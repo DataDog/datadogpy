@@ -1,0 +1,1459 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>datadog — The Datadog’s Python library &mdash; Datadog Python Client 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Datadog Python Client 1.0.0 documentation" href="#" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="#">Datadog Python Client 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-datadog">
+<span id="datadog-the-datadog-s-python-library"></span><h1><a class="reference internal" href="#module-datadog" title="datadog"><code class="xref py py-mod docutils literal"><span class="pre">datadog</span></code></a> &#8212; The Datadog&#8217;s Python library<a class="headerlink" href="#module-datadog" title="Permalink to this headline">¶</a></h1>
+<p>The <a class="reference internal" href="#module-datadog" title="datadog"><code class="xref py py-mod docutils literal"><span class="pre">datadog</span></code></a> module provides <code class="xref py py-mod docutils literal"><span class="pre">datadog.api</span></code> - a simple wrapper around Datadog&#8217;s HTTP API - <code class="xref py py-mod docutils literal"><span class="pre">datadog.threadstats</span></code> - a tool for collecting metrics in high performance applications - and <code class="xref py py-mod docutils literal"><span class="pre">datadog.dogstatsd</span></code> a DogStatsd Python client.</p>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>To install from source, <a class="reference external" href="https://github.com/DataDog/datadog.py">download</a> a distribution and run:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">sudo</span> <span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
+</pre></div>
+</div>
+<p>If you use <a class="reference external" href="http://pypi.python.org/pypi/virtualenv">virtualenv</a> you do not need to use sudo.</p>
+</div>
+<div class="section" id="datadog-api-module">
+<h2>Datadog.api module<a class="headerlink" href="#datadog-api-module" title="Permalink to this headline">¶</a></h2>
+<p>Datadog.api is a Python client library for Datadog&#8217;s <a class="reference external" href="http://api.datadoghq.com">HTTP API</a>.</p>
+<p>Datadog.api client requires to run <a class="reference internal" href="#module-datadog" title="datadog"><code class="xref py py-mod docutils literal"><span class="pre">datadog</span></code></a> <cite>initialize</cite> method first.</p>
+<dl class="function">
+<dt id="datadog.initialize">
+<code class="descclassname">datadog.</code><code class="descname">initialize</code><span class="sig-paren">(</span><em>api_key=None</em>, <em>app_key=None</em>, <em>host_name=None</em>, <em>api_host='https://app.datadoghq.com'</em>, <em>proxies=None</em>, <em>statsd_host=None</em>, <em>statsd_port=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.initialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize and configure Datadog.api and Datadog.statsd modules</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>api_key</strong> (<em>string</em>) &#8211; Datadog API key</li>
+<li><strong>app_key</strong> (<em>string</em>) &#8211; Datadog application key</li>
+<li><strong>proxies</strong> (<em>dictionary mapping protocol to the URL of the proxy.</em>) &#8211; Proxy to use to connect to Datadog API</li>
+<li><strong>api_host</strong> (<em>url</em>) &#8211; Datadog API endpoint</li>
+<li><strong>statsd_host</strong> (<em>address</em>) &#8211; Host of DogStatsd server or statsd daemon</li>
+<li><strong>statsd_port</strong> (<em>port</em>) &#8211; Port of DogStatsd server or statsd daemon</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="datadog.api.Comment">
+<em class="property">class </em><code class="descclassname">datadog.api.</code><code class="descname">Comment</code><a class="headerlink" href="#datadog.api.Comment" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper around Comment HTTP API.</p>
+<dl class="method">
+<dt id="datadog.api.Comment.create">
+<code class="descname">create</code><span class="sig-paren">(</span><em>attach_host_name=False</em>, <em>method='POST'</em>, <em>id=None</em>, <em>params=None</em>, <em>**body</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Comment.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>attach_host_name</strong> (<em>bool</em>) &#8211; link the new resource object to the host name</li>
+<li><strong>method</strong> (<em>HTTP method string</em>) &#8211; HTTP method to use to contact API endpoint</li>
+<li><strong>id</strong> (<em>id</em>) &#8211; create a new resource object as a child of the given object</li>
+<li><strong>params</strong> (<em>dictionary</em>) &#8211; new resource object source</li>
+<li><strong>body</strong> (<em>dictionary</em>) &#8211; new resource object attributes</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Comment.delete">
+<code class="descname">delete</code><span class="sig-paren">(</span><em>id</em>, <em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Comment.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>id</strong> (<em>id</em>) &#8211; resource object to delete</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP API request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Comment.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>id</em>, <em>params=None</em>, <em>**body</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Comment.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>params</strong> (<em>dictionary</em>) &#8211; updated resource object source</li>
+<li><strong>body</strong> (<em>dictionary</em>) &#8211; updated resource object attributes</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="datadog.api.Downtime">
+<em class="property">class </em><code class="descclassname">datadog.api.</code><code class="descname">Downtime</code><a class="headerlink" href="#datadog.api.Downtime" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper around Monitor Downtiming HTTP API.</p>
+<dl class="method">
+<dt id="datadog.api.Downtime.create">
+<code class="descname">create</code><span class="sig-paren">(</span><em>attach_host_name=False</em>, <em>method='POST'</em>, <em>id=None</em>, <em>params=None</em>, <em>**body</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Downtime.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>attach_host_name</strong> (<em>bool</em>) &#8211; link the new resource object to the host name</li>
+<li><strong>method</strong> (<em>HTTP method string</em>) &#8211; HTTP method to use to contact API endpoint</li>
+<li><strong>id</strong> (<em>id</em>) &#8211; create a new resource object as a child of the given object</li>
+<li><strong>params</strong> (<em>dictionary</em>) &#8211; new resource object source</li>
+<li><strong>body</strong> (<em>dictionary</em>) &#8211; new resource object attributes</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Downtime.delete">
+<code class="descname">delete</code><span class="sig-paren">(</span><em>id</em>, <em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Downtime.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>id</strong> (<em>id</em>) &#8211; resource object to delete</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP API request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Downtime.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>id</em>, <em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Downtime.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get information about an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>id</strong> (<em>id</em>) &#8211; resource object id to retrieve</li>
+<li><strong>params</strong> (<em>dictionary</em>) &#8211; parameters to filter API resource stream</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Downtime.get_all">
+<code class="descname">get_all</code><span class="sig-paren">(</span><em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Downtime.get_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>List API resource objects</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>params</strong> (<em>dictionary</em>) &#8211; parameters to filter API resource stream</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP API request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Downtime.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>id</em>, <em>params=None</em>, <em>**body</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Downtime.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>params</strong> (<em>dictionary</em>) &#8211; updated resource object source</li>
+<li><strong>body</strong> (<em>dictionary</em>) &#8211; updated resource object attributes</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="datadog.api.Event">
+<em class="property">class </em><code class="descclassname">datadog.api.</code><code class="descname">Event</code><a class="headerlink" href="#datadog.api.Event" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper around Event HTTP API.</p>
+<dl class="classmethod">
+<dt id="datadog.api.Event.create">
+<em class="property">classmethod </em><code class="descname">create</code><span class="sig-paren">(</span><em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Event.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Post an event.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>title</strong> (<em>string</em>) &#8211; title for the new event</li>
+<li><strong>text</strong> (<em>string</em>) &#8211; event message</li>
+<li><strong>date_happened</strong> (<em>integer</em>) &#8211; when the event occurred. if unset defaults to the current time.         (POSIX timestamp)</li>
+<li><strong>handle</strong> (<em>string</em>) &#8211; user to post the event as. defaults to owner of the application key used         to submit.</li>
+<li><strong>priority</strong> (<em>string</em>) &#8211; priority to post the event as. (&#8220;normal&#8221; or &#8220;low&#8221;, defaults to &#8220;normal&#8221;)</li>
+<li><strong>related_event_id</strong> (<em>id</em>) &#8211; post event as a child of the given event</li>
+<li><strong>tags</strong> (<em>list of strings</em>) &#8211; tags to post the event with</li>
+<li><strong>host</strong> (<em>list of strings</em>) &#8211; host to post the event with</li>
+<li><strong>device_name</strong> (<em>list of strings</em>) &#8211; device_name to post the event with</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP request</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">title</span> <span class="o">=</span> <span class="s">&quot;Something big happened!&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">text</span> <span class="o">=</span> <span class="s">&#39;And let me tell you all about it here!&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tags</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;version:1&#39;</span><span class="p">,</span> <span class="s">&#39;application:web&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">api</span><span class="o">.</span><span class="n">Event</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">text</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Event.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>id</em>, <em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Event.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get information about an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>id</strong> (<em>id</em>) &#8211; resource object id to retrieve</li>
+<li><strong>params</strong> (<em>dictionary</em>) &#8211; parameters to filter API resource stream</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="datadog.api.Event.query">
+<em class="property">classmethod </em><code class="descname">query</code><span class="sig-paren">(</span><em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Event.query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the events that occurred between the <em>start</em> and <em>end</em> POSIX timestamps,
+optional filtered by <em>priority</em> (&#8220;low&#8221; or &#8220;normal&#8221;), <em>sources</em> and
+<em>tags</em>.</p>
+<p>See the <a class="reference external" href="http://api.datadoghq.com/events">event API documentation</a> for the
+event data format.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP request</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">api</span><span class="o">.</span><span class="n">Event</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="mi">1313769783</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="mi">1419436870</span><span class="p">,</span> <span class="n">priority</span><span class="o">=</span><span class="s">&quot;normal&quot;</span><span class="p">,</span>             <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;application:web&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="datadog.api.Graph">
+<em class="property">class </em><code class="descclassname">datadog.api.</code><code class="descname">Graph</code><a class="headerlink" href="#datadog.api.Graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper around Graph HTTP API.</p>
+<dl class="classmethod">
+<dt id="datadog.api.Graph.create">
+<em class="property">classmethod </em><code class="descname">create</code><span class="sig-paren">(</span><em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Graph.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Take a snapshot of a graph, returning the full url to the snapshot.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>metric_query</strong> (<em>string query</em>) &#8211; metric query</li>
+<li><strong>start</strong> (<em>POSIX timestamp</em>) &#8211; timestamp of the start of the query.</li>
+<li><strong>end</strong> (<em>POSIX timestamp</em>) &#8211; timestamp of the end of the query.</li>
+<li><strong>event_query</strong> (<em>string query</em>) &#8211; a query that will add event bands to the graph</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="datadog.api.Graph.status">
+<em class="property">classmethod </em><code class="descname">status</code><span class="sig-paren">(</span><em>snapshot_url</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Graph.status" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the status code of snapshot. Can be used to know when the
+snapshot is ready for download.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>snapshot_url</strong> (<em>string url</em>) &#8211; snapshot URL to check</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP API request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="datadog.api.Host">
+<em class="property">class </em><code class="descclassname">datadog.api.</code><code class="descname">Host</code><a class="headerlink" href="#datadog.api.Host" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper around Host HTTP API.</p>
+<dl class="classmethod">
+<dt id="datadog.api.Host.mute">
+<em class="property">classmethod </em><code class="descname">mute</code><span class="sig-paren">(</span><em>host_name</em>, <em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Host.mute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mute a host.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>host_name</strong> (<em>string</em>) &#8211; hostname</li>
+<li><strong>end</strong> (<em>POSIX timestamp</em>) &#8211; timestamp to end muting</li>
+<li><strong>override</strong> (<em>bool</em>) &#8211; if true and the host is already muted, will overwrite         existing end on the host</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="datadog.api.Host.unmute">
+<em class="property">classmethod </em><code class="descname">unmute</code><span class="sig-paren">(</span><em>host_name</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Host.unmute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unmute a host.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>host_name</strong> (<em>string</em>) &#8211; hostname</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP API request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="datadog.api.Infrastructure">
+<em class="property">class </em><code class="descclassname">datadog.api.</code><code class="descname">Infrastructure</code><a class="headerlink" href="#datadog.api.Infrastructure" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper around Infrastructure HTTP API.</p>
+<dl class="classmethod">
+<dt id="datadog.api.Infrastructure.search">
+<em class="property">classmethod </em><code class="descname">search</code><span class="sig-paren">(</span><em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Infrastructure.search" title="Permalink to this definition">¶</a></dt>
+<dd><p>Search for entities in Datadog.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>q</strong> (<em>string query</em>) &#8211; a query to serch for host and metrics</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP API request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="datadog.api.Metric">
+<em class="property">class </em><code class="descclassname">datadog.api.</code><code class="descname">Metric</code><a class="headerlink" href="#datadog.api.Metric" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper around Metric HTTP API.</p>
+<dl class="classmethod">
+<dt id="datadog.api.Metric.send">
+<em class="property">classmethod </em><code class="descname">send</code><span class="sig-paren">(</span><em>*metrics</em>, <em>**single_metric</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Metric.send" title="Permalink to this definition">¶</a></dt>
+<dd><p>Submit a metric or a list of metrics to the metric API</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>metric</strong> (<em>string</em>) &#8211; the name of the time series</li>
+<li><strong>points</strong> (<em>list</em>) &#8211; list of points to submit</li>
+<li><strong>host</strong> (<em>string</em>) &#8211; host name that produced the metric</li>
+<li><strong>tags</strong> (<em>string list</em>) &#8211; list of tags associated with the metric.</li>
+<li><strong>metric_type</strong> (<em>&#8216;gauge&#8217; or &#8216;counter&#8217; string</em>) &#8211; type of the metric</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="datadog.api.Monitor">
+<em class="property">class </em><code class="descclassname">datadog.api.</code><code class="descname">Monitor</code><a class="headerlink" href="#datadog.api.Monitor" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper around Monitor HTTP API.</p>
+<dl class="method">
+<dt id="datadog.api.Monitor.create">
+<code class="descname">create</code><span class="sig-paren">(</span><em>attach_host_name=False</em>, <em>method='POST'</em>, <em>id=None</em>, <em>params=None</em>, <em>**body</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Monitor.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>attach_host_name</strong> (<em>bool</em>) &#8211; link the new resource object to the host name</li>
+<li><strong>method</strong> (<em>HTTP method string</em>) &#8211; HTTP method to use to contact API endpoint</li>
+<li><strong>id</strong> (<em>id</em>) &#8211; create a new resource object as a child of the given object</li>
+<li><strong>params</strong> (<em>dictionary</em>) &#8211; new resource object source</li>
+<li><strong>body</strong> (<em>dictionary</em>) &#8211; new resource object attributes</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Monitor.delete">
+<code class="descname">delete</code><span class="sig-paren">(</span><em>id</em>, <em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Monitor.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>id</strong> (<em>id</em>) &#8211; resource object to delete</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP API request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="datadog.api.Monitor.get">
+<em class="property">classmethod </em><code class="descname">get</code><span class="sig-paren">(</span><em>id</em>, <em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Monitor.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get monitor&#8217;s details.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>id</strong> (<em>id</em>) &#8211; monitor to retrieve</li>
+<li><strong>group_states</strong> (<em>string list, strings are chosen from one or more         from &#8216;all&#8217;, &#8216;alert&#8217;, &#8216;warn&#8217;, or &#8216;no data&#8217;</em>) &#8211; string list indicating what, if any, group states to include</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="datadog.api.Monitor.get_all">
+<em class="property">classmethod </em><code class="descname">get_all</code><span class="sig-paren">(</span><em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Monitor.get_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get all monitor details.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>group_states</strong> (<em>string list, strings are chosen from one or more         from &#8216;all&#8217;, &#8216;alert&#8217;, &#8216;warn&#8217;, or &#8216;no data&#8217;</em>) &#8211; string list indicating what, if any, group states to include</li>
+<li><strong>tags</strong> (<em>string list</em>) &#8211; tags to filter the list of monitors by scope</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="datadog.api.Monitor.mute">
+<em class="property">classmethod </em><code class="descname">mute</code><span class="sig-paren">(</span><em>id</em>, <em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Monitor.mute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mute a monitor.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>scope</strong> (<em>string</em>) &#8211; scope to apply the mute</li>
+<li><strong>end</strong> (<em>POSIX timestamp</em>) &#8211; timestamp for when the mute should end</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="datadog.api.Monitor.mute_all">
+<em class="property">classmethod </em><code class="descname">mute_all</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Monitor.mute_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mute all monitors.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="datadog.api.Monitor.unmute">
+<em class="property">classmethod </em><code class="descname">unmute</code><span class="sig-paren">(</span><em>id</em>, <em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Monitor.unmute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unmute a monitor.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>scope</strong> (<em>string</em>) &#8211; scope to apply the unmute</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="datadog.api.Monitor.unmute_all">
+<em class="property">classmethod </em><code class="descname">unmute_all</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Monitor.unmute_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unmute all monitors.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Monitor.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>id</em>, <em>params=None</em>, <em>**body</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Monitor.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>params</strong> (<em>dictionary</em>) &#8211; updated resource object source</li>
+<li><strong>body</strong> (<em>dictionary</em>) &#8211; updated resource object attributes</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="datadog.api.Screenboard">
+<em class="property">class </em><code class="descclassname">datadog.api.</code><code class="descname">Screenboard</code><a class="headerlink" href="#datadog.api.Screenboard" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper around Screenboard HTTP API.</p>
+<dl class="method">
+<dt id="datadog.api.Screenboard.create">
+<code class="descname">create</code><span class="sig-paren">(</span><em>attach_host_name=False</em>, <em>method='POST'</em>, <em>id=None</em>, <em>params=None</em>, <em>**body</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Screenboard.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>attach_host_name</strong> (<em>bool</em>) &#8211; link the new resource object to the host name</li>
+<li><strong>method</strong> (<em>HTTP method string</em>) &#8211; HTTP method to use to contact API endpoint</li>
+<li><strong>id</strong> (<em>id</em>) &#8211; create a new resource object as a child of the given object</li>
+<li><strong>params</strong> (<em>dictionary</em>) &#8211; new resource object source</li>
+<li><strong>body</strong> (<em>dictionary</em>) &#8211; new resource object attributes</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Screenboard.delete">
+<code class="descname">delete</code><span class="sig-paren">(</span><em>id</em>, <em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Screenboard.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>id</strong> (<em>id</em>) &#8211; resource object to delete</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP API request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Screenboard.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>id</em>, <em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Screenboard.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get information about an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>id</strong> (<em>id</em>) &#8211; resource object id to retrieve</li>
+<li><strong>params</strong> (<em>dictionary</em>) &#8211; parameters to filter API resource stream</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Screenboard.get_all">
+<code class="descname">get_all</code><span class="sig-paren">(</span><em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Screenboard.get_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>List API resource objects</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>params</strong> (<em>dictionary</em>) &#8211; parameters to filter API resource stream</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP API request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="datadog.api.Screenboard.share">
+<em class="property">classmethod </em><code class="descname">share</code><span class="sig-paren">(</span><em>board_id</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Screenboard.share" title="Permalink to this definition">¶</a></dt>
+<dd><p>Share the screenboard with given id</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>board_id</strong> (<em>id</em>) &#8211; screenboard to share</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Screenboard.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>id</em>, <em>params=None</em>, <em>**body</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Screenboard.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>params</strong> (<em>dictionary</em>) &#8211; updated resource object source</li>
+<li><strong>body</strong> (<em>dictionary</em>) &#8211; updated resource object attributes</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="datadog.api.ServiceCheck">
+<em class="property">class </em><code class="descclassname">datadog.api.</code><code class="descname">ServiceCheck</code><a class="headerlink" href="#datadog.api.ServiceCheck" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper around ServiceCheck HTTP API.</p>
+<dl class="classmethod">
+<dt id="datadog.api.ServiceCheck.check">
+<em class="property">classmethod </em><code class="descname">check</code><span class="sig-paren">(</span><em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.ServiceCheck.check" title="Permalink to this definition">¶</a></dt>
+<dd><p>Post check statuses for use with monitors</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>check</strong> (<em>string</em>) &#8211; text for the message</li>
+<li><strong>host_name</strong> (<em>string</em>) &#8211; name of the host submitting the check</li>
+<li><strong>status</strong> (<em>Options: &#8216;0&#8217;: OK, &#8216;1&#8217;: WARNING, &#8216;2&#8217;: CRITICAL, &#8216;3&#8217;: UNKNOWN</em>) &#8211; integer for the status of the check</li>
+<li><strong>timestamp</strong> (<em>POSIX timestamp</em>) &#8211; timestamp of the event</li>
+<li><strong>message</strong> (<em>string</em>) &#8211; description of why this status occurred</li>
+<li><strong>tags</strong> (<em>string list</em>) &#8211; list of tags for this check</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="datadog.api.Tag">
+<em class="property">class </em><code class="descclassname">datadog.api.</code><code class="descname">Tag</code><a class="headerlink" href="#datadog.api.Tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper around Tag HTTP API.</p>
+<dl class="classmethod">
+<dt id="datadog.api.Tag.create">
+<em class="property">classmethod </em><code class="descname">create</code><span class="sig-paren">(</span><em>host</em>, <em>**body</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Tag.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add tags to a host</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>tags</strong> (<em>string list</em>) &#8211; list of tags to apply to the host</li>
+<li><strong>source</strong> (<em>string</em>) &#8211; source of the tags</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Tag.delete">
+<code class="descname">delete</code><span class="sig-paren">(</span><em>id</em>, <em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Tag.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>id</strong> (<em>id</em>) &#8211; resource object to delete</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP API request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Tag.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>id</em>, <em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Tag.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get information about an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>id</strong> (<em>id</em>) &#8211; resource object id to retrieve</li>
+<li><strong>params</strong> (<em>dictionary</em>) &#8211; parameters to filter API resource stream</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Tag.get_all">
+<code class="descname">get_all</code><span class="sig-paren">(</span><em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Tag.get_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>List API resource objects</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>params</strong> (<em>dictionary</em>) &#8211; parameters to filter API resource stream</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP API request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="datadog.api.Tag.update">
+<em class="property">classmethod </em><code class="descname">update</code><span class="sig-paren">(</span><em>host</em>, <em>**body</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Tag.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update all tags for a given host</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>tags</strong> (<em>string list</em>) &#8211; list of tags to apply to the host</li>
+<li><strong>source</strong> (<em>string</em>) &#8211; source of the tags</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="datadog.api.Timeboard">
+<em class="property">class </em><code class="descclassname">datadog.api.</code><code class="descname">Timeboard</code><a class="headerlink" href="#datadog.api.Timeboard" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper around Timeboard HTTP API.</p>
+<dl class="method">
+<dt id="datadog.api.Timeboard.create">
+<code class="descname">create</code><span class="sig-paren">(</span><em>attach_host_name=False</em>, <em>method='POST'</em>, <em>id=None</em>, <em>params=None</em>, <em>**body</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Timeboard.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>attach_host_name</strong> (<em>bool</em>) &#8211; link the new resource object to the host name</li>
+<li><strong>method</strong> (<em>HTTP method string</em>) &#8211; HTTP method to use to contact API endpoint</li>
+<li><strong>id</strong> (<em>id</em>) &#8211; create a new resource object as a child of the given object</li>
+<li><strong>params</strong> (<em>dictionary</em>) &#8211; new resource object source</li>
+<li><strong>body</strong> (<em>dictionary</em>) &#8211; new resource object attributes</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Timeboard.delete">
+<code class="descname">delete</code><span class="sig-paren">(</span><em>id</em>, <em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Timeboard.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>id</strong> (<em>id</em>) &#8211; resource object to delete</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP API request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Timeboard.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>id</em>, <em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Timeboard.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get information about an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>id</strong> (<em>id</em>) &#8211; resource object id to retrieve</li>
+<li><strong>params</strong> (<em>dictionary</em>) &#8211; parameters to filter API resource stream</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Timeboard.get_all">
+<code class="descname">get_all</code><span class="sig-paren">(</span><em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Timeboard.get_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>List API resource objects</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>params</strong> (<em>dictionary</em>) &#8211; parameters to filter API resource stream</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP API request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.api.Timeboard.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>id</em>, <em>params=None</em>, <em>**body</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Timeboard.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update an API resource object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>params</strong> (<em>dictionary</em>) &#8211; updated resource object source</li>
+<li><strong>body</strong> (<em>dictionary</em>) &#8211; updated resource object attributes</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP API request</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="datadog.api.User">
+<em class="property">class </em><code class="descclassname">datadog.api.</code><code class="descname">User</code><a class="headerlink" href="#datadog.api.User" title="Permalink to this definition">¶</a></dt>
+<dd><p>A wrapper around User HTTP API.</p>
+<dl class="classmethod">
+<dt id="datadog.api.User.invite">
+<em class="property">classmethod </em><code class="descname">invite</code><span class="sig-paren">(</span><em>emails</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.User.invite" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send an invite to join datadog to each of the email addresses in the
+<em>emails</em> list. If <em>emails</em> is a string, it will be wrapped in a list and
+sent. Returns a list of email addresses for which an email was sent.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>emails</strong> (<em>string list</em>) &#8211; emails adresses to invite to join datadog</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="datadog-threadstats-module">
+<h2>Datadog.threadstats module<a class="headerlink" href="#datadog-threadstats-module" title="Permalink to this headline">¶</a></h2>
+<p>Datadog.threadstats is a tool for collecting application metrics without hindering performance.
+It collects metrics in the application thread with very little overhead and allows flushing
+metrics in process, in a thread or in a greenlet, depending on your application&#8217;s needs.</p>
+<p>To run properly Datadog.threadstats requires to run <a class="reference internal" href="#module-datadog" title="datadog"><code class="xref py py-mod docutils literal"><span class="pre">datadog</span></code></a> <cite>initialize</cite> method first.</p>
+<dl class="function">
+<dt>
+<code class="descclassname">datadog.</code><code class="descname">initialize</code><span class="sig-paren">(</span><em>api_key=None</em>, <em>app_key=None</em>, <em>host_name=None</em>, <em>api_host='https://app.datadoghq.com'</em>, <em>proxies=None</em>, <em>statsd_host=None</em>, <em>statsd_port=None</em><span class="sig-paren">)</span></dt>
+<dd><p>Initialize and configure Datadog.api and Datadog.statsd modules</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>api_key</strong> (<em>string</em>) &#8211; Datadog API key</li>
+<li><strong>app_key</strong> (<em>string</em>) &#8211; Datadog application key</li>
+<li><strong>proxies</strong> (<em>dictionary mapping protocol to the URL of the proxy.</em>) &#8211; Proxy to use to connect to Datadog API</li>
+<li><strong>api_host</strong> (<em>url</em>) &#8211; Datadog API endpoint</li>
+<li><strong>statsd_host</strong> (<em>address</em>) &#8211; Host of DogStatsd server or statsd daemon</li>
+<li><strong>statsd_port</strong> (<em>port</em>) &#8211; Port of DogStatsd server or statsd daemon</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="datadog.threadstats.base.ThreadStats">
+<em class="property">class </em><code class="descclassname">datadog.threadstats.base.</code><code class="descname">ThreadStats</code><a class="headerlink" href="#datadog.threadstats.base.ThreadStats" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="datadog.threadstats.base.ThreadStats.decrement">
+<code class="descname">decrement</code><span class="sig-paren">(</span><em>metric_name</em>, <em>value=1</em>, <em>timestamp=None</em>, <em>tags=None</em>, <em>sample_rate=1</em>, <em>host=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.threadstats.base.ThreadStats.decrement" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decrement a counter, optionally setting a value, tags and a sample
+rate.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span><span class="o">.</span><span class="n">decrement</span><span class="p">(</span><span class="s">&#39;files.remaining&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span><span class="o">.</span><span class="n">decrement</span><span class="p">(</span><span class="s">&#39;active.connections&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.threadstats.base.ThreadStats.event">
+<code class="descname">event</code><span class="sig-paren">(</span><em>title</em>, <em>text</em>, <em>alert_type=None</em>, <em>aggregation_key=None</em>, <em>source_type_name=None</em>, <em>date_happened=None</em>, <em>priority=None</em>, <em>tags=None</em>, <em>hostname=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.threadstats.base.ThreadStats.event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send an event. Attributes are the same as the Event API. (<a class="reference external" href="http://docs.datadoghq.com/api/">http://docs.datadoghq.com/api/</a>)
+&gt;&gt;&gt; stats.event(&#8216;Man down!&#8217;, &#8216;This server needs assistance.&#8217;)
+&gt;&gt;&gt; stats.event(&#8216;The web server restarted&#8217;,             &#8216;The web server is up again&#8217;, alert_type=&#8217;success&#8217;)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.threadstats.base.ThreadStats.flush">
+<code class="descname">flush</code><span class="sig-paren">(</span><em>timestamp=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.threadstats.base.ThreadStats.flush" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flush and post all metrics to the server. Note that this is a blocking
+call, so it is likely not suitable for user facing processes. In those
+cases, it&#8217;s probably best to flush in a thread or greenlet.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.threadstats.base.ThreadStats.gauge">
+<code class="descname">gauge</code><span class="sig-paren">(</span><em>metric_name</em>, <em>value</em>, <em>timestamp=None</em>, <em>tags=None</em>, <em>sample_rate=1</em>, <em>host=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.threadstats.base.ThreadStats.gauge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Record the current <code class="docutils literal"><span class="pre">value</span></code> of a metric. They most recent value in
+a given flush interval will be recorded. Optionally, specify a set of
+tags to associate with the metric. This should be used for sum values
+such as total hard disk space, process uptime, total number of active
+users, or number of rows in a database table.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span><span class="o">.</span><span class="n">gauge</span><span class="p">(</span><span class="s">&#39;process.uptime&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">process_start_time</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span><span class="o">.</span><span class="n">gauge</span><span class="p">(</span><span class="s">&#39;cache.bytes.free&#39;</span><span class="p">,</span> <span class="n">cache</span><span class="o">.</span><span class="n">get_free_bytes</span><span class="p">(),</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;version:1.0&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.threadstats.base.ThreadStats.histogram">
+<code class="descname">histogram</code><span class="sig-paren">(</span><em>metric_name</em>, <em>value</em>, <em>timestamp=None</em>, <em>tags=None</em>, <em>sample_rate=1</em>, <em>host=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.threadstats.base.ThreadStats.histogram" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sample a histogram value. Histograms will produce metrics that
+describe the distribution of the recorded values, namely the minimum,
+maximum, average, count and the 75th, 85th, 95th and 99th percentiles.
+Optionally, specify a list of <code class="docutils literal"><span class="pre">tags</span></code> to associate with the metric.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="s">&#39;uploaded_file.size&#39;</span><span class="p">,</span> <span class="n">uploaded_file</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.threadstats.base.ThreadStats.increment">
+<code class="descname">increment</code><span class="sig-paren">(</span><em>metric_name</em>, <em>value=1</em>, <em>timestamp=None</em>, <em>tags=None</em>, <em>sample_rate=1</em>, <em>host=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.threadstats.base.ThreadStats.increment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Increment the counter by the given <code class="docutils literal"><span class="pre">value</span></code>. Optionally, specify a list of
+<code class="docutils literal"><span class="pre">tags</span></code> to associate with the metric. This is useful for counting things
+such as incrementing a counter each time a page is requested.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span><span class="o">.</span><span class="n">increment</span><span class="p">(</span><span class="s">&#39;home.page.hits&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span><span class="o">.</span><span class="n">increment</span><span class="p">(</span><span class="s">&#39;bytes.processed&#39;</span><span class="p">,</span> <span class="nb">file</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.threadstats.base.ThreadStats.start">
+<code class="descname">start</code><span class="sig-paren">(</span><em>flush_interval=10</em>, <em>roll_up_interval=10</em>, <em>device=None</em>, <em>flush_in_thread=True</em>, <em>flush_in_greenlet=False</em>, <em>disabled=False</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.threadstats.base.ThreadStats.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start the ThreadStats instance with the specified metric flushing method and preferences.</p>
+<p>By default, metrics will be flushed in a thread.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>If you&#8217;re running a gevent server and want to flush metrics in a
+greenlet, set <em>flush_in_greenlet</em> to True. Be sure to import and monkey
+patch gevent before starting ThreadStats.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">gevent</span> <span class="kn">import</span> <span class="n">monkey</span><span class="p">;</span> <span class="n">monkey</span><span class="o">.</span><span class="n">patch_all</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">flush_in_greenlet</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If you&#8217;d like to flush metrics in process, set <em>flush_in_thread</em>
+to False, though you&#8217;ll have to call <code class="docutils literal"><span class="pre">flush</span></code> manually to post metrics
+to the server.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">flush_in_thread</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If for whatever reason, you need to disable metrics collection in a
+hurry, set <code class="docutils literal"><span class="pre">disabled</span></code> to True and metrics won&#8217;t be collected or flushed.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">disabled</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt><em>Note:</em> Please remember to set your API key before,</dt>
+<dd>using datadog module <code class="docutils literal"><span class="pre">initialize</span></code> method.</dd>
+</dl>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">datadog</span> <span class="kn">import</span> <span class="n">initialize</span><span class="p">,</span> <span class="n">ThreadStats</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">initialize</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="s">&#39;my_api_key&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span> <span class="o">=</span> <span class="n">ThreadStats</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span><span class="o">.</span><span class="n">increment</span><span class="p">(</span><span class="s">&#39;home.page.hits&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>flush_interval</strong> (<em>int</em>) &#8211; The number of seconds to wait between flushes.</li>
+<li><strong>flush_in_thread</strong> (<em>bool</em>) &#8211; True if you&#8217;d like to spawn a thread to flush metrics.
+It will run every <cite>flush_interval</cite> seconds.</li>
+<li><strong>flush_in_greenlet</strong> (<em>bool</em>) &#8211; Set to true if you&#8217;d like to flush in a gevent greenlet.</li>
+<li><strong>disabled</strong> (<em>bool</em>) &#8211; Disable metrics collection</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.threadstats.base.ThreadStats.timed">
+<code class="descname">timed</code><span class="sig-paren">(</span><em>metric_name</em>, <em>sample_rate=1</em>, <em>tags=None</em>, <em>host=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.threadstats.base.ThreadStats.timed" title="Permalink to this definition">¶</a></dt>
+<dd><p>A decorator that will track the distribution of a function&#8217;s run time.
+Optionally specify a list of tags to associate with the metric.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="nd">@stats.timed</span><span class="p">(</span><span class="s">&#39;user.query.time&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">get_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">):</span>
+    <span class="c"># Do what you need to ...</span>
+    <span class="k">pass</span>
+
+<span class="c"># Is equivalent to ...</span>
+<span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">get_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">)</span>
+<span class="k">finally</span><span class="p">:</span>
+    <span class="n">stats</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="s">&#39;user.query.time&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.threadstats.base.ThreadStats.timer">
+<code class="descname">timer</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwds</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.threadstats.base.ThreadStats.timer" title="Permalink to this definition">¶</a></dt>
+<dd><p>A context manager that will track the distribution of the contained code&#8217;s run time.
+Optionally specify a list of tags to associate with the metric.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">get_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">stats</span><span class="o">.</span><span class="n">timer</span><span class="p">(</span><span class="s">&#39;user.query.time&#39;</span><span class="p">):</span>
+        <span class="c"># Do what you need to ...</span>
+        <span class="k">pass</span>
+
+<span class="c"># Is equivalent to ...</span>
+<span class="k">def</span> <span class="nf">get_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">):</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c"># Do what you need to ...</span>
+        <span class="k">pass</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">stats</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="s">&#39;user.query.time&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.threadstats.base.ThreadStats.timing">
+<code class="descname">timing</code><span class="sig-paren">(</span><em>metric_name</em>, <em>value</em>, <em>timestamp=None</em>, <em>tags=None</em>, <em>sample_rate=1</em>, <em>host=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.threadstats.base.ThreadStats.timing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Record a timing, optionally setting tags and a sample rate.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">stats</span><span class="o">.</span><span class="n">timing</span><span class="p">(</span><span class="s">&quot;query.response.time&quot;</span><span class="p">,</span> <span class="mi">1234</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="datadog-dogstatsd-module">
+<h2>Datadog.dogstatsd module<a class="headerlink" href="#datadog-dogstatsd-module" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="datadog.dogstatsd.base.DogStatsd">
+<em class="property">class </em><code class="descclassname">datadog.dogstatsd.base.</code><code class="descname">DogStatsd</code><span class="sig-paren">(</span><em>host='localhost'</em>, <em>port=8125</em>, <em>max_buffer_size=50</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="datadog.dogstatsd.base.DogStatsd.close_buffer">
+<code class="descname">close_buffer</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.close_buffer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flush the buffer and switch back to single metric packets</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.dogstatsd.base.DogStatsd.decrement">
+<code class="descname">decrement</code><span class="sig-paren">(</span><em>metric</em>, <em>value=1</em>, <em>tags=None</em>, <em>sample_rate=1</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.decrement" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decrement a counter, optionally setting a value, tags and a sample
+rate.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">statsd</span><span class="o">.</span><span class="n">decrement</span><span class="p">(</span><span class="s">&#39;files.remaining&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">statsd</span><span class="o">.</span><span class="n">decrement</span><span class="p">(</span><span class="s">&#39;active.connections&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.dogstatsd.base.DogStatsd.event">
+<code class="descname">event</code><span class="sig-paren">(</span><em>title</em>, <em>text</em>, <em>alert_type=None</em>, <em>aggregation_key=None</em>, <em>source_type_name=None</em>, <em>date_happened=None</em>, <em>priority=None</em>, <em>tags=None</em>, <em>hostname=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.event" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Send an event. Attributes are the same as the Event API.</dt>
+<dd><a class="reference external" href="http://docs.datadoghq.com/api/">http://docs.datadoghq.com/api/</a></dd>
+</dl>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">statsd</span><span class="o">.</span><span class="n">event</span><span class="p">(</span><span class="s">&#39;Man down!&#39;</span><span class="p">,</span> <span class="s">&#39;This server needs assistance.&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">statsd</span><span class="o">.</span><span class="n">event</span><span class="p">(</span><span class="s">&#39;The web server restarted&#39;</span><span class="p">,</span> <span class="s">&#39;The web server is up again&#39;</span><span class="p">,</span> <span class="n">alert_type</span><span class="o">=</span><span class="s">&#39;success&#39;</span><span class="p">)</span>  <span class="c"># NOQA</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.dogstatsd.base.DogStatsd.gauge">
+<code class="descname">gauge</code><span class="sig-paren">(</span><em>metric</em>, <em>value</em>, <em>tags=None</em>, <em>sample_rate=1</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.gauge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Record the value of a gauge, optionally setting a list of tags and a
+sample rate.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">statsd</span><span class="o">.</span><span class="n">gauge</span><span class="p">(</span><span class="s">&#39;users.online&#39;</span><span class="p">,</span> <span class="mi">123</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">statsd</span><span class="o">.</span><span class="n">gauge</span><span class="p">(</span><span class="s">&#39;active.connections&#39;</span><span class="p">,</span> <span class="mi">1001</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;protocol:http&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.dogstatsd.base.DogStatsd.get_socket">
+<code class="descname">get_socket</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.get_socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a connected socket</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.dogstatsd.base.DogStatsd.histogram">
+<code class="descname">histogram</code><span class="sig-paren">(</span><em>metric</em>, <em>value</em>, <em>tags=None</em>, <em>sample_rate=1</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.histogram" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sample a histogram value, optionally setting tags and a sample rate.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">statsd</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="s">&#39;uploaded.file.size&#39;</span><span class="p">,</span> <span class="mi">1445</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">statsd</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="s">&#39;album.photo.count&#39;</span><span class="p">,</span> <span class="mi">26</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;gender:female&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.dogstatsd.base.DogStatsd.increment">
+<code class="descname">increment</code><span class="sig-paren">(</span><em>metric</em>, <em>value=1</em>, <em>tags=None</em>, <em>sample_rate=1</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.increment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Increment a counter, optionally setting a value, tags and a sample
+rate.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">statsd</span><span class="o">.</span><span class="n">increment</span><span class="p">(</span><span class="s">&#39;page.views&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">statsd</span><span class="o">.</span><span class="n">increment</span><span class="p">(</span><span class="s">&#39;files.transferred&#39;</span><span class="p">,</span> <span class="mi">124</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.dogstatsd.base.DogStatsd.open_buffer">
+<code class="descname">open_buffer</code><span class="sig-paren">(</span><em>max_buffer_size=50</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.open_buffer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Open a buffer to send a batch of metrics in one packet</p>
+<p>You can also use this as a context manager.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">DogStatsd</span><span class="p">()</span> <span class="k">as</span> <span class="n">batch</span><span class="p">:</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">batch</span><span class="o">.</span><span class="n">gauge</span><span class="p">(</span><span class="s">&#39;users.online&#39;</span><span class="p">,</span> <span class="mi">123</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">batch</span><span class="o">.</span><span class="n">gauge</span><span class="p">(</span><span class="s">&#39;active.connections&#39;</span><span class="p">,</span> <span class="mi">1001</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.dogstatsd.base.DogStatsd.service_check">
+<code class="descname">service_check</code><span class="sig-paren">(</span><em>check_name</em>, <em>status</em>, <em>tags=None</em>, <em>timestamp=None</em>, <em>hostname=None</em>, <em>message=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.service_check" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send a service check run.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">statsd</span><span class="o">.</span><span class="n">service_check</span><span class="p">(</span><span class="s">&#39;my_service.check_name&#39;</span><span class="p">,</span> <span class="n">DogStatsd</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.dogstatsd.base.DogStatsd.set">
+<code class="descname">set</code><span class="sig-paren">(</span><em>metric</em>, <em>value</em>, <em>tags=None</em>, <em>sample_rate=1</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sample a set value.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">statsd</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s">&#39;visitors.uniques&#39;</span><span class="p">,</span> <span class="mi">999</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.dogstatsd.base.DogStatsd.timed">
+<code class="descname">timed</code><span class="sig-paren">(</span><em>metric</em>, <em>tags=None</em>, <em>sample_rate=1</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.timed" title="Permalink to this definition">¶</a></dt>
+<dd><p>A decorator that will measure the distribution of a function&#8217;s run
+time.  Optionally specify a list of tag or a sample rate.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="nd">@statsd.timed</span><span class="p">(</span><span class="s">&#39;user.query.time&#39;</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">get_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">):</span>
+    <span class="c"># Do what you need to ...</span>
+    <span class="k">pass</span>
+
+<span class="c"># Is equivalent to ...</span>
+<span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">get_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">)</span>
+<span class="k">finally</span><span class="p">:</span>
+    <span class="n">statsd</span><span class="o">.</span><span class="n">timing</span><span class="p">(</span><span class="s">&#39;user.query.time&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="datadog.dogstatsd.base.DogStatsd.timing">
+<code class="descname">timing</code><span class="sig-paren">(</span><em>metric</em>, <em>value</em>, <em>tags=None</em>, <em>sample_rate=1</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.timing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Record a timing, optionally setting tags and a sample rate.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">statsd</span><span class="o">.</span><span class="n">timing</span><span class="p">(</span><span class="s">&quot;query.response.time&quot;</span><span class="p">,</span> <span class="mi">1234</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="data">
+<dt id="datadog.statsd">
+<code class="descclassname">datadog.</code><code class="descname">statsd</code><a class="headerlink" href="#datadog.statsd" title="Permalink to this definition">¶</a></dt>
+<dd><p>A global <a class="reference internal" href="#datadog.dogstatsd.base.DogStatsd" title="datadog.dogstatsd.base.DogStatsd"><code class="xref py py-class docutils literal"><span class="pre">DogStatsd</span></code></a> instance that is easily shared
+across an application&#8217;s modules. Initialize this once in your application&#8217;s
+set-up code and then other modules can import and use it without further
+configuration.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">datadog</span> <span class="kn">import</span> <span class="n">initialize</span><span class="p">,</span> <span class="n">statsd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">initialize</span><span class="p">(</span><span class="n">statsd_host</span><span class="o">=</span><span class="s">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">statsd_port</span><span class="o">=</span><span class="mi">8125</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">statsd</span><span class="o">.</span><span class="n">increment</span><span class="p">(</span><span class="s">&#39;home.page.hits&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="source">
+<h2>Source<a class="headerlink" href="#source" title="Permalink to this headline">¶</a></h2>
+<p>The Datadog&#8217;s Python library source is freely available on Github. Check it out <a class="reference external" href="https://github.com/DataDog/datadogpy">here</a>.</p>
+</div>
+<div class="section" id="get-in-touch">
+<h2>Get in Touch<a class="headerlink" href="#get-in-touch" title="Permalink to this headline">¶</a></h2>
+<p>If you&#8217;d like to suggest a feature or report a bug, please add an issue <a class="reference external" href="https://github.com/DataDog/datadogpy/issues">here</a>. If you want to talk about Datadog in general, reach out at <a class="reference external" href="http://datadoghq.com">datadoghq.com</a>.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#"><code class="docutils literal"><span class="pre">datadog</span></code> &#8212; The Datadog&#8217;s Python library</a><ul>
+<li><a class="reference internal" href="#installation">Installation</a></li>
+<li><a class="reference internal" href="#datadog-api-module">Datadog.api module</a></li>
+<li><a class="reference internal" href="#datadog-threadstats-module">Datadog.threadstats module</a></li>
+<li><a class="reference internal" href="#datadog-dogstatsd-module">Datadog.dogstatsd module</a></li>
+<li><a class="reference internal" href="#source">Source</a></li>
+<li><a class="reference internal" href="#get-in-touch">Get in Touch</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="#">Datadog Python Client 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Datadog, Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3b1.
+    </div>
+  </body>
+</html>
