@@ -40,8 +40,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Datadog API'
-copyright = u'2012, Datadog, Inc.'
+project = u'Datadog Python Client'
+copyright = u'2015, Datadog, Inc.'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -178,7 +178,7 @@ htmlhelp_basename = 'DatadogAPIdoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'DatadogAPI.tex', u'Datadog API Documentation',
+  ('index', 'Datadogpy.tex', u'Datadog Python Client Documentation',
    u'Datadog, Inc.', 'manual'),
 ]
 
@@ -211,6 +211,6 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'datadogapi', u'Datadog API Documentation',
+    ('index', 'datadogpy', u'Datadog Python Client Documentation',
      [u'Datadog, Inc.'], 1)
 ]

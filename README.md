@@ -1,7 +1,12 @@
-= Python client for Datadog
-==========
+The Datadog Python library
+===========================
+([![Build Status](https://travis-ci.org/DataDog/datadogpy.svg?branch=master)](https://travis-ci.org/DataDog/datadogpy))
 
-Datadog.py is a collection of tools suitable for inclusion in existing Python projects or for development of standalone scripts. It provides an abstraction on top of Datadog's raw HTTP interface and agent's StatsD metrics aggregation server, to interact with Datadog and efficiently report events and metrics.
+Datadogpy is a collection of tools suitable for inclusion in existing Python projects or for development of standalone scripts. It provides an abstraction on top of Datadog's raw HTTP interface and agent's StatsD metrics aggregation server, to interact with Datadog and efficiently report events and metrics.
+
+- Library Documentation: http://datadog.github.io/datadogpy/
+- HTTP API Documentation: http://docs.datadoghq.com/api/
+- DataDogHQ: http://datadoghq.com
 
 
 Quick Start Guide
@@ -35,3 +40,9 @@ from datadog import stats
 stats.increment('whatever')
 stats.gauge('foo')
 ```
+
+Change Log
+----------
+- 0.1 RC
+    - Release date: 2015.01.27
+    - Datadogpy beta release
