@@ -52,7 +52,7 @@ class TestUnitDogStatsAPI(object):
 
     def test_timed_decorator(self):
         dog = DogStatsApi()
-        dog.start(roll_up_interval=1, flush_in_thread=False, statsd=False)
+        dog.configure(roll_up_interval=1, flush_in_thread=False, statsd=False)
         reporter = dog.reporter = MemoryReporter()
 
         @dog.timed('timed.test')
@@ -78,7 +78,7 @@ class TestUnitDogStatsAPI(object):
 
     def test_event(self):
         dog = DogStatsApi()
-        dog.start(roll_up_interval=10, flush_in_thread=False, statsd=False)
+        dog.configure(roll_up_interval=10, flush_in_thread=False, statsd=False)
         reporter = dog.reporter = MemoryReporter()
 
         # Add two events
@@ -114,7 +114,7 @@ class TestUnitDogStatsAPI(object):
 
     def test_histogram(self):
         dog = DogStatsApi()
-        dog.start(roll_up_interval=10, flush_in_thread=False, statsd=False)
+        dog.configure(roll_up_interval=10, flush_in_thread=False, statsd=False)
         reporter = dog.reporter = MemoryReporter()
 
         # Add some histogram metrics.
@@ -186,7 +186,7 @@ class TestUnitDogStatsAPI(object):
 
     def test_histogram_percentiles(self):
         dog = DogStatsApi()
-        dog.start(roll_up_interval=10, flush_in_thread=False, statsd=False)
+        dog.configure(roll_up_interval=10, flush_in_thread=False, statsd=False)
         reporter = dog.reporter = MemoryReporter()
         # Sample all numbers between 1-100 many times. This
         # means our percentiles should be relatively close to themselves.
@@ -213,7 +213,7 @@ class TestUnitDogStatsAPI(object):
     def test_gauge(self):
         # Create some fake metrics.
         dog = DogStatsApi()
-        dog.start(roll_up_interval=10, flush_in_thread=False, statsd=False)
+        dog.configure(roll_up_interval=10, flush_in_thread=False, statsd=False)
         reporter = dog.reporter = MemoryReporter()
 
         dog.gauge('test.gauge.1', 20, 100.0)
@@ -245,7 +245,7 @@ class TestUnitDogStatsAPI(object):
     def test_counter(self):
         # Create some fake metrics.
         dog = DogStatsApi()
-        dog.start(roll_up_interval=10, flush_in_thread=False, statsd=False)
+        dog.configure(roll_up_interval=10, flush_in_thread=False, statsd=False)
         reporter = dog.reporter = MemoryReporter()
 
         dog.increment('test.counter.1', timestamp=1000.0)
@@ -289,7 +289,7 @@ class TestUnitDogStatsAPI(object):
 
     def test_default_host_and_device(self):
         dog = DogStatsApi()
-        dog.start(roll_up_interval=1, flush_in_thread=False, statsd=False)
+        dog.configure(roll_up_interval=1, flush_in_thread=False, statsd=False)
         reporter = dog.reporter = MemoryReporter()
         dog.gauge('my.gauge', 1, 100.0)
         dog.flush(1000)
@@ -299,7 +299,7 @@ class TestUnitDogStatsAPI(object):
 
     def test_custom_host_and_device(self):
         dog = DogStatsApi()
-        dog.start(roll_up_interval=1, flush_in_thread=False, device='dev', statsd=False)
+        dog.configure(roll_up_interval=1, flush_in_thread=False, device='dev', statsd=False)
         reporter = dog.reporter = MemoryReporter()
         dog.gauge('my.gauge', 1, 100.0, host='host')
         dog.flush(1000)
@@ -309,7 +309,7 @@ class TestUnitDogStatsAPI(object):
 
     def test_tags(self):
         dog = DogStatsApi()
-        dog.start(roll_up_interval=10, flush_in_thread=False, statsd=False)
+        dog.configure(roll_up_interval=10, flush_in_thread=False, statsd=False)
         reporter = dog.reporter = MemoryReporter()
 
         # Post the same metric with different tags.
@@ -356,7 +356,7 @@ class TestUnitDogStatsAPI(object):
 
     def test_host(self):
         dog = DogStatsApi()
-        dog.start(roll_up_interval=10, flush_in_thread=False, statsd=False)
+        dog.configure(roll_up_interval=10, flush_in_thread=False, statsd=False)
         reporter = dog.reporter = MemoryReporter()
 
         # Post the same metric with different tags.
@@ -410,7 +410,7 @@ class TestUnitDogStatsAPI(object):
     def test_disabled_mode(self):
         dog = DogStatsApi()
         reporter = dog.reporter = MemoryReporter()
-        dog.start(disabled=True, flush_interval=1, roll_up_interval=1, statsd=False)
+        dog.configure(disabled=True, flush_interval=1, roll_up_interval=1, statsd=False)
         dog.gauge('testing', 1, timestamp=1000)
         dog.gauge('testing', 2, timestamp=1000)
         dog.flush(2000.0)
@@ -418,7 +418,7 @@ class TestUnitDogStatsAPI(object):
 
     def test_stop(self):
         dog = DogStatsApi()
-        dog.start(flush_interval=1, roll_up_interval=1, statsd=False)
+        dog.configure(flush_interval=1, roll_up_interval=1, statsd=False)
         for i in range(10):
             dog.gauge('metric', i)
         time.sleep(2)
@@ -438,7 +438,7 @@ class TestUnitDogStatsAPI(object):
         # A test to ensure we flush the expected values
         # when we have lots of threads writing to dog api
         dog = DogStatsApi()
-        dog.start(flush_interval=1, roll_up_interval=1, statsd=False)
+        dog.configure(flush_interval=1, roll_up_interval=1, statsd=False)
         reporter = dog.reporter = MemoryReporter()
 
         class MetricProducer(threading.Thread):

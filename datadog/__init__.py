@@ -45,6 +45,9 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host="https://app
     :param api_host: Datadog API endpoint
     :type api_host: url
 
+    :param stats_params: DogStatsApi ``configure`` parameters
+    :type stats_params: DogStatsApi parameters dictionary
+
     """
     # Configure api
     api._api_key = api_key
@@ -54,4 +57,4 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host="https://app
     api._proxies = proxies
 
     # Configure stats
-    stats.start(**stats_params)
+    stats.configure(**stats_params)

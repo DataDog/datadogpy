@@ -24,20 +24,68 @@ class DogStatsApi(object):
 
     def __init__(self):
         """ Initialize a dogstats object. """
-        # Don't collect until start is called.
+        # Don't collect until configure is called.
         self._disabled = True
 
-    def start(self, flush_interval=10, roll_up_interval=10, device=None,
-              flush_in_thread=True, flush_in_greenlet=False, disabled=False, statsd=True,
-              statsd_host='localhost', statsd_port=8125):
+    def configure(self, flush_interval=10, roll_up_interval=10, device=None,
+                  flush_in_thread=True, flush_in_greenlet=False, disabled=False, statsd=True,
+                  statsd_host='localhost', statsd_port=8125):
         """
-        Configure the DogStatsApi instance and optionally, begin auto-flushing metrics.
+        Configure the DogStatsApi instance on how to flush metrics.
+        Two modes are available: using statsd (recommended but require
+        Datadog agent or any statsd daemon) or using the Datadog HTTP API.
+        By default, metrics will be flushed with statsd . ::
 
-        :param api_key: Your Datadog API key.
+        >>> stats.configure(statsd_host='localhost', statsd_port=8125)
+
+        If you're not running Datadog agent, and want to flush metrics using
+        Datadog HTTP API, set ``statsd`` to False. By default, metrics will be
+        flushed in a thread. Please remember to set your API key before,
+        using datadog module ``initialize`` method.
+
+        >>> stats.configure(statsd=False, flush_in_thread=True)
+
+        If you're running a gevent server and want to flush metrics in a
+        greenlet, set *flush_in_greenlet* to True. Be sure to import and monkey
+        patch gevent before starting dog_stats_api. ::
+
+        >>> from gevent import monkey; monkey.patch_all()
+        >>> stats.configure(statsd=False, flush_in_greelet=True)
+
+        If you'd like to flush metrics in process, set *flush_in_thread*
+        to False, though you'll have to call ``flush`` manually to post metrics
+        to the server. ::
+
+        >>> stats.configure(statsd=False, flush_in_thread=True)
+
+        If for whatever reason, you need to disable metrics collection in a
+        hurry, set ``disabled`` to True and metrics won't be collected or flushed.
+
+        >>> stats.configure(disabled=True)
+
+        *Note:* ``configure`` is automatically called from datadog module
+        ``initialize`` method. General use-case` is to redefine stats parameters
+        when already initialized.
+
+        >>> from datadog import initialize, stats
+        >>> initialize(api_key='my_api_key', statsd=False, flush_in_thread=True)
+        >>> stats.increment('home.page.hits')
+
         :param flush_interval: The number of seconds to wait between flushes.
+        :type flush_interval: int
         :param flush_in_thread: True if you'd like to spawn a thread to flush metrics. \
         It will run every `flush_interval` seconds.
+        :type flush_in_thread: bool
         :param flush_in_greenlet: Set to true if you'd like to flush in a gevent greenlet.
+        :type flush_in_greenlet: bool
+        :param disabled: Disable metrics collection
+        :type disabled: bool
+        :param statsd: Flush metrics using statsd
+        :type statsd: bool
+        :param statsd_host: Host of DogStatsd server or statsd daemon
+        :type statsd_host: address
+        :param statsd_port: Port of DogStatsd server or statsd daemon
+        :type statsd_port: port
         """
         self.flush_interval = flush_interval
         self.roll_up_interval = roll_up_interval
@@ -101,7 +149,7 @@ class DogStatsApi(object):
 
     def gauge(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
         """
-        Record the current *value* of a metric. They most recent value in
+        Record the current ``value`` of a metric. They most recent value in
         a given flush interval will be recorded. Optionally, specify a set of
         tags to associate with the metric. This should be used for sum values
         such as total hard disk space, process uptime, total number of active
@@ -116,8 +164,8 @@ class DogStatsApi(object):
 
     def increment(self, metric_name, value=1, timestamp=None, tags=None, sample_rate=1, host=None):
         """
-        Increment the counter by the given *value*. Optionally, specify a list of
-        *tags* to associate with the metric. This is useful for counting things
+        Increment the counter by the given ``value``. Optionally, specify a list of
+        ``tags`` to associate with the metric. This is useful for counting things
         such as incrementing a counter each time a page is requested.
 
         >>> dog_stats_api.increment('home.page.hits')
@@ -144,7 +192,7 @@ class DogStatsApi(object):
         Sample a histogram value. Histograms will produce metrics that
         describe the distribution of the recorded values, namely the minimum,
         maximum, average, count and the 75th, 85th, 95th and 99th percentiles.
-        Optionally, specify a list of *tags* to associate with the metric.
+        Optionally, specify a list of ``tags`` to associate with the metric.
 
         >>> dog_stats_api.histogram('uploaded_file.size', uploaded_file.size())
         """

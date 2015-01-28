@@ -49,7 +49,7 @@ class TestDogStatsd(object):
 
     def setUp(self):
         self.statsd = DogStatsApi()
-        self.statsd.start(statsd=True)
+        self.statsd.configure(statsd=True)
         self.statsd._metric_aggregator.socket = FakeSocket()
         self.statsd._metric_aggregator.socket_sendto = self.statsd._metric_aggregator.socket.sendto
 
@@ -153,32 +153,3 @@ class TestDogStatsd(object):
         t.assert_equal('ms', type_)
         t.assert_equal('timed.test', name)
         self.assert_almost_equal(0.5, float(value), 0.1)
-
-    # def test_batched(self):
-    #     self.statsd._open_buffer()
-    #     self.statsd.gauge('page.views', 123)
-    #     self.statsd.timing('timer', 123)
-    #     self.statsd._close_buffer()
-
-    #     t.assert_equal('page.views:123|g\ntimer:123|ms', self.recv())
-
-    # def test_context_manager(self):
-    #     fake_socket = FakeSocket()
-    #     with DogStatsApi() as statsd:
-    #         statsd.start(statsd=True)
-    #         statsd._metric_aggregator.socket = fake_socket
-    #         statsd.gauge('page.views', 123)
-    #         statsd.timing('timer', 123)
-
-    #     t.assert_equal('page.views:123|g\ntimer:123|ms', fake_socket.recv())
-
-    # def test_batched_buffer_autoflush(self):
-    #     fake_socket = FakeSocket()
-    #     with DogStatsApi() as statsd:
-    #         statsd.start(statsd=True)
-    #         statsd._metric_aggregator.socket = fake_socket
-    #         for i in range(51):
-    #             statsd.increment('mycounter')
-    #         t.assert_equal('\n'.join(['mycounter:1|c' for i in range(50)]), fake_socket.recv())
-
-    #     t.assert_equal('mycounter:1|c', fake_socket.recv())
