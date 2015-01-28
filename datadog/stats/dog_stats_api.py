@@ -10,6 +10,7 @@ from functools import wraps
 from contextlib import contextmanager
 from time import time
 
+from datadog.api.exceptions import ApiNotInitialized
 from datadog.stats.constants import MetricType
 from datadog.stats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing, Set
 from datadog.stats.events import EventsAggregator
@@ -313,6 +314,8 @@ class DogStatsApi(object):
                 self.reporter.flush_events(events)
             else:
                 log.debug("No events to flush. Continuing.")
+        except ApiNotInitialized:
+            raise
         except:
             try:
                 log.exception("Error flushing metrics and events")

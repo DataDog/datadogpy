@@ -47,7 +47,8 @@ class TestUnitDogStatsAPI(object):
         def sort(metric):
             tags = metric['tags'] or []
             host = metric['host'] or ''
-            return (metric['points'][0][0], metric['metric'], tags, host)
+            return (metric['points'][0][0], metric['metric'], tags, host,
+                    metric['points'][0][1])
         return sorted(metrics, key=sort)
 
     def test_timed_decorator(self):

@@ -1,6 +1,7 @@
 # stdlib
 import os
 import tempfile
+import time
 
 # 3p
 import mock
@@ -11,7 +12,6 @@ from datadog import initialize, api, stats
 from datadog.util.compat import is_p3k
 from datadog.api.exceptions import ApiNotInitialized
 from tests.unit.api.helper import (
-    DatadogAPITestCase,
     DatadogAPIWithInitialization,
     DatadogAPINoInitialization,
     MyCreatable,
@@ -39,11 +39,16 @@ class TestInitialization(DatadogAPINoInitialization):
         assert_false(stats._needs_flush)
         assert_raises(ApiNotInitialized, MyCreatable.create)
 
-        # Make sure not statsd mode raises
-        initialize(statsd=False)
-        assert_raises(ApiNotInitialized, stats.event("", ""))
+        # Make sure stats in HTTP API mode raises too
+        initialize(statsd=False, flush_in_thread=False)
+        stats.increment("IWillRaiseAnException")
+        time.sleep(5)
+        assert_raises(ApiNotInitialized, stats.flush)
+        stats.event("IAmATitle", "IWillRaiseAnException")
+        time.sleep(5)
+        assert_raises(ApiNotInitialized, stats.flush)
 
-        # Finaly initialize with an API key
+        # Finally, initialize with an API key
         initialize(api_key=API_KEY, api_host=API_HOST)
         MyCreatable.create()
         assert self.request_mock.request.call_count == 1

@@ -13,7 +13,7 @@ class EventsAggregator(object):
         if is_p3k():
             event = {k: v for k, v in event.items() if v}
         else:
-            event = {k: v for k, v in event.iteritems() if v}
+            event = dict((k, v) for k, v in event.iteritems() if v is not None)
         self._events.append(event)
 
     def flush(self):
