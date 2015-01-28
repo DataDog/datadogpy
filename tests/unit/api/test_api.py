@@ -42,11 +42,9 @@ class TestInitialization(DatadogAPINoInitialization):
         # Make sure stats in HTTP API mode raises too
         initialize(statsd=False, flush_in_thread=False)
         stats.increment("IWillRaiseAnException")
-        time.sleep(5)
-        assert_raises(ApiNotInitialized, stats.flush)
+        assert_raises(ApiNotInitialized, stats.flush, int(time.time()) + 60)
         stats.event("IAmATitle", "IWillRaiseAnException")
-        time.sleep(5)
-        assert_raises(ApiNotInitialized, stats.flush)
+        assert_raises(ApiNotInitialized, stats.flush, int(time.time()) + 60)
 
         # Finally, initialize with an API key
         initialize(api_key=API_KEY, api_host=API_HOST)

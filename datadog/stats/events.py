@@ -1,4 +1,4 @@
-from datadog.util.compat import is_p3k
+from datadog.util.compat import iteritems
 
 
 class EventsAggregator(object):
@@ -10,10 +10,7 @@ class EventsAggregator(object):
 
     def add_event(self, **event):
         # Clean empty values
-        if is_p3k():
-            event = {k: v for k, v in event.items() if v}
-        else:
-            event = dict((k, v) for k, v in event.iteritems() if v is not None)
+        event = dict((k, v) for k, v in iteritems(event) if v is not None)
         self._events.append(event)
 
     def flush(self):

@@ -17,11 +17,17 @@ if is_p3k():
     import configparser
     import urllib.request as url_lib, urllib.error, urllib.parse
     from io import StringIO
+
+    def iteritems(d):
+        return iter(d.items())
 else:
     get_input = raw_input
     import ConfigParser as configparser
     import urllib2 as url_lib
     from cStringIO import StringIO
+
+    def iteritems(d):
+        return d.iteritems()
 
 try:
     from UserDict import IterableUserDict
@@ -43,3 +49,4 @@ try:
     import simplejson as json
 except ImportError:
     import json
+

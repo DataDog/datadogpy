@@ -104,7 +104,6 @@ Datadog.api is a Python client library for Datadog's `HTTP API <http://api.datad
     .. automethod:: flush
 
 
-.. module:: datadog
 .. data:: stats
 
     A global :class:`~datadog.stats.DogStatsApi` instance that is easily shared

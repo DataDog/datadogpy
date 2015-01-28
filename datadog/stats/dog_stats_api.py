@@ -136,11 +136,10 @@ class DogStatsApi(object):
               source_type_name=None, date_happened=None, priority=None,
               tags=None, hostname=None):
         """
-        Send an event. Attributes are the same as the Event API.
-            http://docs.datadoghq.com/api/
+        Send an event. Attributes are the same as the Event API. (http://docs.datadoghq.com/api/)
         >>> dog_stats_api.event('Man down!', 'This server needs assistance.')
-        >>> dog_stats_api.event('The web server restarted',
-                                'The web server is up again', alert_type='success')
+        >>> dog_stats_api.event('The web server restarted', \
+            'The web server is up again', alert_type='success')
         """
         if not self._disabled:
             self._event_aggregator.add_event(

@@ -6,7 +6,7 @@ import types
 
 import simplejson as json
 
-from datadog.util.compat import url_lib, is_p3k
+from datadog.util.compat import url_lib, is_p3k, iteritems
 from datadog.util.config import get_config, get_os, CfgNotFound
 
 VALID_HOSTNAME_RFC_1123_PATTERN = re.compile(r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$")  # noqa
@@ -206,7 +206,7 @@ class EC2(object):
             instance_object = connection.get_only_instances([EC2.metadata['instance-id']])[0]
 
             EC2_tags = [u"%s:%s" % (tag_key, tag_value) for tag_key, tag_value
-                        in instance_object.tags.iteritems()]
+                        in iteritems(instance_object.tags)]
 
         except Exception:
             log.exception("Problem retrieving custom EC2 tags")
