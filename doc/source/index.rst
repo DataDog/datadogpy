@@ -9,15 +9,6 @@ The :mod:`datadog` module provides :mod:`datadog.api` - a simple wrapper around 
 Installation
 ============
 
-The module can be downloaded from PyPI and installed in one step with
-easy_install:
-
-    >>> sudo easy_install
-
-Or with pip:
-
-    >>> sudo pip install
-
 To install from source, `download <https://github.com/DataDog/datadog.py>`_ a distribution and run:
 
    >>> sudo python setup.py install
