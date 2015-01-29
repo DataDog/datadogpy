@@ -4,9 +4,8 @@ The Datadog Python library
 
 Datadogpy is a collection of tools suitable for inclusion in existing Python projects or for development of standalone scripts. It provides an abstraction on top of Datadog's raw HTTP interface and agent's StatsD metrics aggregation server, to interact with Datadog and efficiently report events and metrics.
 
-- Library Documentation: http://datadog.github.io/datadogpy/
-- HTTP API Documentation: http://docs.datadoghq.com/api/
-- DataDogHQ: http://datadoghq.com
+- Library Documentation: http://datadogpy.readthedocs.org/en/latest/
+- DatadogHQ: http://datadoghq.com
 
 Installation
 ------------
