@@ -28,6 +28,11 @@ Datadog.api module
 ==================
 Datadog.api is a Python client library for Datadog's `HTTP API <http://api.datadoghq.com>`_.
 
+Datadog.api client requires to run :mod:`datadog` `initialize` method first.
+
+
+.. autofunction:: datadog.initialize
+
 .. autoclass:: datadog.api.Comment
     :members:
     :inherited-members:
@@ -80,6 +85,16 @@ Datadog.api is a Python client library for Datadog's `HTTP API <http://api.datad
     :members:
     :inherited-members:
 
+
+Datadog.stats module
+====================
+Datadog.stats is a tool for collecting application metrics without hindering performance.
+It collects metrics in the application thread with very little overhead and allows flushing
+metrics in process, in a thread or in a greenlet, depending on your application's needs.
+
+To run properly Datadog.stats client requires to run :mod:`datadog` `initialize` method first.
+
+.. autofunction:: datadog.initialize
 
 .. automodule:: datadog.stats.dog_stats_api
 

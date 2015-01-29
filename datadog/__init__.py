@@ -31,7 +31,7 @@ else:
 def initialize(api_key=None, app_key=None, host_name=None, api_host="https://app.datadoghq.com",
                proxies=None, **stats_params):
     """
-    Configure api and stats instances
+    Initialize and configure Datadog.api and Datadog.stats modules
 
     :param api_key: Datadog API key
     :type api_key: string
