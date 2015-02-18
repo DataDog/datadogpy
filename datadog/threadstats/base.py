@@ -80,7 +80,6 @@ class ThreadStats(object):
         self._is_auto_flushing = False
 
         # Create an aggregator
-        self._needs_flush = True
         self._metric_aggregator = MetricsAggregator(self.roll_up_interval)
         self._event_aggregator = EventsAggregator()
 
@@ -248,12 +247,10 @@ class ThreadStats(object):
         cases, it's probably best to flush in a thread or greenlet.
         """
         try:
-            if not self._needs_flush:
-                return False
             if self._is_flush_in_progress:
                 log.debug("A flush is already in progress. Skipping this one.")
                 return False
-            elif self._disabled:
+            if self._disabled:
                 log.info("Not flushing because we're disabled.")
                 return False
 
