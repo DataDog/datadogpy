@@ -197,8 +197,8 @@ class EC2(object):
 
         try:
             iam_role = url_lib.urlopen(EC2.URL + "/iam/security-credentials").read().strip()
-            iam_params = json.loads(url_lib.urlopen(EC2.URL + "/iam/security-credentials" + "/"
-                                    + unicode(iam_role)).read().strip())
+            iam_params = json.loads(url_lib.urlopen(EC2.URL + "/iam/security-credentials" + "/" +
+                                    unicode(iam_role)).read().strip())
             from boto.ec2.connection import EC2Connection
             connection = EC2Connection(aws_access_key_id=iam_params['AccessKeyId'],
                                        aws_secret_access_key=iam_params['SecretAccessKey'],

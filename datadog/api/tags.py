@@ -1,8 +1,3 @@
-__all__ = [
-    'Tag',
-]
-
-
 from datadog.api.base import CreateableAPIResource, UpdatableAPIResource,\
     DeletableAPIResource, GetableAPIResource, ListableAPIResource
 

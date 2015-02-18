@@ -1,7 +1,3 @@
-__all__ = [
-    'Event',
-]
-
 from datadog.util.compat import iteritems
 from datadog.api.base import GetableAPIResource, CreateableAPIResource, \
     SearchableAPIResource

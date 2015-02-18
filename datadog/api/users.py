@@ -1,6 +1,3 @@
-__all__ = [
-    'User',
-]
 from datadog.api.base import ActionAPIResource
 
 

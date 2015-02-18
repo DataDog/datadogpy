@@ -1,7 +1,3 @@
-__all__ = [
-    'Graph',
-]
-
 from datadog.util.compat import urlparse
 from datadog.api.base import CreateableAPIResource, ActionAPIResource
 

@@ -1,7 +1,3 @@
-__all__ = [
-    'Host',
-]
-
 from datadog.api.base import ActionAPIResource
 
 

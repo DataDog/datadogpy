@@ -1,6 +1,3 @@
-__all__ = [
-    'Downtime',
-]
 from datadog.api.base import GetableAPIResource, CreateableAPIResource,\
     UpdatableAPIResource, ListableAPIResource, DeletableAPIResource
 

@@ -1,6 +1,3 @@
-__all__ = [
-    'Metric',
-]
 import time
 
 from datadog.api.base import SendableAPIResource

@@ -1,7 +1,3 @@
-__all__ = [
-    'Screenboard',
-]
-
 from datadog.api.base import GetableAPIResource, CreateableAPIResource, \
     UpdatableAPIResource, DeletableAPIResource, ActionAPIResource, ListableAPIResource
 

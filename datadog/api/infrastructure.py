@@ -1,7 +1,3 @@
-__all__ = [
-    'Infrastructure',
-]
-
 from datadog.api.base import SearchableAPIResource
 
 
