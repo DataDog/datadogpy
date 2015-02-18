@@ -2,6 +2,7 @@ __all__ = [
     'Event',
 ]
 
+from datadog.util.compat import iteritems
 from datadog.api.base import GetableAPIResource, CreateableAPIResource, \
     SearchableAPIResource
 
@@ -14,6 +15,7 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
     _class_url = '/events'
     _plural_class_name = 'events'
     _json_name = 'event'
+    _timestamp_keys = set(['start', 'end'])
 
     @classmethod
     def create(cls, **params):
@@ -74,4 +76,12 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
         >>> api.Event.query(start=1313769783, end=1419436870, priority="normal", \
             tags=["application:web"])
         """
+        def timestamp_to_integer(k, v):
+            if k in cls._timestamp_keys:
+                return int(v)
+            else:
+                return v
+
+        params = dict((k, timestamp_to_integer(k, v)) for k, v in iteritems(params))
+
         return super(Event, cls)._search(**params)
