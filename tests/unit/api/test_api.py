@@ -8,7 +8,7 @@ import mock
 from nose.tools import assert_raises, assert_true, assert_false
 
 # datadog
-from datadog import initialize, api, stats
+from datadog import initialize, api
 from datadog.util.compat import is_p3k
 from datadog.api.exceptions import ApiNotInitialized
 from tests.unit.api.helper import (
@@ -31,20 +31,20 @@ class TestInitialization(DatadogAPINoInitialization):
 
     def test_no_initialization_fails(self):
         assert_raises(ApiNotInitialized, MyCreatable.create)
-        assert_true(stats._disabled)
+        # assert_true(stats._disabled)
 
         # No API key => only stats in statsd mode should work
         initialize()
-        assert_false(stats._disabled)
-        assert_false(stats._needs_flush)
+        # assert_false(stats._disabled)
+        # assert_false(stats._needs_flush)
         assert_raises(ApiNotInitialized, MyCreatable.create)
 
         # Make sure stats in HTTP API mode raises too
-        initialize(statsd=False, flush_in_thread=False)
-        stats.increment("IWillRaiseAnException")
-        assert_raises(ApiNotInitialized, stats.flush, int(time.time()) + 60)
-        stats.event("IAmATitle", "IWillRaiseAnException")
-        assert_raises(ApiNotInitialized, stats.flush, int(time.time()) + 60)
+        # initialize(flush_in_thread=False)
+        # stats.increment("IWillRaiseAnException")
+        # assert_raises(ApiNotInitialized, stats.flush, int(time.time()) + 60)
+        # stats.event("IAmATitle", "IWillRaiseAnException")
+        # assert_raises(ApiNotInitialized, stats.flush, int(time.time()) + 60)
 
         # Finally, initialize with an API key
         initialize(api_key=API_KEY, api_host=API_HOST)

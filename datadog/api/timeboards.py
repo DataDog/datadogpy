@@ -2,7 +2,7 @@ __all__ = [
     'Timeboard',
 ]
 
-from datadog.api.core import GetableAPIResource, CreateableAPIResource, \
+from datadog.api.base import GetableAPIResource, CreateableAPIResource, \
     UpdatableAPIResource, ListableAPIResource, DeletableAPIResource
 
 

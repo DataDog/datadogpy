@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-
 """
-Tests for the DogStatsAPI class, using statsd mode
+Tests for dogstatsd.py
 """
 
 from collections import deque
@@ -11,8 +10,8 @@ import time
 
 from nose import tools as t
 
-
-from datadog.stats.dog_stats_api import DogStatsApi
+from datadog.statsd.base import DogStatsd
+from datadog import initialize, statsd
 
 
 class FakeSocket(object):
@@ -20,10 +19,6 @@ class FakeSocket(object):
 
     def __init__(self):
         self.payloads = deque()
-
-    def sendto(self, payload, address):
-        assert type(payload) == six.binary_type
-        self.payloads.append(payload)
 
     def send(self, payload):
         assert type(payload) == six.binary_type
@@ -48,13 +43,22 @@ class BrokenSocket(FakeSocket):
 class TestDogStatsd(object):
 
     def setUp(self):
-        self.statsd = DogStatsApi()
-        self.statsd.configure(statsd=True)
-        self.statsd._metric_aggregator.socket = FakeSocket()
-        self.statsd._metric_aggregator.socket_sendto = self.statsd._metric_aggregator.socket.sendto
+        self.statsd = DogStatsd()
+        self.statsd.socket = FakeSocket()
 
     def recv(self):
-        return self.statsd._metric_aggregator.socket.recv()
+        return self.statsd.socket.recv()
+
+    def test_initialization(self):
+        options = {
+            'statsd_host': "myhost",
+            'statsd_port': "1234"
+        }
+
+        # initialize method should trigger a statsd socket creation
+        # which fails with:
+        # gaierror: [Errno 8] nodename nor servname provided, or not known
+        t.assert_raises(socket.gaierror, initialize, **options)
 
     def test_set(self):
         self.statsd.set('set', 123)
@@ -98,7 +102,7 @@ class TestDogStatsd(object):
         assert not self.recv()
         for i in range(10000):
             self.statsd.increment('sampled_counter', sample_rate=0.3)
-        self.assert_almost_equal(3000, len(self.statsd._metric_aggregator.socket.payloads), 150)
+        self.assert_almost_equal(3000, len(self.statsd.socket.payloads), 150)
         t.assert_equal('sampled_counter:1|c|@0.3', self.recv())
 
     def test_tags_and_samples(self):
@@ -118,9 +122,19 @@ class TestDogStatsd(object):
         self.statsd.event('Title', u'L1\nL2', priority='low', date_happened=1375296969)
         t.assert_equal(u'_e{5,6}:Title|L1\\nL2|d:1375296969|p:low', self.recv())
 
-        self.statsd.event('Title', u'♬ †øU †øU ¥ºu T0µ ♪', aggregation_key='key',
-                          tags=['t1', 't2:v2'])
+        self.statsd.event('Title', u'♬ †øU †øU ¥ºu T0µ ♪',
+                          aggregation_key='key', tags=['t1', 't2:v2'])
         t.assert_equal(u'_e{5,19}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2', self.recv())
+
+    def test_service_check(self):
+        now = int(time.time())
+        self.statsd.service_check(
+            'my_check.name', self.statsd.WARNING,
+            tags=['key1:val1', 'key2:val2'], timestamp=now,
+            hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪")
+        t.assert_equal(
+            u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}'
+            .format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\: T0µ ♪"), self.recv())
 
     @staticmethod
     def assert_almost_equal(a, b, delta):
@@ -153,3 +167,41 @@ class TestDogStatsd(object):
         t.assert_equal('ms', type_)
         t.assert_equal('timed.test', name)
         self.assert_almost_equal(0.5, float(value), 0.1)
+
+    def test_batched(self):
+        self.statsd.open_buffer()
+        self.statsd.gauge('page.views', 123)
+        self.statsd.timing('timer', 123)
+        self.statsd.close_buffer()
+
+        t.assert_equal('page.views:123|g\ntimer:123|ms', self.recv())
+
+    def test_context_manager(self):
+        fake_socket = FakeSocket()
+        with DogStatsd() as statsd:
+            statsd.socket = fake_socket
+            statsd.gauge('page.views', 123)
+            statsd.timing('timer', 123)
+
+        t.assert_equal('page.views:123|g\ntimer:123|ms', fake_socket.recv())
+
+    def test_batched_buffer_autoflush(self):
+        fake_socket = FakeSocket()
+        with DogStatsd() as statsd:
+            statsd.socket = fake_socket
+            for i in range(51):
+                statsd.increment('mycounter')
+            t.assert_equal('\n'.join(['mycounter:1|c' for i in range(50)]), fake_socket.recv())
+
+        t.assert_equal('mycounter:1|c', fake_socket.recv())
+
+    def test_module_level_instance(self):
+        t.assert_true(isinstance(statsd, DogStatsd))
+
+
+if __name__ == '__main__':
+    statsd = statsd
+    while True:
+        statsd.gauge('test.gauge', 1)
+        statsd.increment('test.count', 2)
+        time.sleep(0.05)

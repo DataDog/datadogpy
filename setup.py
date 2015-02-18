@@ -14,13 +14,14 @@ if [sys.version_info[0], sys.version_info[1]] < [2, 7]:
 
 setup(
     name="datadogpy",
-    version="0.1.dev",
+    version="0.2.dev",
     install_requires=install_reqs,
     tests_require=["tox"],
     packages=[
         'datadog',
         'datadog.api',
-        'datadog.stats',
+        'datadog.statsd',
+        'datadog.threadstats',
         'datadog.util',
         'datadog.dogshell'
     ],

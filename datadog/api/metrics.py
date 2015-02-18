@@ -3,7 +3,7 @@ __all__ = [
 ]
 import time
 
-from datadog.api.core import SendableAPIResource
+from datadog.api.base import SendableAPIResource
 
 
 class Metric(SendableAPIResource):

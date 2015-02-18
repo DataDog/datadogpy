@@ -2,7 +2,7 @@ __all__ = [
     'Comment',
 ]
 
-from datadog.api.core import CreateableAPIResource, UpdatableAPIResource, \
+from datadog.api.base import CreateableAPIResource, UpdatableAPIResource, \
     DeletableAPIResource
 
 

@@ -27,7 +27,7 @@ options = {
 
 initialize(**options)
 
-# Use Datadog HTTP API client
+# Use Datadog REST API client
 from datadog import api
 
 title = "Something big happened!"
@@ -37,11 +37,18 @@ tags = ['version:1', 'application:web']
 api.Event.create(title=title, text=text, tags=tags)
 
 
-# Use Stats to efficiently collect metrics
-from datadog import stats
+# Use Statsd, a Python client for DogStatsd
+from datadog import statsd
 
-stats.increment('whatever')
-stats.gauge('foo')
+statsd.increment('whatever')
+statsd.gauge('foo')
+
+# Or ThreadStats, an alternative tool to collect and flush metrics, using Datadog REST API
+from datadog import ThreadStats
+stats = ThreadStats()
+stats.start()
+stats.increment('home.page.hits')
+
 ```
 
 

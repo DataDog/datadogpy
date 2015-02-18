@@ -1,5 +1,5 @@
 """
-DogStatsApi is a tool for collecting application metrics without hindering
+ThreadStats is a tool for collecting application metrics without hindering
 performance. It collects metrics in the application thread with very little overhead
 and allows flushing metrics in process, in a thread or in a greenlet, depending
 on your application's needs.
@@ -11,82 +11,67 @@ from contextlib import contextmanager
 from time import time
 
 from datadog.api.exceptions import ApiNotInitialized
-from datadog.stats.constants import MetricType
-from datadog.stats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing, Set
-from datadog.stats.events import EventsAggregator
-from datadog.stats.statsd import StatsdAggregator
-from datadog.stats.reporters import HttpReporter
+from datadog.threadstats.constants import MetricType
+from datadog.threadstats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing
+from datadog.threadstats.events import EventsAggregator
+from datadog.threadstats.reporters import HttpReporter
 
 # Loggers
 log = logging.getLogger('dd.datadogpy')
 
 
-class DogStatsApi(object):
+class ThreadStats(object):
 
     def __init__(self):
         """ Initialize a dogstats object. """
-        # Don't collect until configure is called.
+        # Don't collect until start is called.
         self._disabled = True
 
-    def configure(self, flush_interval=10, roll_up_interval=10, device=None,
-                  flush_in_thread=True, flush_in_greenlet=False, disabled=False, statsd=True,
-                  statsd_host='localhost', statsd_port=8125):
+    def start(self, flush_interval=10, roll_up_interval=10, device=None,
+              flush_in_thread=True, flush_in_greenlet=False, disabled=False):
         """
-        Configure the DogStatsApi instance on how to flush metrics.
-        Two modes are available: using statsd (recommended but require
-        Datadog agent or any statsd daemon) or using the Datadog HTTP API.
-        By default, metrics will be flushed with statsd . ::
+        Start the ThreadStats instance with the specified metric flushing method and preferences.
 
-        >>> stats.configure(statsd_host='localhost', statsd_port=8125)
+        By default, metrics will be flushed in a thread.
 
-        If you're not running Datadog agent, and want to flush metrics using
-        Datadog HTTP API, set ``statsd`` to False. By default, metrics will be
-        flushed in a thread. Please remember to set your API key before,
-        using datadog module ``initialize`` method.
-
-        >>> stats.configure(statsd=False, flush_in_thread=True)
+        >>> stats.start()
 
         If you're running a gevent server and want to flush metrics in a
         greenlet, set *flush_in_greenlet* to True. Be sure to import and monkey
         patch gevent before starting dog_stats_api. ::
 
         >>> from gevent import monkey; monkey.patch_all()
-        >>> stats.configure(statsd=False, flush_in_greelet=True)
+        >>> stats.start(flush_in_greenlet=True)
 
         If you'd like to flush metrics in process, set *flush_in_thread*
         to False, though you'll have to call ``flush`` manually to post metrics
         to the server. ::
 
-        >>> stats.configure(statsd=False, flush_in_thread=True)
+        >>> stats.start(flush_in_thread=False)
 
         If for whatever reason, you need to disable metrics collection in a
         hurry, set ``disabled`` to True and metrics won't be collected or flushed.
 
-        >>> stats.configure(disabled=True)
+        >>> stats.start(disabled=True)
 
-        *Note:* ``configure`` is automatically called from datadog module
-        ``initialize`` method. General use-case` is to redefine stats parameters
-        when already initialized.
+        *Note:* Please remember to set your API key before,
+            using datadog module ``initialize`` method.
 
-        >>> from datadog import initialize, stats
-        >>> initialize(api_key='my_api_key', statsd=False, flush_in_thread=True)
+        >>> from datadog import initialize, ThreadStats
+        >>> initialize(api_key='my_api_key')
+        >>> stats = ThreadStats()
+        >>> stats.start()
         >>> stats.increment('home.page.hits')
 
         :param flush_interval: The number of seconds to wait between flushes.
         :type flush_interval: int
-        :param flush_in_thread: True if you'd like to spawn a thread to flush metrics. \
-        It will run every `flush_interval` seconds.
+        :param flush_in_thread: True if you'd like to spawn a thread to flush metrics.
+            It will run every `flush_interval` seconds.
         :type flush_in_thread: bool
         :param flush_in_greenlet: Set to true if you'd like to flush in a gevent greenlet.
         :type flush_in_greenlet: bool
         :param disabled: Disable metrics collection
         :type disabled: bool
-        :param statsd: Flush metrics using statsd
-        :type statsd: bool
-        :param statsd_host: Host of DogStatsd server or statsd daemon
-        :type statsd_host: address
-        :param statsd_port: Port of DogStatsd server or statsd daemon
-        :type statsd_port: port
         """
         self.flush_interval = flush_interval
         self.roll_up_interval = roll_up_interval
@@ -94,35 +79,25 @@ class DogStatsApi(object):
         self._disabled = disabled
         self._is_auto_flushing = False
 
-        if statsd:
-            # If we're configured to send to a statsd instance, use an aggregator
-            # which forwards packets over UDP.
-            log.info("Initializing dog api to use statsd: %s, %s" % (statsd_host, statsd_port))
-            self._needs_flush = False
-            self._metric_aggregator = StatsdAggregator(statsd_host, statsd_port)
-            # StatsdAggregator aggregates both metrics and events
-            self._event_aggregator = self._metric_aggregator
+        # Create an aggregator
+        self._needs_flush = True
+        self._metric_aggregator = MetricsAggregator(self.roll_up_interval)
+        self._event_aggregator = EventsAggregator()
+
+        # The reporter is responsible for sending metrics off to their final destination.
+        # It's abstracted to support easy unit testing and in the near future, forwarding
+        # to the datadog agent.
+        self.reporter = HttpReporter()
+
+        self._is_flush_in_progress = False
+        self.flush_count = 0
+        if self._disabled:
+            log.info("ThreadStats instance is disabled. No metrics will flush.")
         else:
-            # Otherwise create an aggreagtor that while aggregator metrics
-            # in process.
-            self._needs_flush = True
-            self._metric_aggregator = MetricsAggregator(self.roll_up_interval)
-            self._event_aggregator = EventsAggregator()
-
-            # The reporter is responsible for sending metrics off to their final destination.
-            # It's abstracted to support easy unit testing and in the near future, forwarding
-            # to the datadog agent.
-            self.reporter = HttpReporter()
-
-            self._is_flush_in_progress = False
-            self.flush_count = 0
-            if self._disabled:
-                log.info("datadog stats is disabled. No metrics will flush.")
-            else:
-                if flush_in_greenlet:
-                    self._start_flush_greenlet()
-                elif flush_in_thread:
-                    self._start_flush_thread()
+            if flush_in_greenlet:
+                self._start_flush_greenlet()
+            elif flush_in_thread:
+                self._start_flush_thread()
 
     def stop(self):
         if not self._is_auto_flushing:
@@ -199,16 +174,6 @@ class DogStatsApi(object):
         if not self._disabled:
             self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
                                               Histogram, sample_rate=sample_rate, host=host)
-
-    def set(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
-        """
-        Sample a set value.
-
-        >>> dog_stats_api.set('visitors.uniques', 999)
-        """
-        if not self._disabled:
-            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
-                                              Set, sample_rate=sample_rate, host=host)
 
     def timing(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
         """
@@ -348,7 +313,7 @@ class DogStatsApi(object):
 
     def _start_flush_thread(self):
         """ Start a thread to flush metrics. """
-        from datadog.stats.periodic_timer import PeriodicTimer
+        from datadog.threadstats.periodic_timer import PeriodicTimer
         if self._is_auto_flushing:
             log.info("Autoflushing already started.")
             return
@@ -392,5 +357,3 @@ class DogStatsApi(object):
 
         log.info("Starting flush greenlet with interval %s." % self.flush_interval)
         gevent.spawn(flush)
-
-stats = DogStatsApi()

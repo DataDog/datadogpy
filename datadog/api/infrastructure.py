@@ -2,7 +2,7 @@ __all__ = [
     'Infrastructure',
 ]
 
-from datadog.api.core import SearchableAPIResource
+from datadog.api.base import SearchableAPIResource
 
 
 class Infrastructure(SearchableAPIResource):
