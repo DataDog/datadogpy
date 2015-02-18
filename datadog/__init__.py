@@ -2,7 +2,7 @@
 Datadogpy is a collection of Datadog Python tools.
 It contains:
 * datadog.api: a Python client for Datadog REST API.
-* datadog.statsd: a DogStatsd Python client.
+* datadog.dogstatsd: a DogStatsd Python client.
 * datadog.threadstats: an alternative tool to DogStatsd client for collecting application metrics
 without hindering performance.
 * datadog.dogshell: a command-line tool, wrapping datadog.api, to interact with Datadog REST API.
@@ -11,7 +11,7 @@ from pkg_resources import get_distribution, DistributionNotFound
 import os.path
 
 from datadog import api
-from datadog.statsd import statsd
+from datadog.dogstatsd import statsd
 from datadog.threadstats import ThreadStats  # noqa
 from datadog.util.hostname import get_hostname
 

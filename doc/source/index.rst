@@ -4,7 +4,7 @@
 
 .. module:: datadog
 
-The :mod:`datadog` module provides :mod:`datadog.api` - a simple wrapper around Datadog's HTTP API - and :mod:`datadog.stats` - a tool for collecting metrics in high performance applications.
+The :mod:`datadog` module provides :mod:`datadog.api` - a simple wrapper around Datadog's HTTP API - :mod:`datadog.threadstats` - a tool for collecting metrics in high performance applications - and :mod:`datadog.dogstatsd` a DogStatsd Python client.
 
 Installation
 ============
@@ -77,76 +77,39 @@ Datadog.api client requires to run :mod:`datadog` `initialize` method first.
     :inherited-members:
 
 
-Datadog.stats module
-====================
-Datadog.stats is a tool for collecting application metrics without hindering performance.
+Datadog.threadstats module
+==========================
+Datadog.threadstats is a tool for collecting application metrics without hindering performance.
 It collects metrics in the application thread with very little overhead and allows flushing
 metrics in process, in a thread or in a greenlet, depending on your application's needs.
 
-To run properly Datadog.stats client requires to run :mod:`datadog` `initialize` method first.
+To run properly Datadog.threadstats requires to run :mod:`datadog` `initialize` method first.
 
 .. autofunction:: datadog.initialize
 
-.. automodule:: datadog.stats.dog_stats_api
+.. autoclass::  datadog.threadstats.base.ThreadStats
+    :members:
+    :inherited-members:
 
-.. autoclass::  datadog.stats.dog_stats_api.DogStatsApi
+Datadog.dogstatsd module
+==========================
 
-    .. automethod:: configure
-
-    .. automethod:: event
-
-    .. automethod:: gauge
-
-    .. automethod:: increment
-
-    .. automethod:: decrement
-
-    .. automethod:: set
-
-    .. automethod:: histogram
-
-    .. automethod:: timed
-
-    .. automethod:: flush
+.. autoclass::  datadog.dogstatsd.base.DogStatsd
+    :members:
+    :inherited-members:
 
 
-.. data:: stats
+.. data:: statsd
 
-    A global :class:`~datadog.stats.DogStatsApi` instance that is easily shared
+    A global :class:`~datadog.dogstatsd.base.DogStatsd` instance that is easily shared
     across an application's modules. Initialize this once in your application's
     set-up code and then other modules can import and use it without further
     configuration.
 
-    >>> from datadog import initialize, stats
-    >>> initialize(api_key='my_api_key')
-    >>> stats.increment('home.page.hits')
+    >>> from datadog import initialize, statsd
+    >>> initialize(statsd_host='localhost', statsd_port=8125)
+    >>> statsd.increment('home.page.hits')
 
-
-Here's an example that put's it all together. ::
-
-    # Import the dog stats instance.
-    from datadog import initialize, stats
-
-    # Begin flushing asynchronously with the given api key. After this is done
-    # once in your application, other modules can import and use stats
-    # without any further configuration.
-    initialize(api_key='my_api_key', statsd=False)
-
-
-    @stats.timed('home_page.render.time')
-    def render_home_page(user_id):
-        """ Render the home page for the given user. """
-
-        # Fetch the user from the cache or the database
-        # and record metrics on our cache hits and misses.
-        user = user_cache.get(user_id)
-        if user:
-            stats.increment('user_cache.hit')
-        else:
-            stats.increment('user_cache.miss')
-            user = user_database.get(user_id)
-
-        return render('home.html', user_id)
 
 
 Source

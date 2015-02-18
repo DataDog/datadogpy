@@ -10,7 +10,7 @@ import time
 
 from nose import tools as t
 
-from datadog.statsd.base import DogStatsd
+from datadog.dogstatsd.base import DogStatsd
 from datadog import initialize, statsd
 
 

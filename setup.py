@@ -20,7 +20,7 @@ setup(
     packages=[
         'datadog',
         'datadog.api',
-        'datadog.statsd',
+        'datadog.dogstatsd',
         'datadog.threadstats',
         'datadog.util',
         'datadog.dogshell'
