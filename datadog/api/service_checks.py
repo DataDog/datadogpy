@@ -2,7 +2,7 @@ __all__ = [
     'ServiceCheck',
 ]
 
-from datadog.api.core import ActionAPIResource
+from datadog.api.base import ActionAPIResource
 from datadog.api.exceptions import ApiError
 from datadog.api.constants import CheckStatus
 

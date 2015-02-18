@@ -3,7 +3,7 @@ __all__ = [
 ]
 
 from datadog.util.compat import urlparse
-from datadog.api.core import CreateableAPIResource, ActionAPIResource
+from datadog.api.base import CreateableAPIResource, ActionAPIResource
 
 
 class Graph(CreateableAPIResource, ActionAPIResource):

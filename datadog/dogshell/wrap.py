@@ -143,6 +143,8 @@ def main():
         event_body.extend([u'notifications: %s\n' % (notifications)])
 
     event_body.append(u'%%%\n')
+    # ensure all strings are parsed as utf-8
+    event_body = [x.decode('utf-8') for x in event_body]
     event_body = u''.join(event_body)
     event = {
         'alert_type': alert_type,

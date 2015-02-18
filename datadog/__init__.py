@@ -1,16 +1,18 @@
 """
-Datadog.py is a collection of Datadog Python tools.
+Datadogpy is a collection of Datadog Python tools.
 It contains:
 * datadog.api: a Python client for Datadog REST API.
-* datadog.stats: a tool to collect application metrics without hindering
-performance.
-* datadog.dogshell: a wrapper around datadog.api
+* datadog.statsd: a DogStatsd Python client.
+* datadog.threadstats: an alternative tool to DogStatsd client for collecting application metrics
+without hindering performance.
+* datadog.dogshell: a command-line tool, wrapping datadog.api, to interact with Datadog REST API.
 """
 from pkg_resources import get_distribution, DistributionNotFound
 import os.path
 
 from datadog import api
-from datadog.stats import stats
+from datadog.statsd import statsd
+from datadog.threadstats import ThreadStats  # noqa
 from datadog.util.hostname import get_hostname
 
 
@@ -29,9 +31,9 @@ else:
 
 
 def initialize(api_key=None, app_key=None, host_name=None, api_host="https://app.datadoghq.com",
-               proxies=None, **stats_params):
+               proxies=None, statsd_host='localhost', statsd_port=8125):
     """
-    Initialize and configure Datadog.api and Datadog.stats modules
+    Initialize and configure Datadog.api and Datadog.statsd modules
 
     :param api_key: Datadog API key
     :type api_key: string
@@ -45,9 +47,11 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host="https://app
     :param api_host: Datadog API endpoint
     :type api_host: url
 
-    :param stats_params: DogStatsApi ``configure`` parameters
-    :type stats_params: DogStatsApi parameters dictionary
+    :param statsd_host: Host of DogStatsd server or statsd daemon
+    :type statsd_host: address
 
+    :param statsd_port: Port of DogStatsd server or statsd daemon
+    :type statsd_port: port
     """
     # Configure api
     api._api_key = api_key
@@ -57,4 +61,4 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host="https://app
     api._proxies = proxies
 
     # Configure stats
-    stats.configure(**stats_params)
+    statsd.connect(statsd_host, statsd_port)

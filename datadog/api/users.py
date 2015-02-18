@@ -1,7 +1,7 @@
 __all__ = [
     'User',
 ]
-from datadog.api.core import ActionAPIResource
+from datadog.api.base import ActionAPIResource
 
 
 class User(ActionAPIResource):

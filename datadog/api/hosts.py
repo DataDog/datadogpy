@@ -2,7 +2,7 @@ __all__ = [
     'Host',
 ]
 
-from datadog.api.core import ActionAPIResource
+from datadog.api.base import ActionAPIResource
 
 
 class Host(ActionAPIResource):

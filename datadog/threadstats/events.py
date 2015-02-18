@@ -1,3 +1,7 @@
+"""
+Event aggregator class.
+"""
+
 from datadog.util.compat import iteritems
 
 

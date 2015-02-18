@@ -5,10 +5,6 @@ from collections import defaultdict
 import random
 
 
-class NotSupportedByStatsAPI(Exception):
-    "Metric type is not supported in Datadog API mode. Switch to statsd mode"
-
-
 class Metric(object):
     """
     A base metric class that accepts points, slices them into time intervals
@@ -115,16 +111,6 @@ class Timing(Histogram):
     """
 
     stats_tag = 'ms'
-
-
-class Set(Metric):
-    """ A Set metric. """
-
-    stats_tag = 's'
-
-    def __init__(self, name, tags, host):
-        raise NotSupportedByStatsAPI("Set metric type is not supported in API mode."
-                                     "Please switch to statsd.")
 
 
 class MetricsAggregator(object):

@@ -2,8 +2,8 @@
 import unittest
 
 # datadog
-from datadog import initialize, api, stats
-from datadog.api.core import CreateableAPIResource, UpdatableAPIResource, DeletableAPIResource,\
+from datadog import initialize, api
+from datadog.api.base import CreateableAPIResource, UpdatableAPIResource, DeletableAPIResource,\
     GetableAPIResource, ListableAPIResource, ActionAPIResource
 from datadog.util.compat import is_p3k
 
@@ -103,8 +103,6 @@ class DatadogAPINoInitialization(DatadogAPITestCase):
         api._application_key = None
         api._api_host = None
         api._host_name = None
-
-        stats._disabled = True
 
 
 class DatadogAPIWithInitialization(DatadogAPITestCase):
