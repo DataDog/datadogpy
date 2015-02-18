@@ -54,6 +54,11 @@ stats.increment('home.page.hits')
 
 Change Log
 ----------
-- 0.1 RC
+- 0.2.dev
+    - Release date: 2015.02.17
+    - Split DogStats to DogStatsd and ThreadStats
+    - Merge last changes from Dogapi and statsd repositories
+    - A lot of renaming
+- 0.1.dev
     - Release date: 2015.01.27
     - Datadogpy beta release

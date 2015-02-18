@@ -38,7 +38,7 @@ class ThreadStats(object):
 
         If you're running a gevent server and want to flush metrics in a
         greenlet, set *flush_in_greenlet* to True. Be sure to import and monkey
-        patch gevent before starting dog_stats_api. ::
+        patch gevent before starting ThreadStats. ::
 
         >>> from gevent import monkey; monkey.patch_all()
         >>> stats.start(flush_in_greenlet=True)
@@ -112,8 +112,8 @@ class ThreadStats(object):
               tags=None, hostname=None):
         """
         Send an event. Attributes are the same as the Event API. (http://docs.datadoghq.com/api/)
-        >>> dog_stats_api.event('Man down!', 'This server needs assistance.')
-        >>> dog_stats_api.event('The web server restarted', \
+        >>> stats.event('Man down!', 'This server needs assistance.')
+        >>> stats.event('The web server restarted', \
             'The web server is up again', alert_type='success')
         """
         if not self._disabled:
@@ -130,8 +130,8 @@ class ThreadStats(object):
         such as total hard disk space, process uptime, total number of active
         users, or number of rows in a database table.
 
-        >>> dog_stats_api.gauge('process.uptime', time.time() - process_start_time)
-        >>> dog_stats_api.gauge('cache.bytes.free', cache.get_free_bytes(), tags=['version:1.0'])
+        >>> stats.gauge('process.uptime', time.time() - process_start_time)
+        >>> stats.gauge('cache.bytes.free', cache.get_free_bytes(), tags=['version:1.0'])
         """
         if not self._disabled:
             self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value, Gauge,
@@ -143,8 +143,8 @@ class ThreadStats(object):
         ``tags`` to associate with the metric. This is useful for counting things
         such as incrementing a counter each time a page is requested.
 
-        >>> dog_stats_api.increment('home.page.hits')
-        >>> dog_stats_api.increment('bytes.processed', file.size())
+        >>> stats.increment('home.page.hits')
+        >>> stats.increment('bytes.processed', file.size())
         """
         if not self._disabled:
             self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
@@ -155,8 +155,8 @@ class ThreadStats(object):
         Decrement a counter, optionally setting a value, tags and a sample
         rate.
 
-        >>> dog_stats_api.decrement('files.remaining')
-        >>> dog_stats_api.decrement('active.connections', 2)
+        >>> stats.decrement('files.remaining')
+        >>> stats.decrement('active.connections', 2)
         """
         if not self._disabled:
             self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), -value,
@@ -169,7 +169,7 @@ class ThreadStats(object):
         maximum, average, count and the 75th, 85th, 95th and 99th percentiles.
         Optionally, specify a list of ``tags`` to associate with the metric.
 
-        >>> dog_stats_api.histogram('uploaded_file.size', uploaded_file.size())
+        >>> stats.histogram('uploaded_file.size', uploaded_file.size())
         """
         if not self._disabled:
             self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
@@ -179,7 +179,7 @@ class ThreadStats(object):
         """
         Record a timing, optionally setting tags and a sample rate.
 
-        >>> dog_stats_api.timing("query.response.time", 1234)
+        >>> stats.timing("query.response.time", 1234)
         """
         if not self._disabled:
             self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value, Timing,
@@ -193,7 +193,7 @@ class ThreadStats(object):
         ::
 
             def get_user(user_id):
-                with dog_stats_api.timer('user.query.time'):
+                with stats.timer('user.query.time'):
                     # Do what you need to ...
                     pass
 
@@ -204,7 +204,7 @@ class ThreadStats(object):
                     # Do what you need to ...
                     pass
                 finally:
-                    dog_stats_api.histogram('user.query.time', time.time() - start)
+                    stats.histogram('user.query.time', time.time() - start)
         """
         start = time()
         try:
@@ -220,7 +220,7 @@ class ThreadStats(object):
         Optionally specify a list of tags to associate with the metric.
         ::
 
-            @dog_stats_api.timed('user.query.time')
+            @stats.timed('user.query.time')
             def get_user(user_id):
                 # Do what you need to ...
                 pass
@@ -230,7 +230,7 @@ class ThreadStats(object):
             try:
                 get_user(user_id)
             finally:
-                dog_stats_api.histogram('user.query.time', time.time() - start)
+                stats.histogram('user.query.time', time.time() - start)
         """
         def wrapper(func):
             @wraps(func)
