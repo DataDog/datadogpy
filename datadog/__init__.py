@@ -31,7 +31,7 @@ else:
 
 
 def initialize(api_key=None, app_key=None, host_name=None, api_host="https://app.datadoghq.com",
-               proxies=None, statsd_host='localhost', statsd_port=8125):
+               proxies=None, statsd_host=None, statsd_port=None):
     """
     Initialize and configure Datadog.api and Datadog.statsd modules
 
@@ -60,5 +60,7 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host="https://app
     api._api_host = api_host
     api._proxies = proxies
 
-    # Configure stats
-    statsd.connect(statsd_host, statsd_port)
+    # Given statsd_host and statsd_port, overrides statsd instance
+    if statsd_host and statsd_port:
+        statsd.host = statsd_host
+        statsd.port = int(statsd_port)

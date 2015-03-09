@@ -52,13 +52,14 @@ class TestDogStatsd(object):
     def test_initialization(self):
         options = {
             'statsd_host': "myhost",
-            'statsd_port': "1234"
+            'statsd_port': 1234
         }
 
-        # initialize method should trigger a statsd socket creation
-        # which fails with:
-        # gaierror: [Errno 8] nodename nor servname provided, or not known
-        t.assert_raises(socket.gaierror, initialize, **options)
+        t.assert_equal(statsd.host, "localhost")
+        t.assert_equal(statsd.port, 8125)
+        initialize(**options)
+        t.assert_equal(statsd.host, "myhost")
+        t.assert_equal(statsd.port, 1234)
 
     def test_set(self):
         self.statsd.set('set', 123)
@@ -197,6 +198,24 @@ class TestDogStatsd(object):
 
     def test_module_level_instance(self):
         t.assert_true(isinstance(statsd, DogStatsd))
+
+    def test_instantiating_does_not_connect(self):
+        dogpound = DogStatsd()
+        t.assert_equal(None, dogpound.socket)
+
+    def test_accessing_socket_opens_socket(self):
+        dogpound = DogStatsd()
+        try:
+            t.assert_not_equal(None, dogpound.get_socket())
+        finally:
+            dogpound.socket.close()
+
+    def test_accessing_socket_multiple_times_returns_same_socket(self):
+        dogpound = DogStatsd()
+        fresh_socket = FakeSocket()
+        dogpound.socket = fresh_socket
+        t.assert_equal(fresh_socket, dogpound.get_socket())
+        t.assert_not_equal(FakeSocket(), dogpound.get_socket())
 
 
 if __name__ == '__main__':

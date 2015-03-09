@@ -35,4 +35,5 @@ setup(
             'dogwrap = datadog.dogshell.wrap:main',
         ],
     },
+    test_suite = "nose.collector"
 )
