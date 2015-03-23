@@ -5,13 +5,13 @@ import time
 import unittest
 
 # 3p
-import simplejson as json
 from nose.plugins.attrib import attr
 from nose.tools import assert_raises
 from nose.tools import assert_equal as eq
 from nose.tools import assert_true as ok
 
 # datadog
+import datadog.util.compat.json as json
 from datadog import initialize
 from datadog import api as dog
 from datadog.api.exceptions import ApiError

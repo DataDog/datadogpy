@@ -5,12 +5,11 @@ import unittest
 from datadog import initialize, api
 from datadog.api.base import CreateableAPIResource, UpdatableAPIResource, DeletableAPIResource,\
     GetableAPIResource, ListableAPIResource, ActionAPIResource
-from datadog.util.compat import is_p3k
+from datadog.util.compat import is_p3k, json
 
 # 3p
 import requests
 from mock import patch, Mock
-import simplejson as json
 
 API_KEY = "apikey"
 APP_KEY = "applicationkey"
