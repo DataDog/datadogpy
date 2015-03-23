@@ -59,6 +59,9 @@ stats.increment('home.page.hits')
 
 Change Log
 ----------
+- 0.1.2
+    - Release date: 2015.03.23
+    - Fix a typo that was causing an initialization issue with `datadog.dogshell`
 - 0.1
     - Release date: 2015.03.10
     - First release

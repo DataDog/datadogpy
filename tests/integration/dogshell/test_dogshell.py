@@ -104,7 +104,8 @@ class TestDogshell(unittest.TestCase):
         event_id = None
 
         def match_permalink(out):
-            match = re.match(r'.*/event/jump_to\?event_id=([0-9]*)', out, re.DOTALL)
+            match = re.match(r'.*/event/event\?id=([0-9]*)', out, re.DOTALL) or \
+                re.match(r'.*/event/jump_to\?event_id=([0-9]*)', out, re.DOTALL)
             if match:
                 return match.group(1)
             else:

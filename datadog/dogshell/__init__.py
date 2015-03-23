@@ -42,7 +42,7 @@ def main():
                         " out an API call (default 10)", default=10, type=int)
     parser.add_argument('-v', '--version', help='Dog API version', action='version',
                         version='%(prog)s {version}'
-                        .format(version=pkg.require("datadog.py")[0].version))
+                        .format(version=pkg.require("datadog")[0].version))
 
     config = DogshellConfig()
 
