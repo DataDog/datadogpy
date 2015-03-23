@@ -9,7 +9,7 @@ The :mod:`datadog` module provides :mod:`datadog.api` - a simple wrapper around 
 Installation
 ============
 
-To install from source, `download <https://github.com/DataDog/datadog.py>`_ a distribution and run:
+To install from source, `download <https://github.com/DataDog/datadogpy>`_ a distribution and run:
 
    >>> sudo python setup.py install
 
