@@ -8,6 +8,8 @@ Datadogpy is a collection of tools suitable for inclusion in existing Python pro
 - HTTP API Documentation: http://docs.datadoghq.com/api/
 - DatadogHQ: http://datadoghq.com
 
+See [CHANGELOG.md](CHANGELOG.md) for changes.
+
 Installation
 ------------
 To install from pip:
@@ -55,13 +57,3 @@ stats.start()
 stats.increment('home.page.hits')
 
 ```
-
-
-Change Log
-----------
-- 0.1.2
-    - Release date: 2015.03.23
-    - Fix a typo that was causing an initialization issue with `datadog.dogshell`
-- 0.1
-    - Release date: 2015.03.10
-    - First release
