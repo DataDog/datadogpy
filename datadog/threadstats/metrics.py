@@ -3,6 +3,9 @@ Metric roll-up classes.
 """
 from collections import defaultdict
 import random
+import itertools
+
+from datadog.util.compat import iternext
 
 
 class Metric(object):
@@ -47,13 +50,14 @@ class Counter(Metric):
         self.name = name
         self.tags = tags
         self.host = host
-        self.count = 0
+        self.count = []
 
     def add_point(self, value):
-        self.count += value
+        self.count.append(value)
 
     def flush(self, timestamp):
-        return [(timestamp, self.count, self.name, self.tags, self.host)]
+        count = sum(self.count, 0)
+        return [(timestamp, count, self.name, self.tags, self.host)]
 
 
 class Histogram(Metric):
@@ -67,8 +71,9 @@ class Histogram(Metric):
         self.host = host
         self.max = float("-inf")
         self.min = float("inf")
-        self.sum = 0
-        self.count = 0
+        self.sum = []
+        self.iter_counter = itertools.count()
+        self.count = iternext(self.iter_counter)
         self.sample_size = 1000
         self.samples = []
         self.percentiles = [0.75, 0.85, 0.95, 0.99]
@@ -76,12 +81,12 @@ class Histogram(Metric):
     def add_point(self, value):
         self.max = self.max if self.max > value else value
         self.min = self.min if self.min < value else value
-        self.sum += value
+        self.sum.append(value)
         if self.count < self.sample_size:
             self.samples.append(value)
         else:
             self.samples[random.randrange(0, self.sample_size)] = value
-        self.count += 1
+        self.count = iternext(self.iter_counter)
 
     def flush(self, timestamp):
         if not self.count:
@@ -101,7 +106,8 @@ class Histogram(Metric):
         return metrics
 
     def average(self):
-        return float(self.sum) / self.count
+        sum_metrics = sum(self.sum, 0)
+        return float(sum_metrics) / self.count
 
 
 class Timing(Histogram):

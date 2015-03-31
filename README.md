@@ -48,7 +48,7 @@ api.Event.create(title=title, text=text, tags=tags)
 from datadog import statsd
 
 statsd.increment('whatever')
-statsd.gauge('foo', 2)
+statsd.gauge('foo', 42)
 
 # Or ThreadStats, an alternative tool to collect and flush metrics, using Datadog REST API
 from datadog import ThreadStats
@@ -57,3 +57,7 @@ stats.start()
 stats.increment('home.page.hits')
 
 ```
+
+Threadsafety
+------------
+`DogStatsd` and `ThreadStats` are threadsafe.

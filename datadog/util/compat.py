@@ -20,6 +20,10 @@ if is_p3k():
 
     def iteritems(d):
         return iter(d.items())
+
+    def iternext(iter):
+        return next(iter)
+
 else:
     get_input = raw_input
     import ConfigParser as configparser
@@ -28,6 +32,10 @@ else:
 
     def iteritems(d):
         return d.iteritems()
+
+    def iternext(iter):
+        return iter.next()
+
 
 try:
     from UserDict import IterableUserDict
@@ -49,4 +57,3 @@ try:
     import simplejson as json
 except ImportError:
     import json
-
