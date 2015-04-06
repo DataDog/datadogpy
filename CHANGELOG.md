@@ -1,6 +1,11 @@
 # CHANGELOG
 
-0.2.1 / 2015.04.06
+0.2.2 / 2015.04.06
+==================
+
+- Fix a left 'pdb' statement
+
+0.2.1 / REMOVED
 ==================
 
 - Import json module from `datadog.compat`
