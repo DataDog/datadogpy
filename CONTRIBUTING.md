@@ -8,11 +8,9 @@ Fork, then clone the repo:
 
 Make sure the tests pass:
 
-    pip install nose six mock; python setup.py test
-
-Make your change. Add tests for your change. Make the tests pass:
-
     python setup.py test
+
+Make your change. Add tests for your change. Make the tests pass again.
 
 Push to your fork and [submit a pull request][pr].
 

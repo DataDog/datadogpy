@@ -40,3 +40,5 @@ nosetests.xml
 
 #Misc
 .DS_Store
+.eggs/
+.env/

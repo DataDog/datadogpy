@@ -16,7 +16,7 @@ setup(
     name="datadog",
     version="0.2.0",
     install_requires=install_reqs,
-    tests_require=["tox"],
+    tests_require=["tox", "nose", "mock", "six", "pillow"],
     packages=[
         'datadog',
         'datadog.api',
