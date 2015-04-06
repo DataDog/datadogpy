@@ -14,7 +14,7 @@ if [sys.version_info[0], sys.version_info[1]] < [2, 7]:
 
 setup(
     name="datadog",
-    version="0.2.1",
+    version="0.2.2",
     install_requires=install_reqs,
     tests_require=["tox", "nose", "mock", "six", "pillow"],
     packages=[
