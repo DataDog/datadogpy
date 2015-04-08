@@ -1,5 +1,10 @@
 # CHANGELOG
 
+0.3.0 / 2015.04.08
+==================
+
+- `DATADOG_HOST` environment variable to determine which API host to use, [#30][]
+
 0.2.2 / 2015.04.06
 ==================
 
@@ -36,6 +41,7 @@ See [#8][], thanks [@benweatherman][]
 [#7]: https://github.com/DataDog/datadogpy/issues/7
 [#8]: https://github.com/DataDog/datadogpy/issues/8
 [#9]: https://github.com/DataDog/datadogpy/issues/9
+[#30]: https://github.com/DataDog/datadogpy/issues/30
 [@benweatherman]: https://github.com/benweatherman
 [@miketheman]: https://github.com/miketheman
 [@yannmh]: https://github.com/yannmh
