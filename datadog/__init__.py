@@ -8,6 +8,7 @@ without hindering performance.
 * datadog.dogshell: a command-line tool, wrapping datadog.api, to interact with Datadog REST API.
 """
 from pkg_resources import get_distribution, DistributionNotFound
+import os
 import os.path
 
 from datadog import api
@@ -30,7 +31,7 @@ else:
     __version__ = _dist.version
 
 
-def initialize(api_key=None, app_key=None, host_name=None, api_host="https://app.datadoghq.com",
+def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
                proxies=None, statsd_host=None, statsd_port=None):
     """
     Initialize and configure Datadog.api and Datadog.statsd modules
@@ -57,7 +58,8 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host="https://app
     api._api_key = api_key
     api._application_key = app_key
     api._host_name = host_name if host_name is not None else get_hostname()
-    api._api_host = api_host
+    api._api_host = api_host if api_host is not None else \
+        os.environ.get('DATADOG_HOST', 'https://app.datadoghq.com')
     api._proxies = proxies
 
     # Given statsd_host and statsd_port, overrides statsd instance
