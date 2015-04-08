@@ -1,7 +1,9 @@
 # stdlib
+from functools import wraps
 import os
 import tempfile
 import time
+
 
 # 3p
 import mock
@@ -26,6 +28,23 @@ from tests.unit.api.helper import (
     HOST_NAME,
     FAKE_PROXY)
 
+def preserve_environ_datadog_host(func):
+    """
+    Decorator to preserve the original environment value of DATADOG_HOST.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwds):
+        environ_api_host = os.environ.get('DATADOG_HOST')
+        try:
+            return func(*args, **kwds)
+        finally:
+            # restore the original environ value
+            if environ_api_host:
+                os.environ['DATADOG_HOST'] = environ_api_host
+            elif os.environ.get('DATADOG_HOST'):
+                del os.environ['DATADOG_HOST']
+
+    return wrapper
 
 class TestInitialization(DatadogAPINoInitialization):
 
@@ -90,6 +109,25 @@ class TestInitialization(DatadogAPINoInitialization):
         assert 'headers' in options
         assert options['headers'] == {'Content-Type': 'application/json'}
 
+    @preserve_environ_datadog_host
+    def test_api_host_from_env(self):
+        os.environ['DATADOG_HOST'] = 'http://localhost'
+        initialize()
+        self.assertEquals(api._api_host, 'http://localhost')
+
+    @preserve_environ_datadog_host
+    def test_api_host_default(self):
+        if os.environ.get('DATADOG_HOST'):
+            del os.environ['DATADOG_HOST']
+        initialize()
+        self.assertEquals(api._api_host, 'https://app.datadoghq.com')
+
+    @preserve_environ_datadog_host
+    def test_api_host_param(self):
+        if os.environ.get('DATADOG_HOST'):
+            del os.environ['DATADOG_HOST']
+        initialize(api_host='http://localhost')
+        self.assertEquals(api._api_host, 'http://localhost')
 
 class TestResources(DatadogAPIWithInitialization):
 
