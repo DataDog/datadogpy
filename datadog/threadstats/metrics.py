@@ -131,7 +131,7 @@ class MetricsAggregator(object):
     def add_point(self, metric, tags, timestamp, value, metric_class, sample_rate=1, host=None):
         # The sample rate is currently ignored for in process stuff
         interval = timestamp - timestamp % self._roll_up_interval
-        key = (metric, host, tuple(sorted(tags)) if tags else tags)
+        key = (metric, host, tuple(sorted(tags)) if tags else None)
         if key not in self._metrics[interval]:
             self._metrics[interval][key] = metric_class(metric, tags, host)
         self._metrics[interval][key].add_point(value)
