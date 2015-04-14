@@ -115,7 +115,7 @@ class EventClient(object):
         else:
             tags = None
         res = api.Event.create(
-            title=args.title, message=message,
+            title=args.title, text=message,
             # TODO FXIME
             # date_happened=args.date_happened,
             handle=args.handle, priority=args.priority,
