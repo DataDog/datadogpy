@@ -10,6 +10,7 @@ from datadog import api
 
 def prettyprint_event(event):
     title = event['title'] or ''
+    text = event.get('text', '') or ''
     handle = event.get('handle', '') or ''
     date = event['date_happened']
     dt = datetime.datetime.fromtimestamp(date)
@@ -17,7 +18,7 @@ def prettyprint_event(event):
     # Encode UTF-8
     title = title.encode('utf8')
     handle = handle.encode('utf8')
-    print((title + b' (' + handle + b')').strip())
+    print((title + ' ' + text + ' ' + b' (' + handle + b')').strip())
     print(dt.isoformat(' ') + ' | ' + link)
 
 
@@ -115,7 +116,7 @@ class EventClient(object):
         else:
             tags = None
         res = api.Event.create(
-            title=args.title, message=message,
+            title=args.title, text=message,
             # TODO FXIME
             # date_happened=args.date_happened,
             handle=args.handle, priority=args.priority,
