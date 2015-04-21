@@ -3,7 +3,7 @@ import sys
 
 install_reqs = [
     "decorator>=3.3.2",
-    "requests>=0.8.8",
+    "requests>=2.6.0",
 ]
 if sys.version_info[0] == 2:
     # simplejson is not python3 compatible
