@@ -2,8 +2,6 @@
 from functools import wraps
 import os
 import tempfile
-import time
-
 
 # 3p
 import mock
@@ -28,42 +26,35 @@ from tests.unit.api.helper import (
     HOST_NAME,
     FAKE_PROXY)
 
-def preserve_environ_datadog_host(func):
+
+def preserve_environ_datadog(func):
     """
-    Decorator to preserve the original environment value of DATADOG_HOST.
+    Decorator to preserve the original environment value.
     """
     @wraps(func)
-    def wrapper(*args, **kwds):
-        environ_api_host = os.environ.get('DATADOG_HOST')
+    def wrapper(env_name, *args, **kwds):
+        environ_api_param = os.environ.get(env_name)
         try:
-            return func(*args, **kwds)
+            return func(env_name, *args, **kwds)
         finally:
             # restore the original environ value
-            if environ_api_host:
-                os.environ['DATADOG_HOST'] = environ_api_host
-            elif os.environ.get('DATADOG_HOST'):
-                del os.environ['DATADOG_HOST']
+            if environ_api_param:
+                os.environ[env_name] = environ_api_param
+            elif os.environ.get(env_name):
+                del os.environ[env_name]
 
     return wrapper
 
+
 class TestInitialization(DatadogAPINoInitialization):
 
-    def test_no_initialization_fails(self):
+    def test_no_initialization_fails(self, test='sisi'):
         assert_raises(ApiNotInitialized, MyCreatable.create)
-        # assert_true(stats._disabled)
 
         # No API key => only stats in statsd mode should work
         initialize()
-        # assert_false(stats._disabled)
-        # assert_false(stats._needs_flush)
+        api._api_key = None
         assert_raises(ApiNotInitialized, MyCreatable.create)
-
-        # Make sure stats in HTTP API mode raises too
-        # initialize(flush_in_thread=False)
-        # stats.increment("IWillRaiseAnException")
-        # assert_raises(ApiNotInitialized, stats.flush, int(time.time()) + 60)
-        # stats.event("IAmATitle", "IWillRaiseAnException")
-        # assert_raises(ApiNotInitialized, stats.flush, int(time.time()) + 60)
 
         # Finally, initialize with an API key
         initialize(api_key=API_KEY, api_host=API_HOST)
@@ -109,25 +100,55 @@ class TestInitialization(DatadogAPINoInitialization):
         assert 'headers' in options
         assert options['headers'] == {'Content-Type': 'application/json'}
 
-    @preserve_environ_datadog_host
-    def test_api_host_from_env(self):
-        os.environ['DATADOG_HOST'] = 'http://localhost'
-        initialize()
-        self.assertEquals(api._api_host, 'http://localhost')
+    def test_initialization_from_env(self):
+        @preserve_environ_datadog
+        def test_api_params_from_env(env_name, attr_name, env_value):
+            """
+            Set env_name environment variable to env_value
+            Assert api.attr_name = env_value
+            """
+            os.environ[env_name] = env_value
+            initialize()
+            self.assertEquals(getattr(api, attr_name), env_value)
 
-    @preserve_environ_datadog_host
-    def test_api_host_default(self):
-        if os.environ.get('DATADOG_HOST'):
-            del os.environ['DATADOG_HOST']
-        initialize()
-        self.assertEquals(api._api_host, 'https://app.datadoghq.com')
+        @preserve_environ_datadog
+        def test_api_params_default(env_name, attr_name, expected_value):
+            """
+            Unset env_name environment variable
+            Assert api.attr_name = expected_value
+            """
+            if os.environ.get(env_name):
+                del os.environ[env_name]
+            initialize()
+            self.assertEquals(getattr(api, attr_name), expected_value)
 
-    @preserve_environ_datadog_host
-    def test_api_host_param(self):
-        if os.environ.get('DATADOG_HOST'):
-            del os.environ['DATADOG_HOST']
-        initialize(api_host='http://localhost')
-        self.assertEquals(api._api_host, 'http://localhost')
+        @preserve_environ_datadog
+        def test_api_params_from_params(env_name, parameter, attr_name, value ):
+            """
+            Unset env_name environment variable
+            Initialize API with parameter=value
+            Assert api.attr_name = value
+            """
+            if os.environ.get(env_name):
+                del os.environ[env_name]
+            initialize(api_host='http://localhost')
+            self.assertEquals(api._api_host, 'http://localhost')
+
+        # Default values
+        test_api_params_default("DATADOG_API_KEY", "_api_key", None)
+        test_api_params_default("DATADOG_APP_KEY", "_application_key", None)
+        test_api_params_default("DATADOG_HOST", "_api_host", "https://app.datadoghq.com")
+
+        # From environment
+        test_api_params_from_env("DATADOG_API_KEY", "_api_key", env_value="apikey")
+        test_api_params_from_env("DATADOG_APP_KEY", "_application_key", env_value="appkey")
+        test_api_params_from_env("DATADOG_HOST", "_api_host", env_value="http://localhost")
+
+        # From parameters
+        test_api_params_from_params("DATADOG_API_KEY", "api_key", "_api_key", "apikey2")
+        test_api_params_from_params("DATADOG_APP_KEY", "app_key", "_application_key", "appkey2")
+        test_api_params_from_params("DATADOG_HOST", "api_host", "_api_host", "http://127.0.0.1")
+
 
 class TestResources(DatadogAPIWithInitialization):
 
