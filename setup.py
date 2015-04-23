@@ -37,5 +37,14 @@ setup(
             'dogwrap = datadog.dogshell.wrap:main',
         ],
     },
-    test_suite="nose.collector"
+    test_suite="nose.collector",
+    classifiers=[
+        "License :: OSI Approved :: BSD License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 2.6",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: Implementation :: PyPy"
+    ]
 )
