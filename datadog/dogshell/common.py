@@ -74,8 +74,8 @@ class DogshellConfig(IterableUserDict):
 
                             # Write the config file
                             config.add_section('Connection')
-                            config.set('Connection', 'api_key', api_key)
-                            config.set('Connection', 'app_key', app_key)
+                            config.set('Connection', 'apikey', api_key)
+                            config.set('Connection', 'appkey', app_key)
 
                             f = open(config_file, 'w')
                             config.write(f)
