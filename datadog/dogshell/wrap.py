@@ -92,6 +92,8 @@ def main():
     parser.add_option('-m', '--submit_mode', action='store', type='choice',
                       default='errors', choices=['errors', 'all'])
     parser.add_option('-t', '--timeout', action='store', type='int', default=60 * 60 * 24)
+    parser.add_option('-p', '--priority', action='store', type='choice', choices=['normal', 'low'],
+                      default='normal', help="The priority of the event (default: 'normal')")
     parser.add_option('--sigterm_timeout', action='store', type='int', default=60 * 2)
     parser.add_option('--sigkill_timeout', action='store', type='int', default=60)
     parser.add_option('--proc_poll_interval', action='store', type='float', default=0.5)
@@ -150,6 +152,7 @@ def main():
         'alert_type': alert_type,
         'aggregation_key': options.name,
         'host': host,
+        'priority': options.priority,
     }
 
     print >> sys.stderr, stderr.strip()
