@@ -5,7 +5,7 @@ import unittest
 from datadog import initialize, api
 from datadog.api.base import CreateableAPIResource, UpdatableAPIResource, DeletableAPIResource,\
     GetableAPIResource, ListableAPIResource, ActionAPIResource
-from datadog.util.compat import is_p3k, json
+from datadog.util.compat import iteritems, json
 
 # 3p
 import requests
@@ -81,14 +81,9 @@ class DatadogAPITestCase(unittest.TestCase):
 
         if params:
             assert 'params' in others
-            if is_p3k():
-                for (k, v) in params.items():
-                    assert k in others['params'], others['params']
-                    assert v == others['params'][k]
-            else:
-                for (k, v) in params.iteritems():
-                    assert k in others['params'], others['params']
-                    assert v == others['params'][k]
+            for (k, v) in iteritems(params):
+                assert k in others['params'], others['params']
+                assert v == others['params'][k]
 
     def tearDown(self):
         self.request_patcher.stop()
