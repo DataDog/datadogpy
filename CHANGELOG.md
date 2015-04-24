@@ -1,35 +1,44 @@
 # CHANGELOG
 
+0.4.0 / 2015.04.24
+==================
+* [FEATURE] Initialize API parameters from environment variables, [#43][]
+* [FEATURE] Add a priority option to Dogwrap, or auto-detect it based on output, [#42][]
+* [FEATURE] Stream Dogwrap command output during its execution or buffer it, [#39][]
+* [BUGFIX] Fix wrong keys in auto-generated .dogrc, [#34][]
+* [BUGFIX] Fix a wrong event post parameter in Dogshell/Dogwrap, [#36][]
+* [OTHER] Add PyPI classifiers, [#41][]
+
 0.3.0 / 2015.04.08
 ==================
 
-- `DATADOG_HOST` environment variable to determine which API host to use, [#30][]
+* [FEATURE] `DATADOG_HOST` environment variable to determine which API host to use, [#30][]
 
 0.2.2 / 2015.04.06
 ==================
 
-- Fix a left 'pdb' statement
+* [BUGFIX] Fix a leftover debug statement
 
 0.2.1 / REMOVED
 ==================
 
-- Import json module from `datadog.compat`
-- Fix test requirements
-- Contributing update
+* [BUGFIX] Import json module from `datadog.compat`
+* [BUGFIX] Fix test requirements
+* [OTHER] Contributing update
 
 See [#8][], thanks [@benweatherman][]
 
 0.2.0 / 2015.03.31
 ==================
 
-- Changelog update, [#9][] [@miketheman][]
-- Fixes `threadstats` unsafe thread operations, [#6][]
-- Add tests to check `statsd` and `threadstats` thread safety [#6][]
+* [FEATURE] Add tests to check `statsd` and `threadstats` thread safety, [#6][]
+* [BUGFIX] Fixes `threadstats` unsafe thread operations, [#6][]
+* [OTHER] Changelog update, [#9][] [@miketheman][]
 
 0.1.2 / 2015.03.23
 ==================
 
-- Fix a typo that was causing an initialization issue with `datadog.dogshell`, [#7][] [@yannmh][]
+* [BUGFIX] Fix a typo that was causing an initialization issue with `datadog.dogshell`, [#7][] [@yannmh][]
 
 0.1 / 2015.03.10
 ================
@@ -42,6 +51,12 @@ See [#8][], thanks [@benweatherman][]
 [#8]: https://github.com/DataDog/datadogpy/issues/8
 [#9]: https://github.com/DataDog/datadogpy/issues/9
 [#30]: https://github.com/DataDog/datadogpy/issues/30
+[#34]: https://github.com/DataDog/datadogpy/issues/34
+[#36]: https://github.com/DataDog/datadogpy/issues/36
+[#39]: https://github.com/DataDog/datadogpy/issues/39
+[#41]: https://github.com/DataDog/datadogpy/issues/41
+[#42]: https://github.com/DataDog/datadogpy/issues/42
+[#43]: https://github.com/DataDog/datadogpy/issues/43
 [@benweatherman]: https://github.com/benweatherman
 [@miketheman]: https://github.com/miketheman
 [@yannmh]: https://github.com/yannmh
