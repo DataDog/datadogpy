@@ -92,6 +92,8 @@ def main():
     parser.add_option('-m', '--submit_mode', action='store', type='choice',
                       default='errors', choices=['errors', 'all'])
     parser.add_option('-t', '--timeout', action='store', type='int', default=60 * 60 * 24)
+    parser.add_option('-p', '--priority', action='store', type='choice', choices=['normal', 'low'],
+                      help="The priority of the event (default: 'normal')")
     parser.add_option('--sigterm_timeout', action='store', type='int', default=60 * 2)
     parser.add_option('--sigkill_timeout', action='store', type='int', default=60)
     parser.add_option('--proc_poll_interval', action='store', type='float', default=0.5)
@@ -113,17 +115,19 @@ def main():
 
     if returncode == 0:
         alert_type = SUCCESS
+        event_priority = 'low'
         event_title = u'[%s] %s succeeded in %.2fs' % (host, options.name,
                                                        duration)
-    elif returncode is Timeout:
-        alert_type = ERROR
-        event_title = u'[%s] %s timed out after %.2fs' % (host, options.name,
-                                                          duration)
-        returncode = -1
     else:
         alert_type = ERROR
-        event_title = u'[%s] %s failed in %.2fs' % (host, options.name,
-                                                    duration)
+        event_priority = 'normal'
+
+        if returncode is Timeout:
+            event_title = u'[%s] %s timed out after %.2fs' % (host, options.name, duration)
+            returncode = -1
+        else:
+            event_title = u'[%s] %s failed in %.2fs' % (host, options.name, duration)
+
     event_body = [u'%%%\n',
                   u'commmand:\n```\n', u' '.join(cmd), u'\n```\n',
                   u'exit code: %s\n\n' % returncode,
@@ -150,8 +154,8 @@ def main():
         'alert_type': alert_type,
         'aggregation_key': options.name,
         'host': host,
+        'priority': options.priority or event_priority,
     }
-
     print >> sys.stderr, stderr.strip()
     print >> sys.stdout, stdout.strip()
 
