@@ -6,7 +6,7 @@ import requests
 # datadog
 from datadog.api.exceptions import ClientError, ApiError, HttpBackoff, \
     HttpTimeout, ApiNotInitialized
-from datadog.api import _api_version, _timeout, _max_timeouts, _backoff_period
+from datadog.api import _api_version, _max_timeouts, _backoff_period
 from datadog.util.compat import json, is_p3k
 
 log = logging.getLogger('dd.datadogpy')
@@ -22,7 +22,6 @@ class HTTPClient(object):
     _backoff_timestamp = None
     _timeout_counter = 0
     _api_version = _api_version
-    _timeout = _timeout
 
     @classmethod
     def request(cls, method, path, body=None, attach_host_name=False, response_formatter=None,
@@ -62,7 +61,7 @@ class HTTPClient(object):
 
             # Import API, User and HTTP settings
             from datadog.api import _api_key, _application_key, _api_host, \
-                _swallow, _host_name, _proxies, _max_retries
+                _swallow, _host_name, _proxies, _max_retries, _timeout
 
             # Check keys and add then to params
             if _api_key is None:
@@ -112,7 +111,7 @@ class HTTPClient(object):
                     headers=headers,
                     params=params,
                     data=body,
-                    timeout=cls._timeout,
+                    timeout=_timeout,
                     proxies=_proxies)
 
                 result.raise_for_status()
@@ -120,7 +119,7 @@ class HTTPClient(object):
                 raise ClientError("Could not request %s %s%s: %s" % (method, _api_host, url, e))
             except requests.exceptions.Timeout as e:
                 cls._timeout_counter += 1
-                raise HttpTimeout('%s %s timed out after %d seconds.' % (method, url, cls._timeout))
+                raise HttpTimeout('%s %s timed out after %d seconds.' % (method, url, _timeout))
             except requests.exceptions.HTTPError as e:
                 if e.response.status_code == 404 or e.response.status_code == 400:
                     pass

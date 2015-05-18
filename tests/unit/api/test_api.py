@@ -9,8 +9,9 @@ from nose.tools import assert_raises, assert_true, assert_false
 
 # datadog
 from datadog import initialize, api
-from datadog.util.compat import is_p3k
+from datadog.api import Metric
 from datadog.api.exceptions import ApiNotInitialized
+from datadog.util.compat import is_p3k
 from tests.unit.api.helper import (
     DatadogAPIWithInitialization,
     DatadogAPINoInitialization,
@@ -192,3 +193,15 @@ class TestResources(DatadogAPIWithInitialization):
         MyActionable.trigger_action('POST', "actionname", id=actionable_object_id, mydata="val")
         self.request_called_with('POST', "host/api/v1/actionname/" + str(actionable_object_id),
                                  data={'mydata': "val"})
+
+    def test_metric_submit_query_switch(self):
+        """
+        Specific to Metric subpackages: endpoints are different for submission and queries
+        """
+        Metric.send(points="val")
+        self.request_called_with('POST', "host/api/v1/series",
+                                 data={'series': [{'points': "val", 'host': api._host_name}]})
+
+        Metric.query(start="val1", end="val2")
+        self.request_called_with('GET', "host/api/v1/query",
+                                 params={'from': "val1", 'to': "val2"})

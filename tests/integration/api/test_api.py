@@ -11,10 +11,10 @@ from nose.tools import assert_equal as eq
 from nose.tools import assert_true as ok
 
 # datadog
-import datadog.util.compat.json as json
 from datadog import initialize
 from datadog import api as dog
 from datadog.api.exceptions import ApiError
+from datadog.util.compat import json
 from tests.util.snapshot_test_utils import (
     assert_snap_not_blank, assert_snap_has_no_events
 )
@@ -311,17 +311,23 @@ class TestDatadog(unittest.TestCase):
         assert len(results['results']['hosts']) > 0
         assert len(results['results']['metrics']) > 0
 
+    @attr("metric")
     def test_metrics(self):
         now = datetime.datetime.now()
         now_ts = int(time.mktime(now.timetuple()))
+        metric_name = "test.metric." + str(now_ts)
+        host_name = "test.host." + str(now_ts)
 
-        dog.Metric.send(metric='test.metric.' + str(now_ts),
-                        points=1, host="test.host." + str(now_ts))
+        dog.Metric.send(metric=metric_name, points=1, host=host_name)
         time.sleep(self.wait_time)
 
-        results = dog.Infrastructure.search(q='metrics:test.metric.' + str(now_ts))
+        metric_query = dog.Metric.query(start=now_ts - 3600, end=now_ts + 3600,
+                                        query="avg:%s{host:%s}" % (metric_name, host_name))
+        assert len(metric_query['series']) == 1, metric_query
+
+        # results = dog.Infrastructure.search(q='metrics:test.metric.' + str(now_ts))
         # TODO mattp: cache issue. move this test to server side.
-        # assert len(results['metrics']) == 1, results
+        # assert len(results['results']['metrics']) == 1, results
 
         matt_series = [
             (int(time.mktime((now - datetime.timedelta(minutes=25)).timetuple())), 5),

@@ -16,10 +16,10 @@ class Graph(CreateableAPIResource, ActionAPIResource):
         :param metric_query: metric query
         :type metric_query: string query
 
-        :param start: timestamp of the start of the query.
+        :param start: query start timestamp
         :type start: POSIX timestamp
 
-        :param end: timestamp of the end of the query.
+        :param end: query end timestamp
         :type end: POSIX timestamp
 
         :param event_query: a query that will add event bands to the graph
