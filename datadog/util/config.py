@@ -59,7 +59,7 @@ def _windows_commondata_path():
                                  wintypes.HANDLE,
                                  wintypes.DWORD, wintypes.LPCWSTR]
 
-    path_buf = wintypes.create_unicode_buffer(wintypes.MAX_PATH)
+    path_buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
     _SHGetFolderPath(0, CSIDL_COMMON_APPDATA, 0, 0, path_buf)
     return path_buf.value
 
