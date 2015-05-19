@@ -1,5 +1,10 @@
 # CHANGELOG
 
+0.5.0 / 2015.05.19
+==================
+* [FEATURE] Add support for metric query API, [#45][]
+* [BUGFIX] Fix an unexpected exception raised in `initialize` method on Windows with Python3.4, [#47][]
+
 0.4.0 / 2015.04.24
 ==================
 * [FEATURE] Initialize API parameters from environment variables, [#43][]
@@ -38,7 +43,7 @@ See [#8][], thanks [@benweatherman][]
 0.1.2 / 2015.03.23
 ==================
 
-* [BUGFIX] Fix a typo that was causing an initialization issue with `datadog.dogshell`, [#7][] [@yannmh][]
+* [BUGFIX] Fix a typo that was causing an initialization issue with `datadog.dogshell`, [#7][]
 
 0.1 / 2015.03.10
 ================
@@ -57,6 +62,7 @@ See [#8][], thanks [@benweatherman][]
 [#41]: https://github.com/DataDog/datadogpy/issues/41
 [#42]: https://github.com/DataDog/datadogpy/issues/42
 [#43]: https://github.com/DataDog/datadogpy/issues/43
+[#45]: https://github.com/DataDog/datadogpy/issues/45
+[#47]: https://github.com/DataDog/datadogpy/issues/47
 [@benweatherman]: https://github.com/benweatherman
 [@miketheman]: https://github.com/miketheman
-[@yannmh]: https://github.com/yannmh
