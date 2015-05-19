@@ -18,9 +18,12 @@ class Host(ActionAPIResource):
         :param end: timestamp to end muting
         :type end: POSIX timestamp
 
-        :param override: if true and the host is already muted, will overwrite\
+        :param override: if true and the host is already muted, will override\
          existing end on the host
         :type override: bool
+
+        :param message: message to associate with the muting of this host
+        :type message: string
 
         :returns: JSON response from HTTP API request
 
