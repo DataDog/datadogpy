@@ -1,3 +1,5 @@
+# stdlib
+from hashlib import md5
 import json
 import os
 import random
@@ -8,7 +10,10 @@ import time
 import tempfile
 import unittest
 
-from hashlib import md5
+# 3rd
+from nose.plugins.attrib import attr
+
+# datadog
 from datadog.dogshell.common import find_localhost
 from datadog.util.compat import is_p3k, ConfigParser
 
@@ -33,8 +38,8 @@ class TestDogshell(unittest.TestCase):
         self.config_fn, self.config_file = get_temp_file()
         config = ConfigParser()
         config.add_section('Connection')
-        config.set('Connection', 'api_key', os.environ['DATADOG_API_KEY'])
-        config.set('Connection', 'app_key', os.environ['DATADOG_APP_KEY'])
+        config.set('Connection', 'apikey', os.environ['DATADOG_API_KEY'])
+        config.set('Connection', 'appkey', os.environ['DATADOG_APP_KEY'])
         config.set('Connection', 'api_host', os.environ['DATADOG_HOST'])
         config.write(self.config_file)
         self.config_file.flush()
@@ -410,6 +415,7 @@ class TestDogshell(unittest.TestCase):
         out, err, return_code = self.dogshell(["monitor", "unmute_all"], check_return_code=False)
         self.assertNotEquals(return_code, 0)
 
+    @attr('host')
     def test_host_muting(self):
         hostname = "my.test.host"
         message = "Muting this host for a test."
