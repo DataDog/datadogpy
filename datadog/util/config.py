@@ -96,18 +96,12 @@ def get_config_path(cfg_path=None, os_name=None):
         os_name = get_os()
 
     # Check for an OS-specific path, continue on not-found exceptions
-    try:
-        if os_name == 'windows':
-            return _windows_config_path()
-        elif os_name == 'mac':
-            return _mac_config_path()
-        else:
-            return _unix_config_path()
-    except PathNotFound:
-        pass
-
-    # If all searches fail, exit the agent with an error
-    raise CfgNotFound
+    if os_name == 'windows':
+        return _windows_config_path()
+    elif os_name == 'mac':
+        return _mac_config_path()
+    else:
+        return _unix_config_path()
 
 
 def get_config(cfg_path=None, options=None):
@@ -127,16 +121,7 @@ def get_config(cfg_path=None, options=None):
         for option in config.options('Main'):
             agentConfig[option] = config.get('Main', option)
 
-    except configparser.NoSectionError as e:
-        sys.stderr.write('Config file not found or incorrectly formatted.\n')
-        sys.exit(2)
-
-    except configparser.ParsingError as e:
-        sys.stderr.write('Config file not found or incorrectly formatted.\n')
-        sys.exit(2)
-
-    except configparser.NoOptionError as e:
-        sys.stderr.write('There are some items missing from your config file'
-                         ', but nothing fatal [%s]' % e)
+    except Exception:
+        raise CfgNotFound
 
     return agentConfig
