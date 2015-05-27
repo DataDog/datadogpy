@@ -13,8 +13,11 @@ class HostClient(object):
         mute_parser.add_argument('host_name', help='host to mute')
         mute_parser.add_argument('--end', help="POSIX timestamp, if omitted,"
                                  " host will be muted until explicitly unmuted", default=None)
+        mute_parser.add_argument('--message', help="string to associate with the"
+                                 " muting of this host", default=None)
         mute_parser.add_argument('--override', help="true/false, if true and the host is already"
-                                 " muted, will overwrite existing end on the host", default=None)
+                                 " muted, will overwrite existing end on the host",
+                                 action='store_true')
         mute_parser.set_defaults(func=cls._mute)
 
         unmute_parser = verb_parsers.add_parser('unmute', help='Unmute a host')
@@ -25,7 +28,8 @@ class HostClient(object):
     def _mute(cls, args):
         api._timeout = args.timeout
         format = args.format
-        res = api.Host.mute(args.host_name, end=args.end, override=args.override)
+        res = api.Host.mute(args.host_name, end=args.end, message=args.message,
+                            override=args.override)
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':

@@ -703,6 +703,35 @@ class TestDatadog(unittest.TestCase):
             check='check_pg', host_name='host0', status=1,
             message='PG is WARNING', tags=['db:prod_data'])
 
+    @attr('host')
+    def test_host_muting(self):
+        hostname = "my.test.host"
+        message = "Muting this host for a test."
+        end = int(time.time()) + 60 * 60
+
+        try:
+            # reset test
+            dog.Host.unmute(hostname)
+        except ApiError:
+            pass
+
+        # Mute a host
+        mute = dog.Host.mute(hostname, end=end, message=message)
+        eq(mute['hostname'], hostname)
+        eq(mute['action'], "Muted")
+        eq(mute['message'], message)
+        eq(mute['end'], end)
+
+        # We shouldn't be able to mute a host that's already muted, unless we include
+        # the override param.
+        end2 = end + 60 * 15
+        assert_raises(ApiError, dog.Host.mute, hostname, end=end2)
+        mute = dog.Host.mute(hostname, end=end2, override=True)
+        eq(mute['hostname'], hostname)
+        eq(mute['action'], "Muted")
+        eq(mute['end'], end2)
+
+        unmute = dog.Host.unmute(hostname)
 
 if __name__ == '__main__':
     unittest.main()

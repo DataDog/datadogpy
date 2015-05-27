@@ -1,3 +1,5 @@
+# stdlib
+from hashlib import md5
 import json
 import os
 import random
@@ -8,7 +10,10 @@ import time
 import tempfile
 import unittest
 
-from hashlib import md5
+# 3rd
+from nose.plugins.attrib import attr
+
+# datadog
 from datadog.dogshell.common import find_localhost
 from datadog.util.compat import is_p3k, ConfigParser
 
@@ -33,8 +38,8 @@ class TestDogshell(unittest.TestCase):
         self.config_fn, self.config_file = get_temp_file()
         config = ConfigParser()
         config.add_section('Connection')
-        config.set('Connection', 'api_key', os.environ['DATADOG_API_KEY'])
-        config.set('Connection', 'app_key', os.environ['DATADOG_APP_KEY'])
+        config.set('Connection', 'apikey', os.environ['DATADOG_API_KEY'])
+        config.set('Connection', 'appkey', os.environ['DATADOG_APP_KEY'])
         config.set('Connection', 'api_host', os.environ['DATADOG_HOST'])
         config.write(self.config_file)
         self.config_file.flush()
@@ -410,8 +415,53 @@ class TestDogshell(unittest.TestCase):
         out, err, return_code = self.dogshell(["monitor", "unmute_all"], check_return_code=False)
         self.assertNotEquals(return_code, 0)
 
+    @attr('host')
     def test_host_muting(self):
-        pass
+        hostname = "my.test.host"
+        message = "Muting this host for a test."
+        end = int(time.time()) + 60 * 60
+
+        # Reset test
+        self.dogshell(["host", "unmute", hostname], check_return_code=False)
+
+        # Mute a host
+        out, err, return_code = self.dogshell(
+            ["host", "mute", hostname, "--message", message, "--end", str(end)])
+        out = json.loads(out)
+        assert "action" in out, out
+        assert "hostname" in out, out
+        assert "message" in out, out
+        assert "end" in out, out
+        self.assertEquals(out['action'], "Muted")
+        self.assertEquals(out['hostname'], hostname)
+        self.assertEquals(out['message'], message)
+        self.assertEquals(out['end'], end)
+
+        # We shouldn't be able to mute a host that's already muted, unless we include
+        # the override param.
+        end2 = end + 60 * 15
+
+        out, err, return_code = self.dogshell(
+            ["host", "mute", hostname, "--end", str(end2)], check_return_code=False)
+        assert err
+
+        out, err, return_code = self.dogshell(
+            ["host", "mute", hostname,  "--end", str(end2), "--override"])
+        out = json.loads(out)
+        assert "action" in out, out
+        assert "hostname" in out, out
+        assert "end" in out, out
+        self.assertEquals(out['action'], "Muted")
+        self.assertEquals(out['hostname'], hostname)
+        self.assertEquals(out['end'], end2)
+
+        # Unmute a host
+        out, err, return_code = self.dogshell(["host", "unmute", hostname])
+        out = json.loads(out)
+        assert "action" in out, out
+        assert "hostname" in out, out
+        self.assertEquals(out['action'], "Unmuted")
+        self.assertEquals(out['hostname'], hostname)
 
     def test_downtime_schedule(self):
         # Schedule a downtime
