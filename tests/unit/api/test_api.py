@@ -205,3 +205,34 @@ class TestResources(DatadogAPIWithInitialization):
         Metric.query(start="val1", end="val2")
         self.request_called_with('GET', "host/api/v1/query",
                                  params={'from': "val1", 'to': "val2"})
+
+    def test_metric_submit_multiple_points_is_single_value(self):
+        from copy import deepcopy
+        import json
+        from time import time
+
+        now = time()
+
+        data = [dict(metric='metric.1', points=13),
+                dict(metric='metric.2', points=19)]
+
+        Metric.send(*deepcopy(data))
+
+        args, kwargs = self.request_mock.request.call_args
+        sent_data = json.loads(kwargs['data'])
+
+        for i, metric in enumerate(sent_data['series']):
+            assert set(metric.keys()) == set(['metric', 'points', 'host'])
+
+            assert metric['metric'] == data[i]['metric']
+            assert metric['host'] == api._host_name
+
+            # points is a list of 1 point
+            assert isinstance(metric['points'], list) and len(metric['points']) == 1
+            # it consists of a [time, value] pair
+            assert len(metric['points'][0]) == 2
+            # its value == value we sent
+            assert metric['points'][0][1] == data[i]['points']
+            # it's time not so far from current time
+            assert now - 1 < metric['points'][0][0] < now + 1
+
