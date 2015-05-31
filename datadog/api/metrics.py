@@ -53,7 +53,8 @@ class Metric(SearchableAPIResource, SendableAPIResource):
                 for metric in metrics:
                     if isinstance(metric, dict):
                         metric['points'] = cls._process_points(metric['points'])
-                metrics_dict = {"series": metrics[0]}
+                #metrics_dict = {"series": metrics[0]}
+                metrics_dict = {"series": metrics}
             else:
                 single_metric['points'] = cls._process_points(single_metric['points'])
                 metrics = [single_metric]
