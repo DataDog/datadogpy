@@ -1,6 +1,6 @@
 # CHANGELOG
 
-0.6.0 / 2015.05.27
+0.6.0 / 2015.06.01
 ==================
 * [FEATURE] Add `message` parameter support to host muting commands, [#51][]
 * [BUGFIX] Always fall back when unable to determine hostname from `datadog.conf`, [#53][]
