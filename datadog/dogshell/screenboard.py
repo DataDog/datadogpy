@@ -63,6 +63,11 @@ class ScreenboardClient(object):
         share_parser.add_argument('screenboard_id', help="screenboard to share")
         share_parser.set_defaults(func=cls._share)
 
+        revoke_parser = verb_parsers.add_parser('revoke', help="Revoke an existing screenboard's"
+                                                " with a public URL.")
+        revoke_parser.add_argument('screenboard_id', help="screenboard to revoke")
+        revoke_parser.set_defaults(func=cls._revoke)
+
         pull_parser = verb_parsers.add_parser('pull', help="Pull a screenboard on the server"
                                               " into a local file")
         pull_parser.add_argument('screenboard_id', help="ID of screenboard to pull")
@@ -234,6 +239,17 @@ class ScreenboardClient(object):
         api._timeout = args.timeout
         format = args.format
         res = api.Screenboard.share(args.screenboard_id)
+
+        if format == 'pretty':
+            print(cls._pretty_json(res))
+        else:
+            print(json.dumps(res))
+
+    @classmethod
+    def _revoke(cls, args):
+        api._timeout = args.timeout
+        format = args.format
+        res = api.Screenboard.revoke(args.screenboard_id)
 
         if format == 'pretty':
             print(cls._pretty_json(res))

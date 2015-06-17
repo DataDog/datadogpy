@@ -9,6 +9,7 @@ import subprocess
 import time
 import tempfile
 import unittest
+import requests
 
 # 3rd
 from nose.plugins.attrib import attr
@@ -267,6 +268,7 @@ class TestDogshell(unittest.TestCase):
                                               check_return_code=False)
         self.assertNotEquals(return_code, 0)
 
+    @attr('screenboard')
     def test_screenboards(self):
         # Create a screenboard and write it to a file
         name, temp0 = get_temp_file()
@@ -337,6 +339,20 @@ class TestDogshell(unittest.TestCase):
             self.assertEquals(out, updated_screenboard)
         finally:
             os.unlink(updated_file)
+
+        # Share the screenboard
+        out, _, _ = self.dogshell(["screenboard", "share", str(screenboard["id"])])
+        out = json.loads(out)
+        assert out['board_id'] == screenboard['id']
+        # Verify it's actually shared
+        public_url = out['public_url']
+        response = requests.get(public_url)
+        assert response.status_code == 200
+
+        # Revoke the screenboard and verify it's actually revoked
+        self.dogshell(["screenboard", "revoke", str(screenboard["id"])])
+        response = requests.get(public_url)
+        assert response.status_code == 404
 
         # Delete the screenboard
         self.dogshell(["screenboard", "delete", str(screenboard["id"])])

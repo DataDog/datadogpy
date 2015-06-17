@@ -3,6 +3,7 @@ import datetime
 import os
 import time
 import unittest
+import requests
 
 # 3p
 from nose.plugins.attrib import attr
@@ -553,6 +554,14 @@ class TestDatadog(unittest.TestCase):
 
         share_res = dog.Screenboard.share(get_res['id'])
         assert share_res['board_id'] == get_res['id']
+        public_url = share_res['public_url']
+
+        response = requests.get(public_url)
+        assert response.status_code == 200
+
+        revoke_res = dog.Screenboard.revoke(get_res['id'])
+        response = requests.get(public_url)
+        assert response.status_code == 404
 
         delete_res = dog.Screenboard.delete(update_res['id'])
         assert delete_res['id'] == update_res['id']
