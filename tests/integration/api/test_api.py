@@ -3,7 +3,7 @@ import datetime
 import os
 import time
 import unittest
-import urllib2
+import requests
 
 # 3p
 from nose.plugins.attrib import attr
@@ -556,13 +556,12 @@ class TestDatadog(unittest.TestCase):
         assert share_res['board_id'] == get_res['id']
         public_url = share_res['public_url']
 
-        response = urllib2.urlopen(public_url)
-        assert response.code == 200
+        response = requests.get(public_url)
+        assert response.status_code == 200
 
         revoke_res = dog.Screenboard.revoke(get_res['id'])
-        with self.assertRaises(urllib2.HTTPError) as cm:
-            urllib2.urlopen(public_url)
-        assert cm.exception.code == 404
+        response = requests.get(public_url)
+        assert response.status_code == 404
 
         delete_res = dog.Screenboard.delete(update_res['id'])
         assert delete_res['id'] == update_res['id']

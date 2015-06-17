@@ -9,7 +9,7 @@ import subprocess
 import time
 import tempfile
 import unittest
-import urllib2
+import requests
 
 # 3rd
 from nose.plugins.attrib import attr
@@ -346,14 +346,13 @@ class TestDogshell(unittest.TestCase):
         assert out['board_id'] == screenboard['id']
         # Verify it's actually shared
         public_url = out['public_url']
-        response = urllib2.urlopen(public_url)
-        assert response.code == 200
+        response = requests.get(public_url)
+        assert response.status_code == 200
 
         # Revoke the screenboard and verify it's actually revoked
         self.dogshell(["screenboard", "revoke", str(screenboard["id"])])
-        with self.assertRaises(urllib2.HTTPError) as cm:
-            urllib2.urlopen(public_url)
-        assert cm.exception.code == 404
+        response = requests.get(public_url)
+        assert response.status_code == 404
 
         # Delete the screenboard
         self.dogshell(["screenboard", "delete", str(screenboard["id"])])
