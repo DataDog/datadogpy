@@ -554,7 +554,7 @@ class TestDatadog(unittest.TestCase):
 
         share_res = dog.Screenboard.share(get_res['id'])
         assert share_res['board_id'] == get_res['id']
-        public_url = share_res['public_url'].replace('8080', '5000')
+        public_url = share_res['public_url']
 
         response = urllib2.urlopen(public_url)
         assert response.code == 200

@@ -345,7 +345,7 @@ class TestDogshell(unittest.TestCase):
         out = json.loads(out)
         assert out['board_id'] == screenboard['id']
         # Verify it's actually shared
-        public_url = out['public_url'].replace('8080', '5000')
+        public_url = out['public_url']
         response = urllib2.urlopen(public_url)
         assert response.code == 200
 
