@@ -24,7 +24,7 @@ class Metric(SearchableAPIResource, SendableAPIResource):
         return points
 
     @classmethod
-    def send(cls, *metrics, **single_metric):
+    def send(cls, metrics=None, **single_metric):
         """
         Submit a metric or a list of metrics to the metric API
 
