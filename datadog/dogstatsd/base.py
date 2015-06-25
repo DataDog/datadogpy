@@ -47,17 +47,21 @@ class DogStatsd(object):
         self.close_buffer()
 
     def get_socket(self):
-        '''
-        Return a connected socket
-        '''
+        """
+        Return a connected socket.
+
+        Note: connect the socket before assigning it to the class instance to
+        avoid bad thread race conditions.
+        """
         if not self.socket:
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.socket.connect((self.host, self.port))
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.connect((self.host, self.port))
+            self.socket = sock
         return self.socket
 
     def open_buffer(self, max_buffer_size=50):
         """
-        Open a buffer to send a batch of metrics in one packet
+        Open a buffer to send a batch of metrics in one packet.
 
         You can also use this as a context manager.
 
@@ -71,7 +75,7 @@ class DogStatsd(object):
 
     def close_buffer(self):
         """
-        Flush the buffer and switch back to single metric packets
+        Flush the buffer and switch back to single metric packets.
         """
         self._send = self._send_to_server
         self._flush_buffer()

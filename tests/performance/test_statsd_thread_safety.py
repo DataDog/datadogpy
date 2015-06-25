@@ -57,3 +57,11 @@ class TestDogStatsdThreadSafety(object):
         payload = map(lambda x: x.split("\n"), self.recv())
         payload = reduce(lambda prev, ele: prev + ele, payload, [])
         t.assert_equal(10001, len(payload), len(payload))
+
+    def test_socket_creation(self):
+        """
+        Assess thread safeness in socket creation.
+        """
+        statsd = DogstatsdTest()
+        for _ in range(10000):
+            threading.Thread(target=statsd.send_metrics).start()
