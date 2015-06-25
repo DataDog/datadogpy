@@ -70,6 +70,13 @@ class DatadogAPITestCase(unittest.TestCase):
         self.request_mock = request_class_mock.return_value
         self.request_mock.request = Mock(return_value=MockReponse())
 
+    def get_request_data(self):
+        """
+
+        """
+        _, kwargs = self.request_mock.request.call_args
+        return json.loads(kwargs['data'])
+
     def request_called_with(self, method, url, data=None, params=None):
         (req_method, req_url), others = self.request_mock.request.call_args
         assert method == req_method, req_method

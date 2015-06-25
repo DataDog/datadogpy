@@ -24,7 +24,7 @@ class Metric(SearchableAPIResource, SendableAPIResource):
         return points
 
     @classmethod
-    def send(cls, *metrics, **single_metric):
+    def send(cls, metrics=None, **single_metric):
         """
         Submit a metric or a list of metrics to the metric API
 
@@ -53,7 +53,7 @@ class Metric(SearchableAPIResource, SendableAPIResource):
                 for metric in metrics:
                     if isinstance(metric, dict):
                         metric['points'] = cls._process_points(metric['points'])
-                metrics_dict = {"series": metrics[0]}
+                metrics_dict = {"series": metrics}
             else:
                 single_metric['points'] = cls._process_points(single_metric['points'])
                 metrics = [single_metric]

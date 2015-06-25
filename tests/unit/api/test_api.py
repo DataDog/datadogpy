@@ -1,7 +1,9 @@
 # stdlib
+from copy import deepcopy
 from functools import wraps
 import os
 import tempfile
+from time import time
 
 # 3p
 import mock
@@ -194,9 +196,41 @@ class TestResources(DatadogAPIWithInitialization):
         self.request_called_with('POST', "host/api/v1/actionname/" + str(actionable_object_id),
                                  data={'mydata': "val"})
 
+
+class TestMetricResource(DatadogAPIWithInitialization):
+
+    def submit_and_assess_metric_payload(self, serie):
+        """
+        Helper to assess the metric payload format.
+        """
+        now = time()
+
+        if isinstance(serie, dict):
+            Metric.send(**deepcopy(serie))
+            serie = [serie]
+        else:
+            Metric.send(deepcopy(serie))
+
+        payload = self.get_request_data()
+
+        for i, metric in enumerate(payload['series']):
+            assert set(metric.keys()) == set(['metric', 'points', 'host'])
+
+            assert metric['metric'] == serie[i]['metric']
+            assert metric['host'] == api._host_name
+
+            # points is a list of 1 point
+            assert isinstance(metric['points'], list) and len(metric['points']) == 1
+            # it consists of a [time, value] pair
+            assert len(metric['points'][0]) == 2
+            # its value == value we sent
+            assert metric['points'][0][1] == serie[i]['points']
+            # it's time not so far from current time
+            assert now - 1 < metric['points'][0][0] < now + 1
+
     def test_metric_submit_query_switch(self):
         """
-        Specific to Metric subpackages: endpoints are different for submission and queries
+        Endpoints are different for submission and queries.
         """
         Metric.send(points="val")
         self.request_called_with('POST', "host/api/v1/series",
@@ -205,3 +239,16 @@ class TestResources(DatadogAPIWithInitialization):
         Metric.query(start="val1", end="val2")
         self.request_called_with('GET', "host/api/v1/query",
                                  params={'from': "val1", 'to': "val2"})
+
+    def test_points_submission(self):
+        """
+        Assess the data payload format, when submitting a single or multiple points.
+        """
+        # Single point
+        serie = dict(metric='metric.1', points=13)
+        self.submit_and_assess_metric_payload(serie)
+
+        # Multiple point
+        serie = [dict(metric='metric.1', points=13),
+                 dict(metric='metric.2', points=19)]
+        self.submit_and_assess_metric_payload(serie)
