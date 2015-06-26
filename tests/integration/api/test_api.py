@@ -753,5 +753,152 @@ class TestDatadog(unittest.TestCase):
 
         dog.Host.unmute(hostname)
 
+    @attr('embed')
+    def test_get_all_embeds(self):
+        all_embeds = dog.Embed.get_all()
+        # Check all embeds is a valid response
+        assert "embedded_graphs" in all_embeds
+
+    @attr('embed')
+    def test_create_embed(self):
+        # Initialize a graph definition
+        graph_def = {
+            "viz": "toplist",
+            "requests": [{
+                "q": "top(system.disk.free{$var} by {device}, 10, 'mean', 'desc')",
+                "style": {
+                    "palette": "dog_classic"
+                },
+                "conditional_formats": [{
+                    "palette": "red",
+                    "comparator": ">",
+                    "value": 50000000000
+                }, {
+                    "palette": "green",
+                    "comparator": ">",
+                    "value": 30000000000
+                }]
+            }]
+        }
+        timeframe = "1_hour"
+        size = "medium"
+        legend = "no"
+        title = "Custom titles!"
+        # Dump the dictionary to a JSON string and make an API call
+        graph_json = json.dumps(graph_def)
+        result = dog.Embed.create(graph_json=graph_json, timeframe=timeframe, size=size, legend=legend, title=title)
+        # Check various result attributes
+        assert "embed_id" in result
+        assert result["revoked"] is False
+        assert len(result["template_variables"]) == 1
+        assert result["template_variables"][0] == "var"
+        assert "html" in result
+        assert result["graph_title"] == title
+
+    @attr('embed')
+    def test_get_embed(self):
+        # Create a graph that we can try getting
+        graph_def = {
+            "viz": "toplist",
+            "requests": [{
+                "q": "top(system.disk.free{$var} by {device}, 10, 'mean', 'desc')",
+                "style": {
+                    "palette": "dog_classic"
+                },
+                "conditional_formats": [{
+                    "palette": "red",
+                    "comparator": ">",
+                    "value": 50000000000
+                }, {
+                    "palette": "green",
+                    "comparator": ">",
+                    "value": 30000000000
+                }]
+            }]
+        }
+        timeframe = "1_hour"
+        size = "medium"
+        legend = "no"
+        graph_json = json.dumps(graph_def)
+        created_graph = dog.Embed.create(graph_json=graph_json, timeframe=timeframe, size=size, legend=legend)
+        # Save the html to check against replaced var get
+        html = created_graph["html"]
+        # Save the embed_id into a variable and get it again
+        embed_id = created_graph["embed_id"]
+        response_graph = dog.Embed.get(embed_id, var="asdfasdfasdf")
+        # Check the graph has the same embed_id and the template_var is added to the url
+        assert "embed_id" in response_graph
+        assert response_graph["embed_id"] == embed_id
+        assert len(response_graph["html"]) > len(html)
+
+    @attr('embed')
+    def test_enable_embed(self):
+        # Create a graph that we can try getting
+        graph_def = {
+            "viz": "toplist",
+            "requests": [{
+                "q": "top(system.disk.free{$var} by {device}, 10, 'mean', 'desc')",
+                "style": {
+                    "palette": "dog_classic"
+                },
+                "conditional_formats": [{
+                    "palette": "red",
+                    "comparator": ">",
+                    "value": 50000000000
+                }, {
+                    "palette": "green",
+                    "comparator": ">",
+                    "value": 30000000000
+                }]
+            }]
+        }
+        timeframe = "1_hour"
+        size = "medium"
+        legend = "no"
+        graph_json = json.dumps(graph_def)
+        created_graph = dog.Embed.create(graph_json=graph_json, timeframe=timeframe, size=size, legend=legend)
+        # Save the embed_id into a variable and enable it again
+        embed_id = created_graph["embed_id"]
+        result = dog.Embed.enable(embed_id)
+        # Check that the graph is enabled again
+        assert "success" in result
+
+    @attr('embed')
+    def test_revoke_embed(self):
+        # Create a graph that we can try getting
+        graph_def = {
+            "viz": "toplist",
+            "requests": [{
+                "q": "top(system.disk.free{$var} by {device}, 10, 'mean', 'desc')",
+                "style": {
+                    "palette": "dog_classic"
+                },
+                "conditional_formats": [{
+                    "palette": "red",
+                    "comparator": ">",
+                    "value": 50000000000
+                }, {
+                    "palette": "green",
+                    "comparator": ">",
+                    "value": 30000000000
+                }]
+            }]
+        }
+        timeframe = "1_hour"
+        size = "medium"
+        legend = "no"
+        graph_json = json.dumps(graph_def)
+        created_graph = dog.Embed.create(graph_json=graph_json, timeframe=timeframe, size=size, legend=legend)
+        # Save the embed_id into a variable and enable it again
+        embed_id = created_graph["embed_id"]
+        result = dog.Embed.revoke(embed_id)
+        # Check embed is revoked and that we can't get it again
+        assert "success" in result
+        try:
+            dog.Embed.get(embed_id)
+        except ApiError, e:
+            assert True
+
+
 if __name__ == '__main__':
     unittest.main()
