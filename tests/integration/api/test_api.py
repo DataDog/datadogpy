@@ -357,10 +357,8 @@ class TestDatadog(unittest.TestCase):
         dog.Metric.send(metric="test.metric", points=1.0)
         dog.Metric.send(metric="test.metric", points=(time.time(), 1.0))
 
+    @attr('monitor')
     def test_monitors(self):
-        # Stop testing 'silenced' parameter
-        # Depending on the enabled flag (i.e. API release), 'silenced' can be a boolean or a dictionnary
-
         query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
 
         monitor_id = dog.Monitor.create(query=query, type="metric alert")['id']
@@ -371,13 +369,15 @@ class TestDatadog(unittest.TestCase):
 
         options = {
             "notify_no_data": True,
-            "no_data_timeframe": 20
+            "no_data_timeframe": 20,
+            "silenced": {"*": None}
         }
-        dog.Monitor.update(monitor_id, query=query, silenced=True, options=options, timeout_h=1)
+        dog.Monitor.update(monitor_id, query=query, options=options, timeout_h=1)
         monitor = dog.Monitor.get(monitor_id)
         assert monitor['query'] == query, monitor['query']
         assert monitor['options']['notify_no_data'] == True, monitor['options']['notify_no_data']
-        assert monitor['options']['no_data_timeframe'] == 20, monitor['options']['notify_no_data']
+        assert monitor['options']['no_data_timeframe'] == 20, monitor['options']['no_data_timeframe']
+        assert monitor['options']['silenced'] == {"*": None}, monitor['options']['silenced']
 
         dog.Monitor.delete(monitor_id)
         try:
@@ -676,6 +676,17 @@ class TestDatadog(unittest.TestCase):
         monitor = dog.Monitor.get(monitor_id)
         eq(monitor['options']['silenced'], {})
 
+        options = {
+            "silenced": {"host:abcd1234": None, "host:abcd1235": None}
+        }
+        dog.Monitor.update(monitor_id, query=query, options=options)
+        monitor = dog.Monitor.get(monitor_id)
+        eq(monitor['options']['silenced'], options['silenced'])
+
+        dog.Monitor.unmute(monitor_id, all_scopes=True)
+        monitor = dog.Monitor.get(monitor_id)
+        eq(monitor['options']['silenced'], {})
+
         dog.Monitor.delete(monitor_id)
 
     @attr('monitor')
@@ -740,7 +751,7 @@ class TestDatadog(unittest.TestCase):
         eq(mute['action'], "Muted")
         eq(mute['end'], end2)
 
-        unmute = dog.Host.unmute(hostname)
+        dog.Host.unmute(hostname)
 
 if __name__ == '__main__':
     unittest.main()
