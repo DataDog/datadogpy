@@ -170,7 +170,7 @@ class TestDogStatsd(object):
         self.assert_almost_equal(0.5, float(value), 0.1)
 
     def test_timed_context(self):
-        with self.statsd.timed_context('timed_context.test'):
+        with self.statsd.timed('timed_context.test'):
             time.sleep(0.5)
 
         packet = self.recv()
@@ -187,7 +187,7 @@ class TestDogStatsd(object):
             pass
 
         def func(self):
-            with self.statsd.timed_context('timed_context.test.exception'):
+            with self.statsd.timed('timed_context.test.exception'):
                 time.sleep(0.5)
                 raise ContextException()
 
