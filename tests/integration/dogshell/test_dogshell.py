@@ -350,7 +350,7 @@ class TestDogshell(unittest.TestCase):
 
     def test_monitors(self):
         # Create a monitor
-        query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
+        query = "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100"
         type_alert = "metric alert"
         out, err, return_code = self.dogshell(["monitor", "post", type_alert, query])
 
@@ -389,12 +389,35 @@ class TestDogshell(unittest.TestCase):
         assert "id" in out, out
         out = json.loads(out)
         self.assertEquals(str(out["id"]), monitor_id)
+        self.assertEquals(out["options"]["silenced"], {"*": None})
 
         # Unmute monitor
-        self.dogshell(["monitor", "unmute", monitor_id])
         out, err, return_code = self.dogshell(["monitor", "unmute", monitor_id], check_return_code=False)
-        self.assertEquals(out, '')
-        self.assertEquals(return_code, 1)
+        out = json.loads(out)
+        self.assertEquals(str(out["id"]), monitor_id)
+        self.assertEquals(out["options"]["silenced"], {})
+
+        # Unmute all scopes of a monitor
+        options = {
+            "silenced": {"host:abcd1234": None, "host:abcd1235": None}
+        }
+
+        out, err, return_code = self.dogshell(
+            ["monitor", "update", monitor_id, type_alert,
+             query, "--options", json.dumps(options)])
+
+        assert "id" in out, out
+        assert "options" in out, out
+        out = json.loads(out)
+        self.assertEquals(out["query"], query)
+        self.assertEquals(out["options"]["silenced"], {"host:abcd1234": None, "host:abcd1235": None})
+
+        out, err, return_code = self.dogshell(["monitor", "unmute", str(out["id"]),
+                                                "--all_scopes"])
+        assert "id" in out, out
+        out = json.loads(out)
+        self.assertEquals(str(out["id"]), monitor_id)
+        self.assertEquals(out["options"]["silenced"], {})
 
         # Delete a monitor
         self.dogshell(["monitor", "delete", monitor_id])
