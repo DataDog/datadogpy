@@ -130,7 +130,7 @@ class DogStatsd(object):
     def timed(self, metric, tags=None, sample_rate=1):
         """
         A decorator that will measure the distribution of a function's run
-        time.  Optionally specify a list of tag or a sample rate.
+        time.  Optionally specify a list of tags or a sample rate.
         ::
 
             @statsd.timed('user.query.time', sample_rate=0.5)
@@ -155,6 +155,44 @@ class DogStatsd(object):
                 return result
             return wrapped
         return wrapper
+
+    class _TimedContextManager(object):
+        def __init__(self, statsd, metric, tags=None, sample_rate=1):
+            """
+            Create a context manager which will report the time elapsed by its
+            context.
+            """
+            self.statsd = statsd
+            self.metric = metric
+            self.tags = tags
+            self.sample_rate = sample_rate
+
+        def __enter__(self):
+            self.start = time()
+
+        def __exit__(self, type, value, traceback):
+            # Report the elapsed time of the context manager.
+            self.statsd.timing(self.metric, time() - self.start,
+                               self.tags, self.sample_rate)
+
+    def timed_context(self, metric, tags=None, sample_rate=1):
+        """
+        A context manager that will measure the distribution of a context's run
+        time.  Optionally specify a list of tags or a sample rate.
+        ::
+
+            with statsd.timed_context('user.query.time', sample_rate=0.5):
+                # Do what you need to ...
+                pass
+
+            # Is equivalent to ...
+            start = time.time()
+            try:
+                get_user(user_id)
+            finally:
+                statsd.timing('user.query.time', time.time() - start)
+        """
+        return self._TimedContextManager(self, metric, tags, sample_rate)
 
     def set(self, metric, value, tags=None, sample_rate=1):
         """
