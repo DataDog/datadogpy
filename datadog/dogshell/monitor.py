@@ -46,23 +46,25 @@ class MonitorClient(object):
         delete_parser.add_argument('monitor_id', help="monitor to delete")
         delete_parser.set_defaults(func=cls._delete)
 
-        mute_all_parser = verb_parsers.add_parser('mute_all', help="Mute all monitors")
+        mute_all_parser = verb_parsers.add_parser('mute_all', help="Globally mute "
+                                                  "monitors (downtime over *)")
         mute_all_parser.set_defaults(func=cls._mute_all)
 
-        unmute_all_parser = verb_parsers.add_parser('unmute_all', help="Unmute all monitors")
+        unmute_all_parser = verb_parsers.add_parser('unmute_all', help="Globally unmute "
+                                                    "monitors (cancel downtime over *)")
         unmute_all_parser.set_defaults(func=cls._unmute_all)
 
         mute_parser = verb_parsers.add_parser('mute', help="Mute a monitor")
         mute_parser.add_argument('monitor_id', help="monitor to mute")
         mute_parser.add_argument('--scope', help="scope to apply the mute to,"
-                                 " e.g. role:db", default=[])
+                                 " e.g. role:db (optional)", default=[])
         mute_parser.add_argument('--end', help="POSIX timestamp for when"
-                                 " the mute should end", default=None)
+                                 " the mute should end (optional)", default=None)
         mute_parser.set_defaults(func=cls._mute)
 
         unmute_parser = verb_parsers.add_parser('unmute', help="Unmute a monitor")
         unmute_parser.add_argument('monitor_id', help="monitor to unmute")
-        unmute_parser.add_argument('--scope', help="scope to apply the mute to, "
+        unmute_parser.add_argument('--scope', help="scope to unmute (must be muted), "
                                    "e.g. role:db", default=[])
         unmute_parser.set_defaults(func=cls._unmute)
 

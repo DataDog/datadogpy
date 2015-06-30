@@ -72,6 +72,9 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
         :param scope: scope to apply the unmute
         :type scope: string
 
+        :param all_scopes: if True, clears mute settings for all scopes
+        :type all_scopes: boolean
+
         :returns: JSON response from HTTP request
         """
         return super(Monitor, cls)._trigger_class_action('POST', 'unmute', id, **params)
@@ -79,7 +82,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
     @classmethod
     def mute_all(cls):
         """
-        Mute all monitors.
+        Globally mute monitors.
 
         :returns: JSON response from HTTP request
         """
@@ -88,7 +91,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
     @classmethod
     def unmute_all(cls):
         """
-        Unmute all monitors.
+        Cancel global monitor mute setting (does not remove mute settings for individual monitors).
 
         :returns: JSON response from HTTP request
         """
