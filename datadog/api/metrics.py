@@ -40,21 +40,35 @@ class Metric(SearchableAPIResource, SendableAPIResource):
         :param tags:  list of tags associated with the metric.
         :type tags: string list
 
-        :param metric_type: type of the metric
-        :type metric_type: 'gauge' or 'counter' string
+        :param type: type of the metric
+        :type type: 'gauge' or 'counter' string
 
         :returns: JSON response from HTTP request
         """
+        def rename_metric_type(metric):
+            """
+            FIXME DROPME in 1.0:
+
+            API documentation was illegitimately promoting usage of `metric_type` parameter
+            instead of `type`.
+            To be consistent and avoid 'backward incompatibilities', properly rename this parameter.
+            """
+            if 'metric_type' in metric:
+                metric['type'] = metric.pop('metric_type')
+
         # Set the right endpoint
         cls._class_url = cls._METRIC_SUBMIT_ENDPOINT
 
+        # Format the payload
         try:
             if metrics:
                 for metric in metrics:
                     if isinstance(metric, dict):
+                        rename_metric_type(metric)
                         metric['points'] = cls._process_points(metric['points'])
                 metrics_dict = {"series": metrics}
             else:
+                rename_metric_type(single_metric)
                 single_metric['points'] = cls._process_points(single_metric['points'])
                 metrics = [single_metric]
                 metrics_dict = {"series": metrics}
