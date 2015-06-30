@@ -121,7 +121,7 @@ class HTTPClient(object):
                 cls._timeout_counter += 1
                 raise HttpTimeout('%s %s timed out after %d seconds.' % (method, url, _timeout))
             except requests.exceptions.HTTPError as e:
-                if e.response.status_code == 404 or e.response.status_code == 400:
+                if e.response.status_code in (400, 403, 404):
                     pass
                 else:
                     raise
