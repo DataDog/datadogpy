@@ -66,6 +66,8 @@ class MonitorClient(object):
         unmute_parser.add_argument('monitor_id', help="monitor to unmute")
         unmute_parser.add_argument('--scope', help="scope to unmute (must be muted), "
                                    "e.g. role:db", default=[])
+        unmute_parser.add_argument('--all_scopes', help="clear muting across all scopes",
+                                   action='store_true')
         unmute_parser.set_defaults(func=cls._unmute)
 
     @classmethod
@@ -196,8 +198,10 @@ class MonitorClient(object):
     @classmethod
     def _unmute(cls, args):
         api._timeout = args.timeout
-        # TODO CHECK
-        res = api.Monitor.unmute(args.monitor_id, scope=args.scope)
-        if res is not None:
-            report_warnings(res)
-            report_errors(res)
+        res = api.Monitor.unmute(args.monitor_id, scope=args.scope, all_scopes=args.all_scopes)
+        report_warnings(res)
+        report_errors(res)
+        if format == 'pretty':
+            print(cls._pretty_json(res))
+        else:
+            print(json.dumps(res))
