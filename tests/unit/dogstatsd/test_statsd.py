@@ -169,6 +169,40 @@ class TestDogStatsd(object):
         t.assert_equal('timed.test', name)
         self.assert_almost_equal(0.5, float(value), 0.1)
 
+    def test_timed_context(self):
+        with self.statsd.timed('timed_context.test'):
+            time.sleep(0.5)
+
+        packet = self.recv()
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        t.assert_equal('ms', type_)
+        t.assert_equal('timed_context.test', name)
+        self.assert_almost_equal(0.5, float(value), 0.1)
+
+    def test_timed_context_exception(self):
+        """Test that an exception bubbles out of the context manager."""
+        class ContextException(Exception):
+            pass
+
+        def func(self):
+            with self.statsd.timed('timed_context.test.exception'):
+                time.sleep(0.5)
+                raise ContextException()
+
+        # Ensure the exception was raised.
+        t.assert_raises(ContextException, func, self)
+
+        # Ensure the timing was recorded.
+        packet = self.recv()
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        t.assert_equal('ms', type_)
+        t.assert_equal('timed_context.test.exception', name)
+        self.assert_almost_equal(0.5, float(value), 0.1)
+
     def test_batched(self):
         self.statsd.open_buffer()
         self.statsd.gauge('page.views', 123)
