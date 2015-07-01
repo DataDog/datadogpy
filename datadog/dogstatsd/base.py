@@ -143,12 +143,8 @@ class DogStatsd(object):
             """Decorator which returns the elapsed time of the function call."""
             @wraps(func)
             def wrapped(*args, **kwargs):
-                start = time()
-                result = func(*args, **kwargs)
-                self.statsd.timing(
-                    self.metric, time() - start, tags=self.tags,
-                    sample_rate=self.sample_rate)
-                return result
+                with self:
+                    return func(*args, **kwargs)
             return wrapped
 
         def __enter__(self):
