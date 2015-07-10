@@ -152,7 +152,8 @@ class DogStatsd(object):
 
         def __exit__(self, type, value, traceback):
             # Report the elapsed time of the context manager.
-            self.statsd.timing(self.metric, time() - self.start,
+            time_ms = int(round(1000 * (time() - self.start)))
+            self.statsd.timing(self.metric, time_ms,
                                self.tags, self.sample_rate)
 
     def timed(self, metric, tags=None, sample_rate=1):
@@ -177,7 +178,8 @@ class DogStatsd(object):
             try:
                 get_user(user_id)
             finally:
-                statsd.timing('user.query.time', time.time() - start)
+                time_ms = int(round(1000 * (time.time() - start)))
+                statsd.timing('user.query.time', time_ms)
         """
         return self._TimedContextManagerDecorator(self, metric, tags, sample_rate)
 

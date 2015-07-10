@@ -167,7 +167,7 @@ class TestDogStatsd(object):
 
         t.assert_equal('ms', type_)
         t.assert_equal('timed.test', name)
-        self.assert_almost_equal(0.5, float(value), 0.1)
+        self.assert_almost_equal(500, int(value), 100)
 
     def test_timed_context(self):
         with self.statsd.timed('timed_context.test'):
@@ -179,7 +179,7 @@ class TestDogStatsd(object):
 
         t.assert_equal('ms', type_)
         t.assert_equal('timed_context.test', name)
-        self.assert_almost_equal(0.5, float(value), 0.1)
+        self.assert_almost_equal(500, int(value), 100)
 
     def test_timed_context_exception(self):
         """Test that an exception bubbles out of the context manager."""
@@ -201,7 +201,7 @@ class TestDogStatsd(object):
 
         t.assert_equal('ms', type_)
         t.assert_equal('timed_context.test.exception', name)
-        self.assert_almost_equal(0.5, float(value), 0.1)
+        self.assert_almost_equal(500, int(value), 100)
 
     def test_batched(self):
         self.statsd.open_buffer()
