@@ -21,7 +21,7 @@ log = logging.getLogger('dogstatsd')
 class DogStatsd(object):
     OK, WARNING, CRITICAL, UNKNOWN = (0, 1, 2, 3)
 
-    def __init__(self, host='localhost', port=8125, max_buffer_size=50):
+    def __init__(self, host='localhost', port=8125, max_buffer_size=50, constant_tags=None):
         """
         Initialize a DogStatsd object.
 
@@ -31,6 +31,7 @@ class DogStatsd(object):
         :param port: the port of the DogStatsd server.
         :param max_buffer_size: Maximum number of metric to buffer before sending to the server
             if sending metrics in batch
+        :param constant_tags: A list of strings to attach to every metric reported by this client
         """
         self.host = host
         self.port = int(port)
@@ -38,6 +39,7 @@ class DogStatsd(object):
         self.max_buffer_size = max_buffer_size
         self._send = self._send_to_server
         self.encoding = 'utf-8'
+        self.constant_tags = constant_tags
 
     def __enter__(self):
         self.open_buffer(self.max_buffer_size)
@@ -196,6 +198,14 @@ class DogStatsd(object):
         payload = [metric, ":", value, "|", metric_type]
         if sample_rate != 1:
             payload.extend(["|@", sample_rate])
+
+        # Append all client level tags to every metric
+        if self.constant_tags:
+            if tags:
+                tags += self.constant_tags
+            else:
+                tags = self.constant_tags
+
         if tags:
             payload.extend(["|#", ",".join(tags)])
 
