@@ -61,7 +61,8 @@ class HTTPClient(object):
 
             # Import API, User and HTTP settings
             from datadog.api import _api_key, _application_key, _api_host, \
-                _swallow, _host_name, _proxies, _max_retries, _timeout
+                _swallow, _host_name, _proxies, _max_retries, _timeout, \
+                _cacert
 
             # Check keys and add then to params
             if _api_key is None:
@@ -112,7 +113,8 @@ class HTTPClient(object):
                     params=params,
                     data=body,
                     timeout=_timeout,
-                    proxies=_proxies)
+                    proxies=_proxies,
+                    verify=_cacert)
 
                 result.raise_for_status()
             except requests.ConnectionError as e:

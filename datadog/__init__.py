@@ -32,7 +32,7 @@ else:
 
 
 def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
-               proxies=None, statsd_host=None, statsd_port=None):
+               proxies=None, statsd_host=None, statsd_port=None, cacert=True):
     """
     Initialize and configure Datadog.api and Datadog.statsd modules
 
@@ -53,6 +53,11 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
 
     :param statsd_port: Port of DogStatsd server or statsd daemon
     :type statsd_port: port
+
+    :param cacert: Path to local certificate file used to verify SSL
+    certificates. Can also be set to True (default) to use the systems
+    certificate store, or False to skip SSL verification
+    :type cacert: path or boolean
     """
     # Configure api
     api._api_key = api_key if api_key is not None else os.environ.get('DATADOG_API_KEY')
@@ -61,6 +66,7 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
     api._api_host = api_host if api_host is not None else \
         os.environ.get('DATADOG_HOST', 'https://app.datadoghq.com')
     api._proxies = proxies
+    api._cacert = cacert
 
     # Given statsd_host and statsd_port, overrides statsd instance
     if statsd_host and statsd_port:
