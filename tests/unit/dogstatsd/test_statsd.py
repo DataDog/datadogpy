@@ -113,7 +113,7 @@ class TestDogStatsd(object):
         def test_tags_and_samples(self):
             for i in range(100):
                 self.statsd.gauge('gst', 23, tags=["sampled"], sample_rate=0.9)
-            t.assert_equal('gst:23|g|@0.9|#sampled,bar:baz,foo')
+            t.assert_equal('gst:23|g|@0.9|#sampled')
 
     def test_timing(self):
         self.statsd.timing('t', 123)
@@ -136,6 +136,17 @@ class TestDogStatsd(object):
         t.assert_equal(
             u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}'
             .format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\: T0µ ♪"), self.recv())
+
+    # Test Client level contant tags
+    def test_gauge_constant_tags(self):
+        self.statsd.constant_tags=['bar:baz', 'foo']
+        self.statsd.gauge('gauge', 123.4)
+        assert self.recv() == 'gauge:123.4|g|#bar:baz,foo'
+
+    def test_counter_constant_tag_with_metric_level_tags(self):
+        self.statsd.constant_tags=['bar:baz', 'foo']
+        self.statsd.increment('page.views', tags=['extra'])
+        t.assert_equal('page.views:1|c|#extra,bar:baz,foo', self.recv())
 
     @staticmethod
     def assert_almost_equal(a, b, delta):
@@ -250,96 +261,6 @@ class TestDogStatsd(object):
         dogpound.socket = fresh_socket
         t.assert_equal(fresh_socket, dogpound.get_socket())
         t.assert_not_equal(FakeSocket(), dogpound.get_socket())
-
-
-class TestDogStatsdConstantTags(object):
-
-    def setUp(self):
-        self.statsd = DogStatsd(constant_tags=['bar:baz','foo'])
-        self.statsd.socket = FakeSocket()
-
-    def recv(self):
-        return self.statsd.socket.recv()
-
-    @staticmethod
-    def assert_almost_equal(a, b, delta):
-        assert 0 <= abs(a - b) <= delta, "%s - %s not within %s" % (a, b, delta)
-
-    def test_set(self):
-        self.statsd.set('set', 123)
-        assert self.recv() == 'set:123|s|#bar:baz,foo'
-
-    def test_gauge(self):
-        self.statsd.gauge('gauge', 123.4)
-        assert self.recv() == 'gauge:123.4|g|#bar:baz,foo'
-
-    def test_counter(self):
-        self.statsd.increment('page.views')
-        t.assert_equal('page.views:1|c|#bar:baz,foo', self.recv())
-
-        self.statsd.increment('page.views', 11)
-        t.assert_equal('page.views:11|c|#bar:baz,foo', self.recv())
-
-        self.statsd.decrement('page.views')
-        t.assert_equal('page.views:-1|c|#bar:baz,foo', self.recv())
-
-        self.statsd.decrement('page.views', 12)
-        t.assert_equal('page.views:-12|c|#bar:baz,foo', self.recv())
-
-    def test_histogram(self):
-        self.statsd.histogram('histo', 123.4)
-        t.assert_equal('histo:123.4|h|#bar:baz,foo', self.recv())
-
-    def test_tagged_gauge(self):
-        self.statsd.gauge('gt', 123.4, tags=['country:china', 'age:45', 'blue'])
-        t.assert_equal('gt:123.4|g|#country:china,age:45,blue,bar:baz,foo', self.recv())
-
-    def test_tagged_counter(self):
-        self.statsd.increment('ct', tags=['country:canada', 'red'])
-        t.assert_equal('ct:1|c|#country:canada,red,bar:baz,foo', self.recv())
-
-    def test_tagged_histogram(self):
-        self.statsd.histogram('h', 1, tags=['red'])
-        t.assert_equal('h:1|h|#red,bar:baz,foo', self.recv())
-
-    def test_sample_rate(self):
-        self.statsd.increment('c', sample_rate=0)
-        assert not self.recv()
-        for i in range(10000):
-            self.statsd.increment('sampled_counter', sample_rate=0.3)
-        self.assert_almost_equal(3000, len(self.statsd.socket.payloads), 150)
-        t.assert_equal('sampled_counter:1|c|@0.3|#bar:baz,foo', self.recv())
-
-    def test_tags_and_samples(self):
-        for i in range(100):
-            self.statsd.gauge('gst', 23, tags=["sampled"], sample_rate=0.9)
-
-        def test_tags_and_samples(self):
-            for i in range(100):
-                self.statsd.gauge('gst', 23, tags=["sampled"], sample_rate=0.9)
-            t.assert_equal('gst:23|g|@0.9|#sampled,bar:baz,foo')
-
-    def test_timing(self):
-        self.statsd.timing('t', 123)
-        t.assert_equal('t:123|ms|#bar:baz,foo', self.recv())
-
-    def test_event(self):
-        self.statsd.event('Title', u'L1\nL2', priority='low', date_happened=1375296969)
-        t.assert_equal(u'_e{5,6}:Title|L1\\nL2|d:1375296969|p:low', self.recv())
-
-        self.statsd.event('Title', u'♬ †øU †øU ¥ºu T0µ ♪',
-                          aggregation_key='key', tags=['t1', 't2:v2'])
-        t.assert_equal(u'_e{5,19}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2', self.recv())
-
-    def test_service_check(self):
-        now = int(time.time())
-        self.statsd.service_check(
-            'my_check.name', self.statsd.WARNING,
-            tags=['key1:val1', 'key2:val2'], timestamp=now,
-            hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪")
-        t.assert_equal(
-            u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}'
-            .format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\: T0µ ♪"), self.recv())
 
 if __name__ == '__main__':
     statsd = statsd
