@@ -135,7 +135,7 @@ class DogStatsd(object):
         the context OR in a function call.
         """
 
-        def __init__(self, statsd, metric, tags=None, sample_rate=1):
+        def __init__(self, statsd, metric=None, tags=None, sample_rate=1):
             self.statsd = statsd
             self.metric = metric
             self.tags = tags
@@ -143,6 +143,10 @@ class DogStatsd(object):
 
         def __call__(self, func):
             """Decorator which returns the elapsed time of the function call."""
+            # Default to the function name if metric was not provided.
+            if not self.metric:
+                self.metric = '%s.%s' % (func.__module__, func.__name__)
+
             @wraps(func)
             def wrapped(*args, **kwargs):
                 with self:
@@ -150,6 +154,8 @@ class DogStatsd(object):
             return wrapped
 
         def __enter__(self):
+            if not self.metric:
+                raise TypeError("Cannot used timed without a metric!")
             self.start = time()
 
         def __exit__(self, type, value, traceback):
@@ -157,11 +163,13 @@ class DogStatsd(object):
             self.statsd.timing(self.metric, time() - self.start,
                                self.tags, self.sample_rate)
 
-    def timed(self, metric, tags=None, sample_rate=1):
+    def timed(self, metric=None, tags=None, sample_rate=1):
         """
         A decorator or context manager that will measure the distribution of a
         function's/context's run time. Optionally specify a list of tags or a
-        sample rate.
+        sample rate. If the metric is not defined as a decorator, the module
+        name and function name will be used. The metric is required as a context
+        manager.
         ::
 
             @statsd.timed('user.query.time', sample_rate=0.5)
