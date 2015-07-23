@@ -137,6 +137,17 @@ class TestDogStatsd(object):
             u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}'
             .format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\: T0µ ♪"), self.recv())
 
+    # Test Client level contant tags
+    def test_gauge_constant_tags(self):
+        self.statsd.constant_tags=['bar:baz', 'foo']
+        self.statsd.gauge('gauge', 123.4)
+        assert self.recv() == 'gauge:123.4|g|#bar:baz,foo'
+
+    def test_counter_constant_tag_with_metric_level_tags(self):
+        self.statsd.constant_tags=['bar:baz', 'foo']
+        self.statsd.increment('page.views', tags=['extra'])
+        t.assert_equal('page.views:1|c|#extra,bar:baz,foo', self.recv())
+
     @staticmethod
     def assert_almost_equal(a, b, delta):
         assert 0 <= abs(a - b) <= delta, "%s - %s not within %s" % (a, b, delta)
@@ -250,7 +261,6 @@ class TestDogStatsd(object):
         dogpound.socket = fresh_socket
         t.assert_equal(fresh_socket, dogpound.get_socket())
         t.assert_not_equal(FakeSocket(), dogpound.get_socket())
-
 
 if __name__ == '__main__':
     statsd = statsd
