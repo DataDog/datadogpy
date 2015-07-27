@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+# 0.8.0 / Unreleased
+* [FEATURE] Constant tags client option to append tags to every submitted metrics, [#68][] (thanks [@jofusa][])
+* [FEATURE] Embeddable graphs API, [#62][]
+* [FEATURE] Optional metric name for the timed decorator, [#71][] (thanks [@clokep][])
+* [IMPROVEMENT] Option to use the verify parameter in requests to configure a ca certificates file or to disable verification, [#70][] (thanks [@ogst][])
+
 # 0.7.0 / 2015-07-01
 * [FEATURE] Revoke a shared screenboard, [#46][]
 * [FEATURE] Add new monitor `unmute` arg (`all_scopes`) to allow clearing all mute settings for a given monitor, [#58][]
@@ -78,11 +84,19 @@ See [#8][], thanks [@benweatherman][]
 [#58]: https://github.com/DataDog/datadogpy/issues/58
 [#59]: https://github.com/DataDog/datadogpy/issues/59
 [#60]: https://github.com/DataDog/datadogpy/issues/60
+[#62]: https://github.com/DataDog/datadogpy/issues/62
 [#63]: https://github.com/DataDog/datadogpy/issues/63
 [#64]: https://github.com/DataDog/datadogpy/issues/64
 [#65]: https://github.com/DataDog/datadogpy/issues/65
+[#67]: https://github.com/DataDog/datadogpy/issues/67
+[#68]: https://github.com/DataDog/datadogpy/issues/68
+[#70]: https://github.com/DataDog/datadogpy/issues/70
+[#71]: https://github.com/DataDog/datadogpy/issues/71
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@benweatherman]: https://github.com/benweatherman
 [@clokep]: https://github.com/clokep
+[@g--]: https://github.com/g--
+[@jofusa]: https://github.com/jofusa
 [@kuzmich]: https://github.com/kuzmich
 [@miketheman]: https://github.com/miketheman
+[@ogst]: https://github.com/ogst
