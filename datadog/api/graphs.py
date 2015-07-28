@@ -59,16 +59,6 @@ class Embed(ListableAPIResource, GetableAPIResource, ActionAPIResource):
     _class_url = '/graph/embed'
 
     @classmethod
-    def get_all(cls):
-        """
-        Returns a JSON object containing a list of all embeddable graphs
-        in the API user's organization.
-
-        :returns: JSON response from HTTP API request
-        """
-        return super(Embed, cls).get_all()
-
-    @classmethod
     def get(cls, embed_id, **params):
         """
         Returns a JSON object representing the specified embed.
@@ -114,7 +104,7 @@ class Embed(ListableAPIResource, GetableAPIResource, ActionAPIResource):
         return super(Embed, cls)._trigger_action('POST', name=cls._class_url, **params)
 
     @classmethod
-    def enable(cls, embed_id, **params):
+    def enable(cls, embed_id):
         """
         Enable a specified embed.
 
@@ -123,8 +113,7 @@ class Embed(ListableAPIResource, GetableAPIResource, ActionAPIResource):
 
         :returns: JSON response from HTTP API request
         """
-        handle = embed_id + "/enable"
-        return super(Embed, cls).get(handle)
+        return super(Embed, cls)._trigger_class_action('GET', id=embed_id, name='enable')
 
     @classmethod
     def revoke(cls, embed_id):
@@ -136,5 +125,4 @@ class Embed(ListableAPIResource, GetableAPIResource, ActionAPIResource):
 
         :returns: JSON response from HTTP API request
         """
-        handle = embed_id + "/revoke"
-        return super(Embed, cls).get(handle)
+        return super(Embed, cls)._trigger_class_action('GET', id=embed_id,  name='revoke')
