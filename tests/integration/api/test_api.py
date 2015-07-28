@@ -894,10 +894,8 @@ class TestDatadog(unittest.TestCase):
         result = dog.Embed.revoke(embed_id)
         # Check embed is revoked and that we can't get it again
         assert "success" in result
-        try:
+        with self.assertRaises(ApiError):
             dog.Embed.get(embed_id)
-        except ApiError, e:
-            assert True
 
 
 if __name__ == '__main__':
