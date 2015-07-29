@@ -52,56 +52,11 @@ class Graph(CreateableAPIResource, ActionAPIResource):
         return super(Graph, cls)._trigger_action('GET', snapshot_status_url)
 
 
-class Embed(ListableAPIResource, GetableAPIResource, ActionAPIResource):
+class Embed(ListableAPIResource, GetableAPIResource, ActionAPIResource, CreateableAPIResource):
     """
     A wrapper around Embed HTTP API.
     """
     _class_url = '/graph/embed'
-
-    @classmethod
-    def get(cls, embed_id, **params):
-        """
-        Returns a JSON object representing the specified embed.
-
-        :param embed_id: embed token
-        :type embed_id: string embed token
-
-        :param size: graph size
-        :type size: string graph size
-
-        :param legend: legend flag
-        :type legend: string legend flag
-
-        :param template_vars: template variable values
-        :type template_vars: string values (each var is a kv pair of **params)
-
-        :returns: JSON response from HTTP API request
-        """
-        return super(Embed, cls).get(embed_id, **params)
-
-    @classmethod
-    def create(cls, **params):
-        """
-        Returns a JSON object representing the specified embed.
-
-        :param graph_json: graph definition
-        :type graph_json: JSON string graph definition
-
-        :param timeframe: graph timeframe
-        :type timeframe: string graph timeframe
-
-        :param size: graph size
-        :type size: string graph size
-
-        :param legend: legend flag
-        :type legend: string legend flag
-
-        :param title: graph title
-        :type title: string title
-
-        :returns: JSON response from HTTP API request
-        """
-        return super(Embed, cls)._trigger_action('POST', name=cls._class_url, **params)
 
     @classmethod
     def enable(cls, embed_id):
