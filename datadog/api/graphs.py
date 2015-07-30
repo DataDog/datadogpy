@@ -1,5 +1,10 @@
 from datadog.util.compat import urlparse
-from datadog.api.base import CreateableAPIResource, ActionAPIResource
+from datadog.api.base import (
+    CreateableAPIResource,
+    ActionAPIResource,
+    GetableAPIResource,
+    ListableAPIResource
+)
 
 
 class Graph(CreateableAPIResource, ActionAPIResource):
@@ -45,3 +50,34 @@ class Graph(CreateableAPIResource, ActionAPIResource):
         snapshot_status_url = '/graph/snapshot_status/{0}'.format(snap_path)
 
         return super(Graph, cls)._trigger_action('GET', snapshot_status_url)
+
+
+class Embed(ListableAPIResource, GetableAPIResource, ActionAPIResource, CreateableAPIResource):
+    """
+    A wrapper around Embed HTTP API.
+    """
+    _class_url = '/graph/embed'
+
+    @classmethod
+    def enable(cls, embed_id):
+        """
+        Enable a specified embed.
+
+        :param embed_id: embed token
+        :type embed_id: string embed token
+
+        :returns: JSON response from HTTP API request
+        """
+        return super(Embed, cls)._trigger_class_action('GET', id=embed_id, name='enable')
+
+    @classmethod
+    def revoke(cls, embed_id):
+        """
+        Revoke a specified embed.
+
+        :param embed_id: embed token
+        :type embed_id: string embed token
+
+        :returns: JSON response from HTTP API request
+        """
+        return super(Embed, cls)._trigger_class_action('GET', id=embed_id,  name='revoke')
