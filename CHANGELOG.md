@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.8.0 / Unreleased
+# 0.8.0 / 2015-07-30
 * [FEATURE] Constant tags client option to append tags to every submitted metrics, [#68][] (thanks [@jofusa][])
 * [FEATURE] Embeddable graphs API, [#62][]
 * [FEATURE] Optional metric name for the timed decorator, [#71][] (thanks [@clokep][])
