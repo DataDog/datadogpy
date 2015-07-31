@@ -178,7 +178,7 @@ class TestDogStatsd(object):
 
         t.assert_equal('ms', type_)
         t.assert_equal('timed.test', name)
-        self.assert_almost_equal(0.5, float(value), 0.1)
+        self.assert_almost_equal(500, int(value), 100)
 
     def test_timed_no_metric(self, ):
         """Test using a decorator without providing a metric."""
@@ -214,7 +214,7 @@ class TestDogStatsd(object):
 
         t.assert_equal('ms', type_)
         t.assert_equal('timed_context.test', name)
-        self.assert_almost_equal(0.5, float(value), 0.1)
+        self.assert_almost_equal(500, int(value), 100)
 
     def test_timed_context_exception(self):
         """Test that an exception bubbles out of the context manager."""
@@ -236,7 +236,7 @@ class TestDogStatsd(object):
 
         t.assert_equal('ms', type_)
         t.assert_equal('timed_context.test.exception', name)
-        self.assert_almost_equal(0.5, float(value), 0.1)
+        self.assert_almost_equal(500, int(value), 100)
 
     def test_timed_context_no_metric_exception(self):
         """Test that an exception occurs if using a context manager without a metric."""
