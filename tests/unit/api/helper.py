@@ -5,6 +5,7 @@ import unittest
 from datadog import initialize, api
 from datadog.api.base import CreateableAPIResource, UpdatableAPIResource, DeletableAPIResource,\
     GetableAPIResource, ListableAPIResource, ActionAPIResource
+from datadog.api.exceptions import ApiError
 from datadog.util.compat import iteritems, json
 
 # 3p
@@ -21,10 +22,15 @@ FAKE_PROXY = {
 
 
 class MockReponse(requests.Response):
-    content = None
+
+    def __init__(self, raise_for_status=False):
+        super(MockReponse, self).__init__()
+        self._raise_for_status = raise_for_status
 
     def raise_for_status(self):
-        pass
+        if not self._raise_for_status:
+            return
+        raise ApiError({'errors': ""})
 
 
 # A few API Resources
@@ -70,30 +76,40 @@ class DatadogAPITestCase(unittest.TestCase):
         self.request_mock = request_class_mock.return_value
         self.request_mock.request = Mock(return_value=MockReponse())
 
+    def tearDown(self):
+        self.request_patcher.stop()
+
+    def arm_requests_to_raise(self):
+        """
+        Arm the mocked request to raise for status.
+        """
+        self.request_mock.request = Mock(return_value=MockReponse(raise_for_status=True))
+
     def get_request_data(self):
         """
-
+        Returns JSON formatted data from the submitted `requests`.
         """
         _, kwargs = self.request_mock.request.call_args
         return json.loads(kwargs['data'])
 
     def request_called_with(self, method, url, data=None, params=None):
         (req_method, req_url), others = self.request_mock.request.call_args
-        assert method == req_method, req_method
-        assert url == req_url, req_url
+        self.assertEquals(method, req_method, req_method)
+        self.assertEquals(url, req_url, req_url)
 
         if data:
-            assert 'data' in others
-            assert json.dumps(data) == others['data'], others['data']
+            self.assertIn('data', others)
+            self.assertEquals(json.dumps(data), others['data'], others['data'])
 
         if params:
-            assert 'params' in others
+            self.assertIn('params', others)
             for (k, v) in iteritems(params):
-                assert k in others['params'], others['params']
-                assert v == others['params'][k]
+                self.assertIn(k, others['params'], others['params'])
+                self.assertEquals(v, others['params'][k])
 
-    def tearDown(self):
-        self.request_patcher.stop()
+    def assertIn(self, first, second, msg=None):
+        msg = msg or "{0} not in {1}".format(first, second)
+        self.assertTrue(first in second, msg)
 
 
 class DatadogAPINoInitialization(DatadogAPITestCase):

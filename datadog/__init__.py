@@ -7,14 +7,17 @@ It contains:
 without hindering performance.
 * datadog.dogshell: a command-line tool, wrapping datadog.api, to interact with Datadog REST API.
 """
+# stdlib
 from pkg_resources import get_distribution, DistributionNotFound
 import os
 import os.path
 
+# datadog
 from datadog import api
 from datadog.dogstatsd import statsd
 from datadog.threadstats import ThreadStats  # noqa
 from datadog.util.hostname import get_hostname
+from datadog.util.compat import iteritems
 
 
 try:
@@ -32,7 +35,7 @@ else:
 
 
 def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
-               proxies=None, statsd_host=None, statsd_port=None, cacert=True):
+               statsd_host=None, statsd_port=None, **kwargs):
     """
     Initialize and configure Datadog.api and Datadog.statsd modules
 
@@ -58,17 +61,23 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
     certificates. Can also be set to True (default) to use the systems
     certificate store, or False to skip SSL verification
     :type cacert: path or boolean
+
+    :param mute: Mute any exceptions before they escape from the library (default: True).
+    :type mute: boolean
     """
-    # Configure api
+    # API configuration
     api._api_key = api_key if api_key is not None else os.environ.get('DATADOG_API_KEY')
     api._application_key = app_key if app_key is not None else os.environ.get('DATADOG_APP_KEY')
     api._host_name = host_name if host_name is not None else get_hostname()
     api._api_host = api_host if api_host is not None else \
         os.environ.get('DATADOG_HOST', 'https://app.datadoghq.com')
-    api._proxies = proxies
-    api._cacert = cacert
 
-    # Given statsd_host and statsd_port, overrides statsd instance
+    # Statsd configuration -overrides default statsd instance attributes-
     if statsd_host and statsd_port:
         statsd.host = statsd_host
         statsd.port = int(statsd_port)
+
+    # HTTP client and API options
+    for key, value in iteritems(kwargs):
+        attribute = "_{0}".format(key)
+        setattr(api, attribute, value)
