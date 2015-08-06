@@ -1,21 +1,10 @@
 from setuptools import setup
 import sys
 
-install_reqs = [
-    "decorator>=3.3.2",
-    "requests>=2.6.0",
-]
-if sys.version_info[0] == 2:
-    # simplejson is not python3 compatible
-    install_reqs.append("simplejson>=2.0.9")
-
-if [sys.version_info[0], sys.version_info[1]] < [2, 7]:
-    install_reqs.append("argparse>=1.2")
-
 setup(
     name="datadog",
     version="0.8.0",
-    install_requires=install_reqs,
+    install_requires=["argparse", "requests", "simplejson"],
     tests_require=["tox", "nose", "mock", "six", "pillow"],
     packages=[
         'datadog',
