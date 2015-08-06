@@ -1,22 +1,25 @@
-import argparse
+# stdlib
+import logging
 import os
 import pkg_resources as pkg
 
-import logging
+# 3p
+import argparse
 
-from datadog.dogshell.common import DogshellConfig
-from datadog.dogshell.comment import CommentClient
-from datadog.dogshell.search import SearchClient
-from datadog.dogshell.metric import MetricClient
-from datadog.dogshell.tag import TagClient
-from datadog.dogshell.event import EventClient
-from datadog.dogshell.monitor import MonitorClient
-from datadog.dogshell.downtime import DowntimeClient
-from datadog.dogshell.screenboard import ScreenboardClient
-from datadog.dogshell.timeboard import TimeboardClient
-from datadog.dogshell.host import HostClient
-from datadog.dogshell.service_check import ServiceCheckClient
+# datadog
 from datadog import initialize
+from datadog.dogshell.comment import CommentClient
+from datadog.dogshell.common import DogshellConfig
+from datadog.dogshell.downtime import DowntimeClient
+from datadog.dogshell.event import EventClient
+from datadog.dogshell.host import HostClient
+from datadog.dogshell.metric import MetricClient
+from datadog.dogshell.monitor import MonitorClient
+from datadog.dogshell.screenboard import ScreenboardClient
+from datadog.dogshell.search import SearchClient
+from datadog.dogshell.service_check import ServiceCheckClient
+from datadog.dogshell.tag import TagClient
+from datadog.dogshell.timeboard import TimeboardClient
 
 logging.getLogger('dd.datadogpy').setLevel(logging.CRITICAL)
 

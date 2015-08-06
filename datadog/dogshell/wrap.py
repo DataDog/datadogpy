@@ -17,14 +17,15 @@ And you can give the command a timeout too:
 dogwrap -n test-job -k $API_KEY --timeout=1 "sleep 3"
 
 '''
-
-import sys
-import time
+# stdlib
 import optparse
-import threading
-import subprocess
 import pkg_resources as pkg
+import subprocess
+import sys
+import threading
+import time
 
+# datadog
 from datadog import initialize, api
 
 

@@ -1,5 +1,6 @@
-from datadog.dogshell.common import report_errors, report_warnings, find_localhost
+# datadog
 from datadog import api
+from datadog.dogshell.common import report_errors, report_warnings, find_localhost
 
 
 class MetricClient(object):

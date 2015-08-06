@@ -1,15 +1,17 @@
-# python
+# stdlib
 import unittest
+
+# 3p
+from mock import patch, Mock
+import requests
+import simplejson as json
 
 # datadog
 from datadog import initialize, api
 from datadog.api.base import CreateableAPIResource, UpdatableAPIResource, DeletableAPIResource,\
     GetableAPIResource, ListableAPIResource, ActionAPIResource
-from datadog.util.compat import iteritems, json
+from datadog.util.compat import iteritems
 
-# 3p
-import requests
-from mock import patch, Mock
 
 API_KEY = "apikey"
 APP_KEY = "applicationkey"
