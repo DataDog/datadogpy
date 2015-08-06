@@ -1,6 +1,9 @@
-from datadog.dogshell.common import report_errors, report_warnings
-from datadog.util.compat import json
+# 3p
+import simplejson as json
+
+# datadog
 from datadog import api
+from datadog.dogshell.common import report_errors, report_warnings
 
 
 class HostClient(object):

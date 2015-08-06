@@ -1,9 +1,11 @@
+# stdlib
 from __future__ import print_function
 import os
 import sys
 import logging
 import socket
 
+# datadog
 from datadog.util.compat import is_p3k, configparser, IterableUserDict,\
     get_input
 
