@@ -51,9 +51,3 @@ try:
     from urllib.parse import urlparse
 except ImportError:
     from urlparse import urlparse
-
-# prefer simplejson but fall back to stdlib python
-try:
-    import simplejson as json
-except ImportError:
-    import json

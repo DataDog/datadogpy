@@ -1,13 +1,17 @@
-import argparse
+# stdlib
 import os.path
 import platform
 import sys
 import webbrowser
 
-from datetime import datetime
-from datadog.util.compat import json
-from datadog.dogshell.common import report_errors, report_warnings, print_err
+# 3p
+import argparse
+import simplejson as json
+
+# datadog
 from datadog import api
+from datadog.dogshell.common import report_errors, report_warnings, print_err
+from datetime import datetime
 
 
 class TimeboardClient(object):

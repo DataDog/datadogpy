@@ -1,10 +1,15 @@
+# stdlib
 import socket
 import re
 import logging
 import subprocess
 import types
 
-from datadog.util.compat import url_lib, is_p3k, iteritems, json
+# 3p
+import simplejson as json
+
+# datadog
+from datadog.util.compat import url_lib, is_p3k, iteritems
 from datadog.util.config import get_config, get_os, CfgNotFound
 
 VALID_HOSTNAME_RFC_1123_PATTERN = re.compile(r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$")  # noqa
