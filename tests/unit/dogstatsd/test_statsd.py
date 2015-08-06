@@ -158,7 +158,10 @@ class TestDogStatsd(object):
         assert True, 'success'
 
     def test_timed(self):
-
+        """
+        Measure the distribution of a function's run time.
+        """
+        # In seconds
         @self.statsd.timed('timed.test')
         def func(a, b, c=1, d=1):
             """docstring"""
@@ -180,8 +183,69 @@ class TestDogStatsd(object):
         t.assert_equal('timed.test', name)
         self.assert_almost_equal(0.5, float(value), 0.1)
 
+        # Repeat, force timer value in milliseconds
+        @self.statsd.timed('timed.test', use_ms=True)
+        def func(a, b, c=1, d=1):
+            """docstring"""
+            time.sleep(0.5)
+            return (a, b, c, d)
+
+        func(1, 2, d=3)
+
+        packet = self.recv()
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        t.assert_equal('ms', type_)
+        t.assert_equal('timed.test', name)
+        self.assert_almost_equal(500, float(value), 100)
+
+    def test_timed_in_ms(self):
+        """
+        Timed value is reported in ms when statsd.use_ms is True.
+        """
+        # Arm statsd to use_ms
+        self.statsd.use_ms = True
+
+        # Sample a function run time
+        @self.statsd.timed('timed.test')
+        def func(a, b, c=1, d=1):
+            """docstring"""
+            time.sleep(0.5)
+            return (a, b, c, d)
+
+        func(1, 2, d=3)
+
+        # Assess the packet
+        packet = self.recv()
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        t.assert_equal('ms', type_)
+        t.assert_equal('timed.test', name)
+        self.assert_almost_equal(500, float(value), 100)
+
+        # Repeat, force timer value in seconds
+        @self.statsd.timed('timed.test', use_ms=False)
+        def func(a, b, c=1, d=1):
+            """docstring"""
+            time.sleep(0.5)
+            return (a, b, c, d)
+
+        func(1, 2, d=3)
+
+        packet = self.recv()
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        t.assert_equal('ms', type_)
+        t.assert_equal('timed.test', name)
+        self.assert_almost_equal(0.5, float(value), 0.1)
+
     def test_timed_no_metric(self, ):
-        """Test using a decorator without providing a metric."""
+        """
+        Test using a decorator without providing a metric.
+        """
 
         @self.statsd.timed()
         def func(a, b, c=1, d=1):
@@ -205,6 +269,10 @@ class TestDogStatsd(object):
         self.assert_almost_equal(0.5, float(value), 0.1)
 
     def test_timed_context(self):
+        """
+        Measure the distribution of a context's run time.
+        """
+        # In seconds
         with self.statsd.timed('timed_context.test'):
             time.sleep(0.5)
 
@@ -216,8 +284,22 @@ class TestDogStatsd(object):
         t.assert_equal('timed_context.test', name)
         self.assert_almost_equal(0.5, float(value), 0.1)
 
+        # In milliseconds
+        with self.statsd.timed('timed_context.test', use_ms=True):
+            time.sleep(0.5)
+
+        packet = self.recv()
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        t.assert_equal('ms', type_)
+        t.assert_equal('timed_context.test', name)
+        self.assert_almost_equal(500, float(value), 100)
+
     def test_timed_context_exception(self):
-        """Test that an exception bubbles out of the context manager."""
+        """
+        Exception bubbles out of the `timed` context manager.
+        """
         class ContextException(Exception):
             pass
 
