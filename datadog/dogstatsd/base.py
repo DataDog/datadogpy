@@ -21,17 +21,28 @@ log = logging.getLogger('dogstatsd')
 class DogStatsd(object):
     OK, WARNING, CRITICAL, UNKNOWN = (0, 1, 2, 3)
 
-    def __init__(self, host='localhost', port=8125, max_buffer_size=50, constant_tags=None):
+    def __init__(self, host='localhost', port=8125, max_buffer_size=50,
+                 constant_tags=None, use_ms=False):
         """
         Initialize a DogStatsd object.
 
         >>> statsd = DogStatsd()
 
         :param host: the host of the DogStatsd server.
+        :type host: string
+
         :param port: the port of the DogStatsd server.
-        :param max_buffer_size: Maximum number of metric to buffer before sending to the server
-            if sending metrics in batch
-        :param constant_tags: A list of strings to attach to every metric reported by this client
+        :type port: integer
+
+        :param max_buffer_size: Maximum number of metrics to buffer before sending to the server
+        if sending metrics in batch
+        :type max_buffer_size: integer
+
+        :param constant_tags: Tags to attach to every metric reported by this client
+        :type constant_tags: list of strings
+
+        :param use_ms: Report timed values in milliseconds instead of seconds (default False)
+        :type use_ms: boolean
         """
         self.host = host
         self.port = int(port)
@@ -40,6 +51,7 @@ class DogStatsd(object):
         self._send = self._send_to_server
         self.encoding = 'utf-8'
         self.constant_tags = constant_tags
+        self.use_ms = use_ms
 
     def __enter__(self):
         self.open_buffer(self.max_buffer_size)
@@ -135,11 +147,12 @@ class DogStatsd(object):
         the context OR in a function call.
         """
 
-        def __init__(self, statsd, metric=None, tags=None, sample_rate=1):
+        def __init__(self, statsd, metric=None, tags=None, sample_rate=1, use_ms=None):
             self.statsd = statsd
             self.metric = metric
             self.tags = tags
             self.sample_rate = sample_rate
+            self.use_ms = use_ms
 
         def __call__(self, func):
             """Decorator which returns the elapsed time of the function call."""
@@ -160,10 +173,12 @@ class DogStatsd(object):
 
         def __exit__(self, type, value, traceback):
             # Report the elapsed time of the context manager.
-            self.statsd.timing(self.metric, time() - self.start,
-                               self.tags, self.sample_rate)
+            elapsed = time() - self.start
+            use_ms = self.use_ms if self.use_ms is not None else self.statsd.use_ms
+            elapsed = int(round(1000 * elapsed)) if use_ms else elapsed
+            self.statsd.timing(self.metric, elapsed, self.tags, self.sample_rate)
 
-    def timed(self, metric=None, tags=None, sample_rate=1):
+    def timed(self, metric=None, tags=None, sample_rate=1, use_ms=None):
         """
         A decorator or context manager that will measure the distribution of a
         function's/context's run time. Optionally specify a list of tags or a
@@ -189,7 +204,7 @@ class DogStatsd(object):
             finally:
                 statsd.timing('user.query.time', time.time() - start)
         """
-        return self._TimedContextManagerDecorator(self, metric, tags, sample_rate)
+        return self._TimedContextManagerDecorator(self, metric, tags, sample_rate, use_ms)
 
     def set(self, metric, value, tags=None, sample_rate=1):
         """
