@@ -21,10 +21,10 @@ FAKE_PROXY = {
 }
 
 
-class MockReponse(requests.Response):
+class MockResponse(requests.Response):
 
     def __init__(self, raise_for_status=False):
-        super(MockReponse, self).__init__()
+        super(MockResponse, self).__init__()
         self._raise_for_status = raise_for_status
 
     def raise_for_status(self):
@@ -74,7 +74,7 @@ class DatadogAPITestCase(unittest.TestCase):
         self.request_patcher = patch('requests.Session')
         request_class_mock = self.request_patcher.start()
         self.request_mock = request_class_mock.return_value
-        self.request_mock.request = Mock(return_value=MockReponse())
+        self.request_mock.request = Mock(return_value=MockResponse())
 
     def tearDown(self):
         self.request_patcher.stop()
@@ -83,7 +83,7 @@ class DatadogAPITestCase(unittest.TestCase):
         """
         Arm the mocked request to raise for status.
         """
-        self.request_mock.request = Mock(return_value=MockReponse(raise_for_status=True))
+        self.request_mock.request = Mock(return_value=MockResponse(raise_for_status=True))
 
     def get_request_data(self):
         """
