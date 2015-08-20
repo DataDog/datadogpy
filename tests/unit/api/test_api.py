@@ -7,12 +7,11 @@ from time import time
 
 # 3p
 import mock
-from nose.tools import assert_raises, assert_true, assert_false
 
 # datadog
 from datadog import initialize, api
 from datadog.api import Metric
-from datadog.api.exceptions import ApiNotInitialized
+from datadog.api.exceptions import ApiError, ApiNotInitialized
 from datadog.util.compat import is_p3k
 from tests.unit.api.helper import (
     DatadogAPIWithInitialization,
@@ -51,21 +50,27 @@ def preserve_environ_datadog(func):
 
 class TestInitialization(DatadogAPINoInitialization):
 
-    def test_no_initialization_fails(self, test='sisi'):
-        assert_raises(ApiNotInitialized, MyCreatable.create)
+    def test_no_initialization_fails(self):
+        """
+        Raise ApiNotInitialized exception when `initialize` has not ran or no API key was set.
+        """
+        self.assertRaises(ApiNotInitialized, MyCreatable.create)
 
         # No API key => only stats in statsd mode should work
         initialize()
         api._api_key = None
-        assert_raises(ApiNotInitialized, MyCreatable.create)
+        self.assertRaises(ApiNotInitialized, MyCreatable.create)
 
         # Finally, initialize with an API key
         initialize(api_key=API_KEY, api_host=API_HOST)
         MyCreatable.create()
-        assert self.request_mock.request.call_count == 1
+        self.assertEquals(self.request_mock.request.call_count, 1)
 
     @mock.patch('datadog.util.config.get_config_path')
     def test_get_hostname(self, mock_config_path):
+        """
+        API hostname parameter fallback with Datadog Agent hostname when available.
+        """
         # Generate a fake agent config
         tmpfilepath = os.path.join(tempfile.gettempdir(), "tmp-agentconfig")
         with open(tmpfilepath, "wb") as f:
@@ -79,31 +84,64 @@ class TestInitialization(DatadogAPINoInitialization):
         mock_config_path.return_value = tmpfilepath
 
         initialize()
-        assert api._host_name == HOST_NAME, api._host_name
+        self.assertEquals(api._host_name, HOST_NAME, api._host_name)
 
     def test_request_parameters(self):
-        # Test API, application keys, API host and proxies
-        initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST, proxies=FAKE_PROXY)
+        """
+        API parameters are set with `initialize` method.
+        """
+        # Test API, application keys, API host, and some HTTP client options
+        initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
 
         # Make a simple API call
         MyCreatable.create()
 
         _, options = self.request_mock.request.call_args
 
-        assert 'params' in options
+        # Assert `requests` parameters
+        self.assertIn('params', options)
 
-        assert 'api_key' in options['params']
-        assert options['params']['api_key'] == API_KEY
-        assert 'application_key' in options['params']
-        assert options['params']['application_key'] == APP_KEY
+        self.assertIn('api_key', options['params'])
+        self.assertEquals(options['params']['api_key'], API_KEY)
+        self.assertIn('application_key', options['params'])
+        self.assertEquals(options['params']['application_key'], APP_KEY)
 
-        assert 'proxies' in options
-        assert options['proxies'] == FAKE_PROXY
+        self.assertIn('headers', options)
+        self.assertEquals(options['headers'], {'Content-Type': 'application/json'})
 
-        assert 'headers' in options
-        assert options['headers'] == {'Content-Type': 'application/json'}
+    def test_initialize_options(self):
+        """
+        HTTP client and API options are set with `initialize` method.
+        """
+        initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST,
+                   proxies=FAKE_PROXY, cacert=False)
+
+        # Make a simple API call
+        MyCreatable.create()
+
+        _, options = self.request_mock.request.call_args
+
+        # Assert `requests` parameters
+        self.assertIn('proxies', options)
+        self.assertEquals(options['proxies'], FAKE_PROXY)
+
+        self.assertIn('verify', options)
+        self.assertEquals(options['verify'], False)
+
+        # Arm the `requests` to raise
+        self.arm_requests_to_raise()
+
+        # No exception should be raised (mute=True by default)
+        MyCreatable.create()
+
+        # Repeat with mute to False
+        initialize(api_key=API_KEY, mute=False)
+        self.assertRaises(ApiError, MyCreatable.create)
 
     def test_initialization_from_env(self):
+        """
+        Set API parameters in `initialize` from environment variables.
+        """
         @preserve_environ_datadog
         def test_api_params_from_env(env_name, attr_name, env_value):
             """
@@ -156,6 +194,9 @@ class TestInitialization(DatadogAPINoInitialization):
 class TestResources(DatadogAPIWithInitialization):
 
     def test_creatable(self):
+        """
+        Creatable resource logic.
+        """
         MyCreatable.create(mydata="val")
         self.request_called_with('POST', "host/api/v1/creatables", data={'mydata': "val"})
 
@@ -164,28 +205,43 @@ class TestResources(DatadogAPIWithInitialization):
                                  data={'mydata': "val", 'host': api._host_name})
 
     def test_getable(self):
+        """
+        Getable resource logic.
+        """
         getable_object_id = 123
         MyGetable.get(getable_object_id, otherparam="val")
         self.request_called_with('GET', "host/api/v1/getables/" + str(getable_object_id),
                                  params={'otherparam': "val"})
 
     def test_listable(self):
+        """
+        Listable resource logic.
+        """
         MyListable.get_all(otherparam="val")
         self.request_called_with('GET', "host/api/v1/listables", params={'otherparam': "val"})
 
     def test_updatable(self):
+        """
+        Updatable resource logic.
+        """
         updatable_object_id = 123
         MyUpdatable.update(updatable_object_id, params={'myparam': "val1"}, mydata="val2")
         self.request_called_with('PUT', "host/api/v1/updatables/" + str(updatable_object_id),
                                  params={'myparam': "val1"}, data={'mydata': "val2"})
 
     def test_detalable(self):
+        """
+        Deletable resource logic.
+        """
         deletable_object_id = 123
         MyDeletable.delete(deletable_object_id, otherparam="val")
         self.request_called_with('DELETE', "host/api/v1/deletables/" + str(deletable_object_id),
                                  params={'otherparam': "val"})
 
     def test_actionable(self):
+        """
+        Actionable resource logic.
+        """
         actionable_object_id = 123
         MyActionable.trigger_class_action('POST', "actionname", id=actionable_object_id,
                                           mydata="val")
@@ -214,17 +270,18 @@ class TestMetricResource(DatadogAPIWithInitialization):
         payload = self.get_request_data()
 
         for i, metric in enumerate(payload['series']):
-            assert set(metric.keys()) == set(['metric', 'points', 'host'])
+            self.assertEquals(set(metric.keys()), set(['metric', 'points', 'host']))
 
-            assert metric['metric'] == serie[i]['metric']
-            assert metric['host'] == api._host_name
+            self.assertEquals(metric['metric'], serie[i]['metric'])
+            self.assertEquals(metric['host'], api._host_name)
 
             # points is a list of 1 point
-            assert isinstance(metric['points'], list) and len(metric['points']) == 1
+            self.assertTrue(isinstance(metric['points'], list))
+            self.assertEquals(len(metric['points']), 1)
             # it consists of a [time, value] pair
-            assert len(metric['points'][0]) == 2
+            self.assertEquals(len(metric['points'][0]), 2)
             # its value == value we sent
-            assert metric['points'][0][1] == serie[i]['points']
+            self.assertEquals(metric['points'][0][1], serie[i]['points'])
             # it's time not so far from current time
             assert now - 1 < metric['points'][0][0] < now + 1
 

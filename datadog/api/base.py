@@ -61,7 +61,7 @@ class HTTPClient(object):
 
             # Import API, User and HTTP settings
             from datadog.api import _api_key, _application_key, _api_host, \
-                _swallow, _host_name, _proxies, _max_retries, _timeout, \
+                _mute, _host_name, _proxies, _max_retries, _timeout, \
                 _cacert
 
             # Check keys and add then to params
@@ -124,6 +124,7 @@ class HTTPClient(object):
                 raise HttpTimeout('%s %s timed out after %d seconds.' % (method, url, _timeout))
             except requests.exceptions.HTTPError as e:
                 if e.response.status_code in (400, 403, 404):
+                    # This gets caught afterwards and raises an ApiError exception
                     pass
                 else:
                     raise
@@ -160,7 +161,7 @@ class HTTPClient(object):
                 return response_formatter(response_obj)
 
         except ClientError as e:
-            if _swallow:
+            if _mute:
                 log.error(str(e))
                 if error_formatter is None:
                     return {'errors': e.args[0]}
@@ -169,7 +170,7 @@ class HTTPClient(object):
             else:
                 raise
         except ApiError as e:
-            if _swallow:
+            if _mute:
                 for error in e.args[0]['errors']:
                     log.error(str(error))
                 if error_formatter is None:

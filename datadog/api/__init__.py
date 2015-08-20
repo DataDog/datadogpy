@@ -14,7 +14,7 @@ _timeout = 3
 _max_timeouts = 3
 _max_retries = 3
 _backoff_period = 300
-_swallow = True
+_mute = True
 
 # Resources
 from datadog.api.comments import Comment
