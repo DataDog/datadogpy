@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+# 0.9.0 / Unreleased
+* [FEATURE] Option to time in ms with `statsd`, [#78][] (thanks [@g--][])
+* [FEATURE] Option to unmute `api` ApiError exceptions, [#76][]
+* [OTHER] Use `simplejson` with Python 3.x, [#83][]
+
 # 0.8.0 / 2015-07-30
 * [FEATURE] Constant tags client option to append tags to every submitted metrics, [#68][] (thanks [@jofusa][])
 * [FEATURE] Embeddable graphs API, [#62][]
@@ -8,34 +13,34 @@ CHANGELOG
 * [IMPROVEMENT] Option to use the verify parameter in requests to configure a ca certificates file or to disable verification, [#70][] (thanks [@ogst][])
 
 # 0.7.0 / 2015-07-01
-* [FEATURE] Revoke a shared screenboard, [#46][]
-* [FEATURE] Add new monitor `unmute` arg (`all_scopes`) to allow clearing all mute settings for a given monitor, [#58][]
-* [IMPROVEMENT] Add a timed context manager to `statsd`, [#65][] (thanks [@clokep][])
-* [IMPROVEMENT] Adjust dogshell descriptions to distinguish between `mute_all`/`unmute_all` and `mute`/`unmute` methods, [#58][]
-* [IMPROVEMENT] Include additional information in 403 response exceptions, [#58][]
 * [BUGFIX] Fix `Metric.send` method to play nice with multiple metrics, [#59][] (thanks [@kuzmich][])
 * [BUGFIX] Fix socket creation thread-unsafe code, [#57][] [#60][] (thanks [@GrahamDumpleton][])
 * [BUGFIX] Rename `metric_type` parameter to `type` in `Metric.send` method, [#64][]
+* [FEATURE] Add new monitor `unmute` arg (`all_scopes`) to allow clearing all mute settings for a given monitor, [#58][]
+* [FEATURE] Revoke a shared screenboard, [#46][]
+* [IMPROVEMENT] Add a timed context manager to `statsd`, [#65][] (thanks [@clokep][])
+* [IMPROVEMENT] Adjust dogshell descriptions to distinguish between `mute_all`/`unmute_all` and `mute`/`unmute` methods, [#58][]
+* [IMPROVEMENT] Include additional information in 403 response exceptions, [#58][]
 * [OTHER] Update `requests` library, per CVE-2015-2296, [#63][]
 
 # 0.6.0 / 2015-06-01
-* [FEATURE] Add `message` parameter support to host muting commands, [#51][]
 * [BUGFIX] Always fall back when unable to determine hostname from `datadog.conf`, [#53][]
+* [FEATURE] Add `message` parameter support to host muting commands, [#51][]
 
 # 0.6.0 / 2015-06-01
-* [FEATURE] Add `message` parameter support to host muting commands, [#51][]
 * [BUGFIX] Always fall back when unable to determine hostname from `datadog.conf`, [#53][]
+* [FEATURE] Add `message` parameter support to host muting commands, [#51][]
 
 # 0.5.0 / 2015-05-19
-* [FEATURE] Add support for metric query API, [#45][]
 * [BUGFIX] Fix an unexpected exception raised in `initialize` method on Windows with Python3.4, [#47][]
+* [FEATURE] Add support for metric query API, [#45][]
 
 # 0.4.0 / 2015-04-24
-* [FEATURE] Initialize API parameters from environment variables, [#43][]
-* [FEATURE] Add a priority option to Dogwrap, or auto-detect it based on output, [#42][]
-* [FEATURE] Stream Dogwrap command output during its execution or buffer it, [#39][]
 * [BUGFIX] Fix a wrong event post parameter in Dogshell/Dogwrap, [#36][]
 * [BUGFIX] Fix wrong keys in auto-generated .dogrc, [#34][]
+* [FEATURE] Add a priority option to Dogwrap, or auto-detect it based on output, [#42][]
+* [FEATURE] Initialize API parameters from environment variables, [#43][]
+* [FEATURE] Stream Dogwrap command output during its execution or buffer it, [#39][]
 * [OTHER] Add PyPI classifiers, [#41][]
 
 # 0.3.0 / 2015-04-08
@@ -45,15 +50,15 @@ CHANGELOG
 * [BUGFIX] Fix a leftover debug statement
 
 # 0.2.1 / REMOVED
-* [BUGFIX] Import json module from `datadog.compat`
 * [BUGFIX] Fix test requirements
+* [BUGFIX] Import json module from `datadog.compat`
 * [OTHER] Contributing update
 
 See [#8][], thanks [@benweatherman][]
 
 # 0.2.0 / 2015-03-31
-* [FEATURE] Add tests to check `statsd` and `threadstats` thread safety, [#6][]
 * [BUGFIX] Fixes `threadstats` unsafe thread operations, [#6][]
+* [FEATURE] Add tests to check `statsd` and `threadstats` thread safety, [#6][]
 * [OTHER] Changelog update, [#9][] [@miketheman][]
 
 # 0.1.2 / 2015-03-23
@@ -92,6 +97,10 @@ See [#8][], thanks [@benweatherman][]
 [#68]: https://github.com/DataDog/datadogpy/issues/68
 [#70]: https://github.com/DataDog/datadogpy/issues/70
 [#71]: https://github.com/DataDog/datadogpy/issues/71
+[#76]: https://github.com/DataDog/datadogpy/issues/76
+[#77]: https://github.com/DataDog/datadogpy/issues/77
+[#78]: https://github.com/DataDog/datadogpy/issues/78
+[#83]: https://github.com/DataDog/datadogpy/issues/83
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@benweatherman]: https://github.com/benweatherman
 [@clokep]: https://github.com/clokep
