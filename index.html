@@ -8,7 +8,7 @@
     
     <title>datadog — The Datadog’s Python library &mdash; Datadog Python Client  documentation</title>
     
-    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -23,21 +23,13 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="Datadog Python Client  documentation" href="#" /> 
+    <link rel="top" title="Datadog Python Client  documentation" href="#" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
   </head>
-  <body role="document">
-    <div class="related" role="navigation" aria-label="related navigation">
-      <h3>Navigation</h3>
-      <ul>
-        <li class="right" style="margin-right: 10px">
-          <a href="genindex.html" title="General Index"
-             accesskey="I">index</a></li>
-        <li class="right" >
-          <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="#">Datadog Python Client  documentation</a> &raquo;</li> 
-      </ul>
-    </div>  
+  <body role="document">  
 
     <div class="document">
       <div class="documentwrapper">
@@ -61,7 +53,7 @@
 <p>Datadog.api client requires to run <a class="reference internal" href="#module-datadog" title="datadog"><code class="xref py py-mod docutils literal"><span class="pre">datadog</span></code></a> <cite>initialize</cite> method first.</p>
 <dl class="function">
 <dt id="datadog.initialize">
-<code class="descclassname">datadog.</code><code class="descname">initialize</code><span class="sig-paren">(</span><em>api_key=None</em>, <em>app_key=None</em>, <em>host_name=None</em>, <em>api_host=None</em>, <em>proxies=None</em>, <em>statsd_host=None</em>, <em>statsd_port=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.initialize" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">datadog.</code><code class="descname">initialize</code><span class="sig-paren">(</span><em>api_key=None</em>, <em>app_key=None</em>, <em>host_name=None</em>, <em>api_host=None</em>, <em>statsd_host=None</em>, <em>statsd_port=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.initialize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initialize and configure Datadog.api and Datadog.statsd modules</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -74,6 +66,8 @@
 <li><strong>api_host</strong> (<em>url</em>) &#8211; Datadog API endpoint</li>
 <li><strong>statsd_host</strong> (<em>address</em>) &#8211; Host of DogStatsd server or statsd daemon</li>
 <li><strong>statsd_port</strong> (<em>port</em>) &#8211; Port of DogStatsd server or statsd daemon</li>
+<li><strong>cacert</strong> (<em>path or boolean</em>) &#8211; Path to local certificate file used to verify SSL         certificates. Can also be set to True (default) to use the systems         certificate store, or False to skip SSL verification</li>
+<li><strong>mute</strong> (<em>boolean</em>) &#8211; Mute any exceptions before they escape from the library (default: True).</li>
 </ul>
 </td>
 </tr>
@@ -350,8 +344,8 @@ event data format.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>metric_query</strong> (<em>string query</em>) &#8211; metric query</li>
-<li><strong>start</strong> (<em>POSIX timestamp</em>) &#8211; timestamp of the start of the query.</li>
-<li><strong>end</strong> (<em>POSIX timestamp</em>) &#8211; timestamp of the end of the query.</li>
+<li><strong>start</strong> (<em>POSIX timestamp</em>) &#8211; query start timestamp</li>
+<li><strong>end</strong> (<em>POSIX timestamp</em>) &#8211; query end timestamp</li>
 <li><strong>event_query</strong> (<em>string query</em>) &#8211; a query that will add event bands to the graph</li>
 </ul>
 </td>
@@ -397,7 +391,8 @@ snapshot is ready for download.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>host_name</strong> (<em>string</em>) &#8211; hostname</li>
 <li><strong>end</strong> (<em>POSIX timestamp</em>) &#8211; timestamp to end muting</li>
-<li><strong>override</strong> (<em>bool</em>) &#8211; if true and the host is already muted, will overwrite         existing end on the host</li>
+<li><strong>override</strong> (<em>bool</em>) &#8211; if true and the host is already muted, will override         existing end on the host</li>
+<li><strong>message</strong> (<em>string</em>) &#8211; message to associate with the muting of this host</li>
 </ul>
 </td>
 </tr>
@@ -451,10 +446,38 @@ snapshot is ready for download.</p>
 <dl class="class">
 <dt id="datadog.api.Metric">
 <em class="property">class </em><code class="descclassname">datadog.api.</code><code class="descname">Metric</code><a class="headerlink" href="#datadog.api.Metric" title="Permalink to this definition">¶</a></dt>
-<dd><p>A wrapper around Metric HTTP API.</p>
+<dd><p>A wrapper around Metric HTTP API</p>
+<dl class="classmethod">
+<dt id="datadog.api.Metric.query">
+<em class="property">classmethod </em><code class="descname">query</code><span class="sig-paren">(</span><em>**params</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Metric.query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Query metrics from Datadog</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>start</strong> (<em>POSIX timestamp</em>) &#8211; query start timestamp</li>
+<li><strong>end</strong> (<em>POSIX timestamp</em>) &#8211; query end timestamp</li>
+<li><strong>query</strong> (<em>string query</em>) &#8211; metric query</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP request</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p><em>start</em> and <em>end</em> should be less than 24 hours apart.
+It is <em>not</em> meant to retrieve metric data in bulk.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">api</span><span class="o">.</span><span class="n">Metric</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span> <span class="o">-</span> <span class="mi">3600</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()),</span>
+<span class="go">                     query=&#39;avg:system.cpu.idle{*}&#39;)</span>
+</pre></div>
+</div>
+</dd></dl>
+
 <dl class="classmethod">
 <dt id="datadog.api.Metric.send">
-<em class="property">classmethod </em><code class="descname">send</code><span class="sig-paren">(</span><em>*metrics</em>, <em>**single_metric</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Metric.send" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="descname">send</code><span class="sig-paren">(</span><em>metrics=None</em>, <em>**single_metric</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Metric.send" title="Permalink to this definition">¶</a></dt>
 <dd><p>Submit a metric or a list of metrics to the metric API</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -465,7 +488,7 @@ snapshot is ready for download.</p>
 <li><strong>points</strong> (<em>list</em>) &#8211; list of points to submit</li>
 <li><strong>host</strong> (<em>string</em>) &#8211; host name that produced the metric</li>
 <li><strong>tags</strong> (<em>string list</em>) &#8211; list of tags associated with the metric.</li>
-<li><strong>metric_type</strong> (<em>&#8216;gauge&#8217; or &#8216;counter&#8217; string</em>) &#8211; type of the metric</li>
+<li><strong>type</strong> (<em>&#8216;gauge&#8217; or &#8216;counter&#8217; string</em>) &#8211; type of the metric</li>
 </ul>
 </td>
 </tr>
@@ -588,7 +611,7 @@ snapshot is ready for download.</p>
 <dl class="classmethod">
 <dt id="datadog.api.Monitor.mute_all">
 <em class="property">classmethod </em><code class="descname">mute_all</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Monitor.mute_all" title="Permalink to this definition">¶</a></dt>
-<dd><p>Mute all monitors.</p>
+<dd><p>Globally mute monitors.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -607,9 +630,14 @@ snapshot is ready for download.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>scope</strong> (<em>string</em>) &#8211; scope to apply the unmute</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>scope</strong> (<em>string</em>) &#8211; scope to apply the unmute</li>
+<li><strong>all_scopes</strong> (<em>boolean</em>) &#8211; if True, clears mute settings for all scopes</li>
+</ul>
+</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP request</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON response from HTTP request</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -618,7 +646,7 @@ snapshot is ready for download.</p>
 <dl class="classmethod">
 <dt id="datadog.api.Monitor.unmute_all">
 <em class="property">classmethod </em><code class="descname">unmute_all</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Monitor.unmute_all" title="Permalink to this definition">¶</a></dt>
-<dd><p>Unmute all monitors.</p>
+<dd><p>Cancel global monitor mute setting (does not remove mute settings for individual monitors).</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -728,6 +756,22 @@ snapshot is ready for download.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>params</strong> (<em>dictionary</em>) &#8211; parameters to filter API resource stream</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP API request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="datadog.api.Screenboard.revoke">
+<em class="property">classmethod </em><code class="descname">revoke</code><span class="sig-paren">(</span><em>board_id</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.api.Screenboard.revoke" title="Permalink to this definition">¶</a></dt>
+<dd><p>Revoke a shared screenboard with given id</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>board_id</strong> (<em>id</em>) &#8211; screenboard to revoke</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">JSON response from HTTP request</td>
 </tr>
 </tbody>
 </table>
@@ -1041,7 +1085,7 @@ metrics in process, in a thread or in a greenlet, depending on your application&
 <p>To run properly Datadog.threadstats requires to run <a class="reference internal" href="#module-datadog" title="datadog"><code class="xref py py-mod docutils literal"><span class="pre">datadog</span></code></a> <cite>initialize</cite> method first.</p>
 <dl class="function">
 <dt>
-<code class="descclassname">datadog.</code><code class="descname">initialize</code><span class="sig-paren">(</span><em>api_key=None</em>, <em>app_key=None</em>, <em>host_name=None</em>, <em>api_host=None</em>, <em>proxies=None</em>, <em>statsd_host=None</em>, <em>statsd_port=None</em><span class="sig-paren">)</span></dt>
+<code class="descclassname">datadog.</code><code class="descname">initialize</code><span class="sig-paren">(</span><em>api_key=None</em>, <em>app_key=None</em>, <em>host_name=None</em>, <em>api_host=None</em>, <em>statsd_host=None</em>, <em>statsd_port=None</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
 <dd><p>Initialize and configure Datadog.api and Datadog.statsd modules</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -1054,6 +1098,8 @@ metrics in process, in a thread or in a greenlet, depending on your application&
 <li><strong>api_host</strong> (<em>url</em>) &#8211; Datadog API endpoint</li>
 <li><strong>statsd_host</strong> (<em>address</em>) &#8211; Host of DogStatsd server or statsd daemon</li>
 <li><strong>statsd_port</strong> (<em>port</em>) &#8211; Port of DogStatsd server or statsd daemon</li>
+<li><strong>cacert</strong> (<em>path or boolean</em>) &#8211; Path to local certificate file used to verify SSL         certificates. Can also be set to True (default) to use the systems         certificate store, or False to skip SSL verification</li>
+<li><strong>mute</strong> (<em>boolean</em>) &#8211; Mute any exceptions before they escape from the library (default: True).</li>
 </ul>
 </td>
 </tr>
@@ -1241,11 +1287,11 @@ Optionally specify a list of tags to associate with the metric.</p>
 <h2>Datadog.dogstatsd module<a class="headerlink" href="#datadog-dogstatsd-module" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="datadog.dogstatsd.base.DogStatsd">
-<em class="property">class </em><code class="descclassname">datadog.dogstatsd.base.</code><code class="descname">DogStatsd</code><span class="sig-paren">(</span><em>host='localhost'</em>, <em>port=8125</em>, <em>max_buffer_size=50</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">datadog.dogstatsd.base.</code><code class="descname">DogStatsd</code><span class="sig-paren">(</span><em>host='localhost'</em>, <em>port=8125</em>, <em>max_buffer_size=50</em>, <em>constant_tags=None</em>, <em>use_ms=False</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="method">
 <dt id="datadog.dogstatsd.base.DogStatsd.close_buffer">
 <code class="descname">close_buffer</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.close_buffer" title="Permalink to this definition">¶</a></dt>
-<dd><p>Flush the buffer and switch back to single metric packets</p>
+<dd><p>Flush the buffer and switch back to single metric packets.</p>
 </dd></dl>
 
 <dl class="method">
@@ -1286,7 +1332,9 @@ sample rate.</p>
 <dl class="method">
 <dt id="datadog.dogstatsd.base.DogStatsd.get_socket">
 <code class="descname">get_socket</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.get_socket" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return a connected socket</p>
+<dd><p>Return a connected socket.</p>
+<p>Note: connect the socket before assigning it to the class instance to
+avoid bad thread race conditions.</p>
 </dd></dl>
 
 <dl class="method">
@@ -1313,7 +1361,7 @@ rate.</p>
 <dl class="method">
 <dt id="datadog.dogstatsd.base.DogStatsd.open_buffer">
 <code class="descname">open_buffer</code><span class="sig-paren">(</span><em>max_buffer_size=50</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.open_buffer" title="Permalink to this definition">¶</a></dt>
-<dd><p>Open a buffer to send a batch of metrics in one packet</p>
+<dd><p>Open a buffer to send a batch of metrics in one packet.</p>
 <p>You can also use this as a context manager.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">with</span> <span class="n">DogStatsd</span><span class="p">()</span> <span class="k">as</span> <span class="n">batch</span><span class="p">:</span>
 <span class="gp">&gt;&gt;&gt; </span>    <span class="n">batch</span><span class="o">.</span><span class="n">gauge</span><span class="p">(</span><span class="s">&#39;users.online&#39;</span><span class="p">,</span> <span class="mi">123</span><span class="p">)</span>
@@ -1342,11 +1390,19 @@ rate.</p>
 
 <dl class="method">
 <dt id="datadog.dogstatsd.base.DogStatsd.timed">
-<code class="descname">timed</code><span class="sig-paren">(</span><em>metric</em>, <em>tags=None</em>, <em>sample_rate=1</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.timed" title="Permalink to this definition">¶</a></dt>
-<dd><p>A decorator that will measure the distribution of a function&#8217;s run
-time.  Optionally specify a list of tag or a sample rate.</p>
+<code class="descname">timed</code><span class="sig-paren">(</span><em>metric=None</em>, <em>tags=None</em>, <em>sample_rate=1</em>, <em>use_ms=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datadog.dogstatsd.base.DogStatsd.timed" title="Permalink to this definition">¶</a></dt>
+<dd><p>A decorator or context manager that will measure the distribution of a
+function&#8217;s/context&#8217;s run time. Optionally specify a list of tags or a
+sample rate. If the metric is not defined as a decorator, the module
+name and function name will be used. The metric is required as a context
+manager.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="nd">@statsd.timed</span><span class="p">(</span><span class="s">&#39;user.query.time&#39;</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">get_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">):</span>
+    <span class="c"># Do what you need to ...</span>
+    <span class="k">pass</span>
+
+<span class="c"># Is equivalent to ...</span>
+<span class="k">with</span> <span class="n">statsd</span><span class="o">.</span><span class="n">timed</span><span class="p">(</span><span class="s">&#39;user.query.time&#39;</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>
     <span class="c"># Do what you need to ...</span>
     <span class="k">pass</span>
 
@@ -1414,7 +1470,13 @@ configuration.</p>
 </ul>
 </li>
 </ul>
-
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -1439,21 +1501,20 @@ configuration.</p>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related" role="navigation" aria-label="related navigation">
-      <h3>Navigation</h3>
-      <ul>
-        <li class="right" style="margin-right: 10px">
-          <a href="genindex.html" title="General Index"
-             >index</a></li>
-        <li class="right" >
-          <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="#">Datadog Python Client  documentation</a> &raquo;</li> 
-      </ul>
+    <div class="footer">
+      &copy;2015, Datadog, Inc..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+      |
+      <a href="_sources/index.txt"
+          rel="nofollow">Page source</a>
     </div>
-    <div class="footer" role="contentinfo">
-        &copy; Copyright 2015, Datadog, Inc..
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
-    </div>
+
+    
+
+    
   </body>
 </html>
