@@ -57,9 +57,9 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
     :param statsd_port: Port of DogStatsd server or statsd daemon
     :type statsd_port: port
 
-    :param cacert: Path to local certificate file used to verify SSL
-    certificates. Can also be set to True (default) to use the systems
-    certificate store, or False to skip SSL verification
+    :param cacert: Path to local certificate file used to verify SSL \
+        certificates. Can also be set to True (default) to use the systems \
+        certificate store, or False to skip SSL verification
     :type cacert: path or boolean
 
     :param mute: Mute any exceptions before they escape from the library (default: True).
