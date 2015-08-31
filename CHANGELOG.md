@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.9.0 / Unreleased
+# 0.9.0 / 2015-08-31
 * [FEATURE] Option to time in ms with `statsd`, [#78][] (thanks [@g--][])
 * [FEATURE] Option to unmute `api` ApiError exceptions, [#76][]
 * [OTHER] Use `simplejson` with Python 3.x, [#83][]
