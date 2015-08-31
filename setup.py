@@ -5,9 +5,11 @@ install_reqs = [
     "decorator>=3.3.2",
     "requests>=2.6.0",
 ]
+
 if sys.version_info[0] == 2:
-    # simplejson is not python3 compatible
     install_reqs.append("simplejson>=2.0.9")
+else:
+    install_reqs.append("simplejson>=3.0.0")
 
 if [sys.version_info[0], sys.version_info[1]] < [2, 7]:
     install_reqs.append("argparse>=1.2")

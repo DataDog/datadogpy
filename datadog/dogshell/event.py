@@ -1,11 +1,15 @@
+# stdlib
 import datetime
 import time
 import re
 import sys
 
-from datadog.util.compat import json
-from datadog.dogshell.common import report_errors, report_warnings
+# 3p
+import simplejson as json
+
+# datadog
 from datadog import api
+from datadog.dogshell.common import report_errors, report_warnings
 
 
 def prettyprint_event(event):
