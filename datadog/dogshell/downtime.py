@@ -106,3 +106,7 @@ class DowntimeClient(object):
             print(cls._pretty_json(res))
         else:
             print(json.dumps(res))
+
+    @classmethod
+    def _pretty_json(cls, obj):
+        return json.dumps(obj, sort_keys=True, indent=2)

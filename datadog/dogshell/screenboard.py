@@ -284,6 +284,10 @@ class ScreenboardClient(object):
         else:
             print(json.dumps(res))
 
+    @classmethod
+    def _pretty_json(cls, obj):
+        return json.dumps(obj, sort_keys=True, indent=2)
+
 
 def _template_variables(tpl_var_input):
     if '[' not in tpl_var_input:
