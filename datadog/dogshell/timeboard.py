@@ -109,7 +109,7 @@ class TimeboardClient(object):
             return no_punct.replace(" ", "_").replace("-", "_").strip("_")
 
         format = args.format
-        res = api.Timeboard.get_all()()
+        res = api.Timeboard.get_all()
         report_warnings(res)
         report_errors(res)
 
