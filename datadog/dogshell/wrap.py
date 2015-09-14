@@ -189,6 +189,8 @@ case of error.")
     parser.add_option('-b', '--buffer_outs', action='store_true', dest='buffer_outs', default=False,
                       help="displays the stderr and stdout of the command only once it has \
 returned (the command outputs remains buffered in dogwrap meanwhile)")
+    parser.add_option('--tags', action='store', type='string', dest='tags', default='',
+                      help="comma separated list of tags")
 
     options, args = parser.parse_args()
 
@@ -239,6 +241,11 @@ returned (the command outputs remains buffered in dogwrap meanwhile)")
     if notifications:
         event_body.extend([u'notifications: %s\n' % (notifications)])
 
+    if options.tags:
+        tags = [t.strip() for t in options.tags.split(',')]
+    else:
+        tags = None
+
     event_body.append(u'%%%\n')
     # ensure all strings are parsed as utf-8
     event_body = [x.decode('utf-8') for x in event_body]
@@ -248,6 +255,7 @@ returned (the command outputs remains buffered in dogwrap meanwhile)")
         'aggregation_key': options.name,
         'host': host,
         'priority': options.priority or event_priority,
+        'tags': tags
     }
 
     if options.buffer_outs:
