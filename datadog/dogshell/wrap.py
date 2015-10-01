@@ -150,7 +150,7 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout,
 
 
 def main():
-    parser = optparse.OptionParser(usage="%prog -n [event_name] -k [api_key] --submit_mode i\
+    parser = optparse.OptionParser(usage="%prog -n [event_name] -k [api_key] --submit_mode \
 [ all | errors ] [options] \"command\". \n\nNote that you need to enclose your command in \
 quotes to prevent python as soon as there is a space in your command. \n \nNOTICE: In normal \
 mode, the whole stderr is printed before stdout, in flush_live mode they will be mixed but there \
