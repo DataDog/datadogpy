@@ -1,7 +1,17 @@
-from datadog.api.base import ActionAPIResource
+from datadog.api.base import ActionAPIResource, GetableAPIResource, \
+    CreateableAPIResource, UpdatableAPIResource, ListableAPIResource, \
+    DeletableAPIResource
 
 
-class User(ActionAPIResource):
+class User(ActionAPIResource, GetableAPIResource, CreateableAPIResource,
+           UpdatableAPIResource, ListableAPIResource,
+           DeletableAPIResource):
+
+    _class_name = 'user'
+    _class_url = '/user'
+    _plural_class_name = 'users'
+    _json_name = 'user'
+
     """
     A wrapper around User HTTP API.
     """
@@ -17,6 +27,8 @@ class User(ActionAPIResource):
 
         :returns: JSON response from HTTP request
         """
+        print("[DEPRECATION] User.invite() is deprecated. Use `create` instead.")
+
         if not isinstance(emails, list):
             emails = [emails]
 
