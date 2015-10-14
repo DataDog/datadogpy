@@ -22,10 +22,16 @@ log = logging.getLogger('dd.datadogpy')
 
 class ThreadStats(object):
 
-    def __init__(self):
-        """ Initialize a dogstats object. """
+    def __init__(self, constant_tags=None):
+        """
+        Initialize a dogstats object.
+
+        :param constant_tags: Tags to attach to every metric reported by this client
+        :type constant_tags: list of strings
+        """
         # Don't collect until start is called.
         self._disabled = True
+        self.constant_tags = constant_tags
 
     def start(self, flush_interval=10, roll_up_interval=10, device=None,
               flush_in_thread=True, flush_in_greenlet=False, disabled=False):
@@ -116,6 +122,13 @@ class ThreadStats(object):
             'The web server is up again', alert_type='success')
         """
         if not self._disabled:
+            # Append all client level tags to every event
+            if self.constant_tags:
+                if tags:
+                    tags += self.constant_tags
+                else:
+                    tags = self.constant_tags
+
             self._event_aggregator.add_event(
                 title=title, text=text, alert_type=alert_type, aggregation_key=aggregation_key,
                 source_type_name=source_type_name, date_happened=date_happened, priority=priority,
@@ -292,6 +305,13 @@ class ThreadStats(object):
         # FIXME: emit a dictionary from the aggregator
         metrics = []
         for timestamp, value, name, tags, host in rolled_up_metrics:
+            # Append all client level tags to every metric
+            if self.constant_tags:
+                if tags:
+                    tags += self.constant_tags
+                else:
+                    tags = self.constant_tags
+
             metric = {
                 'metric': name,
                 'points': [[timestamp, value]],
