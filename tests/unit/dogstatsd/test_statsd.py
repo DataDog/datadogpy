@@ -127,6 +127,15 @@ class TestDogStatsd(object):
                           aggregation_key='key', tags=['t1', 't2:v2'])
         t.assert_equal(u'_e{5,19}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2', self.recv())
 
+    def test_event_constant_tags(self):
+        self.statsd.constant_tags = ['bar:baz', 'foo']
+        self.statsd.event('Title', u'L1\nL2', priority='low', date_happened=1375296969)
+        t.assert_equal(u'_e{5,6}:Title|L1\\nL2|d:1375296969|p:low|#bar:baz,foo', self.recv())
+
+        self.statsd.event('Title', u'♬ †øU †øU ¥ºu T0µ ♪',
+                          aggregation_key='key', tags=['t1', 't2:v2'])
+        t.assert_equal(u'_e{5,19}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2,bar:baz,foo', self.recv())
+
     def test_service_check(self):
         now = int(time.time())
         self.statsd.service_check(

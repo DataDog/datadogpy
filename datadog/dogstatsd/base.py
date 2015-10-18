@@ -274,6 +274,14 @@ class DogStatsd(object):
         """
         title = self._escape_event_content(title)
         text = self._escape_event_content(text)
+
+        # Append all client level tags to every event
+        if self.constant_tags:
+            if tags:
+                tags += self.constant_tags
+            else:
+                tags = self.constant_tags
+
         string = u'_e{%d,%d}:%s|%s' % (len(title), len(text), title, text)
         if date_happened:
             string = '%s|d:%d' % (string, date_happened)
