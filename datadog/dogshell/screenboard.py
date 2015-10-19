@@ -6,6 +6,7 @@ import webbrowser
 
 # 3p
 import simplejson as json
+from datadog.util.format import pretty_json
 
 # datadog
 from datadog import api
@@ -131,7 +132,7 @@ class ScreenboardClient(object):
             report_errors(res)
 
             if format == 'pretty':
-                print(cls._pretty_json(res))
+                print(pretty_json(res))
             else:
                 print(json.dumps(res))
 
@@ -180,7 +181,7 @@ class ScreenboardClient(object):
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -203,7 +204,7 @@ class ScreenboardClient(object):
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -225,7 +226,7 @@ class ScreenboardClient(object):
             res["id"] = str(res["id"])
 
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -245,7 +246,7 @@ class ScreenboardClient(object):
         res = api.Screenboard.share(args.screenboard_id)
 
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -256,7 +257,7 @@ class ScreenboardClient(object):
         res = api.Screenboard.revoke(args.screenboard_id)
 
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -280,7 +281,7 @@ class ScreenboardClient(object):
         cls._write_screen_to_file(res['id'], args.filename, args.timeout, format, args.string_ids)
 
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
