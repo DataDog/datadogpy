@@ -103,8 +103,9 @@ class TestUnitThreadStats(object):
         reporter.events = []
         event1_priority = "low"
         event1_date_happened = 1375296969
+        event1_tag = "Event 2 tag"
         dog.event(event1_title, event1_text, priority=event1_priority,
-                  date_happened=event1_date_happened)
+                  date_happened=event1_date_happened, tags=[event1_tag])
 
         # Flush and test
         dog.flush()
@@ -113,6 +114,49 @@ class TestUnitThreadStats(object):
         nt.assert_equal(event['text'], event1_text)
         nt.assert_equal(event['priority'], event1_priority)
         nt.assert_equal(event['date_happened'], event1_date_happened)
+        nt.assert_equal(event['tags'], [event1_tag])
+
+    def test_event_constant_tags(self):
+        constant_tag = 'type:constant'
+        dog = ThreadStats(constant_tags=[constant_tag])
+        dog.start(roll_up_interval=10, flush_in_thread=False)
+        reporter = dog.reporter = MemoryReporter()
+
+        # Add two events
+        event1_title = "Event 1 title"
+        event2_title = "Event 1 title"
+        event1_text = "Event 1 text"
+        event2_text = "Event 2 text"
+        dog.event(event1_title, event1_text)
+        dog.event(event2_title, event2_text)
+
+        # Flush and test
+        dog.flush()
+        event1, event2 = reporter.events
+        nt.assert_equal(event1['title'], event1_title)
+        nt.assert_equal(event1['text'], event1_text)
+        nt.assert_equal(event1['tags'], [constant_tag])
+        nt.assert_equal(event2['title'], event2_title)
+        nt.assert_equal(event2['text'], event2_text)
+        nt.assert_equal(event2['text'], event2_text)
+        nt.assert_equal(event2['tags'], [constant_tag])
+
+        # Test more parameters
+        reporter.events = []
+        event1_priority = "low"
+        event1_date_happened = 1375296969
+        event1_tag = "Event 2 tag"
+        dog.event(event1_title, event1_text, priority=event1_priority,
+                  date_happened=event1_date_happened, tags=[event1_tag])
+
+        # Flush and test
+        dog.flush()
+        event, = reporter.events
+        nt.assert_equal(event['title'], event1_title)
+        nt.assert_equal(event['text'], event1_text)
+        nt.assert_equal(event['priority'], event1_priority)
+        nt.assert_equal(event['date_happened'], event1_date_happened)
+        nt.assert_equal(event['tags'], [event1_tag, constant_tag])
 
     def test_histogram(self):
         dog = ThreadStats()
@@ -344,6 +388,42 @@ class TestUnitThreadStats(object):
         nt.assert_equal(g2['points'][0][1], 15)
         nt.assert_equal(g3['tags'], ['env:staging'])
         nt.assert_equal(g3['points'][0][1], 20)
+
+    def test_constant_tags(self):
+        dog = ThreadStats(constant_tags=['type:constant'])
+        dog.start(roll_up_interval=10, flush_in_thread=False)
+        reporter = dog.reporter = MemoryReporter()
+
+        # Post the same metric with different tags.
+        dog.gauge('gauge', 10, timestamp=100.0)
+        dog.gauge('gauge', 15, timestamp=100.0, tags=['env:production', 'db'])
+        dog.gauge('gauge', 20, timestamp=100.0, tags=['env:staging'])
+
+        dog.increment('counter', timestamp=100.0)
+        dog.increment('counter', timestamp=100.0, tags=['env:production', 'db'])
+        dog.increment('counter', timestamp=100.0, tags=['env:staging'])
+
+        dog.flush(200.0)
+
+        metrics = self.sort_metrics(reporter.metrics)
+        nt.assert_equal(len(metrics), 6)
+
+        [c1, c2, c3, g1, g2, g3] = metrics
+        (nt.assert_equal(c['metric'], 'counter') for c in [c1, c2, c3])
+        nt.assert_equal(c1['tags'], ['env:production', 'db', 'type:constant'])
+        nt.assert_equal(c1['points'][0][1], 1)
+        nt.assert_equal(c2['tags'], ['env:staging', 'type:constant'])
+        nt.assert_equal(c2['points'][0][1], 1)
+        nt.assert_equal(c3['tags'], ['type:constant'])
+        nt.assert_equal(c3['points'][0][1], 1)
+
+        (nt.assert_equal(c['metric'], 'gauge') for c in [g1, g2, g3])
+        nt.assert_equal(g1['tags'], ['env:production', 'db', 'type:constant'])
+        nt.assert_equal(g1['points'][0][1], 15)
+        nt.assert_equal(g2['tags'], ['env:staging', 'type:constant'])
+        nt.assert_equal(g2['points'][0][1], 20)
+        nt.assert_equal(g3['tags'], ['type:constant'])
+        nt.assert_equal(g3['points'][0][1], 10)
 
         # Ensure histograms work as well.
         @dog.timed('timed', tags=['version:1'])
