@@ -4,6 +4,7 @@ import os
 import time
 import unittest
 import requests
+import simplejson as json
 
 # 3p
 from nose.plugins.attrib import attr
@@ -15,7 +16,6 @@ from nose.tools import assert_true as ok
 from datadog import initialize
 from datadog import api as dog
 from datadog.api.exceptions import ApiError
-from datadog.util.compat import json
 from tests.util.snapshot_test_utils import (
     assert_snap_not_blank, assert_snap_has_no_events
 )
@@ -897,6 +897,44 @@ class TestDatadog(unittest.TestCase):
         with self.assertRaises(ApiError):
             dog.Embed.get(embed_id)
 
+    def test_user_crud(self):
+        handle = 'user@test.com'
+        name = 'Test User'
+        alternate_name = 'Test User Alt'
+        alternate_email = 'user+1@test.com'
+
+        # test create user
+        # the user might already exist
+        try:
+            u = dog.User.create(handle=handle, name=name)
+        except ApiError as e:
+            pass
+
+        # reset user to original status
+        u = dog.User.update(handle, email=handle, name=name, disabled=False)
+        assert u['user']['handle'] == handle
+        assert u['user']['name'] == name
+        assert u['user']['disabled'] == False
+
+        # test get
+        u = dog.User.get(handle)
+        assert u['user']['handle'] == handle
+        assert u['user']['name'] == name
+
+        # test update user
+        u = dog.User.update(handle, email=alternate_email, name=alternate_name)
+        assert u['user']['handle'] == handle
+        assert u['user']['name'] == alternate_name
+        assert u['user']['email'] == alternate_email
+
+        # test disable user
+        dog.User.delete(handle)
+        u = dog.User.get(handle)
+        assert u['user']['disabled'] == True
+
+        # test get all users
+        u = dog.User.get_all()
+        assert len(u['users']) >= 1
 
 if __name__ == '__main__':
     unittest.main()
