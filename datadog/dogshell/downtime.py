@@ -1,5 +1,6 @@
 # 3p
 import simplejson as json
+from datadog.util.format import pretty_json
 
 # datadog
 from datadog import api
@@ -58,7 +59,7 @@ class DowntimeClient(object):
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -71,7 +72,7 @@ class DowntimeClient(object):
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -91,7 +92,7 @@ class DowntimeClient(object):
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -103,6 +104,6 @@ class DowntimeClient(object):
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))

@@ -10,6 +10,7 @@ import simplejson as json
 
 # datadog
 from datadog import api
+from datadog.util.format import pretty_json
 from datadog.dogshell.common import report_errors, report_warnings, print_err
 from datetime import datetime
 
@@ -109,7 +110,7 @@ class TimeboardClient(object):
             return no_punct.replace(" ", "_").replace("-", "_").strip("_")
 
         format = args.format
-        res = api.Timeboard.get_all()()
+        res = api.Timeboard.get_all()
         report_warnings(res)
         report_errors(res)
 
@@ -152,7 +153,7 @@ class TimeboardClient(object):
                                 args.timeout, format, args.string_ids)
 
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -214,7 +215,7 @@ class TimeboardClient(object):
             report_errors(res)
 
             if format == 'pretty':
-                print(cls._pretty_json(res))
+                print(pretty_json(res))
             else:
                 print(json.dumps(res))
 
@@ -237,7 +238,7 @@ class TimeboardClient(object):
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -259,7 +260,7 @@ class TimeboardClient(object):
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -275,7 +276,7 @@ class TimeboardClient(object):
             res["dash"]["id"] = str(res["dash"]["id"])
 
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -292,7 +293,7 @@ class TimeboardClient(object):
                 d["id"] = str(d["id"])
 
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         elif format == 'raw':
             print(json.dumps(res))
         else:
@@ -319,10 +320,6 @@ class TimeboardClient(object):
     @classmethod
     def _escape(cls, s):
         return s.replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t")
-
-    @classmethod
-    def _pretty_json(cls, obj):
-        return json.dumps(obj, sort_keys=True, indent=2)
 
 
 def _template_variables(tpl_var_input):

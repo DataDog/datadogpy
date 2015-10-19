@@ -1,5 +1,6 @@
 # 3p
 import simplejson as json
+from datadog.util.format import pretty_json
 
 # datadog
 from datadog import api
@@ -88,7 +89,7 @@ class MonitorClient(object):
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -107,7 +108,7 @@ class MonitorClient(object):
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -123,7 +124,7 @@ class MonitorClient(object):
             res["id"] = str(res["id"])
 
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -140,7 +141,7 @@ class MonitorClient(object):
                 d["id"] = str(d["id"])
 
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         elif format == 'raw':
             print(json.dumps(res))
         else:
@@ -174,7 +175,7 @@ class MonitorClient(object):
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -194,7 +195,7 @@ class MonitorClient(object):
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
 
@@ -205,6 +206,6 @@ class MonitorClient(object):
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
-            print(cls._pretty_json(res))
+            print(pretty_json(res))
         else:
             print(json.dumps(res))
