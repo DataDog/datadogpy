@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.10.0 / Unreleased
+# 0.10.0 / 2015-10-19
 * [BUGFIX] Fix typo in Dogshell breaking the Timeboard `pull_all` method, [#92][]
 * [FEATURE] Enhance `constant_tags` support to ThreadStats and Statsd events, [#90][] (thanks [@jofusa][])
 * [FEATURE] New CRUD User API, [#89][]
