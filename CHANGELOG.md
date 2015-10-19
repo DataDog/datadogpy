@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+# 0.10.0 / Unreleased
+* [BUGFIX] Fix typo in Dogshell breaking the Timeboard `pull_all` method, [#92][]
+* [FEATURE] Enhance `constant_tags` support to ThreadStats and Statsd events, [#90][] (thanks [@jofusa][])
+* [FEATURE] New CRUD User API, [#89][]
+* [OTHER] Fix Dogwrap documentation output typo, [#87][] (thanks [@gnarf][])
+
 # 0.9.0 / 2015-08-31
 * [FEATURE] Option to time in ms with `statsd`, [#78][] (thanks [@g--][])
 * [FEATURE] Option to unmute `api` ApiError exceptions, [#76][]
@@ -19,7 +25,7 @@ CHANGELOG
 * [FEATURE] Add new monitor `unmute` arg (`all_scopes`) to allow clearing all mute settings for a given monitor, [#58][]
 * [FEATURE] Revoke a shared screenboard, [#46][]
 * [IMPROVEMENT] Add a timed context manager to `statsd`, [#65][] (thanks [@clokep][])
-* [IMPROVEMENT] Adjust dogshell descriptions to distinguish between `mute_all`/`unmute_all` and `mute`/`unmute` methods, [#58][]
+* [IMPROVEMENT] Adjust Dogshell descriptions to distinguish between `mute_all`/`unmute_all` and `mute`/`unmute` methods, [#58][]
 * [IMPROVEMENT] Include additional information in 403 response exceptions, [#58][]
 * [OTHER] Update `requests` library, per CVE-2015-2296, [#63][]
 
@@ -101,10 +107,15 @@ See [#8][], thanks [@benweatherman][]
 [#77]: https://github.com/DataDog/datadogpy/issues/77
 [#78]: https://github.com/DataDog/datadogpy/issues/78
 [#83]: https://github.com/DataDog/datadogpy/issues/83
+[#87]: https://github.com/DataDog/datadogpy/issues/87
+[#89]: https://github.com/DataDog/datadogpy/issues/89
+[#90]: https://github.com/DataDog/datadogpy/issues/90
+[#92]: https://github.com/DataDog/datadogpy/issues/92
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@benweatherman]: https://github.com/benweatherman
 [@clokep]: https://github.com/clokep
 [@g--]: https://github.com/g--
+[@gnarf]: https://github.com/gnarf
 [@jofusa]: https://github.com/jofusa
 [@kuzmich]: https://github.com/kuzmich
 [@miketheman]: https://github.com/miketheman
