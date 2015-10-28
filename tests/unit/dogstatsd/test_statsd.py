@@ -157,6 +157,17 @@ class TestDogStatsd(object):
         self.statsd.increment('page.views', tags=['extra'])
         t.assert_equal('page.views:1|c|#extra,bar:baz,foo', self.recv())
 
+    def test_gauge_constant_tags_with_metric_level_tags_twice(self):
+        metric_level_tag = ['foo:bar']
+        self.statsd.constant_tags=['bar:baz']
+        self.statsd.gauge('gauge', 123.4, tags=metric_level_tag)
+        assert self.recv() == 'gauge:123.4|g|#foo:bar,bar:baz'
+
+        # sending metrics multiple times with same metric-level tags
+        # should not duplicate the tags being sent
+        self.statsd.gauge('gauge', 123.4, tags=metric_level_tag)
+        assert self.recv() == 'gauge:123.4|g|#foo:bar,bar:baz'
+
     @staticmethod
     def assert_almost_equal(a, b, delta):
         assert 0 <= abs(a - b) <= delta, "%s - %s not within %s" % (a, b, delta)
