@@ -225,7 +225,7 @@ class DogStatsd(object):
         # Append all client level tags to every metric
         if self.constant_tags:
             if tags:
-                tags += self.constant_tags
+                tags = tags + self.constant_tags
             else:
                 tags = self.constant_tags
 
