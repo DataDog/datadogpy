@@ -62,7 +62,8 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
         certificate store, or False to skip SSL verification
     :type cacert: path or boolean
 
-    :param mute: Mute any ApiError or ClientError before they escape from datadog.api.HTTPClient (default: True).
+    :param mute: Mute any ApiError or ClientError before they escape \
+        from datadog.api.HTTPClient (default: True).
     :type mute: boolean
     """
     # API configuration
