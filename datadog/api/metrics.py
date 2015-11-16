@@ -14,13 +14,16 @@ class Metric(SearchableAPIResource, SendableAPIResource):
     _METRIC_QUERY_ENDPOINT = '/query'
     _METRIC_SUBMIT_ENDPOINT = '/series'
 
+    _SUPPORTED_DATA_TYPES = (int, float, long)
+
     @classmethod
     def _process_points(cls, points):
         now = time.time()
-        if isinstance(points, (float, int)):
+        if isinstance(points, cls._SUPPORTED_DATA_TYPES):
             points = [(now, points)]
         elif isinstance(points, tuple):
             points = [points]
+
         return points
 
     @classmethod

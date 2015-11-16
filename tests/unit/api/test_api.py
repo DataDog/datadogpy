@@ -309,3 +309,13 @@ class TestMetricResource(DatadogAPIWithInitialization):
         serie = [dict(metric='metric.1', points=13),
                  dict(metric='metric.2', points=19)]
         self.submit_and_assess_metric_payload(serie)
+
+    def test_data_type_support(self):
+        """
+        `Metric` API supports built-in real numerical data types.
+        """
+        supported_data_types = [1, 1.0, 1L]
+
+        for point in supported_data_types:
+            serie = dict(metric='metric.numerical', points=point)
+            self.submit_and_assess_metric_payload(serie)
