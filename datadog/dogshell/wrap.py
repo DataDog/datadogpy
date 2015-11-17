@@ -32,6 +32,8 @@ from datadog import initialize, api
 SUCCESS = 'success'
 ERROR = 'error'
 
+MAX_EVENT_BODY_LENGTH = 3000
+
 
 class Timeout(Exception):
     pass
@@ -52,7 +54,7 @@ class OutputReader(threading.Thread):
         '''
         threading.Thread.__init__(self)
         self.daemon = True
-        self._out_content = ''
+        self._out_content = u""
         self._out = proc_out
         self._fwd_out = fwd_out
 
@@ -64,7 +66,7 @@ class OutputReader(threading.Thread):
         for line in iter(self._out.readline, b''):
             if self._fwd_out is not None:
                 self._fwd_out.write(line)
-
+            line = line.decode('utf-8')
             self._out_content += line
         self._out.close()
 
@@ -149,6 +151,72 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout,
     return returncode, stdout, stderr, duration
 
 
+def trim_text(text, max_len):
+    """
+    Trim input text to fit the `max_len` condition.
+
+    If trim is needed: keep the first 1/3rd of the budget on the top,
+    and the other 2 thirds on the bottom.
+    """
+    if len(text) <= max_len:
+        return text
+
+    trimmed_text = \
+        u"{top_third}\n"\
+        u"```\n" \
+        u"*...trimmed...*\n" \
+        u"```\n" \
+        u"{bottom_two_third}\n".format(
+            top_third=text[:max_len / 3],
+            bottom_two_third=text[len(text) - (2 * max_len) / 3:]
+        )
+
+    return trimmed_text
+
+
+def build_event_body(cmd, returncode, stdout, stderr, notifications):
+    """
+    Format and return an event body.
+
+    Note: do not exceed MAX_EVENT_BODY_LENGTH length.
+    """
+    fmt_stdout = u""
+    fmt_stderr = u""
+    fmt_notifications = u""
+
+    max_length = MAX_EVENT_BODY_LENGTH / 2 if stdout and stderr else MAX_EVENT_BODY_LENGTH
+
+    if stdout:
+        fmt_stdout = u"**>>>> STDOUT <<<<**\n```\n{stdout} \n```\n".format(
+            stdout=trim_text(stdout, max_length)
+        )
+
+    if stderr:
+        fmt_stderr = u"**>>>> STDERR <<<<**\n```\n{stderr} \n```\n".format(
+            stderr=trim_text(stderr, max_length)
+        )
+
+    if notifications:
+        fmt_notifications = u"**>>>> NOTIFICATIONS <<<<**\n\n {notifications}\n".format(
+            notifications=notifications
+        )
+
+    return \
+        u"%%%\n" \
+        u"**>>>> CMD <<<<**\n```\n{command} \n```\n" \
+        u"**>>>> EXIT CODE <<<<**\n\n {returncode}\n\n\n" \
+        u"{stdout}" \
+        u"{stderr}" \
+        u"{notifications}" \
+        u"%%%\n".format(
+            command=u" ".join(cmd),
+            returncode=returncode,
+            stdout=fmt_stdout,
+            stderr=fmt_stderr,
+            notifications=fmt_notifications,
+        )
+
+
 def main():
     parser = optparse.OptionParser(usage="%prog -n [event_name] -k [api_key] --submit_mode \
 [ all | errors ] [options] \"command\". \n\nNote that you need to enclose your command in \
@@ -223,33 +291,19 @@ returned (the command outputs remains buffered in dogwrap meanwhile)")
         else:
             event_title = u'[%s] %s failed in %.2fs' % (host, options.name, duration)
 
-    event_body = [u'%%%\n',
-                  u'commmand:\n```\n', u' '.join(cmd), u'\n```\n',
-                  u'exit code: %s\n\n' % returncode, ]
-
-    if stdout:
-        event_body.extend([u'stdout:\n```\n', stdout, u'\n```\n'])
-    if stderr:
-        event_body.extend([u'stderr:\n```\n', stderr, u'\n```\n'])
-
     notifications = ""
     if alert_type == SUCCESS and options.notify_success:
         notifications = options.notify_success
     elif alert_type == ERROR and options.notify_error:
         notifications = options.notify_error
 
-    if notifications:
-        event_body.extend([u'notifications: %s\n' % (notifications)])
-
     if options.tags:
         tags = [t.strip() for t in options.tags.split(',')]
     else:
         tags = None
 
-    event_body.append(u'%%%\n')
-    # ensure all strings are parsed as utf-8
-    event_body = [x.decode('utf-8') for x in event_body]
-    event_body = u''.join(event_body)
+    event_body = build_event_body(cmd, returncode, stdout, stderr, notifications)
+
     event = {
         'alert_type': alert_type,
         'aggregation_key': options.name,
