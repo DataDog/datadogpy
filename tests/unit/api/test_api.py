@@ -281,7 +281,7 @@ class TestMetricResource(DatadogAPIWithInitialization):
             # it consists of a [time, value] pair
             self.assertEquals(len(metric['points'][0]), 2)
             # its value == value we sent
-            self.assertEquals(metric['points'][0][1], serie[i]['points'])
+            self.assertEquals(metric['points'][0][1], float(serie[i]['points']))
             # it's time not so far from current time
             assert now - 1 < metric['points'][0][0] < now + 1
 
@@ -289,9 +289,9 @@ class TestMetricResource(DatadogAPIWithInitialization):
         """
         Endpoints are different for submission and queries.
         """
-        Metric.send(points="val")
+        Metric.send(points=(123, 456))
         self.request_called_with('POST', "host/api/v1/series",
-                                 data={'series': [{'points': "val", 'host': api._host_name}]})
+                                 data={'series': [{'points': [[123, 456.0]], 'host': api._host_name}]})
 
         Metric.query(start="val1", end="val2")
         self.request_called_with('GET', "host/api/v1/query",
@@ -312,9 +312,17 @@ class TestMetricResource(DatadogAPIWithInitialization):
 
     def test_data_type_support(self):
         """
-        `Metric` API supports built-in real numerical data types.
+        `Metric` API supports `real` numerical data types.
         """
-        supported_data_types = [1, 1.0, 1L]
+        from decimal import Decimal
+        from fractions import Fraction
+
+        m_long = int(1)  # long in Python 3.x
+
+        if not is_p3k():
+            m_long = long(1)
+
+        supported_data_types = [1, 1.0, m_long, Decimal(1), Fraction(1, 2)]
 
         for point in supported_data_types:
             serie = dict(metric='metric.numerical', points=point)
