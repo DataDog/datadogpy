@@ -1,4 +1,5 @@
 import time
+from numbers import Number
 
 from datadog.api.base import SearchableAPIResource, SendableAPIResource
 from datadog.api.exceptions import ApiError
@@ -14,17 +15,52 @@ class Metric(SearchableAPIResource, SendableAPIResource):
     _METRIC_QUERY_ENDPOINT = '/query'
     _METRIC_SUBMIT_ENDPOINT = '/series'
 
-    _SUPPORTED_DATA_TYPES = (int, float, long)
-
     @classmethod
     def _process_points(cls, points):
-        now = time.time()
-        if isinstance(points, cls._SUPPORTED_DATA_TYPES):
-            points = [(now, points)]
-        elif isinstance(points, tuple):
-            points = [points]
+        """
+        Format `points` parameter.
 
-        return points
+        Input:
+            a value or (timestamp, value) pair or a list of value or (timestamp, value) pairs
+
+        Returns:
+            list of (timestamp, float value) pairs
+
+        """
+        now = time.time()
+        points_lst = points if isinstance(points, list) else [points]
+
+        def rec_parse(points_lst):
+            """
+            Recursively parse a list of values or a list of (timestamp, value) pairs to a list of
+            (timestamp, `float` value) pairs.
+            """
+            try:
+                if not points_lst:
+                    return []
+
+                point = points_lst.pop()
+                timestamp = now if isinstance(point, Number) else point[0]
+                value = float(point) if isinstance(point, Number) else float(point[1])
+
+                point = [(timestamp, value)]
+
+                return point + rec_parse(points_lst)
+
+            except TypeError as e:
+                raise TypeError(
+                    u"{0}: "
+                    "`points` parameter must use real numerical values.".format(e)
+                )
+
+            except IndexError as e:
+                raise IndexError(
+                    u"{0}: "
+                    u"`points` must be a list of values or "
+                    u"a list of (timestamp, value) pairs".format(e)
+                )
+
+        return rec_parse(points_lst)
 
     @classmethod
     def send(cls, metrics=None, **single_metric):
@@ -34,7 +70,7 @@ class Metric(SearchableAPIResource, SendableAPIResource):
         :param metric: the name of the time series
         :type metric: string
 
-        :param points: list of points to submit
+        :param points: a (timestamp, value) pair or list of (timestamp, value) pairs
         :type points: list
 
         :param host: host name that produced the metric
