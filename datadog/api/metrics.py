@@ -1,8 +1,10 @@
+# stdlib
 import time
 from numbers import Number
 
-from datadog.api.base import SearchableAPIResource, SendableAPIResource
+# datadog
 from datadog.api.exceptions import ApiError
+from datadog.api.resources import SearchableAPIResource, SendableAPIResource
 
 
 class Metric(SearchableAPIResource, SendableAPIResource):

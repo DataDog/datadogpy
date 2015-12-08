@@ -1,4 +1,4 @@
-from datadog.api.base import SearchableAPIResource
+from datadog.api.resources import SearchableAPIResource
 
 
 class Infrastructure(SearchableAPIResource):

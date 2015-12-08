@@ -7,9 +7,9 @@ import requests
 
 # datadog
 from datadog import initialize, api
-from datadog.api.base import CreateableAPIResource, UpdatableAPIResource, DeletableAPIResource,\
-    GetableAPIResource, ListableAPIResource, ActionAPIResource
 from datadog.api.exceptions import ApiError
+from datadog.api.resources import CreateableAPIResource, UpdatableAPIResource, DeletableAPIResource,\
+    GetableAPIResource, ListableAPIResource, ActionAPIResource
 from datadog.util.compat import iteritems, json
 
 

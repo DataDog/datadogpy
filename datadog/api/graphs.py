@@ -1,5 +1,5 @@
 from datadog.util.compat import urlparse
-from datadog.api.base import (
+from datadog.api.resources import (
     CreateableAPIResource,
     ActionAPIResource,
     GetableAPIResource,
