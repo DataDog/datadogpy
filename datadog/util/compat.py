@@ -56,3 +56,9 @@ try:
     import pkg_resources as pkg
 except ImportError:
     pkg = None
+
+# Prefer `simplejson` but fall back to stdlib `json`
+try:
+    import simplejson as json
+except ImportError:
+    import json
