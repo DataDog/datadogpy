@@ -1,1 +1,1 @@
-from datadog.dogstatsd.base import statsd  # noqa
+from datadog.dogstatsd.base import DogStatsd, statsd  # noqa

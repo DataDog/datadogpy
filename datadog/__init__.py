@@ -14,7 +14,7 @@ import os.path
 
 # datadog
 from datadog import api
-from datadog.dogstatsd import statsd
+from datadog.dogstatsd import DogStatsd, statsd  # noqa
 from datadog.threadstats import ThreadStats  # noqa
 from datadog.util.hostname import get_hostname
 from datadog.util.compat import iteritems
