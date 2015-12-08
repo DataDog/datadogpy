@@ -8,7 +8,6 @@ without hindering performance.
 * datadog.dogshell: a command-line tool, wrapping datadog.api, to interact with Datadog REST API.
 """
 # stdlib
-from pkg_resources import get_distribution, DistributionNotFound
 import os
 import os.path
 
@@ -18,20 +17,10 @@ from datadog.dogstatsd import DogStatsd, statsd  # noqa
 from datadog.threadstats import ThreadStats  # noqa
 from datadog.util.hostname import get_hostname
 from datadog.util.compat import iteritems
+from datadog.util.config import get_version
 
 
-try:
-    _dist = get_distribution("datadog")
-    # Normalize case for Windows systems
-    dist_loc = os.path.normcase(_dist.location)
-    here = os.path.normcase(__file__)
-    if not here.startswith(os.path.join(dist_loc, __name__)):
-        # not installed, but there is another version that *is*e
-        raise DistributionNotFound
-except DistributionNotFound:
-    __version__ = 'Please install datadog with setup.py'
-else:
-    __version__ = _dist.version
+__version__ = get_version()
 
 
 def initialize(api_key=None, app_key=None, host_name=None, api_host=None,

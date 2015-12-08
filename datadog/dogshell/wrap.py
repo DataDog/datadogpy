@@ -19,7 +19,6 @@ dogwrap -n test-job -k $API_KEY --timeout=1 "sleep 3"
 '''
 # stdlib
 import optparse
-import pkg_resources as pkg
 import subprocess
 import sys
 import threading
@@ -27,6 +26,7 @@ import time
 
 # datadog
 from datadog import initialize, api
+from datadog.util.config import get_version
 
 
 SUCCESS = 'success'
@@ -223,7 +223,7 @@ def main():
 quotes to prevent python as soon as there is a space in your command. \n \nNOTICE: In normal \
 mode, the whole stderr is printed before stdout, in flush_live mode they will be mixed but there \
 is not guarantee that messages sent by the command on both stderr and stdout are printed in the \
-order they were sent.", version="%prog {0}".format(pkg.require("datadog")[0].version))
+order they were sent.", version="%prog {0}".format(get_version()))
 
     parser.add_option('-n', '--name', action='store', type='string', help="the name of the event \
 as it should appear on your Datadog stream")
