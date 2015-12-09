@@ -101,12 +101,12 @@ def get_hostname():
             hostname = socket_hostname
 
     if hostname is None:
-        log.critical("Unable to reliably determine host name. You can define one"
-                     " in datadog.conf or in your hosts file")
-        raise Exception("Unable to reliably determine host name. You can define"
-                        " one in datadog.conf or in your hosts file")
-    else:
-        return hostname
+        log.warning(
+            u"Unable to reliably determine host name. You can define one in your `hosts` file, "
+            u"or in `datadog.conf` file if you have Datadog Agent installed."
+        )
+
+    return hostname
 
 
 def get_ec2_instance_id():
