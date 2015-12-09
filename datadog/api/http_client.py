@@ -1,18 +1,20 @@
 """
 Available HTTP Client for Datadog API client.
 
-1. Priority to `requests`
-2. Fall back to `urlfetch` module on Google App Engine
+Priority:
+1. `requests` 3p module
+2. `urlfetch` 3p module - Google App Engine only
 """
 # stdlib
 import logging
-
-# 3p
-import requests
+import urllib
 
 # datadog
-from datadog.api.exceptions import ClientError, HttpTimeout
+from datadog.api.exceptions import ClientError, HTTPError, HttpTimeout
 
+requests = None
+urlfetch = None
+urlfetch_errors = None
 
 log = logging.getLogger('dd.datadogpy')
 
@@ -21,11 +23,19 @@ class HTTPClient(object):
     """
     An abstract generic HTTP client. Subclasses must implement the `request` methods.
     """
-    _CORE = NotImplemented
-
     @classmethod
     def request(cls, method, url, headers, params, data, timeout, proxies, verify, max_retries):
         """
+        Main method to be implemented by HTTP clients.
+
+        The returned data structure has the following fields:
+        * `content`: string containing the response from the server
+        * `status_code`: HTTP status code returned by the server
+
+        Can raise the following exceptions:
+        * `ClientError`: server cannot be contacted
+        * `HttpTimeout`: connection timed out
+        * `HTTPError`: unexpected HTTP response code
         """
         raise NotImplementedError(
             u"Must be implemented by HTTPClient subclasses."
@@ -46,31 +56,24 @@ class RequestClient(HTTPClient):
         s.mount('https://', http_adapter)
 
         try:
-            # Request
             result = s.request(
-                method,
-                url,
-                headers=headers,
-                params=params,
-                data=data,
+                method, url,
+                headers=headers, params=params, data=data,
                 timeout=timeout,
-                proxies=proxies,
-                verify=verify)
+                proxies=proxies, verify=verify)
 
-            # Raise on status
             result.raise_for_status()
 
         except requests.ConnectionError as e:
             raise ClientError(method, url, e)
-        except requests.exceptions.Timeout as e:
-            cls._timeout_counter += 1
+        except requests.exceptions.Timeout:
             raise HttpTimeout(method, url, timeout)
         except requests.exceptions.HTTPError as e:
             if e.response.status_code in (400, 403, 404, 409):
                 # This gets caught afterwards and raises an ApiError exception
                 pass
             else:
-                raise
+                raise HTTPError(e.response.status_code, result.reason)
         except TypeError as e:
             raise TypeError(
                 u"Your installed version of `requests` library seems not compatible with"
@@ -85,4 +88,78 @@ class URLFetchClient(HTTPClient):
     """
     HTTP client based on Google App Engine `urlfetch` module.
     """
-    pass
+    @classmethod
+    def request(cls, method, url, headers, params, data, timeout, proxies, verify, max_retries):
+        """
+        Wrapper around `urlfetch.fetch` method.
+
+        TO IMPLEMENT:
+        * `max_retries`
+        """
+        # No local certificate file can be used on Google App Engine
+        validate_certificate = True if verify else False
+
+        # Encode parameters in the url
+        url_with_params = "{url}?{params}".format(
+            url=url,
+            params=urllib.urlencode(params)
+        )
+
+        try:
+            result = urlfetch.fetch(
+                url=url_with_params,
+                method=method,
+                headers=headers,
+                validate_certificate=validate_certificate,
+                deadline=timeout,
+                payload=data
+            )
+
+            cls.raise_on_status(result)
+
+        except urlfetch.DownloadError as e:
+            raise ClientError(method, url, e)
+        except urlfetch_errors.DeadlineExceededError:
+            raise HttpTimeout(method, url, timeout)
+
+        return result
+
+    @classmethod
+    def raise_on_status(cls, result):
+        """
+        Raise on HTTP status code errors.
+        """
+        status_code = result.status_code
+
+        if (status_code / 100) != 2:
+            if status_code in (400, 403, 404, 409):
+                pass
+            else:
+                raise HTTPError(status_code)
+
+
+HTTP_CLIENTS = [RequestClient, URLFetchClient]
+
+
+def get_http_client():
+    """
+    Return the appropriate HTTP client based the defined priority and user environment.
+    """
+    global requests
+    global urlfetch
+    global urlfetch_errors
+
+    try:
+        import requests
+        return RequestClient
+    except ImportError:
+        pass
+
+    try:
+        from google.appengine.api import urlfetch, urlfetch_errors
+        return URLFetchClient
+    except ImportError:
+        raise ImportError(
+            u"Datadog API client was unable to resolve a HTTP client. "
+            u" Please install `requests` library."
+        )

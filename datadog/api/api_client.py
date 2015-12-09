@@ -6,7 +6,7 @@ import time
 from datadog.api import _api_version, _max_timeouts, _backoff_period
 from datadog.api.exceptions import ClientError, ApiError, HttpBackoff, \
     HttpTimeout, ApiNotInitialized
-from datadog.api.http_client import RequestClient
+from datadog.api.http_client import get_http_client
 from datadog.util.compat import json, is_p3k
 
 
@@ -15,6 +15,8 @@ log = logging.getLogger('dd.datadogpy')
 
 class APIClient(object):
     """
+    Datadog API client: format and submit API calls to Datadog.
+    Embeds a HTTP client.
     """
     # HTTP transport parameters
     _backoff_period = _backoff_period
@@ -25,17 +27,9 @@ class APIClient(object):
 
     def __init__(self):
         """
-        Instantiate a HTTP Client.
+        Instantiate the client. Plug a HTTP client.
         """
-        self._http_client = self._get_http_client()
-
-    @staticmethod
-    def _get_http_client():
-        """
-        Resolve the appropriate HTTP client based on priority and user environment.
-        """
-
-        return RequestClient
+        self._http_client = get_http_client()
 
     def submit(self, method, path, body=None, attach_host_name=False, response_formatter=None,
                error_formatter=None, **params):
@@ -84,9 +78,6 @@ class APIClient(object):
             if _application_key:
                 params['application_key'] = _application_key
 
-            # Construct the url
-            url = "%s/api/%s/%s" % (_api_host, self._api_version, path.lstrip("/"))
-
             # Attach host name to body
             if attach_host_name and body:
                 # Is it a 'series' list of objects ?
@@ -108,6 +99,13 @@ class APIClient(object):
             if isinstance(body, dict):
                 body = json.dumps(body)
                 headers['Content-Type'] = 'application/json'
+
+            # Construct the URL
+            url = "{api_host}/api/{api_version}/{path}".format(
+                  api_host=_api_host,
+                  api_version=self._api_version,
+                  path=path.lstrip("/"),
+            )
 
             # Process requesting
             start_time = time.time()
@@ -145,6 +143,9 @@ class APIClient(object):
             else:
                 return response_formatter(response_obj)
 
+        except HttpTimeout:
+            self._timeout_counter += 1
+            raise
         except ClientError as e:
             if _mute:
                 log.error(str(e))
@@ -206,6 +207,7 @@ class APIClient(object):
     @classmethod
     def _backoff_status(cls):
         """
+        Get a backoff report, i.e. backoff total and remaining time.
         """
         now = time.time()
         backed_off_time = now - cls._backoff_timestamp
