@@ -135,7 +135,7 @@ class DogStatsd(object):
 
     def timing(self, metric, value, tags=None, sample_rate=1):
         """
-        Record a timing, optionally setting tags and a sample rate.
+        Record a timing in ms, optionally setting tags and a sample rate.
 
         >>> statsd.timing("query.response.time", 1234)
         """
