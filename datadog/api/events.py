@@ -24,6 +24,9 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
         :param text: event message
         :type text: string
 
+        :param alert_type: "error", "warning", "info" or "success".
+        :type alert_type: string
+
         :param date_happened: when the event occurred. if unset defaults to the current time. \
         (POSIX timestamp)
         :type date_happened: integer
