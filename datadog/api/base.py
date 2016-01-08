@@ -38,7 +38,7 @@ class HTTPClient(object):
         :param path: API endpoint url
         :type path: url
 
-        :param body: dictionnary to be sent in the body of the request
+        :param body: dictionary to be sent in the body of the request
         :type body: dictionary
 
         :param response_formatter: function to format JSON response from HTTP API request
@@ -50,7 +50,7 @@ class HTTPClient(object):
         :param attach_host_name: link the new resource object to the host name
         :type attach_host_name: bool
 
-        :param params: dictionnary to be sent in the query string of the request
+        :param params: dictionary to be sent in the query string of the request
         :type params: dictionary
 
         :returns: JSON or formated response from HTTP API request
