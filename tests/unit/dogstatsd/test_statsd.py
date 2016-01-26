@@ -4,6 +4,7 @@ Tests for dogstatsd.py
 """
 
 from collections import deque
+import os
 import six
 import socket
 import time
@@ -401,6 +402,22 @@ class TestDogStatsd(object):
         dogpound.socket = fresh_socket
         t.assert_equal(fresh_socket, dogpound.get_socket())
         t.assert_not_equal(FakeSocket(), dogpound.get_socket())
+
+    def test_tags_from_environment(self):
+        os.environ['DOGSTATSD_TAGS'] = 'country:china,age:45,blue'
+        statsd = DogStatsd()
+        del(os.environ['DOGSTATSD_TAGS'])
+        statsd.socket = FakeSocket()
+        statsd.gauge('gt', 123.4)
+        t.assert_equal('gt:123.4|g|#country:china,age:45,blue', statsd.socket.recv())
+
+    def test_tags_from_environment_and_constant(self):
+        os.environ['DOGSTATSD_TAGS'] = 'country:china,age:45,blue'
+        statsd = DogStatsd(constant_tags=['country:canada', 'red'])
+        del(os.environ['DOGSTATSD_TAGS'])
+        statsd.socket = FakeSocket()
+        statsd.gauge('gt', 123.4)
+        t.assert_equal('gt:123.4|g|#country:canada,red,country:china,age:45,blue', statsd.socket.recv())
 
 if __name__ == '__main__':
     statsd = statsd

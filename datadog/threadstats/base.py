@@ -6,6 +6,7 @@ on your application's needs.
 """
 
 import logging
+import os
 from functools import wraps
 from contextlib import contextmanager
 from time import time
@@ -28,10 +29,16 @@ class ThreadStats(object):
 
         :param constant_tags: Tags to attach to every metric reported by this client
         :type constant_tags: list of strings
+
+        :envvar DOGSTATSD_TAGS: Tags to attach to every metric reported by ThreadStats client
+        :type constant_tags: list of strings
         """
         # Don't collect until start is called.
         self._disabled = True
-        self.constant_tags = constant_tags
+        self.env_tags = [tag for tag in os.environ.get('DOGSTATSD_TAGS', '').split(',') if tag]
+        if constant_tags is None:
+            constant_tags = []
+        self.constant_tags = constant_tags + self.env_tags
 
     def start(self, flush_interval=10, roll_up_interval=10, device=None,
               flush_in_thread=True, flush_in_greenlet=False, disabled=False):
