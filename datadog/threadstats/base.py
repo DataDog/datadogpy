@@ -35,10 +35,10 @@ class ThreadStats(object):
         """
         # Don't collect until start is called.
         self._disabled = True
-        self.env_tags = [tag for tag in os.environ.get('DOGSTATSD_TAGS', '').split(',') if tag]
+        env_tags = [tag for tag in os.environ.get('DOGSTATSD_TAGS', '').split(',') if tag]
         if constant_tags is None:
             constant_tags = []
-        self.constant_tags = constant_tags + self.env_tags
+        self.constant_tags = constant_tags + env_tags
 
     def start(self, flush_interval=10, roll_up_interval=10, device=None,
               flush_in_thread=True, flush_in_greenlet=False, disabled=False):

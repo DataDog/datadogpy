@@ -54,10 +54,10 @@ class DogStatsd(object):
         self.max_buffer_size = max_buffer_size
         self._send = self._send_to_server
         self.encoding = 'utf-8'
-        self.env_tags = [tag for tag in os.environ.get('DOGSTATSD_TAGS', '').split(',') if tag]
+        env_tags = [tag for tag in os.environ.get('DOGSTATSD_TAGS', '').split(',') if tag]
         if constant_tags is None:
             constant_tags = []
-        self.constant_tags = constant_tags + self.env_tags
+        self.constant_tags = constant_tags + env_tags
         self.use_ms = use_ms
 
     def __enter__(self):
