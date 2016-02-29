@@ -14,6 +14,8 @@ from nose.plugins.skip import SkipTest
 from datadog import ThreadStats
 from datadog.api.exceptions import ApiNotInitialized
 
+from tests.util.contextmanagers import preserve_environment_variable
+
 
 # Silence the logger.
 logger = logging.getLogger('dd.datadogpy')
@@ -518,9 +520,9 @@ class TestUnitThreadStats(object):
 
     def test_tags_from_environment(self):
         test_tags = ['country:china', 'age:45', 'blue']
-        os.environ['DOGSTATSD_TAGS'] = ','.join(test_tags)
-        dog = ThreadStats()
-        del(os.environ['DOGSTATSD_TAGS'])
+        with preserve_environment_variable('DOGSTATSD_TAGS'):
+            os.environ['DOGSTATSD_TAGS'] = ','.join(test_tags)
+            dog = ThreadStats()
         dog.start(roll_up_interval=10, flush_in_thread=False)
         reporter = dog.reporter = MemoryReporter()
 
@@ -564,9 +566,9 @@ class TestUnitThreadStats(object):
     def test_tags_from_environment_and_constant(self):
         test_tags = ['country:china', 'age:45', 'blue']
         constant_tags = ['country:canada', 'red']
-        os.environ['DOGSTATSD_TAGS'] = ','.join(test_tags)
-        dog = ThreadStats(constant_tags=constant_tags)
-        del(os.environ['DOGSTATSD_TAGS'])
+        with preserve_environment_variable('DOGSTATSD_TAGS'):
+            os.environ['DOGSTATSD_TAGS'] = ','.join(test_tags)
+            dog = ThreadStats(constant_tags=constant_tags)
         dog.start(roll_up_interval=10, flush_in_thread=False)
         reporter = dog.reporter = MemoryReporter()
 

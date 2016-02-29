@@ -14,6 +14,8 @@ from nose import tools as t
 from datadog.dogstatsd.base import DogStatsd
 from datadog import initialize, statsd
 
+from tests.util.contextmanagers import preserve_environment_variable
+
 
 class FakeSocket(object):
     """ A fake socket for testing. """
@@ -404,17 +406,17 @@ class TestDogStatsd(object):
         t.assert_not_equal(FakeSocket(), dogpound.get_socket())
 
     def test_tags_from_environment(self):
-        os.environ['DOGSTATSD_TAGS'] = 'country:china,age:45,blue'
-        statsd = DogStatsd()
-        del(os.environ['DOGSTATSD_TAGS'])
+        with preserve_environment_variable('DOGSTATSD_TAGS'):
+            os.environ['DOGSTATSD_TAGS'] = 'country:china,age:45,blue'
+            statsd = DogStatsd()
         statsd.socket = FakeSocket()
         statsd.gauge('gt', 123.4)
         t.assert_equal('gt:123.4|g|#country:china,age:45,blue', statsd.socket.recv())
 
     def test_tags_from_environment_and_constant(self):
-        os.environ['DOGSTATSD_TAGS'] = 'country:china,age:45,blue'
-        statsd = DogStatsd(constant_tags=['country:canada', 'red'])
-        del(os.environ['DOGSTATSD_TAGS'])
+        with preserve_environment_variable('DOGSTATSD_TAGS'):
+           os.environ['DOGSTATSD_TAGS'] = 'country:china,age:45,blue'
+           statsd = DogStatsd(constant_tags=['country:canada', 'red'])
         statsd.socket = FakeSocket()
         statsd.gauge('gt', 123.4)
         t.assert_equal('gt:123.4|g|#country:canada,red,country:china,age:45,blue', statsd.socket.recv())
