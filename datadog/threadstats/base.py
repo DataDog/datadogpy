@@ -123,16 +123,17 @@ class ThreadStats(object):
         """
         if not self._disabled:
             # Append all client level tags to every event
+            event_tags = tags
             if self.constant_tags:
                 if tags:
-                    tags += self.constant_tags
+                    event_tags = tags + self.constant_tags
                 else:
-                    tags = self.constant_tags
+                    event_tags = self.constant_tags
 
             self._event_aggregator.add_event(
                 title=title, text=text, alert_type=alert_type, aggregation_key=aggregation_key,
                 source_type_name=source_type_name, date_happened=date_happened, priority=priority,
-                tags=tags, host=hostname)
+                tags=event_tags, host=hostname)
 
     def gauge(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
         """
@@ -306,11 +307,13 @@ class ThreadStats(object):
         metrics = []
         for timestamp, value, name, tags, host in rolled_up_metrics:
             # Append all client level tags to every metric
+            metric_tags = tags
+
             if self.constant_tags:
                 if tags:
-                    tags += self.constant_tags
+                    metric_tags = tags + self.constant_tags
                 else:
-                    tags = self.constant_tags
+                    metric_tags = self.constant_tags
 
             metric = {
                 'metric': name,
@@ -318,7 +321,7 @@ class ThreadStats(object):
                 'type': MetricType.Gauge,
                 'host': host,
                 'device': self.device,
-                'tags': tags
+                'tags': metric_tags
             }
             metrics.append(metric)
         return metrics
