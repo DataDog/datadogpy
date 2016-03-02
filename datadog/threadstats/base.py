@@ -30,12 +30,12 @@ class ThreadStats(object):
         :param constant_tags: Tags to attach to every metric reported by this client
         :type constant_tags: list of strings
 
-        :envvar DOGSTATSD_TAGS: Tags to attach to every metric reported by ThreadStats client
+        :envvar DATADOG_TAGS: Tags to attach to every metric reported by ThreadStats client
         :type constant_tags: list of strings
         """
         # Don't collect until start is called.
         self._disabled = True
-        env_tags = [tag for tag in os.environ.get('DOGSTATSD_TAGS', '').split(',') if tag]
+        env_tags = [tag for tag in os.environ.get('DATADOG_TAGS', '').split(',') if tag]
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags

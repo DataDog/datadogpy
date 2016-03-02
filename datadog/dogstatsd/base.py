@@ -45,7 +45,7 @@ class DogStatsd(object):
         :param use_ms: Report timed values in milliseconds instead of seconds (default False)
         :type use_ms: boolean
 
-        :envvar DOGSTATSD_TAGS: Tags to attach to every metric reported by dogstatsd client
+        :envvar DATADOG_TAGS: Tags to attach to every metric reported by dogstatsd client
         :type constant_tags: list of strings
         """
         self.host = host
@@ -54,7 +54,7 @@ class DogStatsd(object):
         self.max_buffer_size = max_buffer_size
         self._send = self._send_to_server
         self.encoding = 'utf-8'
-        env_tags = [tag for tag in os.environ.get('DOGSTATSD_TAGS', '').split(',') if tag]
+        env_tags = [tag for tag in os.environ.get('DATADOG_TAGS', '').split(',') if tag]
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags

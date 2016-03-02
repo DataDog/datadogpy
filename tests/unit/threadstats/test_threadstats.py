@@ -520,8 +520,8 @@ class TestUnitThreadStats(object):
 
     def test_tags_from_environment(self):
         test_tags = ['country:china', 'age:45', 'blue']
-        with preserve_environment_variable('DOGSTATSD_TAGS'):
-            os.environ['DOGSTATSD_TAGS'] = ','.join(test_tags)
+        with preserve_environment_variable('DATADOG_TAGS'):
+            os.environ['DATADOG_TAGS'] = ','.join(test_tags)
             dog = ThreadStats()
         dog.start(roll_up_interval=10, flush_in_thread=False)
         reporter = dog.reporter = MemoryReporter()
@@ -566,8 +566,8 @@ class TestUnitThreadStats(object):
     def test_tags_from_environment_and_constant(self):
         test_tags = ['country:china', 'age:45', 'blue']
         constant_tags = ['country:canada', 'red']
-        with preserve_environment_variable('DOGSTATSD_TAGS'):
-            os.environ['DOGSTATSD_TAGS'] = ','.join(test_tags)
+        with preserve_environment_variable('DATADOG_TAGS'):
+            os.environ['DATADOG_TAGS'] = ','.join(test_tags)
             dog = ThreadStats(constant_tags=constant_tags)
         dog.start(roll_up_interval=10, flush_in_thread=False)
         reporter = dog.reporter = MemoryReporter()
