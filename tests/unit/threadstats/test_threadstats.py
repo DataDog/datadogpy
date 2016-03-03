@@ -2,6 +2,7 @@
 Tests for the ThreadStats class, using HTTP mode
 """
 
+import os
 import logging
 import random
 import time
@@ -12,6 +13,8 @@ from nose.plugins.skip import SkipTest
 
 from datadog import ThreadStats
 from datadog.api.exceptions import ApiNotInitialized
+
+from tests.util.contextmanagers import preserve_environment_variable
 
 
 # Silence the logger.
@@ -514,3 +517,94 @@ class TestUnitThreadStats(object):
             dog.gauge('metric', i)
         time.sleep(2)
         assert dog.flush_count in [flush_count, flush_count + 1]
+
+    def test_tags_from_environment(self):
+        test_tags = ['country:china', 'age:45', 'blue']
+        with preserve_environment_variable('DATADOG_TAGS'):
+            os.environ['DATADOG_TAGS'] = ','.join(test_tags)
+            dog = ThreadStats()
+        dog.start(roll_up_interval=10, flush_in_thread=False)
+        reporter = dog.reporter = MemoryReporter()
+
+        # Add two events
+        event1_title = "Event 1 title"
+        event2_title = "Event 1 title"
+        event1_text = "Event 1 text"
+        event2_text = "Event 2 text"
+        dog.event(event1_title, event1_text)
+        dog.event(event2_title, event2_text)
+
+        # Flush and test
+        dog.flush()
+        event1, event2 = reporter.events
+        nt.assert_equal(event1['title'], event1_title)
+        nt.assert_equal(event1['text'], event1_text)
+        nt.assert_equal(event1['tags'], test_tags)
+        nt.assert_equal(event2['title'], event2_title)
+        nt.assert_equal(event2['text'], event2_text)
+        nt.assert_equal(event2['text'], event2_text)
+        nt.assert_equal(event2['tags'], test_tags)
+
+        # Test more parameters
+        reporter.events = []
+        event1_priority = "low"
+        event1_date_happened = 1375296969
+        event1_tag = "Event 2 tag"
+        dog.event(event1_title, event1_text, priority=event1_priority,
+                  date_happened=event1_date_happened, tags=[event1_tag])
+
+        # Flush and test
+        dog.flush()
+        event, = reporter.events
+        nt.assert_equal(event['title'], event1_title)
+        nt.assert_equal(event['text'], event1_text)
+        nt.assert_equal(event['priority'], event1_priority)
+        nt.assert_equal(event['date_happened'], event1_date_happened)
+        nt.assert_equal(event['tags'], [event1_tag] + test_tags)
+        dog.start(flush_interval=1, roll_up_interval=1)
+
+    def test_tags_from_environment_and_constant(self):
+        test_tags = ['country:china', 'age:45', 'blue']
+        constant_tags = ['country:canada', 'red']
+        with preserve_environment_variable('DATADOG_TAGS'):
+            os.environ['DATADOG_TAGS'] = ','.join(test_tags)
+            dog = ThreadStats(constant_tags=constant_tags)
+        dog.start(roll_up_interval=10, flush_in_thread=False)
+        reporter = dog.reporter = MemoryReporter()
+
+        # Add two events
+        event1_title = "Event 1 title"
+        event2_title = "Event 1 title"
+        event1_text = "Event 1 text"
+        event2_text = "Event 2 text"
+        dog.event(event1_title, event1_text)
+        dog.event(event2_title, event2_text)
+
+        # Flush and test
+        dog.flush()
+        event1, event2 = reporter.events
+        nt.assert_equal(event1['title'], event1_title)
+        nt.assert_equal(event1['text'], event1_text)
+        nt.assert_equal(event1['tags'], constant_tags + test_tags)
+        nt.assert_equal(event2['title'], event2_title)
+        nt.assert_equal(event2['text'], event2_text)
+        nt.assert_equal(event2['text'], event2_text)
+        nt.assert_equal(event2['tags'], constant_tags + test_tags)
+
+        # Test more parameters
+        reporter.events = []
+        event1_priority = "low"
+        event1_date_happened = 1375296969
+        event1_tag = "Event 2 tag"
+        dog.event(event1_title, event1_text, priority=event1_priority,
+                  date_happened=event1_date_happened, tags=[event1_tag])
+
+        # Flush and test
+        dog.flush()
+        event, = reporter.events
+        nt.assert_equal(event['title'], event1_title)
+        nt.assert_equal(event['text'], event1_text)
+        nt.assert_equal(event['priority'], event1_priority)
+        nt.assert_equal(event['date_happened'], event1_date_happened)
+        nt.assert_equal(event['tags'], [event1_tag] + constant_tags + test_tags)
+        dog.start(flush_interval=1, roll_up_interval=1)
