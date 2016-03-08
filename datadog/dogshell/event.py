@@ -85,7 +85,9 @@ class EventClient(object):
         post_parser.add_argument('--device', help="related device (e.g. eth0, /dev/sda1)")
         post_parser.add_argument('--aggregation_key', help="key to aggregate the event with")
         post_parser.add_argument('--type', help="type of event, e.g. nagios, jenkins, etc.")
-        post_parser.add_argument('--alert_type', help='"error", "warning", "info" or "success". defaults to "info"')
+        post_parser.add_argument(
+            '--alert_type',
+            help='"error", "warning", "info" or "success". defaults to "info"')
         post_parser.add_argument('message', help="event message body. "
                                  "if unset, reads from stdin.", nargs="?")
         post_parser.set_defaults(func=cls._post)
