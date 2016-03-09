@@ -2,18 +2,19 @@
 Tests for the ThreadStats class, using HTTP mode
 """
 
-import os
+# stdlib
 import logging
+import os
 import random
 import time
-import threading
+import unittest
 
+# 3p
+from mock import patch
 import nose.tools as nt
-from nose.plugins.skip import SkipTest
 
+# datadog
 from datadog import ThreadStats
-from datadog.api.exceptions import ApiNotInitialized
-
 from tests.util.contextmanagers import preserve_environment_variable
 
 
@@ -22,12 +23,10 @@ logger = logging.getLogger('dd.datadogpy')
 logger.setLevel(logging.ERROR)
 
 
-#
-# Test fixtures.
-#
-
 class MemoryReporter(object):
-    """ A reporting class that reports to memory for testing. """
+    """
+    A reporting class that reports to memory for testing.
+    """
 
     def __init__(self):
         self.metrics = []
@@ -40,20 +39,59 @@ class MemoryReporter(object):
         self.events += events
 
 
-#
-# Unit tests.
-#
-class TestUnitThreadStats(object):
-    """ Unit tests for the dog stats api. """
+class TestUnitThreadStats(unittest.TestCase):
+    """
+    Unit tests for ThreadStats.
+    """
+    def setUp(self):
+        """
+        Set a mocked reporter.
+        """
+        self.reporter = MemoryReporter()
 
     def sort_metrics(self, metrics):
-        """ Sort metrics by timestamp of first point and then name """
+        """
+        Sort metrics by timestamp of first point and then name.
+        """
         def sort(metric):
             tags = metric['tags'] or []
             host = metric['host'] or ''
             return (metric['points'][0][0], metric['metric'], tags, host,
                     metric['points'][0][1])
         return sorted(metrics, key=sort)
+
+    def assertMetric(self, name=None, value=None, tags=None, count=None):
+        """
+        Helper, to make assertions on metrics.
+        """
+        matching_metrics = []
+
+        for metric in self.reporter.metrics:
+            if name and name != metric['metric']:
+                continue
+            if value and value != metric['points'][0][1]:
+                continue
+            if tags and tags != metric['tags']:
+                continue
+            matching_metrics.append(metric)
+
+        if count:
+            self.assertEquals(
+                len(matching_metrics), count,
+                u"Candidate size assertion failure: expected {expected}, found {count}. "
+                u"Metric name={name}, value={value}, tags={tags}.".format(
+                    expected=count, count=len(matching_metrics),
+                    name=name, value=value, tags=tags
+                )
+            )
+        else:
+            self.assertTrue(
+                len(matching_metrics) > 0,
+                u"Candidate size assertion failure: no matching metric found. "
+                u"Metric name={name}, value={value}, tags={tags}.".format(
+                    name=name, value=value, tags=tags
+                )
+            )
 
     def test_timed_decorator(self):
         dog = ThreadStats()
@@ -393,51 +431,75 @@ class TestUnitThreadStats(object):
         nt.assert_equal(g3['points'][0][1], 20)
 
     def test_constant_tags(self):
-        dog = ThreadStats(constant_tags=['type:constant'])
-        dog.start(roll_up_interval=10, flush_in_thread=False)
-        reporter = dog.reporter = MemoryReporter()
+        """
+        Constant tags are attached to all metrics.
+        """
+        dog = ThreadStats(constant_tags=["type:constant"])
+        dog.start(roll_up_interval=1, flush_in_thread=False)
+        dog.reporter = self.reporter
 
         # Post the same metric with different tags.
-        dog.gauge('gauge', 10, timestamp=100.0)
-        dog.gauge('gauge', 15, timestamp=100.0, tags=['env:production', 'db'])
-        dog.gauge('gauge', 20, timestamp=100.0, tags=['env:staging'])
+        dog.gauge("gauge", 10, timestamp=100.0)
+        dog.gauge("gauge", 15, timestamp=100.0, tags=["env:production", 'db'])
+        dog.gauge("gauge", 20, timestamp=100.0, tags=["env:staging"])
 
-        dog.increment('counter', timestamp=100.0)
-        dog.increment('counter', timestamp=100.0, tags=['env:production', 'db'])
-        dog.increment('counter', timestamp=100.0, tags=['env:staging'])
+        dog.increment("counter", timestamp=100.0)
+        dog.increment("counter", timestamp=100.0, tags=["env:production", 'db'])
+        dog.increment("counter", timestamp=100.0, tags=["env:staging"])
 
         dog.flush(200.0)
 
-        metrics = self.sort_metrics(reporter.metrics)
-        nt.assert_equal(len(metrics), 6)
+        # Assertions on all metrics
+        self.assertMetric(count=6)
 
-        [c1, c2, c3, g1, g2, g3] = metrics
-        (nt.assert_equal(c['metric'], 'counter') for c in [c1, c2, c3])
-        nt.assert_equal(c1['tags'], ['env:production', 'db', 'type:constant'])
-        nt.assert_equal(c1['points'][0][1], 1)
-        nt.assert_equal(c2['tags'], ['env:staging', 'type:constant'])
-        nt.assert_equal(c2['points'][0][1], 1)
-        nt.assert_equal(c3['tags'], ['type:constant'])
-        nt.assert_equal(c3['points'][0][1], 1)
+        # Assertions on gauges
+        self.assertMetric(name='gauge', value=10, tags=["type:constant"], count=1)
+        self.assertMetric(name="gauge", value=15, tags=["env:production", "db", "type:constant"], count=1)  # noqa
+        self.assertMetric(name="gauge", value=20, tags=["env:staging", "type:constant"], count=1)
 
-        (nt.assert_equal(c['metric'], 'gauge') for c in [g1, g2, g3])
-        nt.assert_equal(g1['tags'], ['env:production', 'db', 'type:constant'])
-        nt.assert_equal(g1['points'][0][1], 15)
-        nt.assert_equal(g2['tags'], ['env:staging', 'type:constant'])
-        nt.assert_equal(g2['points'][0][1], 20)
-        nt.assert_equal(g3['tags'], ['type:constant'])
-        nt.assert_equal(g3['points'][0][1], 10)
+        # Assertions on counters
+        self.assertMetric(name="counter", value=1, tags=["type:constant"], count=1)
+        self.assertMetric(name="counter", value=1, tags=["env:production", "db", "type:constant"], count=1)  # noqa
+        self.assertMetric(name="counter", value=1, tags=["env:staging", "type:constant"], count=1)
 
         # Ensure histograms work as well.
         @dog.timed('timed', tags=['version:1'])
-        def test():
+        def do_nothing():
+            """
+            A function that does nothing, but being timed.
+            """
             pass
-        test()
+
+        with patch("datadog.threadstats.base.time", return_value=300):
+            do_nothing()
+
         dog.histogram('timed', 20, timestamp=300.0, tags=['db', 'version:2'])
-        reporter.metrics = []
-        dog.flush(400)
-        for metric in reporter.metrics:
-            assert metric['tags']  # this is enough
+
+        self.reporter.metrics = []
+        dog.flush(400.0)
+
+        # Histograms, and related metric types, produce 8 different metrics
+        self.assertMetric(tags=["version:1", "type:constant"], count=8)
+        self.assertMetric(tags=["db", "version:2", "type:constant"], count=8)
+
+    def test_metric_namespace(self):
+        """
+        Namespace prefixes all metric names.
+        """
+        # Set up ThreadStats with a namespace
+        dog = ThreadStats(namespace="foo")
+        dog.start(roll_up_interval=1, flush_in_thread=False)
+        dog.reporter = self.reporter
+
+        # Send a few metrics
+        dog.gauge("gauge", 20, timestamp=100.0)
+        dog.increment("counter", timestamp=100.0)
+        dog.flush(200.0)
+
+        # Metric names are prefixed with the namespace
+        self.assertMetric(count=2)
+        self.assertMetric(name="foo.gauge", count=1)
+        self.assertMetric(name="foo.counter", count=1)
 
     def test_host(self):
         dog = ThreadStats()

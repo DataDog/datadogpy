@@ -22,7 +22,7 @@ log = logging.getLogger('dogstatsd')
 class DogStatsd(object):
     OK, WARNING, CRITICAL, UNKNOWN = (0, 1, 2, 3)
 
-    def __init__(self, host='localhost', port=8125, max_buffer_size=50,
+    def __init__(self, host='localhost', port=8125, max_buffer_size=50, namespace=None,
                  constant_tags=None, use_ms=False):
         """
         Initialize a DogStatsd object.
@@ -39,7 +39,10 @@ class DogStatsd(object):
         if sending metrics in batch
         :type max_buffer_size: integer
 
-        :param constant_tags: Tags to attach to every metric reported by this client
+        :param namepace: Namespace to prefix all metric names
+        :type namepace: string
+
+        :param constant_tags: Tags to attach to all metrics
         :type constant_tags: list of strings
 
         :param use_ms: Report timed values in milliseconds instead of seconds (default False)
@@ -58,6 +61,7 @@ class DogStatsd(object):
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
+        self.namespace = namespace
         self.use_ms = use_ms
 
     def __enter__(self):
@@ -222,24 +226,37 @@ class DogStatsd(object):
         self._report(metric, 's', value, tags, sample_rate)
 
     def _report(self, metric, metric_type, value, tags, sample_rate):
+        """
+        Create a metric packet and send it.
+
+        More information about the packets' format: http://docs.datadoghq.com/guides/dogstatsd/
+        """
         if sample_rate != 1 and random() > sample_rate:
             return
 
-        payload = [metric, ":", value, "|", metric_type]
-        if sample_rate != 1:
-            payload.extend(["|@", sample_rate])
+        payload = []
 
-        # Append all client level tags to every metric
+        # Resolve the full tag list
         if self.constant_tags:
             if tags:
                 tags = tags + self.constant_tags
             else:
                 tags = self.constant_tags
 
+        # Create/format the metric packet
+        if self.namespace:
+            payload.extend([self.namespace, "."])
+        payload.extend([metric, ":", value, "|", metric_type])
+
+        if sample_rate != 1:
+            payload.extend(["|@", sample_rate])
+
         if tags:
             payload.extend(["|#", ",".join(tags)])
 
         encoded = "".join(imap(str, payload))
+
+        # Send it
         self._send(encoded)
 
     def _send_to_server(self, packet):

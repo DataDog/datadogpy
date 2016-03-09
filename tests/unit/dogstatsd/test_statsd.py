@@ -149,6 +149,14 @@ class TestDogStatsd(object):
             u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}'
             .format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\: T0µ ♪"), self.recv())
 
+    def test_metric_namespace(self):
+        """
+        Namespace prefixes all metric names.
+        """
+        self.statsd.namespace = "foo"
+        self.statsd.gauge('gauge', 123.4)
+        t.assert_equal('foo.gauge:123.4|g', self.recv())
+
     # Test Client level contant tags
     def test_gauge_constant_tags(self):
         self.statsd.constant_tags=['bar:baz', 'foo']

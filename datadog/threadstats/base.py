@@ -23,7 +23,7 @@ log = logging.getLogger('dd.datadogpy')
 
 class ThreadStats(object):
 
-    def __init__(self, constant_tags=None):
+    def __init__(self, namespace="", constant_tags=None):
         """
         Initialize a dogstats object.
 
@@ -33,12 +33,15 @@ class ThreadStats(object):
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by ThreadStats client
         :type constant_tags: list of strings
         """
-        # Don't collect until start is called.
-        self._disabled = True
+        # Parameters
+        self.namespace = namespace
         env_tags = [tag for tag in os.environ.get('DATADOG_TAGS', '').split(',') if tag]
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
+
+        # State
+        self._disabled = True
 
     def start(self, flush_interval=10, roll_up_interval=10, device=None,
               flush_in_thread=True, flush_in_greenlet=False, disabled=False):
@@ -307,23 +310,31 @@ class ThreadStats(object):
             self._is_flush_in_progress = False
 
     def _get_aggregate_metrics(self, flush_time=None):
+        """
+        Get, format and return the rolled up metrics from the aggregator.
+        """
         # Get rolled up metrics
         rolled_up_metrics = self._metric_aggregator.flush(flush_time)
 
         # FIXME: emit a dictionary from the aggregator
         metrics = []
         for timestamp, value, name, tags, host in rolled_up_metrics:
-            # Append all client level tags to every metric
             metric_tags = tags
+            metric_name = name
 
+            # Append all client level tags to every metric
             if self.constant_tags:
                 if tags:
                     metric_tags = tags + self.constant_tags
                 else:
                     metric_tags = self.constant_tags
 
+            # Resolve the metric name
+            if self.namespace:
+                metric_name = self.namespace + "." + name
+
             metric = {
-                'metric': name,
+                'metric': metric_name,
                 'points': [[timestamp, value]],
                 'type': MetricType.Gauge,
                 'host': host,
