@@ -87,7 +87,7 @@ class HTTPClient(object):
                         if 'host' not in obj_params:
                             obj_params['host'] = _host_name
                 else:
-                    if 'host' not in body:
+                    if body.get('host', "") == "":
                         body['host'] = _host_name
 
             # If defined, make sure tags are defined as a comma-separated string
