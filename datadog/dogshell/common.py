@@ -3,7 +3,6 @@ from __future__ import print_function
 import os
 import sys
 import logging
-import socket
 
 # datadog
 from datadog.util.compat import is_p3k, configparser, IterableUserDict,\
@@ -33,19 +32,6 @@ def report_warnings(res):
             print_err('WARNING: ' + e)
         return True
     return False
-
-
-memoized_hostname = None
-
-
-def find_localhost():
-    try:
-        global memoized_hostname
-        if memoized_hostname is None:
-            memoized_hostname = socket.getfqdn()
-        return memoized_hostname
-    except Exception:
-        logging.exception("Cannot determine local hostname")
 
 
 class DogshellConfig(IterableUserDict):

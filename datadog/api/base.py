@@ -84,7 +84,7 @@ class HTTPClient(object):
                 if 'series' in body:
                     # Adding the host name to all objects
                     for obj_params in body['series']:
-                        if 'host' not in obj_params:
+                        if obj_params.get('host', "") == "":
                             obj_params['host'] = _host_name
                 else:
                     if body.get('host', "") == "":
