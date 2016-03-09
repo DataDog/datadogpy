@@ -85,6 +85,9 @@ class EventClient(object):
         post_parser.add_argument('--device', help="related device (e.g. eth0, /dev/sda1)")
         post_parser.add_argument('--aggregation_key', help="key to aggregate the event with")
         post_parser.add_argument('--type', help="type of event, e.g. nagios, jenkins, etc.")
+        post_parser.add_argument(
+            '--alert_type',
+            help='"error", "warning", "info" or "success". defaults to "info"')
         post_parser.add_argument('message', help="event message body. "
                                  "if unset, reads from stdin.", nargs="?")
         post_parser.set_defaults(func=cls._post)
@@ -126,7 +129,7 @@ class EventClient(object):
             handle=args.handle, priority=args.priority,
             related_event_id=args.related_event_id, tags=tags, host=args.host,
             device=args.device, aggregation_key=args.aggregation_key,
-            source_type_name=args.type)
+            source_type_name=args.type, alert_type=args.alert_type)
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
