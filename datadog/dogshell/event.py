@@ -98,7 +98,7 @@ class EventClient(object):
 
         stream_parser = verb_parsers.add_parser(
             'stream',
-            help="Delete comments.",
+            help="Retrieve events from the Event Stream",
             description="Stream start and end times can be specified as either a POSIX"
             " timestamp (e.g. the output of `date +%s`) or as a period of"
             " time in the past (e.g. '5m', '6h', '3d').")
