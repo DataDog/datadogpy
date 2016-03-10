@@ -19,10 +19,9 @@ def prettyprint_event(event):
     date = event['date_happened']
     dt = datetime.datetime.fromtimestamp(date)
     link = event['url']
-    # Encode UTF-8
-    title = title.encode('utf8')
-    handle = handle.encode('utf8')
-    print((title + ' ' + text + ' ' + b' (' + handle + b')').strip())
+
+    # Print
+    print((title + ' ' + text + ' ' + ' (' + handle + ')').strip())
     print(dt.isoformat(' ') + ' | ' + link)
 
 

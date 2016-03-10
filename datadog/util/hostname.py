@@ -201,7 +201,7 @@ class EC2(object):
         try:
             iam_role = url_lib.urlopen(EC2.URL + "/iam/security-credentials").read().strip()
             iam_params = json.loads(url_lib.urlopen(EC2.URL + "/iam/security-credentials" + "/" +
-                                    unicode(iam_role)).read().strip())
+                                    str(iam_role)).read().strip())
             from boto.ec2.connection import EC2Connection
             connection = EC2Connection(aws_access_key_id=iam_params['AccessKeyId'],
                                        aws_secret_access_key=iam_params['SecretAccessKey'],
@@ -257,7 +257,7 @@ class EC2(object):
         for k in ('instance-id', 'hostname', 'local-hostname', 'public-hostname', 'ami-id',
                   'local-ipv4', 'public-keys', 'public-ipv4', 'reservation-id', 'security-groups'):
             try:
-                v = url_lib.urlopen(EC2.URL + "/" + unicode(k)).read().strip()
+                v = url_lib.urlopen(EC2.URL + "/" + str(k)).read().strip()
                 assert type(v) in (types.StringType, types.UnicodeType) and len(v) > 0, \
                     "%s is not a string" % v
                 EC2.metadata[k] = v
