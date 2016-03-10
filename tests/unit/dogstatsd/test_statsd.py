@@ -429,6 +429,27 @@ class TestDogStatsd(object):
         statsd.gauge('gt', 123.4)
         t.assert_equal('gt:123.4|g|#country:canada,red,country:china,age:45,blue', statsd.socket.recv())
 
+    def test_gauge_doesnt_send_None(self):
+        self.statsd.gauge('metric', None)
+        assert self.recv() is None
+
+    def test_increment_doesnt_send_None(self):
+        self.statsd.increment('metric', None)
+        assert self.recv() is None
+
+    def test_decrement_doesnt_send_None(self):
+        self.statsd.decrement('metric', None)
+        assert self.recv() is None
+
+    def test_timing_doesnt_send_None(self):
+        self.statsd.timing('metric', None)
+        assert self.recv() is None
+
+    def test_histogram_doesnt_send_None(self):
+        self.statsd.histogram('metric', None)
+        assert self.recv() is None
+
+
 if __name__ == '__main__':
     statsd = statsd
     while True:

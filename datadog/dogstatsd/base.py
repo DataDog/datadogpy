@@ -133,7 +133,8 @@ class DogStatsd(object):
         >>> statsd.decrement('files.remaining')
         >>> statsd.decrement('active.connections', 2)
         """
-        self._report(metric, 'c', -value, tags, sample_rate)
+        metric_value = -value if value else value
+        self._report(metric, 'c', metric_value, tags, sample_rate)
 
     def histogram(self, metric, value, tags=None, sample_rate=1):
         """
@@ -231,6 +232,9 @@ class DogStatsd(object):
 
         More information about the packets' format: http://docs.datadoghq.com/guides/dogstatsd/
         """
+        if value is None:
+            return
+
         if sample_rate != 1 and random() > sample_rate:
             return
 
