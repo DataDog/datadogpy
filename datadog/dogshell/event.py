@@ -81,7 +81,10 @@ class EventClient(object):
         post_parser.add_argument('--related_event_id', help="event to post as a child of."
                                  " if unset, posts a top-level event")
         post_parser.add_argument('--tags', help="comma separated list of tags")
-        post_parser.add_argument('--host', help="related host")
+        post_parser.add_argument('--host', help="related host (default to the local host name)",
+                                 default="")
+        post_parser.add_argument('--no_host', help="no host is associated with the event"
+                                 " (overrides --host))", action='store_true')
         post_parser.add_argument('--device', help="related device (e.g. eth0, /dev/sda1)")
         post_parser.add_argument('--aggregation_key', help="key to aggregate the event with")
         post_parser.add_argument('--type', help="type of event, e.g. nagios, jenkins, etc.")
@@ -113,6 +116,9 @@ class EventClient(object):
 
     @classmethod
     def _post(cls, args):
+        """
+        Post an event.
+        """
         api._timeout = args.timeout
         format = args.format
         message = args.message
@@ -122,14 +128,20 @@ class EventClient(object):
             tags = [t.strip() for t in args.tags.split(',')]
         else:
             tags = None
+
+        host = None if args.no_host else args.host
+
+        # Submit event
         res = api.Event.create(
             title=args.title, text=message,
             # TODO FXIME
             # date_happened=args.date_happened,
             handle=args.handle, priority=args.priority,
-            related_event_id=args.related_event_id, tags=tags, host=args.host,
+            related_event_id=args.related_event_id, tags=tags, host=host,
             device=args.device, aggregation_key=args.aggregation_key,
             source_type_name=args.type, alert_type=args.alert_type)
+
+        # Report
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
