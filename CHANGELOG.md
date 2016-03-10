@@ -1,6 +1,22 @@
 CHANGELOG
 =========
 
+# 0.11.0 / Unreleased
+
+* [BUGFIX] DogStatsD: Do not modify metric-level `tags` parameters when `constant_tags` is set, [#94][] (thanks [@steven-liu][])
+* [BUGFIX] ThreadStats: Do not modify metric-level `tags` parameters when `constant_tags` is set, [#94][], [#117][] (thanks [@steven-liu][])
+* [FEATURE] Dogshell: Add an `alert_type` option for `event post`, [#120][] (thanks [@drstevens][])
+* [FEATURE] DogStatD: Set constant tags from `DATADOG_TAGS` environment variable, [#114][] (thanks [@ewdurbin][] )
+* [FEATURE] DogStatsD: Support namespace, [#118][]
+* [FEATURE] ThreadStats: Set constant tags from `DATADOG_TAGS` environment variable, [#114][] (thanks [@ewdurbin][] )
+* [FEATURE] ThreadStats: Support namespace, [#118][]
+* [IMPROVEMENT] API: Support real numerical data types in `Metrics`, [#103][]
+* [IMPROVEMENT] DogStatsD: Discard `None` values, [#119][] (thanks [@dcrosta][])
+* [IMPROVEMENT] DogStatsD: Import from top level, [#105][]
+* [IMPROVEMENT] Dogwrap: Trim output and update event format, [#104][] (thanks [@gnarf][])
+* [OTHER] API: Adjust the documentation, [#96][], [#101][], [#110][], [#111][] (thanks [@aristiden7o][], [@emad][], [@aknuds1][], [@meawoppl][])
+* [OTHER] Dogshell: Update misleading help message for `event stream`, [#124][]
+
 # 0.10.0 / 2015-10-19
 * [BUGFIX] Fix typo in Dogshell breaking the Timeboard `pull_all` method, [#92][]
 * [FEATURE] Enhance `constant_tags` support to ThreadStats and Statsd events, [#90][] (thanks [@jofusa][])
@@ -28,10 +44,6 @@ CHANGELOG
 * [IMPROVEMENT] Adjust Dogshell descriptions to distinguish between `mute_all`/`unmute_all` and `mute`/`unmute` methods, [#58][]
 * [IMPROVEMENT] Include additional information in 403 response exceptions, [#58][]
 * [OTHER] Update `requests` library, per CVE-2015-2296, [#63][]
-
-# 0.6.0 / 2015-06-01
-* [BUGFIX] Always fall back when unable to determine hostname from `datadog.conf`, [#53][]
-* [FEATURE] Add `message` parameter support to host muting commands, [#51][]
 
 # 0.6.0 / 2015-06-01
 * [BUGFIX] Always fall back when unable to determine hostname from `datadog.conf`, [#53][]
@@ -111,12 +123,34 @@ See [#8][], thanks [@benweatherman][]
 [#89]: https://github.com/DataDog/datadogpy/issues/89
 [#90]: https://github.com/DataDog/datadogpy/issues/90
 [#92]: https://github.com/DataDog/datadogpy/issues/92
+[#94]: https://github.com/DataDog/datadogpy/issues/94
+[#96]: https://github.com/DataDog/datadogpy/issues/96
+[#101]: https://github.com/DataDog/datadogpy/issues/101
+[#103]: https://github.com/DataDog/datadogpy/issues/103
+[#104]: https://github.com/DataDog/datadogpy/issues/104
+[#105]: https://github.com/DataDog/datadogpy/issues/105
+[#110]: https://github.com/DataDog/datadogpy/issues/110
+[#111]: https://github.com/DataDog/datadogpy/issues/111
+[#114]: https://github.com/DataDog/datadogpy/issues/114
+[#117]: https://github.com/DataDog/datadogpy/issues/117
+[#118]: https://github.com/DataDog/datadogpy/issues/118
+[#119]: https://github.com/DataDog/datadogpy/issues/119
+[#120]: https://github.com/DataDog/datadogpy/issues/120
+[#124]: https://github.com/DataDog/datadogpy/issues/124
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
+[@aknuds1]: https://github.com/aknuds1
+[@aristiden7o]: https://github.com/aristiden7o
 [@benweatherman]: https://github.com/benweatherman
 [@clokep]: https://github.com/clokep
+[@dcrosta]: https://github.com/dcrosta
+[@drstevens]: https://github.com/drstevens
+[@emad]: https://github.com/emad
+[@ewdurbin]: https://github.com/ewdurbin
 [@g--]: https://github.com/g--
 [@gnarf]: https://github.com/gnarf
 [@jofusa]: https://github.com/jofusa
 [@kuzmich]: https://github.com/kuzmich
+[@meawoppl]: https://github.com/meawoppl
 [@miketheman]: https://github.com/miketheman
 [@ogst]: https://github.com/ogst
+[@steven-liu]: https://github.com/steven-liu
