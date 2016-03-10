@@ -11,7 +11,8 @@ class HostClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
         parser = subparsers.add_parser('host', help='Mute, unmute hosts')
-        verb_parsers = parser.add_subparsers(title='Verbs')
+        verb_parsers = parser.add_subparsers(title='Verbs', dest='verb')
+        verb_parsers.required = True
 
         mute_parser = verb_parsers.add_parser('mute', help='Mute a host')
         mute_parser.add_argument('host_name', help='host to mute')

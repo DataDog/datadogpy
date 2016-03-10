@@ -51,7 +51,8 @@ def main():
 
     # Set up subparsers for each service
 
-    subparsers = parser.add_subparsers(title='Modes')
+    subparsers = parser.add_subparsers(title='Modes', dest='mode')
+    subparsers.required = True
 
     CommentClient.setup_parser(subparsers)
     SearchClient.setup_parser(subparsers)

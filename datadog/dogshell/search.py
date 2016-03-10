@@ -12,7 +12,8 @@ class SearchClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
         parser = subparsers.add_parser('search', help="search datadog")
-        verb_parsers = parser.add_subparsers(title='Verbs')
+        verb_parsers = parser.add_subparsers(title='Verbs', dest='verb')
+        verb_parsers.required = True
 
         query_parser = verb_parsers.add_parser('query', help="Search datadog.")
         query_parser.add_argument('query', help="optionally faceted search query")

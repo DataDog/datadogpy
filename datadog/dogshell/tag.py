@@ -11,7 +11,8 @@ class TagClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
         parser = subparsers.add_parser('tag', help="View and modify host tags.")
-        verb_parsers = parser.add_subparsers(title='Verbs')
+        verb_parsers = parser.add_subparsers(title='Verbs', dest='verb')
+        verb_parsers.required = True
 
         add_parser = verb_parsers.add_parser('add', help="Add a host to one or more tags.",
                                              description='Hosts can be specified by name or id.')

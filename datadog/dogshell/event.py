@@ -69,7 +69,8 @@ class EventClient(object):
     def setup_parser(cls, subparsers):
         parser = subparsers.add_parser('event', help="Post events, get event details,"
                                        " and view the event stream.")
-        verb_parsers = parser.add_subparsers(title='Verbs')
+        verb_parsers = parser.add_subparsers(title='Verbs', dest='verb')
+        verb_parsers.required = True
 
         post_parser = verb_parsers.add_parser('post', help="Post events.")
         post_parser.add_argument('title', help="event title")

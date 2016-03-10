@@ -14,7 +14,8 @@ class DowntimeClient(object):
         parser.add_argument('--string_ids', action='store_true', dest='string_ids',
                             help="Represent downtime IDs as strings instead of ints in JSON")
 
-        verb_parsers = parser.add_subparsers(title='Verbs')
+        verb_parsers = parser.add_subparsers(title='Verbs', dest='verb')
+        verb_parsers.required = True
 
         post_parser = verb_parsers.add_parser('post', help="Create a downtime")
         post_parser.add_argument('scope', help="scope to apply downtime to")
