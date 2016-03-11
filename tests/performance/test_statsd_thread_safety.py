@@ -1,15 +1,21 @@
-import time
+# stdlib
+from collections import deque
 import six
 import threading
-from collections import deque
-from nose import tools as t
+import time
+import unittest
 
+# 3p
+from mock import patch
+
+# datadog
 from datadog.dogstatsd.base import DogStatsd
 
 
 class FakeSocket(object):
-    """ A fake socket for testing. """
-
+    """
+    Mocked socket for testing.
+    """
     def __init__(self):
         self.payloads = deque()
 
@@ -27,41 +33,270 @@ class FakeSocket(object):
         return str(self.payloads)
 
 
-class DogstatsdTest(DogStatsd):
-    def send_metrics(self):
-        self.increment('whatever')
-
-
-class TestDogStatsdThreadSafety(object):
-
+class TestDogStatsdThreadSafety(unittest.TestCase):
+    """
+    DogStatsd thread safety tests.
+    """
     def setUp(self):
+        """
+        Mock a socket.
+        """
         self.socket = FakeSocket()
 
-    def recv(self):
-        return self.socket.recv()
+    def assertMetrics(self, values):
+        """
+        Helper, assertions on metrics.
+        """
+        count = len(values)
 
-    def test_send_metrics(self):
-        statsd = DogstatsdTest()
-        statsd.socket = self.socket
-        for _ in range(10000):
-            threading.Thread(target=statsd.send_metrics).start()
-        time.sleep(1)
-        t.assert_equal(10000, len(self.recv()), len(self.recv()))
+        # Split packet per metric (required when buffered) and discard empty packets
+        packets = map(lambda x: x.split("\n"), self.socket.recv())
+        packets = reduce(lambda prev, ele: prev + ele, packets, [])
+        packets = filter(lambda x: x, packets)
 
-    def test_send_batch_metrics(self):
-        with DogstatsdTest() as batch:
-            batch.socket = self.socket
-            for _ in range(10000):
-                threading.Thread(target=batch.send_metrics).start()
-        time.sleep(1)
-        payload = map(lambda x: x.split("\n"), self.recv())
-        payload = reduce(lambda prev, ele: prev + ele, payload, [])
-        t.assert_equal(10001, len(payload), len(payload))
+        # Count
+        self.assertEquals(
+            len(packets), count,
+            u"Metric size assertion failed: expected={expected}, received={received}".format(
+                expected=count, received=len(packets)
+            )
+        )
+        # Values
+        for packet in packets:
+            metric_value = int(packet.split(':', 1)[1].split('|', 1)[0])
+            self.assertIn(
+                metric_value, values,
+                u"Metric assertion failed: unexpected metric value {metric_value}".format(
+                    metric_value=metric_value
+                )
+            )
+            values.remove(metric_value)
 
     def test_socket_creation(self):
         """
-        Assess thread safeness in socket creation.
+        Socket creation plays well with multiple threads.
         """
-        statsd = DogstatsdTest()
-        for _ in range(10000):
-            threading.Thread(target=statsd.send_metrics).start()
+        # Create a DogStatsd client but no socket
+        statsd = DogStatsd()
+
+        # Submit metrics from different threads to create a socket
+        threads = []
+        for value in range(10000):
+            t = threading.Thread(target=statsd.gauge, args=("foo", value))
+            threads.append(t)
+            t.start()
+        for t in threads:
+            t.join()
+
+    @staticmethod
+    def _submit_with_multiple_threads(statsd, submit_method, values):
+        """
+        Helper, use the given statsd client and method to submit the values
+        within multiple threads.
+        """
+        threads = []
+        for value in values:
+            t = threading.Thread(
+                target=getattr(statsd, submit_method),
+                args=("foo", value)
+            )
+            threads.append(t)
+            t.start()
+        for t in threads:
+            t.join()
+
+    def test_increment(self):
+        """
+        Increments can be submitted from concurrent threads.
+        """
+        # Create a DogStatsd client with a mocked socket
+        statsd = DogStatsd()
+        statsd.socket = self.socket
+
+        # Samples
+        values = set(range(10000))
+
+        # Submit metrics from different threads
+        self._submit_with_multiple_threads(statsd, "increment", values)
+
+        #  All metrics were properly submitted
+        self.assertMetrics(values)
+
+    def test_decrement(self):
+        """
+        Decrements can be submitted from concurrent threads.
+        """
+        # Create a DogStatsd client with a mocked socket
+        statsd = DogStatsd()
+        statsd.socket = self.socket
+
+        # Samples
+        values = set(range(10000))
+        expected_value = set([-value for value in values])
+
+        # Submit metrics from different threads
+        self._submit_with_multiple_threads(statsd, "decrement", expected_value)
+
+        #  All metrics were properly submitted
+        self.assertMetrics(values)
+
+    def test_gauge(self):
+        """
+        Gauges can be submitted from concurrent threads.
+        """
+        # Create a DogStatsd client with a mocked socket
+        statsd = DogStatsd()
+        statsd.socket = self.socket
+
+        # Samples
+        values = set(range(10000))
+
+        # Submit metrics from different threads
+        self._submit_with_multiple_threads(statsd, "gauge", values)
+
+        #  All metrics were properly submitted
+        self.assertMetrics(values)
+
+    def test_histogram(self):
+        """
+        Histograms can be submitted from concurrent threads.
+        """
+        # Create a DogStatsd client with a mocked socket
+        statsd = DogStatsd()
+        statsd.socket = self.socket
+
+        # Samples
+        values = set(range(10000))
+
+        # Submit metrics from different threads
+        self._submit_with_multiple_threads(statsd, "histogram", values)
+
+        #  All metrics were properly submitted
+        self.assertMetrics(values)
+
+    def test_timing(self):
+        """
+        Timings can be submitted from concurrent threads.
+        """
+        # Create a DogStatsd client with a mocked socket
+        statsd = DogStatsd()
+        statsd.socket = self.socket
+
+        # Samples
+        values = set(range(10000))
+
+        # Submit metrics from different threads
+        self._submit_with_multiple_threads(statsd, "timing", values)
+
+        # All metrics were properly submitted
+        self.assertMetrics(values)
+
+    def test_send_batch_metrics(self):
+        """
+        Metrics can be buffered, submitted from concurrent threads.
+        """
+        with DogStatsd() as batch_statsd:
+            # Create a DogStatsd buffer client with a mocked socket
+            batch_statsd.socket = self.socket
+
+            # Samples
+            values = set(range(10000))
+
+            # Submit metrics from different threads
+            self._submit_with_multiple_threads(batch_statsd, "gauge", values)
+
+        # All metrics were properly submitted
+        self.assertMetrics(values)
+
+    @patch('datadog.dogstatsd.base.time')
+    def test_timed_decorator_threaded(self, mock_time):
+        """
+        `timed` decorator plays well with concurrent threads.
+        """
+        # Create a DogStatsd client with a mocked socket
+        statsd = DogStatsd()
+        statsd.socket = self.socket
+
+        # Set up the mocked time
+        mock_time.return_value = 0
+
+        # Method to time
+        @statsd.timed("foo")
+        def bar():
+            """
+            Wait 5 time units and return.
+            """
+            initial_time = mock_time.return_value
+            while mock_time.return_value < initial_time + 2:
+                pass
+
+        # Run the method within multiple threads
+        threads = []
+        for value in range(10):
+            t = threading.Thread(target=bar)
+            threads.append(t)
+            # Bump time so that previous thread can complete
+            mock_time.return_value += 1
+            t.start()
+            # Sleep to let the threads start
+            time.sleep(0.1)
+
+        # Bump time so that all threads completes
+        time.sleep(0.1)
+        mock_time.return_value += 1
+        time.sleep(0.1)
+        mock_time.return_value += 1
+
+        for t in threads:
+            t.join()
+
+        # All metrics were properly submitted
+        expected_values = [2 for _ in xrange(0, 10)]
+        self.assertMetrics(expected_values)
+
+    @patch('datadog.dogstatsd.base.time')
+    def test_timed_context_manager_threaded(self, mock_time):
+        """
+        `timed` context manager plays well with concurrent threads.
+        """
+        # Create a DogStatsd client with a mocked socket
+        statsd = DogStatsd()
+        statsd.socket = self.socket
+
+        # Set up the mocked time
+        mock_time.return_value = 0
+
+        # Method to time
+        def bar():
+            """
+            Wait 5 time units and return.
+            """
+            initial_time = mock_time.return_value
+
+            with statsd.timed("foo"):
+                while mock_time.return_value < initial_time + 2:
+                    pass
+
+        # Run the method within multiple threads
+        threads = []
+        for value in range(10):
+            t = threading.Thread(target=bar)
+            threads.append(t)
+            # Bump time so that previous thread can complete
+            mock_time.return_value += 1
+            t.start()
+            # Sleep to let the threads start
+            time.sleep(0.1)
+
+        # Bump time so that all threads completes
+        time.sleep(0.1)
+        mock_time.return_value += 1
+        time.sleep(0.1)
+        mock_time.return_value += 1
+
+        for t in threads:
+            t.join()
+
+        # All metrics were properly submitted
+        expected_values = [2 for _ in xrange(0, 10)]
+        self.assertMetrics(expected_values)

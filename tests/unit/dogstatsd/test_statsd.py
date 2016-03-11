@@ -7,6 +7,7 @@ from collections import deque
 import os
 import six
 import socket
+import threading
 import time
 
 from nose import tools as t
