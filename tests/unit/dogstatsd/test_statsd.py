@@ -7,6 +7,7 @@ from collections import deque
 import os
 import six
 import socket
+import threading
 import time
 
 from nose import tools as t
@@ -230,6 +231,39 @@ class TestDogStatsd(object):
         t.assert_equal('ms', type_)
         t.assert_equal('timed.test', name)
         self.assert_almost_equal(500, float(value), 100)
+
+    def test_timed_threaded(self):
+        @self.statsd.timed('timed.test')
+        def func():
+            time.sleep(0.5)
+
+        t1 = threading.Thread(target=func)
+        t2 = threading.Thread(target=func)
+
+        t1.start()
+        time.sleep(0.2)
+        t2.start()
+
+        t1.join()
+        t2.join()
+
+        # packet 1
+        packet = self.recv()
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        t.assert_equal('ms', type_)
+        t.assert_equal('timed.test', name)
+        self.assert_almost_equal(0.5, float(value), 0.1)
+
+        # packet 2
+        packet = self.recv()
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        t.assert_equal('ms', type_)
+        t.assert_equal('timed.test', name)
+        self.assert_almost_equal(0.5, float(value), 0.1)
 
     def test_timed_in_ms(self):
         """
