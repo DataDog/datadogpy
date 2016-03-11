@@ -5,7 +5,6 @@ Tests for dogstatsd.py
 # stdlib
 from collections import deque
 import os
-import six
 import socket
 import time
 
@@ -23,7 +22,7 @@ from nose import (
 from datadog import initialize, statsd
 from datadog.dogstatsd.base import DogStatsd
 from datadog.dogstatsd.context import TimedContextManagerDecorator
-from datadog.util.compat import is_higher_py35
+from datadog.util.compat import is_higher_py35, is_p3k
 from tests.util.contextmanagers import preserve_environment_variable
 from tests.unit.dogstatsd.fixtures import load_fixtures
 
@@ -35,7 +34,10 @@ class FakeSocket(object):
         self.payloads = deque()
 
     def send(self, payload):
-        assert type(payload) == six.binary_type
+        if is_p3k():
+            assert type(payload) == bytes
+        else:
+            assert type(payload) == str
         self.payloads.append(payload)
 
     def recv(self):
