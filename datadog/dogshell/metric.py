@@ -11,7 +11,8 @@ class MetricClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
         parser = subparsers.add_parser('metric', help="Post metrics.")
-        verb_parsers = parser.add_subparsers(title='Verbs')
+        verb_parsers = parser.add_subparsers(title='Verbs', dest='verb')
+        verb_parsers.required = True
 
         post_parser = verb_parsers.add_parser('post', help="Post metrics")
         post_parser.add_argument('name', help="metric name")

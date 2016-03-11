@@ -11,7 +11,8 @@ class ServiceCheckClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
         parser = subparsers.add_parser('service_check', help="Perform service checks")
-        verb_parsers = parser.add_subparsers(title='Verbs')
+        verb_parsers = parser.add_subparsers(title='Verbs', dest='verb')
+        verb_parsers.required = True
 
         check_parser = verb_parsers.add_parser('check', help="text for the message")
         check_parser.add_argument('check', help="text for the message")
