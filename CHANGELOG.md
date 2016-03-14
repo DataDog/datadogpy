@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.11.0 / Unreleased
+# 0.11.0 / 2016-03-14
 
 * [BUGFIX] Dogshell: Print usage when no argument is given on Python 3, [#123][]
 * [BUGFIX] DogStatsD: Do not modify metric-level `tags` parameters when `constant_tags` is set, [#94][] (thanks [@steven-liu][])
