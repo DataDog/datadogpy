@@ -3,7 +3,9 @@ CHANGELOG
 
 # 0.11.0 / Unreleased
 
+* [BUGFIX] Dogshell: Print usage when no argument is given on Python 3, [#123][]
 * [BUGFIX] DogStatsD: Do not modify metric-level `tags` parameters when `constant_tags` is set, [#94][] (thanks [@steven-liu][])
+* [BUGFIX] DogStatsD: Fix thread-safety of the `[@timed][]` decorator, [#126][] (thanks [@mgood][])
 * [BUGFIX] ThreadStats: Do not modify metric-level `tags` parameters when `constant_tags` is set, [#94][], [#117][] (thanks [@steven-liu][])
 * [FEATURE] Dogshell: Add an `alert_type` option for `event post`, [#120][] (thanks [@drstevens][])
 * [FEATURE] DogStatD: Set constant tags from `DATADOG_TAGS` environment variable, [#114][] (thanks [@ewdurbin][] )
@@ -11,6 +13,7 @@ CHANGELOG
 * [FEATURE] ThreadStats: Set constant tags from `DATADOG_TAGS` environment variable, [#114][] (thanks [@ewdurbin][] )
 * [FEATURE] ThreadStats: Support namespace, [#118][]
 * [IMPROVEMENT] API: Support real numerical data types in `Metrics`, [#103][]
+* [IMPROVEMENT] Dogshell: Attach hostname by default to event and metric posts, [#122][]
 * [IMPROVEMENT] DogStatsD: Discard `None` values, [#119][] (thanks [@dcrosta][])
 * [IMPROVEMENT] DogStatsD: Import from top level, [#105][]
 * [IMPROVEMENT] Dogwrap: Trim output and update event format, [#104][] (thanks [@gnarf][])
@@ -136,7 +139,10 @@ See [#8][], thanks [@benweatherman][]
 [#118]: https://github.com/DataDog/datadogpy/issues/118
 [#119]: https://github.com/DataDog/datadogpy/issues/119
 [#120]: https://github.com/DataDog/datadogpy/issues/120
+[#122]: https://github.com/DataDog/datadogpy/issues/122
+[#123]: https://github.com/DataDog/datadogpy/issues/123
 [#124]: https://github.com/DataDog/datadogpy/issues/124
+[#126]: https://github.com/DataDog/datadogpy/issues/126
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
 [@aristiden7o]: https://github.com/aristiden7o
@@ -151,6 +157,8 @@ See [#8][], thanks [@benweatherman][]
 [@jofusa]: https://github.com/jofusa
 [@kuzmich]: https://github.com/kuzmich
 [@meawoppl]: https://github.com/meawoppl
+[@mgood]: https://github.com/mgood
 [@miketheman]: https://github.com/miketheman
 [@ogst]: https://github.com/ogst
 [@steven-liu]: https://github.com/steven-liu
+[@timed]: https://github.com/timed
