@@ -35,7 +35,7 @@ else:
 
 
 def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
-               statsd_host=None, statsd_port=None, **kwargs):
+               statsd_host=None, statsd_port=None, statsd_use_default_route=False, **kwargs):
     """
     Initialize and configure Datadog.api and Datadog.statsd modules
 
@@ -57,6 +57,10 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
     :param statsd_port: Port of DogStatsd server or statsd daemon
     :type statsd_port: port
 
+    :param statsd_use_default_route: Dynamically set the statsd host to the default route
+    (Useful when running the client in a container)
+    :type statsd_use_default_route: boolean
+
     :param cacert: Path to local certificate file used to verify SSL \
         certificates. Can also be set to True (default) to use the systems \
         certificate store, or False to skip SSL verification
@@ -74,9 +78,14 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
         os.environ.get('DATADOG_HOST', 'https://app.datadoghq.com')
 
     # Statsd configuration -overrides default statsd instance attributes-
-    if statsd_host and statsd_port:
+    if statsd_host:
         statsd.host = statsd_host
+
+    if statsd_port:
         statsd.port = int(statsd_port)
+
+    if statsd_use_default_route:
+        statsd.use_default_route = statsd_use_default_route
 
     # HTTP client and API options
     for key, value in iteritems(kwargs):
