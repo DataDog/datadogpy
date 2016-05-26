@@ -40,13 +40,13 @@ class CreateableAPIResource(object):
         if params is None:
             params = {}
         if method == 'GET':
-            return APIClient().submit('GET', cls._class_url, **body)
+            return APIClient.submit('GET', cls._class_url, **body)
         if id is None:
-            return APIClient().submit('POST', cls._class_url, body,
-                                      attach_host_name=attach_host_name, **params)
+            return APIClient.submit('POST', cls._class_url, body,
+                                    attach_host_name=attach_host_name, **params)
         else:
-            return APIClient().submit('POST', cls._class_url + "/" + str(id), body,
-                                      attach_host_name=attach_host_name, **params)
+            return APIClient.submit('POST', cls._class_url + "/" + str(id), body,
+                                    attach_host_name=attach_host_name, **params)
 
 
 class SendableAPIResource(object):
@@ -70,11 +70,11 @@ class SendableAPIResource(object):
         :returns: JSON response from HTTP API request
         """
         if id is None:
-            return APIClient().submit('POST', cls._class_url, body,
-                                      attach_host_name=attach_host_name)
+            return APIClient.submit('POST', cls._class_url, body,
+                                    attach_host_name=attach_host_name)
         else:
-            return APIClient().submit('POST', cls._class_url + "/" + str(id), body,
-                                      attach_host_name=attach_host_name)
+            return APIClient.submit('POST', cls._class_url + "/" + str(id), body,
+                                    attach_host_name=attach_host_name)
 
 
 class UpdatableAPIResource(object):
@@ -96,7 +96,7 @@ class UpdatableAPIResource(object):
         """
         if params is None:
             params = {}
-        return APIClient().submit('PUT', cls._class_url + "/" + str(id), body, **params)
+        return APIClient.submit('PUT', cls._class_url + "/" + str(id), body, **params)
 
 
 class DeletableAPIResource(object):
@@ -113,7 +113,7 @@ class DeletableAPIResource(object):
 
         :returns: JSON response from HTTP API request
         """
-        return APIClient().submit('DELETE', cls._class_url + "/" + str(id), **params)
+        return APIClient.submit('DELETE', cls._class_url + "/" + str(id), **params)
 
 
 class GetableAPIResource(object):
@@ -133,7 +133,7 @@ class GetableAPIResource(object):
 
         :returns: JSON response from HTTP API request
         """
-        return APIClient().submit('GET', cls._class_url + "/" + str(id), **params)
+        return APIClient.submit('GET', cls._class_url + "/" + str(id), **params)
 
 
 class ListableAPIResource(object):
@@ -150,7 +150,7 @@ class ListableAPIResource(object):
 
         :returns: JSON response from HTTP API request
         """
-        return APIClient().submit('GET', cls._class_url, **params)
+        return APIClient.submit('GET', cls._class_url, **params)
 
 
 class SearchableAPIResource(object):
@@ -167,7 +167,7 @@ class SearchableAPIResource(object):
 
         :returns: JSON response from HTTP API request
         """
-        return APIClient().submit('GET', cls._class_url, **params)
+        return APIClient.submit('GET', cls._class_url, **params)
 
 
 class ActionAPIResource(object):
@@ -194,9 +194,9 @@ class ActionAPIResource(object):
         :returns: JSON response from HTTP API request
         """
         if id is None:
-            return APIClient().submit(method, cls._class_url + "/" + name, params)
+            return APIClient.submit(method, cls._class_url + "/" + name, params)
         else:
-            return APIClient().submit(method, cls._class_url + "/" + str(id) + "/" + name, params)
+            return APIClient.submit(method, cls._class_url + "/" + str(id) + "/" + name, params)
 
     @classmethod
     def _trigger_action(cls, method, name, id=None, **params):
@@ -218,6 +218,6 @@ class ActionAPIResource(object):
         :returns: JSON response from HTTP API request
         """
         if id is None:
-            return APIClient().submit(method, name, params)
+            return APIClient.submit(method, name, params)
         else:
-            return APIClient().submit(method, name + "/" + str(id), params)
+            return APIClient.submit(method, name + "/" + str(id), params)

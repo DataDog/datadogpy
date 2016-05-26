@@ -9,12 +9,20 @@ Priority:
 import logging
 import urllib
 
+# 3p
+try:
+    import requests
+except ImportError:
+    requests = None
+
+try:
+    from google.appengine.api import urlfetch, urlfetch_errors
+except ImportError:
+    urlfetch, urlfetch_errors = None, None
+
 # datadog
 from datadog.api.exceptions import ClientError, HTTPError, HttpTimeout
 
-requests = None
-urlfetch = None
-urlfetch_errors = None
 
 log = logging.getLogger('dd.datadogpy')
 
@@ -138,28 +146,19 @@ class URLFetchClient(HTTPClient):
                 raise HTTPError(status_code)
 
 
-HTTP_CLIENTS = [RequestClient, URLFetchClient]
-
-
-def get_http_client():
+def resolve_http_client():
     """
-    Return the appropriate HTTP client based the defined priority and user environment.
+    Resolve an appropriate HTTP client based the defined priority and user environment.
     """
-    global requests
-    global urlfetch
-    global urlfetch_errors
-
-    try:
-        import requests
+    if requests:
+        log.debug(u"Use `requests` based HTTP client.")
         return RequestClient
-    except ImportError:
-        pass
 
-    try:
-        from google.appengine.api import urlfetch, urlfetch_errors
+    if urlfetch and urlfetch_errors:
+        log.debug(u"Use `urlfetch` based HTTP client.")
         return URLFetchClient
-    except ImportError:
-        raise ImportError(
-            u"Datadog API client was unable to resolve a HTTP client. "
-            u" Please install `requests` library."
-        )
+
+    raise ImportError(
+        u"Datadog API client was unable to resolve a HTTP client. "
+        u" Please install `requests` library."
+    )

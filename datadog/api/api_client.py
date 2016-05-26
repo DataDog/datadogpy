@@ -6,7 +6,7 @@ import time
 from datadog.api import _api_version, _max_timeouts, _backoff_period
 from datadog.api.exceptions import ClientError, ApiError, HttpBackoff, \
     HttpTimeout, ApiNotInitialized
-from datadog.api.http_client import get_http_client
+from datadog.api.http_client import resolve_http_client
 from datadog.util.compat import json, is_p3k
 
 
@@ -25,13 +25,21 @@ class APIClient(object):
     _timeout_counter = 0
     _api_version = _api_version
 
-    def __init__(self):
-        """
-        Instantiate the client. Plug a HTTP client.
-        """
-        self._http_client = get_http_client()
+    # Plugged HTTP client
+    _http_client = None
 
-    def submit(self, method, path, body=None, attach_host_name=False, response_formatter=None,
+    @classmethod
+    def _get_http_client(cls):
+        """
+        Getter for the embedded HTTP client.
+        """
+        if not cls._http_client:
+            cls._http_client = resolve_http_client()
+
+        return cls._http_client
+
+    @classmethod
+    def submit(cls, method, path, body=None, attach_host_name=False, response_formatter=None,
                error_formatter=None, **params):
         """
         Make an HTTP API request
@@ -61,8 +69,8 @@ class APIClient(object):
         """
         try:
             # Check if it's ok to submit
-            if not self._should_submit():
-                _, backoff_time_left = self._backoff_status()
+            if not cls._should_submit():
+                _, backoff_time_left = cls._backoff_status()
                 raise HttpBackoff(backoff_time_left)
 
             # Import API, User and HTTP settings
@@ -103,14 +111,14 @@ class APIClient(object):
             # Construct the URL
             url = "{api_host}/api/{api_version}/{path}".format(
                   api_host=_api_host,
-                  api_version=self._api_version,
+                  api_version=cls._api_version,
                   path=path.lstrip("/"),
             )
 
             # Process requesting
             start_time = time.time()
 
-            result = self._http_client.request(
+            result = cls._get_http_client().request(
                 method=method, url=url,
                 headers=headers, params=params, data=body,
                 timeout=_timeout, max_retries=_max_retries,
@@ -120,7 +128,7 @@ class APIClient(object):
             # Request succeeded: log it and reset the timeout counter
             duration = round((time.time() - start_time) * 1000., 4)
             log.info("%s %s %s (%sms)" % (result.status_code, method, url, duration))
-            self._timeout_counter = 0
+            cls._timeout_counter = 0
 
             # Format response content
             content = result.content
@@ -144,7 +152,7 @@ class APIClient(object):
                 return response_formatter(response_obj)
 
         except HttpTimeout:
-            self._timeout_counter += 1
+            cls._timeout_counter += 1
             raise
         except ClientError as e:
             if _mute:
