@@ -8,6 +8,7 @@ import os
 from random import random
 from time import time
 import socket
+import struct
 from functools import wraps
 
 try:
@@ -23,7 +24,7 @@ class DogStatsd(object):
     OK, WARNING, CRITICAL, UNKNOWN = (0, 1, 2, 3)
 
     def __init__(self, host='localhost', port=8125, max_buffer_size=50, namespace=None,
-                 constant_tags=None, use_ms=False):
+                 constant_tags=None, use_ms=False, use_default_route=False):
         """
         Initialize a DogStatsd object.
 
@@ -50,6 +51,11 @@ class DogStatsd(object):
 
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by dogstatsd client
         :type constant_tags: list of strings
+
+        :param use_default_route: Dynamically set the statsd host to the default route
+        (Useful when running the client in a container)
+        :type use_default_route: boolean
+
         """
         self.host = host
         self.port = int(port)
@@ -63,6 +69,9 @@ class DogStatsd(object):
         self.constant_tags = constant_tags + env_tags
         self.namespace = namespace
         self.use_ms = use_ms
+        self.use_default_route = use_default_route
+        if self.use_default_route:
+            self.host = self._get_default_route()
 
     def __enter__(self):
         self.open_buffer(self.max_buffer_size)
@@ -70,6 +79,18 @@ class DogStatsd(object):
 
     def __exit__(self, type, value, traceback):
         self.close_buffer()
+
+    def _get_default_route(self):
+        try:
+            with open('/proc/net/route') as f:
+                for line in f.readlines():
+                    fields = line.strip().split()
+                    if fields[1] == '00000000':
+                        return socket.inet_ntoa(struct.pack('<L', int(fields[2], 16)))
+        except IOError as e:
+            log.error('Unable to open /proc/net/route: %s', e)
+
+        return None
 
     def get_socket(self):
         """
@@ -79,6 +100,9 @@ class DogStatsd(object):
         avoid bad thread race conditions.
         """
         if not self.socket:
+            if self.use_default_route:
+                self.host = self._get_default_route()
+
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.connect((self.host, self.port))
             self.socket = sock

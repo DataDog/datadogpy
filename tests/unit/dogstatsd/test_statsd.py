@@ -65,6 +65,14 @@ class TestDogStatsd(object):
         t.assert_equal(statsd.host, "myhost")
         t.assert_equal(statsd.port, 1234)
 
+    def test_default_route(self):
+        options = {
+            'statsd_use_default_route': True,
+        }
+
+        initialize(**options)
+        t.assert_equal(statsd.use_default_route, True)
+
     def test_set(self):
         self.statsd.set('set', 123)
         assert self.recv() == 'set:123|s'
