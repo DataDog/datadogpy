@@ -1,5 +1,5 @@
-# 3p
-import simplejson as json
+# datadog
+from datadog.util.compat import json
 
 
 def pretty_json(obj):

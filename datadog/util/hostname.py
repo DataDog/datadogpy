@@ -5,11 +5,8 @@ import logging
 import subprocess
 import types
 
-# 3p
-import simplejson as json
-
 # datadog
-from datadog.util.compat import url_lib, is_p3k, iteritems
+from datadog.util.compat import url_lib, is_p3k, iteritems, json
 from datadog.util.config import get_config, get_os, CfgNotFound
 
 VALID_HOSTNAME_RFC_1123_PATTERN = re.compile(r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$")  # noqa
@@ -104,12 +101,12 @@ def get_hostname():
             hostname = socket_hostname
 
     if hostname is None:
-        log.critical("Unable to reliably determine host name. You can define one"
-                     " in datadog.conf or in your hosts file")
-        raise Exception("Unable to reliably determine host name. You can define"
-                        " one in datadog.conf or in your hosts file")
-    else:
-        return hostname
+        log.warning(
+            u"Unable to reliably determine host name. You can define one in your `hosts` file, "
+            u"or in `datadog.conf` file if you have Datadog Agent installed."
+        )
+
+    return hostname
 
 
 def get_ec2_instance_id():

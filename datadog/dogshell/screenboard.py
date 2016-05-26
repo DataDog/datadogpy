@@ -5,12 +5,12 @@ import platform
 import webbrowser
 
 # 3p
-import simplejson as json
 from datadog.util.format import pretty_json
 
 # datadog
 from datadog import api
 from datadog.dogshell.common import report_errors, report_warnings, print_err
+from datadog.util.compat import json
 from datetime import datetime
 
 

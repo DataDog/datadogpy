@@ -1,4 +1,4 @@
-from datadog.api.base import ActionAPIResource, GetableAPIResource, \
+from datadog.api.resources import ActionAPIResource, GetableAPIResource, \
     CreateableAPIResource, UpdatableAPIResource, ListableAPIResource, \
     DeletableAPIResource
 

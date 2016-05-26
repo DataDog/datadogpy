@@ -1,6 +1,6 @@
 # flake8: noqa
-
-""" Imports for compatibility with Py2 and Py3
+"""
+Imports for compatibility with Py2, Py3 and Google App Engine.
 """
 import sys
 import logging
@@ -51,3 +51,14 @@ try:
     from urllib.parse import urlparse
 except ImportError:
     from urlparse import urlparse
+
+try:
+    import pkg_resources as pkg
+except ImportError:
+    pkg = None
+
+# Prefer `simplejson` but fall back to stdlib `json`
+try:
+    import simplejson as json
+except ImportError:
+    import json

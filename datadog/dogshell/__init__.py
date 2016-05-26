@@ -1,7 +1,6 @@
 # stdlib
 import logging
 import os
-import pkg_resources as pkg
 
 # 3p
 import argparse
@@ -20,6 +19,7 @@ from datadog.dogshell.search import SearchClient
 from datadog.dogshell.service_check import ServiceCheckClient
 from datadog.dogshell.tag import TagClient
 from datadog.dogshell.timeboard import TimeboardClient
+from datadog.util.config import get_version
 
 logging.getLogger('dd.datadogpy').setLevel(logging.CRITICAL)
 
@@ -44,8 +44,7 @@ def main():
     parser.add_argument('--timeout', help="time to wait in seconds before timing"
                         " out an API call (default 10)", default=10, type=int)
     parser.add_argument('-v', '--version', help='Dog API version', action='version',
-                        version='%(prog)s {version}'
-                        .format(version=pkg.require("datadog")[0].version))
+                        version='%(prog)s {0}'.format(get_version()))
 
     config = DogshellConfig()
 

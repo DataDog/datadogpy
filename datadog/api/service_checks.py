@@ -1,6 +1,6 @@
-from datadog.api.base import ActionAPIResource
-from datadog.api.exceptions import ApiError
 from datadog.api.constants import CheckStatus
+from datadog.api.exceptions import ApiError
+from datadog.api.resources import ActionAPIResource
 
 
 class ServiceCheck(ActionAPIResource):

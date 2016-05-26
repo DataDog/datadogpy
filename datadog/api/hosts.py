@@ -1,4 +1,4 @@
-from datadog.api.base import ActionAPIResource
+from datadog.api.resources import ActionAPIResource
 
 
 class Host(ActionAPIResource):

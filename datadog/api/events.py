@@ -1,6 +1,6 @@
-from datadog.util.compat import iteritems
-from datadog.api.base import GetableAPIResource, CreateableAPIResource, \
+from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
     SearchableAPIResource
+from datadog.util.compat import iteritems
 
 
 class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
