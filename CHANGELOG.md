@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+# 0.12.0 / Unreleased
+* [BUGFIX] API: Do not raise on hostname resolution failures, [#106][]
+* [FEATURE] DogStatsD: Allow to dynamically use default route as a StatsD host, [#134][]
+* [IMPROVEMENT] API: Enhance compatibility with Google App Engine, support `urlfetch` as a HTTP library [#106][]
+
 # 0.11.0 / 2016-03-14
 
 * [BUGFIX] Dogshell: Print usage when no argument is given on Python 3, [#123][]
@@ -132,6 +137,7 @@ See [#8][], thanks [@benweatherman][]
 [#103]: https://github.com/DataDog/datadogpy/issues/103
 [#104]: https://github.com/DataDog/datadogpy/issues/104
 [#105]: https://github.com/DataDog/datadogpy/issues/105
+[#106]: https://github.com/DataDog/datadogpy/issues/106
 [#110]: https://github.com/DataDog/datadogpy/issues/110
 [#111]: https://github.com/DataDog/datadogpy/issues/111
 [#114]: https://github.com/DataDog/datadogpy/issues/114
@@ -143,6 +149,7 @@ See [#8][], thanks [@benweatherman][]
 [#123]: https://github.com/DataDog/datadogpy/issues/123
 [#124]: https://github.com/DataDog/datadogpy/issues/124
 [#126]: https://github.com/DataDog/datadogpy/issues/126
+[#134]: https://github.com/DataDog/datadogpy/issues/134
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
 [@aristiden7o]: https://github.com/aristiden7o
