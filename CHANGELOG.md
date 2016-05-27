@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.12.0 / Unreleased
+# 0.12.0 / 2016-05-27
 * [BUGFIX] API: Do not raise on hostname resolution failures, [#106][]
 * [FEATURE] DogStatsD: Allow to dynamically use default route as a StatsD host, [#134][]
 * [IMPROVEMENT] API: Enhance compatibility with Google App Engine, support `urlfetch` as a HTTP library [#106][]
