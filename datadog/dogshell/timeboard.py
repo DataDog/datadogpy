@@ -176,10 +176,13 @@ class TimeboardClient(object):
 
             json.dump(dash_obj, f, indent=2)
 
+            # Use unicode version of the filename, in case it contains UTF8 chars
+            filename = unicode(filename, "utf-8")
+
             if format == 'pretty':
-                print("Downloaded dashboard {0} to file {1}".format(dash_id, filename))
+                print(u"Downloaded dashboard {0} to file {1}".format(dash_id, filename))
             else:
-                print("{0} {1}".format(dash_id, filename))
+                print(u"{0} {1}".format(dash_id, filename))
 
     @classmethod
     def _push(cls, args):
