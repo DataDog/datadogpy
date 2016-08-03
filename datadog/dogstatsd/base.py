@@ -24,10 +24,13 @@ from datadog.util.compat import text
 
 log = logging.getLogger('dogstatsd')
 
-PY_34 = sys.version_info >= (3, 4)
+PY_35 = sys.version_info >= (3, 5)
 
-if PY_34:
-    from asyncio import iscoroutinefunction, coroutine
+if PY_35:
+    from asyncio import iscoroutinefunction
+else:
+    def iscoroutinefunction(_):
+        return False
 
 
 class DogStatsd(object):
@@ -201,24 +204,26 @@ class DogStatsd(object):
             self.use_ms = use_ms
             self.elapsed = None
 
+        if PY_35:
+            def _get_wrapped_co(self, func):
+                @wraps(func)
+                async def wrapped_co(*args, **kwargs):
+                    start = time()
+                    try:
+                        result = await func(*args, **kwargs)
+                        return result
+                    finally:
+                        self._send(start)
+                return wrapped_co
+
         def __call__(self, func):
             """Decorator which returns the elapsed time of the function call."""
             # Default to the function name if metric was not provided.
             if not self.metric:
                 self.metric = '%s.%s' % (func.__module__, func.__name__)
 
-            if PY_34:
-                if iscoroutinefunction(func):
-                    @wraps(func)
-                    @coroutine
-                    def wrapped_co(*args, **kwargs):
-                        start = time()
-                        try:
-                            result = yield from func(*args, **kwargs)
-                            return result
-                        finally:
-                            self._send(start)
-                    return wrapped_co
+            if iscoroutinefunction(func):
+                return self._get_wrapped_co(func)
 
             @wraps(func)
             def wrapped(*args, **kwargs):
