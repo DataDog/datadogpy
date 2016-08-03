@@ -20,10 +20,10 @@ except ImportError:
 
 log = logging.getLogger('dogstatsd')
 
-PY_35 = sys.version_info >= (3, 5)
+PY_34 = sys.version_info >= (3, 4)
 
-if PY_35:
-    from asyncio import iscoroutinefunction
+if PY_34:
+    from asyncio import iscoroutinefunction, coroutine
 
 
 class DogStatsd(object):
@@ -202,13 +202,15 @@ class DogStatsd(object):
             if not self.metric:
                 self.metric = '%s.%s' % (func.__module__, func.__name__)
 
-            if PY_35:
+            if PY_34:
                 if iscoroutinefunction(func):
                     @wraps(func)
-                    async def wrapped_co(*args, **kwargs):
+                    @coroutine
+                    def wrapped_co(*args, **kwargs):
                         start = time()
                         try:
-                            return await func(*args, **kwargs)
+                            result = yield from func(*args, **kwargs)
+                            return result
                         finally:
                             self._send(start)
                     return wrapped_co
