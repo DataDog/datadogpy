@@ -42,3 +42,4 @@ nosetests.xml
 .DS_Store
 .eggs/
 .env/
+.idea/

@@ -4,6 +4,8 @@ DogStatsd is a Python client for DogStatsd, a Statsd fork for Datadog.
 """
 # stdlib
 from functools import wraps
+
+import sys
 from random import random
 from time import time
 import logging
@@ -21,6 +23,11 @@ from datadog.util.compat import text
 
 
 log = logging.getLogger('dogstatsd')
+
+PY_35 = sys.version_info >= (3, 5)
+
+if PY_35:
+    from asyncio import iscoroutinefunction
 
 
 class DogStatsd(object):
@@ -199,6 +206,17 @@ class DogStatsd(object):
             # Default to the function name if metric was not provided.
             if not self.metric:
                 self.metric = '%s.%s' % (func.__module__, func.__name__)
+
+            if PY_35:
+                if iscoroutinefunction(func):
+                    @wraps(func)
+                    async def wrapped_co(*args, **kwargs):
+                        start = time()
+                        try:
+                            return await func(*args, **kwargs)
+                        finally:
+                            self._send(start)
+                    return wrapped_co
 
             @wraps(func)
             def wrapped(*args, **kwargs):
