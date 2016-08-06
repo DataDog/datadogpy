@@ -5,6 +5,7 @@ DogStatsd is a Python client for DogStatsd, a Statsd fork for Datadog.
 
 import logging
 import os
+import sys
 from random import random
 from time import time
 import socket
@@ -18,6 +19,15 @@ except ImportError:
 
 
 log = logging.getLogger('dogstatsd')
+
+PY_35 = sys.version_info >= (3, 5)
+
+if PY_35:
+    from asyncio import iscoroutinefunction
+    from .base3 import _get_wrapped_co
+else:
+    def iscoroutinefunction(_):
+        return False
 
 
 class DogStatsd(object):
@@ -195,6 +205,9 @@ class DogStatsd(object):
             # Default to the function name if metric was not provided.
             if not self.metric:
                 self.metric = '%s.%s' % (func.__module__, func.__name__)
+
+            if iscoroutinefunction(func):
+                return _get_wrapped_co(self, func)
 
             @wraps(func)
             def wrapped(*args, **kwargs):
