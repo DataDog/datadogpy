@@ -28,6 +28,7 @@ PY_35 = sys.version_info >= (3, 5)
 
 if PY_35:
     from asyncio import iscoroutinefunction
+    from .base3 import _get_wrapped_co
 else:
     def iscoroutinefunction(_):
         return False
@@ -204,18 +205,6 @@ class DogStatsd(object):
             self.use_ms = use_ms
             self.elapsed = None
 
-        if PY_35:
-            def _get_wrapped_co(self, func):
-                @wraps(func)
-                async def wrapped_co(*args, **kwargs):
-                    start = time()
-                    try:
-                        result = await func(*args, **kwargs)
-                        return result
-                    finally:
-                        self._send(start)
-                return wrapped_co
-
         def __call__(self, func):
             """Decorator which returns the elapsed time of the function call."""
             # Default to the function name if metric was not provided.
@@ -223,7 +212,7 @@ class DogStatsd(object):
                 self.metric = '%s.%s' % (func.__module__, func.__name__)
 
             if iscoroutinefunction(func):
-                return self._get_wrapped_co(func)
+                return _get_wrapped_co(self, func)
 
             @wraps(func)
             def wrapped(*args, **kwargs):
