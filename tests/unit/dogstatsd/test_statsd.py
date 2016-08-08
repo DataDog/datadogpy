@@ -313,7 +313,9 @@ class TestDogStatsd(object):
         Measure the distribution of a context's run time.
         """
         # In seconds
-        with self.statsd.timed('timed_context.test'):
+        with self.statsd.timed('timed_context.test') as timer:
+            self.assertIsInstance(timer,
+                                  DogStatsd._TimedContextManagerDecorator)
             time.sleep(0.5)
 
         packet = self.recv()

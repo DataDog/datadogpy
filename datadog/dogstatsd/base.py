@@ -209,6 +209,7 @@ class DogStatsd(object):
             if not self.metric:
                 raise TypeError("Cannot used timed without a metric!")
             self.start = time()
+            return self
 
         def __exit__(self, type, value, traceback):
             # Report the elapsed time of the context manager.
