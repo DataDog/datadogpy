@@ -103,8 +103,8 @@ class TestDogStatsd(object):
         t.assert_equal('gt:123.4|g|#country:china,age:45,blue', self.recv())
 
     def test_tagged_counter(self):
-        self.statsd.increment('ct', tags=['country:canada', 'red'])
-        t.assert_equal('ct:1|c|#country:canada,red', self.recv())
+        self.statsd.increment('ct', tags=[u'country:españa', 'red'])
+        t.assert_equal(u'ct:1|c|#country:españa,red', self.recv())
 
     def test_tagged_histogram(self):
         self.statsd.histogram('h', 1, tags=['red'])
