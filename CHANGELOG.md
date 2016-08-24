@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.13.0 / Unreleased
+# 0.13.0 / 2016-08-24
 * [BUGFIX] Dogshell: Fix `UnicodeError` exceptions when a timeboard name contains non ascii characters, [#140][]
 * [BUGFIX] DogStatsD: Support unicode characters in tags, [#132][], [#152][]
 * [BUGFIX] ThreadStats: Fix `RuntimeError` exceptions on flush caused by an unsafe thread operation, [#143][], [#151][] (thanks [@leozc][])
