@@ -24,6 +24,8 @@ if is_p3k():
     def iternext(iter):
         return next(iter)
 
+    text = str
+
 else:
     get_input = raw_input
     import ConfigParser as configparser
@@ -35,6 +37,8 @@ else:
 
     def iternext(iter):
         return iter.next()
+
+    text = unicode
 
 
 try:

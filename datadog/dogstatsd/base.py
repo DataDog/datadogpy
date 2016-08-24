@@ -2,19 +2,22 @@
 """
 DogStatsd is a Python client for DogStatsd, a Statsd fork for Datadog.
 """
-
-import logging
-import os
+# stdlib
+from functools import wraps
 from random import random
 from time import time
+import logging
+import os
 import socket
 import struct
-from functools import wraps
 
 try:
     from itertools import imap
 except ImportError:
     imap = map
+
+# datadog
+from datadog.util.compat import text
 
 
 log = logging.getLogger('dogstatsd')
@@ -289,7 +292,7 @@ class DogStatsd(object):
         if tags:
             payload.extend(["|#", ",".join(tags)])
 
-        encoded = "".join(imap(str, payload))
+        encoded = "".join(imap(text, payload))
 
         # Send it
         self._send(encoded)
