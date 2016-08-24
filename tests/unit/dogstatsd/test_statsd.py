@@ -314,8 +314,7 @@ class TestDogStatsd(object):
         """
         # In seconds
         with self.statsd.timed('timed_context.test') as timer:
-            self.assert_is_instance(timer,
-                                    DogStatsd._TimedContextManagerDecorator)
+            t.assert_is_instance(timer, DogStatsd._TimedContextManagerDecorator)
             time.sleep(0.5)
 
         packet = self.recv()
