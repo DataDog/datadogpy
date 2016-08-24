@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+# 0.13.0 / Unreleased
+* [BUGFIX] Dogshell: Fix `UnicodeError` exceptions when a timeboard name contains non ascii characters, [#140][]
+* [BUGFIX] DogStatsD: Support unicode characters in tags, [#132][], [#152][]
+* [BUGFIX] ThreadStats: Fix `RuntimeError` exceptions on flush caused by an unsafe thread operation, [#143][], [#151][] (thanks [@leozc][])
+* [FEATURE] API: Add `delete` method for `Event` resource, [#145][]
+* [IMPROVEMENT] DogStatsD: Have `timed` context manager to return itself, [#147][] (thanks [@ross][])
+
 # 0.12.0 / 2016-05-27
 * [BUGFIX] API: Do not raise on hostname resolution failures, [#106][]
 * [FEATURE] DogStatsD: Allow to dynamically use default route as a StatsD host, [#134][]
@@ -149,7 +156,14 @@ See [#8][], thanks [@benweatherman][]
 [#123]: https://github.com/DataDog/datadogpy/issues/123
 [#124]: https://github.com/DataDog/datadogpy/issues/124
 [#126]: https://github.com/DataDog/datadogpy/issues/126
+[#132]: https://github.com/DataDog/datadogpy/issues/132
 [#134]: https://github.com/DataDog/datadogpy/issues/134
+[#140]: https://github.com/DataDog/datadogpy/issues/140
+[#143]: https://github.com/DataDog/datadogpy/issues/143
+[#145]: https://github.com/DataDog/datadogpy/issues/145
+[#147]: https://github.com/DataDog/datadogpy/issues/147
+[#151]: https://github.com/DataDog/datadogpy/issues/151
+[#152]: https://github.com/DataDog/datadogpy/issues/152
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
 [@aristiden7o]: https://github.com/aristiden7o
@@ -163,9 +177,11 @@ See [#8][], thanks [@benweatherman][]
 [@gnarf]: https://github.com/gnarf
 [@jofusa]: https://github.com/jofusa
 [@kuzmich]: https://github.com/kuzmich
+[@leozc]: https://github.com/leozc
 [@meawoppl]: https://github.com/meawoppl
 [@mgood]: https://github.com/mgood
 [@miketheman]: https://github.com/miketheman
 [@ogst]: https://github.com/ogst
+[@ross]: https://github.com/ross
 [@steven-liu]: https://github.com/steven-liu
 [@timed]: https://github.com/timed
