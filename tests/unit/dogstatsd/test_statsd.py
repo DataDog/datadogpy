@@ -375,6 +375,35 @@ class TestDogStatsd(object):
         packet = self.recv()
         t.assert_equal(packet, None)
 
+    def test_timed_start_stop_calls(self):
+        # In seconds
+        timer = self.statsd.timed('timed_context.test')
+        timer.start()
+        time.sleep(0.5)
+        timer.stop()
+
+        packet = self.recv()
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        t.assert_equal('ms', type_)
+        t.assert_equal('timed_context.test', name)
+        self.assert_almost_equal(0.5, float(value), 0.1)
+
+        # In milliseconds
+        timer = self.statsd.timed('timed_context.test', use_ms=True)
+        timer.start()
+        time.sleep(0.5)
+        timer.stop()
+
+        packet = self.recv()
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        t.assert_equal('ms', type_)
+        t.assert_equal('timed_context.test', name)
+        self.assert_almost_equal(500, float(value), 100)
+
     def test_batched(self):
         self.statsd.open_buffer()
         self.statsd.gauge('page.views', 123)
