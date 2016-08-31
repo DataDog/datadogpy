@@ -192,6 +192,7 @@ class DogStatsd(object):
             self.tags = tags
             self.sample_rate = sample_rate
             self.use_ms = use_ms
+            self.elapsed = None
 
         def __call__(self, func):
             """Decorator which returns the elapsed time of the function call."""
@@ -223,6 +224,7 @@ class DogStatsd(object):
             use_ms = self.use_ms if self.use_ms is not None else self.statsd.use_ms
             elapsed = int(round(1000 * elapsed)) if use_ms else elapsed
             self.statsd.timing(self.metric, elapsed, self.tags, self.sample_rate)
+            self.elapsed = elapsed
 
     def timed(self, metric=None, tags=None, sample_rate=1, use_ms=None):
         """
