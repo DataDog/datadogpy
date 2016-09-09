@@ -1,5 +1,9 @@
 # CHANGELOG
 
+0.6.1 / 2016.09.09
+==================
+* [BUGFIX] Fix socket creation thread-unsafe code, [#57][] [#60][] (thanks [@GrahamDumpleton][])
+
 0.6.0 / 2015.06.01
 ==================
 * [FEATURE] Add `message` parameter support to host muting commands, [#51][]
