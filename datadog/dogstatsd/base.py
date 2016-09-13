@@ -226,6 +226,12 @@ class DogStatsd(object):
             self.statsd.timing(self.metric, elapsed, self.tags, self.sample_rate)
             self.elapsed = elapsed
 
+        def start(self):
+            self.__enter__()
+
+        def stop(self):
+            self.__exit__(None, None, None)
+
     def timed(self, metric=None, tags=None, sample_rate=1, use_ms=None):
         """
         A decorator or context manager that will measure the distribution of a
