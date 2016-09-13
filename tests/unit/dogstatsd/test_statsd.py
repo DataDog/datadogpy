@@ -324,9 +324,10 @@ class TestDogStatsd(object):
         t.assert_equal('ms', type_)
         t.assert_equal('timed_context.test', name)
         self.assert_almost_equal(0.5, float(value), 0.1)
+        self.assert_almost_equal(0.5, timer.elapsed, 0.1)
 
         # In milliseconds
-        with self.statsd.timed('timed_context.test', use_ms=True):
+        with self.statsd.timed('timed_context.test', use_ms=True) as timer:
             time.sleep(0.5)
 
         packet = self.recv()
@@ -336,6 +337,7 @@ class TestDogStatsd(object):
         t.assert_equal('ms', type_)
         t.assert_equal('timed_context.test', name)
         self.assert_almost_equal(500, float(value), 100)
+        self.assert_almost_equal(500, timer.elapsed, 100)
 
     def test_timed_context_exception(self):
         """
