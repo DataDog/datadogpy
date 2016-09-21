@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+# 0.14.0 / Unreleased
+* [FEATURE] DogStatsD: Provide elapsed time from the `timed` decorator, [#154][] (thanks [@tuukkamustonen][])
+* [FEATURE] DogStatsD: Allow starting and stopping `timed` manually, [#155][] (thanks [@tuukkamustonen][])
+* [IMPROVEMENT] DogStatsD: Support timing for coroutine functions on Python 3.5 or higher, [#146][] (thanks [@thehesiod][])
+
 # 0.13.0 / 2016-08-24
 * [BUGFIX] Dogshell: Fix `UnicodeError` exceptions when a timeboard name contains non ascii characters, [#140][]
 * [BUGFIX] DogStatsD: Support unicode characters in tags, [#132][], [#152][]
@@ -59,6 +64,9 @@ CHANGELOG
 * [IMPROVEMENT] Adjust Dogshell descriptions to distinguish between `mute_all`/`unmute_all` and `mute`/`unmute` methods, [#58][]
 * [IMPROVEMENT] Include additional information in 403 response exceptions, [#58][]
 * [OTHER] Update `requests` library, per CVE-2015-2296, [#63][]
+
+# 0.6.1 // 2016.09.09
+* [BUGFIX] Fix socket creation thread-unsafe code, [#57][] [#60][] (thanks [@GrahamDumpleton][])
 
 # 0.6.0 / 2015-06-01
 * [BUGFIX] Always fall back when unable to determine hostname from `datadog.conf`, [#53][]
@@ -161,9 +169,12 @@ See [#8][], thanks [@benweatherman][]
 [#140]: https://github.com/DataDog/datadogpy/issues/140
 [#143]: https://github.com/DataDog/datadogpy/issues/143
 [#145]: https://github.com/DataDog/datadogpy/issues/145
+[#146]: https://github.com/DataDog/datadogpy/issues/146
 [#147]: https://github.com/DataDog/datadogpy/issues/147
 [#151]: https://github.com/DataDog/datadogpy/issues/151
 [#152]: https://github.com/DataDog/datadogpy/issues/152
+[#154]: https://github.com/DataDog/datadogpy/issues/154
+[#155]: https://github.com/DataDog/datadogpy/issues/155
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
 [@aristiden7o]: https://github.com/aristiden7o
@@ -184,4 +195,6 @@ See [#8][], thanks [@benweatherman][]
 [@ogst]: https://github.com/ogst
 [@ross]: https://github.com/ross
 [@steven-liu]: https://github.com/steven-liu
+[@thehesiod]: https://github.com/thehesiod
 [@timed]: https://github.com/timed
+[@tuukkamustonen]: https://github.com/tuukkamustonen
