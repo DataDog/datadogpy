@@ -2,9 +2,28 @@ CHANGELOG
 =========
 
 # 0.14.0 / Unreleased
+
+**Logging**
+
+`dd.datadogpy` logger name is no longer. `datadog` now uses logger names matching the project hierarchy, i.e.
+* `datadog.api`
+* `datadog.statsd`
+* `datadog.threadstats`
+
+By default, `datadog` loggers are set with a do-nothing handler ([`NullHandler`](https://docs.python.org/3/howto/logging.html#configuring-logging-for-a-library)).
+
+To setup a different handler, one can add a handler
+```python
+import logging
+
+logging.getLogger("datadog").addHandler(...)
+```
+
+### Changes
 * [FEATURE] DogStatsD: Provide elapsed time from the `timed` decorator, [#154][] (thanks [@tuukkamustonen][])
 * [FEATURE] DogStatsD: Allow starting and stopping `timed` manually, [#155][] (thanks [@tuukkamustonen][])
 * [IMPROVEMENT] DogStatsD: Support timing for coroutine functions on Python 3.5 or higher, [#146][] (thanks [@thehesiod][])
+* [OTHER] Rename loggers and set null handlers, [#161][]
 
 # 0.13.0 / 2016-08-24
 * [BUGFIX] Dogshell: Fix `UnicodeError` exceptions when a timeboard name contains non ascii characters, [#140][]
@@ -175,6 +194,7 @@ See [#8][], thanks [@benweatherman][]
 [#152]: https://github.com/DataDog/datadogpy/issues/152
 [#154]: https://github.com/DataDog/datadogpy/issues/154
 [#155]: https://github.com/DataDog/datadogpy/issues/155
+[#161]: https://github.com/DataDog/datadogpy/issues/161
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
 [@aristiden7o]: https://github.com/aristiden7o
