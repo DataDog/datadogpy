@@ -1,5 +1,4 @@
 # stdlib
-import logging
 import os
 
 # 3p
@@ -21,11 +20,8 @@ from datadog.dogshell.tag import TagClient
 from datadog.dogshell.timeboard import TimeboardClient
 from datadog.util.config import get_version
 
-logging.getLogger('dd.datadogpy').setLevel(logging.CRITICAL)
-
 
 def main():
-
     parser = argparse.ArgumentParser(description="Interact with the Datadog API",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--config', help="location of your dogrc file (default ~/.dogrc)",
@@ -49,7 +45,6 @@ def main():
     config = DogshellConfig()
 
     # Set up subparsers for each service
-
     subparsers = parser.add_subparsers(title='Modes', dest='mode')
     subparsers.required = True
 

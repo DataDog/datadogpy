@@ -24,7 +24,7 @@ except ImportError:
 from datadog.api.exceptions import ClientError, HTTPError, HttpTimeout
 
 
-log = logging.getLogger('dd.datadogpy')
+log = logging.getLogger('datadog.api')
 
 
 class HTTPClient(object):

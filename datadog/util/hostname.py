@@ -12,7 +12,7 @@ from datadog.util.config import get_config, get_os, CfgNotFound
 VALID_HOSTNAME_RFC_1123_PATTERN = re.compile(r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$")  # noqa
 MAX_HOSTNAME_LEN = 255
 
-log = logging.getLogger('dd.datadogpy')
+log = logging.getLogger('datadog.api')
 
 
 def is_valid_hostname(hostname):
