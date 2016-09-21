@@ -67,7 +67,7 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, De
         optional filtered by *priority* ("low" or "normal"), *sources* and
         *tags*.
 
-        See the `event API documentation <http://api.datadoghq.com/events>`_ for the
+        See the `event API documentation <http://docs.datadoghq.com/api/#events-get-all>`_ for the
         event data format.
 
         :return: JSON response from HTTP request
