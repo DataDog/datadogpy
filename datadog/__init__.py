@@ -8,6 +8,7 @@ without hindering performance.
 * datadog.dogshell: a command-line tool, wrapping datadog.api, to interact with Datadog REST API.
 """
 # stdlib
+import logging
 import os
 import os.path
 
@@ -21,6 +22,11 @@ from datadog.util.hostname import get_hostname
 
 
 __version__ = get_version()
+
+# Loggers
+logging.getLogger('datadog.api').addHandler(logging.NullHandler())
+logging.getLogger('datadog.dogstatsd').addHandler(logging.NullHandler())
+logging.getLogger('datadog.threadstats').addHandler(logging.NullHandler())
 
 
 def initialize(api_key=None, app_key=None, host_name=None, api_host=None,

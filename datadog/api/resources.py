@@ -1,14 +1,8 @@
 """
 Datadog API resources.
 """
-# stdlib
-import logging
-
 # datadog
 from datadog.api.api_client import APIClient
-
-
-log = logging.getLogger('dd.datadogpy')
 
 
 class CreateableAPIResource(object):

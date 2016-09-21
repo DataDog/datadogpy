@@ -1,5 +1,4 @@
 import os
-import logging
 import string
 import sys
 
@@ -8,8 +7,6 @@ from datadog.util.compat import configparser, StringIO, is_p3k, pkg
 
 # CONSTANTS
 DATADOG_CONF = "datadog.conf"
-
-log = logging.getLogger('dd.datadogpy')
 
 
 class CfgNotFound(Exception):

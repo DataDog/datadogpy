@@ -18,7 +18,7 @@ from datadog.threadstats.events import EventsAggregator
 from datadog.threadstats.reporters import HttpReporter
 
 # Loggers
-log = logging.getLogger('dd.datadogpy')
+log = logging.getLogger('datadog.threadstats')
 
 
 class ThreadStats(object):

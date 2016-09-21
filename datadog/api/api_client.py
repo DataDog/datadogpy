@@ -10,7 +10,7 @@ from datadog.api.http_client import resolve_http_client
 from datadog.util.compat import json, is_p3k
 
 
-log = logging.getLogger('dd.datadogpy')
+log = logging.getLogger('datadog.api')
 
 
 class APIClient(object):

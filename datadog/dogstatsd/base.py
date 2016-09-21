@@ -17,7 +17,8 @@ from datadog.util.compat import imap
 from datadog.util.compat import text
 
 
-log = logging.getLogger('dogstatsd')
+# Logging
+log = logging.getLogger('datadog.dogstatsd')
 
 
 class DogStatsd(object):
