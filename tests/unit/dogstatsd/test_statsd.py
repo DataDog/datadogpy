@@ -2,19 +2,24 @@
 """
 Tests for dogstatsd.py
 """
-
+# stdlib
 from collections import deque
 import os
 import six
 import socket
-import threading
 import time
 
-from nose import tools as t
+# 3p
+from nose import (
+    SkipTest,
+    tools as t,
+)
 
-from datadog.dogstatsd.base import DogStatsd
+# datadog
 from datadog import initialize, statsd
-
+from datadog.dogstatsd.base import DogStatsd
+from datadog.dogstatsd.context import TimedContextManagerDecorator
+from datadog.util.compat import is_higher_py35
 from tests.util.contextmanagers import preserve_environment_variable
 
 
@@ -308,13 +313,46 @@ class TestDogStatsd(object):
         t.assert_equal('tests.unit.dogstatsd.test_statsd.func', name)
         self.assert_almost_equal(0.5, float(value), 0.1)
 
+    def test_timed_coroutine(self):
+        """
+        Measure the distribution of a coroutine function's run time.
+
+        Warning: Python > 3.5 only.
+        """
+        if not is_higher_py35():
+            raise SkipTest(
+                u"Coroutines are supported on Python 3.5 or higher."
+            )
+
+        import asyncio
+
+        @self.statsd.timed('timed.test')
+        @asyncio.coroutine
+        def print_foo():
+            """docstring"""
+            time.sleep(0.5)
+            print("foo")
+
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(print_foo())
+        loop.close()
+
+        # Assert
+        packet = self.recv()
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        t.assert_equal('ms', type_)
+        t.assert_equal('timed.test', name)
+        self.assert_almost_equal(0.5, float(value), 0.1)
+
     def test_timed_context(self):
         """
         Measure the distribution of a context's run time.
         """
         # In seconds
         with self.statsd.timed('timed_context.test') as timer:
-            t.assert_is_instance(timer, DogStatsd._TimedContextManagerDecorator)
+            t.assert_is_instance(timer, TimedContextManagerDecorator)
             time.sleep(0.5)
 
         packet = self.recv()

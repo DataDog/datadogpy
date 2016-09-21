@@ -1,22 +1,44 @@
 # flake8: noqa
 """
-Imports for compatibility with Py2, Py3 and Google App Engine.
+Imports for compatibility with Python 2, Python 3 and Google App Engine.
 """
-import sys
+from functools import wraps
 import logging
 import socket
+import sys
+
+
+def _is_py_version_higher_than(major, minor=0):
+    """
+    Assert that the Python version is higher than `$maj.$min`.
+    """
+    return sys.version_info >= (major, minor)
 
 
 def is_p3k():
-    value = sys.version_info[0] == 3
-    return value
+    """
+    Assert that Python is version 3 or higher.
+    """
+    return _is_py_version_higher_than(3)
+
+
+def is_higher_py35():
+    """
+    Assert that Python is version 3.5 or higher.
+    """
+    return _is_py_version_higher_than(3, 5)
+
 
 get_input = input
 
+# Python 3.x
 if is_p3k():
+    from io import StringIO
     import configparser
     import urllib.request as url_lib, urllib.error, urllib.parse
-    from io import StringIO
+
+    imap = map
+    text = str
 
     def iteritems(d):
         return iter(d.items())
@@ -24,13 +46,16 @@ if is_p3k():
     def iternext(iter):
         return next(iter)
 
-    text = str
 
+# Python 2.x
 else:
-    get_input = raw_input
+    from cStringIO import StringIO
+    from itertools import imap
     import ConfigParser as configparser
     import urllib2 as url_lib
-    from cStringIO import StringIO
+
+    get_input = raw_input
+    text = unicode
 
     def iteritems(d):
         return d.iteritems()
@@ -38,9 +63,17 @@ else:
     def iternext(iter):
         return iter.next()
 
-    text = unicode
 
+# Python > 3.5
+if is_higher_py35():
+    from asyncio import iscoroutinefunction
 
+# Others
+else:
+    def iscoroutinefunction(*args, **kwargs):
+        return False
+
+# Optional requirements
 try:
     from UserDict import IterableUserDict
 except ImportError:
@@ -61,7 +94,6 @@ try:
 except ImportError:
     pkg = None
 
-# Prefer `simplejson` but fall back to stdlib `json`
 try:
     import simplejson as json
 except ImportError:
