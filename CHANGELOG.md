@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.14.0 / Unreleased
+# 0.14.0 / 2016-09-22
 
 **Logging**
 
