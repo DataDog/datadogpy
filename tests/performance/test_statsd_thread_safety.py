@@ -208,7 +208,7 @@ class TestDogStatsdThreadSafety(unittest.TestCase):
         # All metrics were properly submitted
         self.assertMetrics(values)
 
-    @patch('datadog.dogstatsd.base.time')
+    @patch('datadog.dogstatsd.context.time')
     def test_timed_decorator_threaded(self, mock_time):
         """
         `timed` decorator plays well with concurrent threads.
@@ -254,7 +254,7 @@ class TestDogStatsdThreadSafety(unittest.TestCase):
         expected_values = [2 for _ in xrange(0, 10)]
         self.assertMetrics(expected_values)
 
-    @patch('datadog.dogstatsd.base.time')
+    @patch('datadog.dogstatsd.context.time')
     def test_timed_context_manager_threaded(self, mock_time):
         """
         `timed` context manager plays well with concurrent threads.
