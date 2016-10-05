@@ -10,6 +10,10 @@ import socket
 import time
 
 # 3p
+from mock import (
+    mock_open,
+    patch,
+)
 from nose import (
     SkipTest,
     tools as t,
@@ -21,6 +25,7 @@ from datadog.dogstatsd.base import DogStatsd
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35
 from tests.util.contextmanagers import preserve_environment_variable
+from tests.unit.dogstatsd.fixtures import load_fixtures
 
 
 class FakeSocket(object):
@@ -52,31 +57,59 @@ class BrokenSocket(FakeSocket):
 class TestDogStatsd(object):
 
     def setUp(self):
+        """
+        Set up a default Dogstatsd instance and mock the proc filesystem.
+        """
+        #
         self.statsd = DogStatsd()
         self.statsd.socket = FakeSocket()
+
+        # Mock the proc filesystem
+        route_data = load_fixtures('route')
+        self._procfs_mock = patch('datadog.util.compat.builtins.open', mock_open())
+        self._procfs_mock.__enter__().return_value.readlines.return_value = route_data.split("\n")
+
+    def tearDown(self):
+        """
+        Unmock the proc filesystem.
+        """
+        self._procfs_mock.__exit__()
 
     def recv(self):
         return self.statsd.socket.recv()
 
     def test_initialization(self):
+        """
+        `initialize` overrides `statsd` default instance attributes.
+        """
         options = {
             'statsd_host': "myhost",
             'statsd_port': 1234
         }
 
+        # Default values
         t.assert_equal(statsd.host, "localhost")
         t.assert_equal(statsd.port, 8125)
+
+        # After initialization
         initialize(**options)
         t.assert_equal(statsd.host, "myhost")
         t.assert_equal(statsd.port, 1234)
 
-    def test_default_route(self):
-        options = {
-            'statsd_use_default_route': True,
-        }
+        # Set `statsd` host to the system's default route
+        initialize(statsd_use_default_route=True, **options)
+        t.assert_equal(statsd.host, "172.17.0.1")
+        t.assert_equal(statsd.port, 1234)
 
-        initialize(**options)
-        t.assert_equal(statsd.use_default_route, True)
+    def test_default_route(self):
+        """
+        Dogstatsd host can be dynamically set to the default route.
+        """
+        # Setup
+        statsd = DogStatsd(use_default_route=True)
+
+        # Assert
+        t.assert_equal(statsd.host, "172.17.0.1")
 
     def test_set(self):
         self.statsd.set('set', 123)
@@ -527,11 +560,3 @@ class TestDogStatsd(object):
     def test_histogram_doesnt_send_None(self):
         self.statsd.histogram('metric', None)
         assert self.recv() is None
-
-
-if __name__ == '__main__':
-    statsd = statsd
-    while True:
-        statsd.gauge('test.gauge', 1)
-        statsd.increment('test.count', 2)
-        time.sleep(0.05)

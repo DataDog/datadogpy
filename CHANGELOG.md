@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# 0.15.0 / Unreleased
+* [IMPROVEMENT] DogStatsD: Better exceptions on system default route resolution failures [#166][], [#156][]
+
+
 # 0.14.0 / 2016-09-22
 
 **Logging**
@@ -194,7 +198,9 @@ See [#8][], thanks [@benweatherman][]
 [#152]: https://github.com/DataDog/datadogpy/issues/152
 [#154]: https://github.com/DataDog/datadogpy/issues/154
 [#155]: https://github.com/DataDog/datadogpy/issues/155
+[#156]: https://github.com/DataDog/datadogpy/issues/156
 [#161]: https://github.com/DataDog/datadogpy/issues/161
+[#166]: https://github.com/DataDog/datadogpy/issues/166
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
 [@aristiden7o]: https://github.com/aristiden7o

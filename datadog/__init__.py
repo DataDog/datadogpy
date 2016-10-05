@@ -72,15 +72,12 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
     api._api_host = api_host if api_host is not None else \
         os.environ.get('DATADOG_HOST', 'https://app.datadoghq.com')
 
-    # Statsd configuration -overrides default statsd instance attributes-
-    if statsd_host:
-        statsd.host = statsd_host
-
+    # Statsd configuration
+    # ...overrides the default `statsd` instance attributes
+    if statsd_host or statsd_use_default_route:
+        statsd.host = statsd.resolve_host(statsd_host, statsd_use_default_route)
     if statsd_port:
         statsd.port = int(statsd_port)
-
-    if statsd_use_default_route:
-        statsd.use_default_route = statsd_use_default_route
 
     # HTTP client and API options
     for key, value in iteritems(kwargs):

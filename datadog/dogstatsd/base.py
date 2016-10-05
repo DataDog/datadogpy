@@ -7,15 +7,14 @@ from random import random
 import logging
 import os
 import socket
-import struct
 
 # datadog
 from datadog.dogstatsd.context import TimedContextManagerDecorator
-from datadog.util.compat import imap
-
-# datadog
-from datadog.util.compat import text
-
+from datadog.dogstatsd.route import get_default_route
+from datadog.util.compat import (
+    imap,
+    text,
+)
 
 # Logging
 log = logging.getLogger('datadog.dogstatsd')
@@ -53,26 +52,28 @@ class DogStatsd(object):
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by dogstatsd client
         :type constant_tags: list of strings
 
-        :param use_default_route: Dynamically set the statsd host to the default route
-        (Useful when running the client in a container)
+        :param use_default_route: Dynamically set the DogStatsd host to the default route
+        (Useful when running the client in a container) (Linux only)
         :type use_default_route: boolean
 
         """
-        self.host = host
+        # Connection
+        self.host = self.resolve_host(host, use_default_route)
         self.port = int(port)
+
+        # Socket
         self.socket = None
         self.max_buffer_size = max_buffer_size
         self._send = self._send_to_server
         self.encoding = 'utf-8'
+
+        # Options
         env_tags = [tag for tag in os.environ.get('DATADOG_TAGS', '').split(',') if tag]
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
         self.namespace = namespace
         self.use_ms = use_ms
-        self.use_default_route = use_default_route
-        if self.use_default_route:
-            self.host = self._get_default_route()
 
     def __enter__(self):
         self.open_buffer(self.max_buffer_size)
@@ -81,17 +82,20 @@ class DogStatsd(object):
     def __exit__(self, type, value, traceback):
         self.close_buffer()
 
-    def _get_default_route(self):
-        try:
-            with open('/proc/net/route') as f:
-                for line in f.readlines():
-                    fields = line.strip().split()
-                    if fields[1] == '00000000':
-                        return socket.inet_ntoa(struct.pack('<L', int(fields[2], 16)))
-        except IOError as e:
-            log.error('Unable to open /proc/net/route: %s', e)
+    @staticmethod
+    def resolve_host(host, use_default_route):
+        """
+        Resolve the DogStatsd host.
 
-        return None
+        Args:
+            host (string): host
+            use_default_route (bool): use the system default route as host
+                (overrides the `host` parameter)
+        """
+        if not use_default_route:
+            return host
+
+        return get_default_route()
 
     def get_socket(self):
         """
@@ -101,12 +105,10 @@ class DogStatsd(object):
         avoid bad thread race conditions.
         """
         if not self.socket:
-            if self.use_default_route:
-                self.host = self._get_default_route()
-
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.connect((self.host, self.port))
             self.socket = sock
+
         return self.socket
 
     def open_buffer(self, max_buffer_size=50):

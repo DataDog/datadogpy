@@ -4,11 +4,15 @@ import time
 
 # datadog
 from datadog.api import _api_version, _max_timeouts, _backoff_period
-from datadog.api.exceptions import ClientError, ApiError, HttpBackoff, \
-    HttpTimeout, ApiNotInitialized
+from datadog.api.exceptions import (
+    ClientError,
+    ApiError,
+    HttpBackoff,
+    HttpTimeout,
+    ApiNotInitialized
+)
 from datadog.api.http_client import resolve_http_client
 from datadog.util.compat import json, is_p3k
-
 
 log = logging.getLogger('datadog.api')
 
