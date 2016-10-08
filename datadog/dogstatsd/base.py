@@ -216,6 +216,14 @@ class DogStatsd(object):
         """
         self._report(metric, 's', value, tags, sample_rate)
 
+    def close_socket(self):
+        """
+        Closes connected socket if connected.
+        """
+        if self.socket:
+            self.socket.close()
+            self.socket = None
+
     def _report(self, metric, metric_type, value, tags, sample_rate):
         """
         Create a metric packet and send it.
@@ -260,13 +268,13 @@ class DogStatsd(object):
         except socket.error:
             log.info("Error submitting packet, will try refreshing the socket")
 
-            if self.socket:
-                self.socket.close()
-                self.socket = None
+            self.close_socket()
 
             try:
                 self.get_socket().send(packet.encode(self.encoding))
             except socket.error:
+                self.close_socket()
+
                 log.exception("Failed to send packet with a newly binded socket")
 
     def _send_to_buffer(self, packet):
