@@ -40,8 +40,8 @@ class DogStatsd(object):
         if sending metrics in batch
         :type max_buffer_size: integer
 
-        :param namepace: Namespace to prefix all metric names
-        :type namepace: string
+        :param namespace: Namespace to prefix all metric names
+        :type namespace: string
 
         :param constant_tags: Tags to attach to all metrics
         :type constant_tags: list of strings
@@ -259,7 +259,11 @@ class DogStatsd(object):
             (self.socket or self.get_socket()).send(packet.encode(self.encoding))
         except socket.error:
             log.info("Error submitting packet, will try refreshing the socket")
-            self.socket = None
+
+            if self.socket:
+                self.socket.close()
+                self.socket = None
+
             try:
                 self.get_socket().send(packet.encode(self.encoding))
             except socket.error:
