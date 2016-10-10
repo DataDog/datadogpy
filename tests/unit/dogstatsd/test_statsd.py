@@ -44,6 +44,9 @@ class FakeSocket(object):
         except IndexError:
             return None
 
+    def close(self):
+        pass
+
     def __repr__(self):
         return str(self.payloads)
 
