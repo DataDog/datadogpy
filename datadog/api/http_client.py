@@ -120,7 +120,10 @@ class URLFetchClient(HTTPClient):
                 headers=headers,
                 validate_certificate=validate_certificate,
                 deadline=timeout,
-                payload=data
+                payload=data,
+                # setting follow_redirects=False may be slightly faster:
+                # https://cloud.google.com/appengine/docs/python/microservice-performance#use_the_shortest_route
+                follow_redirects=False
             )
 
             cls.raise_on_status(result)
