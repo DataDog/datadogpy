@@ -177,6 +177,15 @@ class APIClient(object):
                     return error_formatter(e.args[0])
             else:
                 raise
+        except ValueError as e:
+            if _mute:
+                log.error(str(e))
+                if error_formatter is None:
+                    return {'errors': e.args[0]}
+                else:
+                    return error_formatter({'errors': e.args[0]})
+            else:
+                raise
 
     @classmethod
     def _should_submit(cls):
