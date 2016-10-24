@@ -10,7 +10,7 @@ _cacert = True
 
 # HTTP(S) settings
 _proxies = None
-_timeout = 3
+_timeout = 60
 _max_timeouts = 3
 _max_retries = 3
 _backoff_period = 300
