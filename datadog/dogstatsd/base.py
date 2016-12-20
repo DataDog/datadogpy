@@ -275,7 +275,7 @@ class DogStatsd(object):
             except socket.error:
                 self.close_socket()
 
-                log.exception("Failed to send packet with a newly binded socket")
+                log.exception("Failed to send packet with a newly bound socket")
 
     def _send_to_buffer(self, packet):
         self.buffer.append(packet)
