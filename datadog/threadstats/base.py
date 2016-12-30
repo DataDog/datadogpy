@@ -127,6 +127,7 @@ class ThreadStats(object):
               tags=None, hostname=None):
         """
         Send an event. Attributes are the same as the Event API. (http://docs.datadoghq.com/api/)
+
         >>> stats.event('Man down!', 'This server needs assistance.')
         >>> stats.event('The web server restarted', \
             'The web server is up again', alert_type='success')
@@ -147,7 +148,7 @@ class ThreadStats(object):
 
     def gauge(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
         """
-        Record the current ``value`` of a metric. They most recent value in
+        Record the current ``value`` of a metric. The most recent value in
         a given flush interval will be recorded. Optionally, specify a set of
         tags to associate with the metric. This should be used for sum values
         such as total hard disk space, process uptime, total number of active
