@@ -7,7 +7,7 @@ from datadog.api.exceptions import ApiError
 from datadog.api.resources import SearchableAPIResource, SendableAPIResource
 
 
-class Metadata(SearchableAPIResource, SendableAPIResource):
+class Metadata(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource):
     """
     A wrapper around Metric Metadata HTTP API
     """
@@ -26,7 +26,7 @@ class Metadata(SearchableAPIResource, SendableAPIResource):
         if not metric_name:
             raise KeyError("'metric_name' parameter is required")
 
-        return super(Metadata, cls)._trigger_action('GET', 'metrics', metric_name)
+        return super(Metadata, cls).get(metric_name, metric_name)
 
     @classmethod
     def update(cls, metric_name, **params):
