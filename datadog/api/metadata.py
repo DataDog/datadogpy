@@ -4,10 +4,11 @@ from numbers import Number
 
 # datadog
 from datadog.api.exceptions import ApiError
-from datadog.api.resources import SearchableAPIResource, SendableAPIResource
+from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
+    UpdatableAPIResource, ActionAPIResource
 
 
-class Metadata(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource):
+class Metadata(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource, ActionAPIResource):
     """
     A wrapper around Metric Metadata HTTP API
     """
@@ -26,7 +27,7 @@ class Metadata(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource):
         if not metric_name:
             raise KeyError("'metric_name' parameter is required")
 
-        return super(Metadata, cls).get(metric_name, metric_name)
+        return super(Metadata, cls).get(metric_name)
 
     @classmethod
     def update(cls, metric_name, **params):
