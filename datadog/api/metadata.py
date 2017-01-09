@@ -33,9 +33,9 @@ class Metadata(SearchableAPIResource, SendableAPIResource):
         """
         Query metrics from Datadog
 
-        :param metric_type: type of metric (ex. "gauge", "rate", etc.)
+        :param type: type of metric (ex. "gauge", "rate", etc.)
                             see http://docs.datadoghq.com/metrictypes/
-        :type metric_type: string
+        :type type: string
 
         :param description: description of the metric
         :type description: string
@@ -51,8 +51,8 @@ class Metadata(SearchableAPIResource, SendableAPIResource):
                          see http://docs.datadoghq.com/units/ for full list
         :type per_unit: string
 
-        :param interval: interval for metric (in seconds)
-        :type interval: integer
+        :param statsd_interval: statsd flush interval for metric in seconds (if applicable)
+        :type statsd_interval: integer
 
         :return: JSON response from HTTP request
 
