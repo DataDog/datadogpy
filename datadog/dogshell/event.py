@@ -34,6 +34,7 @@ def prettyprint_event_details(event):
 def print_event_details(event):
     prettyprint_event(event)
 
+
 time_pat = re.compile(r'(?P<delta>[0-9]*\.?[0-9]+)(?P<unit>[mhd])')
 
 

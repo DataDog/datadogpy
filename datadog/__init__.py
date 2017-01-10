@@ -9,6 +9,16 @@ without hindering performance.
 """
 # stdlib
 import logging
+# workaround
+try:
+    from logging import NullHandler
+except ImportError:
+    from logging import Handler
+
+    class NullHandler(Handler):
+        def emit(self, record):
+            pass
+
 import os
 import os.path
 
@@ -24,9 +34,9 @@ from datadog.util.hostname import get_hostname
 __version__ = get_version()
 
 # Loggers
-logging.getLogger('datadog.api').addHandler(logging.NullHandler())
-logging.getLogger('datadog.dogstatsd').addHandler(logging.NullHandler())
-logging.getLogger('datadog.threadstats').addHandler(logging.NullHandler())
+logging.getLogger('datadog.api').addHandler(NullHandler())
+logging.getLogger('datadog.dogstatsd').addHandler(NullHandler())
+logging.getLogger('datadog.threadstats').addHandler(NullHandler())
 
 
 def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
