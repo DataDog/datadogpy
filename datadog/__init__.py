@@ -9,15 +9,6 @@ without hindering performance.
 """
 # stdlib
 import logging
-#workaround
-try:
-    from logging import NullHandler
-except ImportError:
-    from logging import Handler
-
-    class NullHandler(Handler):
-        def emit(self, record):
-            pass
 
 import os
 import os.path
@@ -26,7 +17,7 @@ import os.path
 from datadog import api
 from datadog.dogstatsd import DogStatsd, statsd  # noqa
 from datadog.threadstats import ThreadStats  # noqa
-from datadog.util.compat import iteritems
+from datadog.util.compat import iteritems, NullHandler
 from datadog.util.config import get_version
 from datadog.util.hostname import get_hostname
 
