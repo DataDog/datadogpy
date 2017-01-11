@@ -16,7 +16,7 @@ if [sys.version_info[0], sys.version_info[1]] < [2, 7]:
 
 setup(
     name="python26datadog",
-    version="0.15.0",
+    version="0.16.0",
     install_requires=install_reqs,
     tests_require=["tox", "nose", "mock", "six", "pillow"],
     packages=[
