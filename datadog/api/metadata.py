@@ -1,9 +1,4 @@
-# stdlib
-import time
-from numbers import Number
-
 # datadog
-from datadog.api.exceptions import ApiError
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
     UpdatableAPIResource, ActionAPIResource
 
