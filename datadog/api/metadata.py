@@ -32,7 +32,9 @@ class Metadata(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource, 
     @classmethod
     def update(cls, metric_name, **params):
         """
-        Query metrics from Datadog
+        Update metadata fields for an existing Datadog metric.
+        If the metadata does not exist for the metric it is created by
+        the update.
 
         :param type: type of metric (ex. "gauge", "rate", etc.)
                             see http://docs.datadoghq.com/metrictypes/
@@ -62,4 +64,4 @@ class Metadata(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource, 
         if not metric_name:
             raise KeyError("'metric_name' parameter is required")
 
-        return super(Metadata, cls)._trigger_class_action('PUT', 'metrics', metric_name, **params)
+        return super(Metadata, cls).update(id=metric_name, **params)
