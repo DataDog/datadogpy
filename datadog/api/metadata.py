@@ -1,9 +1,8 @@
 # datadog
-from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
-    UpdatableAPIResource, ActionAPIResource
+from datadog.api.resources import GetableAPIResource, UpdatableAPIResource
 
 
-class Metadata(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource, ActionAPIResource):
+class Metadata(GetableAPIResource, UpdatableAPIResource):
     """
     A wrapper around Metric Metadata HTTP API
     """
