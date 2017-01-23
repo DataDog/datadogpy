@@ -100,3 +100,13 @@ try:
     import simplejson as json
 except ImportError:
     import json
+
+#Python 2.6.x
+try:
+    from logging import NullHandler
+except ImportError:
+    from logging import Handler
+
+    class NullHandler(Handler):
+        def emit(self, record):
+            pass
