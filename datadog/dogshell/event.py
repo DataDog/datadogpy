@@ -10,6 +10,9 @@ from datadog.dogshell.common import report_errors, report_warnings
 from datadog.util.compat import json
 
 
+time_pat = re.compile(r'(?P<delta>[0-9]*\.?[0-9]+)(?P<unit>[mhd])')
+
+
 def prettyprint_event(event):
     title = event['title'] or ''
     text = event.get('text', '') or ''
@@ -34,8 +37,6 @@ def prettyprint_event_details(event):
 def print_event_details(event):
     prettyprint_event(event)
 
-time_pat = re.compile(r'(?P<delta>[0-9]*\.?[0-9]+)(?P<unit>[mhd])')
-
 
 def parse_time(timestring):
     now = time.mktime(datetime.datetime.now().timetuple())
@@ -44,7 +45,7 @@ def parse_time(timestring):
     else:
         try:
             t = int(timestring)
-        except:
+        except Exception:
             match = time_pat.match(timestring)
             if match is None:
                 raise Exception
