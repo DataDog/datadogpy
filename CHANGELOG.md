@@ -2,8 +2,11 @@ CHANGELOG
 =========
 
 # 0.15.0 / Unreleased
+* [FEATURE] API: Add metric metadata endpoints [#181][]
+* [IMPROVEMENT] API: Disable redirection following with `urlfetch` HTTP library [#168][] (thanks [@evanj][])
+* [IMPROVEMENT] API: Increase default timeout from 3 to 60 seconds [#174][] (thanks [@ojongerius][])
 * [IMPROVEMENT] DogStatsD: Better exceptions on system default route resolution failures [#166][], [#156][]
-
+* [IMPROVEMENT] DogStatsD: Close sockets when freed [#167][] (thanks [@thehesiod][])
 
 # 0.14.0 / 2016-09-22
 
@@ -201,6 +204,15 @@ See [#8][], thanks [@benweatherman][]
 [#156]: https://github.com/DataDog/datadogpy/issues/156
 [#161]: https://github.com/DataDog/datadogpy/issues/161
 [#166]: https://github.com/DataDog/datadogpy/issues/166
+[#167]: https://github.com/DataDog/datadogpy/issues/167
+[#168]: https://github.com/DataDog/datadogpy/issues/168
+[#174]: https://github.com/DataDog/datadogpy/issues/174
+[#175]: https://github.com/DataDog/datadogpy/issues/175
+[#176]: https://github.com/DataDog/datadogpy/issues/176
+[#178]: https://github.com/DataDog/datadogpy/issues/178
+[#181]: https://github.com/DataDog/datadogpy/issues/181
+[#184]: https://github.com/DataDog/datadogpy/issues/184
+[#185]: https://github.com/DataDog/datadogpy/issues/185
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
 [@aristiden7o]: https://github.com/aristiden7o
@@ -209,6 +221,7 @@ See [#8][], thanks [@benweatherman][]
 [@dcrosta]: https://github.com/dcrosta
 [@drstevens]: https://github.com/drstevens
 [@emad]: https://github.com/emad
+[@evanj]: https://github.com/evanj
 [@ewdurbin]: https://github.com/ewdurbin
 [@g--]: https://github.com/g--
 [@gnarf]: https://github.com/gnarf
@@ -219,6 +232,7 @@ See [#8][], thanks [@benweatherman][]
 [@mgood]: https://github.com/mgood
 [@miketheman]: https://github.com/miketheman
 [@ogst]: https://github.com/ogst
+[@ojongerius]: https://github.com/ojongerius
 [@ross]: https://github.com/ross
 [@steven-liu]: https://github.com/steven-liu
 [@thehesiod]: https://github.com/thehesiod
