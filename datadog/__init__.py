@@ -9,7 +9,6 @@ without hindering performance.
 """
 # stdlib
 import logging
-
 import os
 import os.path
 
