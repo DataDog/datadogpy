@@ -66,26 +66,6 @@ class TestInitialization(DatadogAPINoInitialization):
         MyCreatable.create()
         self.assertEquals(self.request_mock.request.call_count, 1)
 
-    @mock.patch('datadog.util.config.get_config_path')
-    def test_get_hostname(self, mock_config_path):
-        """
-        API hostname parameter fallback with Datadog Agent hostname when available.
-        """
-        # Generate a fake agent config
-        tmpfilepath = os.path.join(tempfile.gettempdir(), "tmp-agentconfig")
-        with open(tmpfilepath, "wb") as f:
-            if is_p3k():
-                f.write(bytes("[Main]\n", 'UTF-8'))
-                f.write(bytes("hostname: {0}\n".format(HOST_NAME), 'UTF-8'))
-            else:
-                f.write("[Main]\n")
-                f.write("hostname: {0}\n".format(HOST_NAME))
-        # Mock get_config_path to return this fake agent config
-        mock_config_path.return_value = tmpfilepath
-
-        initialize()
-        self.assertEquals(api._host_name, HOST_NAME, api._host_name)
-
     def test_request_parameters(self):
         """
         API parameters are set with `initialize` method.

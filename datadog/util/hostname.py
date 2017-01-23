@@ -7,7 +7,7 @@ import types
 
 # datadog
 from datadog.util.compat import url_lib, is_p3k, iteritems, json
-from datadog.util.config import get_config, get_os, CfgNotFound
+from datadog.util.config import get_os
 
 VALID_HOSTNAME_RFC_1123_PATTERN = re.compile(r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$")  # noqa
 MAX_HOSTNAME_LEN = 255
@@ -41,22 +41,12 @@ def get_hostname():
 
     Tries, in order:
 
-      * agent config (datadog.conf, "hostname:")
       * 'hostname -f' (on unix)
       * socket.gethostname()
     """
 
     hostname = None
     config = None
-
-    # first, try the config
-    try:
-        config = get_config()
-        config_hostname = config.get('hostname')
-        if config_hostname and is_valid_hostname(config_hostname):
-            return config_hostname
-    except CfgNotFound:
-        log.info("No agent or invalid configuration file found")
 
     # Try to get GCE instance name
     if hostname is None:

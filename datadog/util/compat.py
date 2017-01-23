@@ -33,7 +33,6 @@ get_input = input
 
 # Python 3.x
 if is_p3k():
-    from io import StringIO
     import builtins
     import configparser
     import urllib.request as url_lib, urllib.error, urllib.parse
@@ -51,7 +50,6 @@ if is_p3k():
 # Python 2.x
 else:
     import __builtin__ as builtins
-    from cStringIO import StringIO
     from itertools import imap
     import ConfigParser as configparser
     import urllib2 as url_lib
