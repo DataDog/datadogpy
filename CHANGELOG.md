@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.15.0 / Unreleased
+# 0.15.0 / 2017-01-24
 * [FEATURE] API: Add metric metadata endpoints [#181][]
 * [IMPROVEMENT] API: Disable redirection following with `urlfetch` HTTP library [#168][] (thanks [@evanj][])
 * [IMPROVEMENT] API: Increase default timeout from 3 to 60 seconds [#174][] (thanks [@ojongerius][])
