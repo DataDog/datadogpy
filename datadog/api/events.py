@@ -24,6 +24,9 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, De
         :param text: event message
         :type text: string
 
+        :param aggregation_key: key by which to group events in event stream
+        :type aggregation_key: string
+
         :param alert_type: "error", "warning", "info" or "success".
         :type alert_type: string
 
