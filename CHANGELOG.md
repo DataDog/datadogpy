@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.16.0 / Unreleased
+# 0.16.0 / 2017-04-26
 * [FEATURE] Dogshell: Add filtering options to the `monitor show_all` command, [#194][]
 
 # 0.15.0 / 2017-01-24
