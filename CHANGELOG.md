@@ -1,6 +1,9 @@
 CHANGELOG
 =========
 
+# 0.16.0 / Unreleased
+* [FEATURE] Dogshell: Add filtering options to the `monitor show_all` command, [#194][]
+
 # 0.15.0 / 2017-01-24
 * [FEATURE] API: Add metric metadata endpoints [#181][]
 * [IMPROVEMENT] API: Disable redirection following with `urlfetch` HTTP library [#168][] (thanks [@evanj][])
@@ -213,6 +216,7 @@ See [#8][], thanks [@benweatherman][]
 [#181]: https://github.com/DataDog/datadogpy/issues/181
 [#184]: https://github.com/DataDog/datadogpy/issues/184
 [#185]: https://github.com/DataDog/datadogpy/issues/185
+[#194]: https://github.com/DataDog/datadogpy/issues/194
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
 [@aristiden7o]: https://github.com/aristiden7o
