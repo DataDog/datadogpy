@@ -38,13 +38,21 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
         :type group_states: string list, strings are chosen from one or more \
         from 'all', 'alert', 'warn', or 'no data'
 
+        :param name: name to filter the list of monitors by
+        :type name: string
+
         :param tags: tags to filter the list of monitors by scope
         :type tags: string list
 
+        :param monitor_tags: list indicating what service and/or custom tags, if any, \
+        should be used to filter the list of monitors
+        :type monitor_tags: string list
+
         :returns: JSON response from HTTP request
         """
-        if 'group_states' in params and isinstance(params['group_states'], list):
-            params['group_states'] = ','.join(params['group_states'])
+        for p in ['group_states', 'tags', 'monitor_tags']:
+            if p in params and isinstance(params[p], list):
+                params[p] = ','.join(params[p])
 
         return super(Monitor, cls).get_all(**params)
 

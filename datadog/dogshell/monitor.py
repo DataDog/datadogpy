@@ -45,6 +45,20 @@ class MonitorClient(object):
         show_parser.set_defaults(func=cls._show)
 
         show_all_parser = verb_parsers.add_parser('show_all', help="Show a list of all monitors")
+        show_all_parser.add_argument(
+            '--group_states', help="comma separated list of group states to filter by"
+            "(choose one or more from 'all', 'alert', 'warn', or 'no data')"
+        )
+        show_all_parser.add_argument('--name', help="string to filter monitors by name")
+        show_all_parser.add_argument(
+            '--tags', help="comma separated list indicating what tags, if any, "
+            "should be used to filter the list of monitors by scope (e.g. 'host:host0')"
+        )
+        show_all_parser.add_argument(
+            '--monitor_tags', help="comma separated list indicating what service "
+            "and/or custom tags, if any, should be used to filter the list of monitors"
+        )
+
         show_all_parser.set_defaults(func=cls._show_all)
 
         delete_parser = verb_parsers.add_parser('delete', help="Delete a monitor")
@@ -133,7 +147,11 @@ class MonitorClient(object):
     def _show_all(cls, args):
         api._timeout = args.timeout
         format = args.format
-        res = api.Monitor.get_all()
+
+        res = api.Monitor.get_all(
+            group_states=args.group_states, name=args.name,
+            tags=args.tags, monitor_tags=args.monitor_tags
+        )
         report_warnings(res)
         report_errors(res)
 
