@@ -22,7 +22,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
         :type group_states: string list, strings are chosen from one or more \
         from 'all', 'alert', 'warn', or 'no data'
 
-        :returns: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
         """
         if 'group_states' in params and isinstance(params['group_states'], list):
             params['group_states'] = ','.join(params['group_states'])
@@ -48,7 +48,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
         should be used to filter the list of monitors
         :type monitor_tags: string list
 
-        :returns: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
         """
         for p in ['group_states', 'tags', 'monitor_tags']:
             if p in params and isinstance(params[p], list):
@@ -68,7 +68,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
         :type end: POSIX timestamp
 
 
-        :returns: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
         """
         return super(Monitor, cls)._trigger_class_action('POST', 'mute', id, **params)
 
@@ -83,7 +83,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
         :param all_scopes: if True, clears mute settings for all scopes
         :type all_scopes: boolean
 
-        :returns: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
         """
         return super(Monitor, cls)._trigger_class_action('POST', 'unmute', id, **params)
 
@@ -92,7 +92,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
         """
         Globally mute monitors.
 
-        :returns: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
         """
         return super(Monitor, cls)._trigger_class_action('POST', 'mute_all')
 
@@ -101,6 +101,6 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
         """
         Cancel global monitor mute setting (does not remove mute settings for individual monitors).
 
-        :returns: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
         """
         return super(Monitor, cls)._trigger_class_action('POST', 'unmute_all')

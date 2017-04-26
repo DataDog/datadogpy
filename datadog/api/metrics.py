@@ -84,7 +84,7 @@ class Metric(SearchableAPIResource, SendableAPIResource):
         :param type: type of the metric
         :type type: 'gauge' or 'counter' string
 
-        :returns: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
         """
         def rename_metric_type(metric):
             """
@@ -133,7 +133,7 @@ class Metric(SearchableAPIResource, SendableAPIResource):
         :param query: metric query
         :type query: string query
 
-        :return: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
 
         *start* and *end* should be less than 24 hours apart.
         It is *not* meant to retrieve metric data in bulk.

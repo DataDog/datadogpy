@@ -30,7 +30,7 @@ class ServiceCheck(ActionAPIResource):
         :param tags: list of tags for this check
         :type tags: string list
 
-        :returns: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
         """
         if 'status' in params and params['status'] not in CheckStatus.ALL:
             raise ApiError('Invalid status, expected one of: %s'

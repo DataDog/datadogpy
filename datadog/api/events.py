@@ -53,7 +53,7 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, De
         :param device_name: device_name to post the event with
         :type device_name: list of strings
 
-        :return: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
 
         >>> title = "Something big happened!"
         >>> text = 'And let me tell you all about it here!'
@@ -73,7 +73,7 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, De
         See the `event API documentation <http://docs.datadoghq.com/api/#events-get-all>`_ for the
         event data format.
 
-        :return: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
 
         >>> api.Event.query(start=1313769783, end=1419436870, priority="normal", \
             tags=["application:web"])
