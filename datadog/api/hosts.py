@@ -25,7 +25,7 @@ class Host(ActionAPIResource):
         :param message: message to associate with the muting of this host
         :type message: string
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
 
         """
         return super(Host, cls)._trigger_class_action('POST', 'mute', host_name, **params)
@@ -38,7 +38,7 @@ class Host(ActionAPIResource):
         :param host_name: hostname
         :type host_name: string
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
 
         """
         return super(Host, cls)._trigger_class_action('POST', 'unmute', host_name)

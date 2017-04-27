@@ -30,7 +30,7 @@ class Graph(CreateableAPIResource, ActionAPIResource):
         :param event_query: a query that will add event bands to the graph
         :type event_query: string query
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
         """
         return super(Graph, cls).create(method='GET', **params)
 
@@ -43,7 +43,7 @@ class Graph(CreateableAPIResource, ActionAPIResource):
         :param snapshot_url: snapshot URL to check
         :type snapshot_url: string url
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
         """
         snap_path = urlparse(snapshot_url).path
         snap_path = snap_path.split('/snapshot/view/')[1].split('.png')[0]
@@ -66,7 +66,7 @@ class Embed(ListableAPIResource, GetableAPIResource, ActionAPIResource, Createab
         :param embed_id: embed token
         :type embed_id: string embed token
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
         """
         return super(Embed, cls)._trigger_class_action('GET', id=embed_id, name='enable')
 
@@ -78,6 +78,6 @@ class Embed(ListableAPIResource, GetableAPIResource, ActionAPIResource, Createab
         :param embed_id: embed token
         :type embed_id: string embed token
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
         """
         return super(Embed, cls)._trigger_class_action('GET', id=embed_id,  name='revoke')
