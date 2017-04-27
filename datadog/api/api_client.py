@@ -57,7 +57,7 @@ class APIClient(object):
         :param body: dictionary to be sent in the body of the request
         :type body: dictionary
 
-        :param response_formatter: function to format Dictionary representing the API's JSON response
+        :param response_formatter: function to format JSON response from HTTP API request
         :type response_formatter: JSON input function
 
         :param error_formatter: function to format JSON error response from HTTP API request
