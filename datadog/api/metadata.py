@@ -16,7 +16,7 @@ class Metadata(GetableAPIResource, UpdatableAPIResource):
 
         param metric_name: metric name (ex. system.cpu.idle)
 
-        :returns: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
         """
         if not metric_name:
             raise KeyError("'metric_name' parameter is required")
@@ -51,7 +51,7 @@ class Metadata(GetableAPIResource, UpdatableAPIResource):
         :param statsd_interval: statsd flush interval for metric in seconds (if applicable)
         :type statsd_interval: integer
 
-        :return: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
 
         >>> api.Metadata.update(metric_name='api.requests.served', metric_type="counter")
         """

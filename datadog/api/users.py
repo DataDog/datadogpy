@@ -25,7 +25,7 @@ class User(ActionAPIResource, GetableAPIResource, CreateableAPIResource,
         :param emails: emails adresses to invite to join datadog
         :type emails: string list
 
-        :returns: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
         """
         print("[DEPRECATION] User.invite() is deprecated. Use `create` instead.")
 

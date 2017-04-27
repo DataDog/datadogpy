@@ -22,7 +22,7 @@ class Tag(CreateableAPIResource, UpdatableAPIResource, GetableAPIResource,
         :param source: source of the tags
         :type source: string
 
-        :return: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
         """
         params = {}
         if 'source' in body:
@@ -40,7 +40,7 @@ class Tag(CreateableAPIResource, UpdatableAPIResource, GetableAPIResource,
         :param source: source of the tags
         :type source: string
 
-        :return: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
         """
         params = {}
         if 'source' in body:
