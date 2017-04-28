@@ -29,7 +29,7 @@ class CreateableAPIResource(object):
         :param body: new resource object attributes
         :type body: dictionary
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
         """
         if params is None:
             params = {}
@@ -61,7 +61,7 @@ class SendableAPIResource(object):
         :param body: new resource object attributes
         :type body: dictionary
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
         """
         if id is None:
             return APIClient.submit('POST', cls._class_url, body,
@@ -86,7 +86,7 @@ class UpdatableAPIResource(object):
         :param body: updated resource object attributes
         :type body: dictionary
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
         """
         if params is None:
             params = {}
@@ -105,7 +105,7 @@ class DeletableAPIResource(object):
         :param id: resource object to delete
         :type id: id
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
         """
         return APIClient.submit('DELETE', cls._class_url + "/" + str(id), **params)
 
@@ -125,7 +125,7 @@ class GetableAPIResource(object):
         :param params: parameters to filter API resource stream
         :type params: dictionary
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
         """
         return APIClient.submit('GET', cls._class_url + "/" + str(id), **params)
 
@@ -142,7 +142,7 @@ class ListableAPIResource(object):
         :param params: parameters to filter API resource stream
         :type params: dictionary
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
         """
         return APIClient.submit('GET', cls._class_url, **params)
 
@@ -159,7 +159,7 @@ class SearchableAPIResource(object):
         :param params: parameters to filter API resource stream
         :type params: dictionary
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
         """
         return APIClient.submit('GET', cls._class_url, **params)
 
@@ -185,7 +185,7 @@ class ActionAPIResource(object):
         :param params: action parameters
         :type params: dictionary
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
         """
         if id is None:
             return APIClient.submit(method, cls._class_url + "/" + name, params)
@@ -209,7 +209,7 @@ class ActionAPIResource(object):
         :param params: action parameters
         :type params: dictionary
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
         """
         if id is None:
             return APIClient.submit(method, name, params)

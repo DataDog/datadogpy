@@ -16,6 +16,6 @@ class Infrastructure(SearchableAPIResource):
         :param q: a query to serch for host and metrics
         :type q: string query
 
-        :returns: JSON response from HTTP API request
+        :returns: Dictionary representing the API's JSON response
         """
         return super(Infrastructure, cls)._search(**params)
