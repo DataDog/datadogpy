@@ -220,7 +220,7 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
 def main():
     parser = optparse.OptionParser(usage="%prog -n [event_name] -k [api_key] --submit_mode \
 [ all | errors ] [options] \"command\". \n\nNote that you need to enclose your command in \
-quotes to prevent python as soon as there is a space in your command. \n \nNOTICE: In normal \
+quotes to prevent python executing as soon as there is a space in your command. \n \nNOTICE: In normal \
 mode, the whole stderr is printed before stdout, in flush_live mode they will be mixed but there \
 is not guarantee that messages sent by the command on both stderr and stdout are printed in the \
 order they were sent.", version="%prog {0}".format(get_version()))
