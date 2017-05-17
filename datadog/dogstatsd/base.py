@@ -25,7 +25,7 @@ class DogStatsd(object):
 
     def __init__(self, host='localhost', port=8125, max_buffer_size=50, namespace=None,
                  constant_tags=None, use_ms=False, use_default_route=False,
-                 use_unix_socket=None):
+                 socket_path=None):
         """
         Initialize a DogStatsd object.
 
@@ -57,14 +57,14 @@ class DogStatsd(object):
         (Useful when running the client in a container) (Linux only)
         :type use_default_route: boolean
 
-        :param use_unix_socket: Communicate with dogstatsd through a UNIX socket instead of
+        :param socket_path: Communicate with dogstatsd through a UNIX socket instead of
         UDP. If set, disables UDP transmission (Linux only)
-        :type use_unix_socket: string
+        :type socket_path: string
         """
 
         # Connection
-        if use_unix_socket is not None:
-            self.socket_path = use_unix_socket
+        if socket_path is not None:
+            self.socket_path = socket_path
             self.host = None
             self.port = None
         else:
