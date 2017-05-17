@@ -282,6 +282,9 @@ class DogStatsd(object):
         try:
             # If set, use socket directly
             (self.socket or self.get_socket()).send(packet.encode(self.encoding))
+        except socket.timeout:
+            # dogstatsd is overflowing, drop the packets (mimicks the UDP behaviour)
+            return
         except socket.error:
             log.info("Error submitting packet, will try refreshing the socket")
 
