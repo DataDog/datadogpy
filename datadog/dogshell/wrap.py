@@ -313,8 +313,8 @@ returned (the command outputs remains buffered in dogwrap meanwhile)")
     }
 
     if options.buffer_outs:
-        print >> sys.stderr, stderr.strip()
-        print >> sys.stdout, stdout.strip()
+        print >> sys.stderr, stderr.strip().encode('utf8')
+        print >> sys.stdout, stdout.strip().encode('utf8')
 
     if options.submit_mode == 'all' or returncode != 0:
         api.Event.create(title=event_title, text=event_body, **event)
