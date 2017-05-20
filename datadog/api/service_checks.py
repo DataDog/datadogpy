@@ -32,8 +32,13 @@ class ServiceCheck(ActionAPIResource):
 
         :returns: Dictionary representing the API's JSON response
         """
-        if 'status' in params and params['status'] not in CheckStatus.ALL:
-            raise ApiError('Invalid status, expected one of: %s'
-                           % ', '.join(str(v) for v in CheckStatus.ALL))
+
+        # Validate checks, include only non-null values
+        for param, value in params.items():
+            if value is None:
+                del params[param]
+            elif param == 'status' and params[param] not in CheckStatus.ALL:
+                raise ApiError('Invalid status, expected one of: %s'
+                               % ', '.join(str(v) for v in CheckStatus.ALL))
 
         return super(ServiceCheck, cls)._trigger_action('POST', 'check_run', **params)
