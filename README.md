@@ -35,10 +35,11 @@ options = {
 
 initialize(**options)
 
+
 # Use Datadog REST API client
 from datadog import api
 
-title = "Something big happened!"
+title = 'Something big happened!'
 text = 'And let me tell you all about it here!'
 tags = ['version:1', 'application:web']
 
@@ -50,6 +51,7 @@ from datadog import statsd
 
 statsd.increment('whatever')
 statsd.gauge('foo', 42)
+
 
 # Or ThreadStats, an alternative tool to collect and flush metrics, using Datadog REST API
 from datadog import ThreadStats
