@@ -16,9 +16,9 @@ if [sys.version_info[0], sys.version_info[1]] < [2, 7]:
 
 setup(
     name="datadog",
-    version="0.14.0",
+    version="0.16.0",
     install_requires=install_reqs,
-    tests_require=["tox", "nose", "mock", "six", "pillow"],
+    tests_require=["nose", "mock"],
     packages=[
         'datadog',
         'datadog.api',
@@ -31,15 +31,15 @@ setup(
     author_email="dev@datadoghq.com",
     description="The Datadog Python library",
     license="BSD",
-    keywords="datadog data",
-    url="http://www.datadoghq.com",
+    keywords="datadog",
+    url="https://www.datadoghq.com",
     entry_points={
         'console_scripts': [
             'dog = datadog.dogshell:main',
             'dogwrap = datadog.dogshell.wrap:main',
         ],
     },
-    test_suite="nose.collector",
+    test_suite="tests",
     classifiers=[
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
@@ -47,6 +47,7 @@ setup(
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: Implementation :: PyPy"
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: Implementation :: PyPy",
     ]
 )

@@ -1,6 +1,5 @@
 # stdlib
 from collections import deque
-import six
 import threading
 import time
 import unittest
@@ -10,6 +9,7 @@ from mock import patch
 
 # datadog
 from datadog.dogstatsd.base import DogStatsd
+from datadog.util.compat import is_p3k
 
 
 class FakeSocket(object):
@@ -20,7 +20,11 @@ class FakeSocket(object):
         self.payloads = deque()
 
     def send(self, payload):
-        assert type(payload) == six.binary_type
+        if is_p3k():
+            assert type(payload) == bytes
+        else:
+            assert type(payload) == str
+
         self.payloads.append(payload)
 
     def recv(self):

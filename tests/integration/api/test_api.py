@@ -16,7 +16,7 @@ from nose.tools import assert_true as ok
 from datadog import initialize
 from datadog import api as dog
 from datadog.api.exceptions import ApiError
-from tests.util.snapshot_test_utils import (
+from tests.integration.util.snapshot_test_utils import (
     assert_snap_not_blank, assert_snap_has_no_events
 )
 

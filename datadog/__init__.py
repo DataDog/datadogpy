@@ -16,7 +16,7 @@ import os.path
 from datadog import api
 from datadog.dogstatsd import DogStatsd, statsd  # noqa
 from datadog.threadstats import ThreadStats  # noqa
-from datadog.util.compat import iteritems
+from datadog.util.compat import iteritems, NullHandler
 from datadog.util.config import get_version
 from datadog.util.hostname import get_hostname
 
@@ -24,9 +24,9 @@ from datadog.util.hostname import get_hostname
 __version__ = get_version()
 
 # Loggers
-logging.getLogger('datadog.api').addHandler(logging.NullHandler())
-logging.getLogger('datadog.dogstatsd').addHandler(logging.NullHandler())
-logging.getLogger('datadog.threadstats').addHandler(logging.NullHandler())
+logging.getLogger('datadog.api').addHandler(NullHandler())
+logging.getLogger('datadog.dogstatsd').addHandler(NullHandler())
+logging.getLogger('datadog.threadstats').addHandler(NullHandler())
 
 
 def initialize(api_key=None, app_key=None, host_name=None, api_host=None,

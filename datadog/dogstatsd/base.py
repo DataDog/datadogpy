@@ -40,8 +40,8 @@ class DogStatsd(object):
         if sending metrics in batch
         :type max_buffer_size: integer
 
-        :param namepace: Namespace to prefix all metric names
-        :type namepace: string
+        :param namespace: Namespace to prefix all metric names
+        :type namespace: string
 
         :param constant_tags: Tags to attach to all metrics
         :type constant_tags: list of strings
@@ -216,6 +216,14 @@ class DogStatsd(object):
         """
         self._report(metric, 's', value, tags, sample_rate)
 
+    def close_socket(self):
+        """
+        Closes connected socket if connected.
+        """
+        if self.socket:
+            self.socket.close()
+            self.socket = None
+
     def _report(self, metric, metric_type, value, tags, sample_rate):
         """
         Create a metric packet and send it.
@@ -259,11 +267,15 @@ class DogStatsd(object):
             (self.socket or self.get_socket()).send(packet.encode(self.encoding))
         except socket.error:
             log.info("Error submitting packet, will try refreshing the socket")
-            self.socket = None
+
+            self.close_socket()
+
             try:
                 self.get_socket().send(packet.encode(self.encoding))
             except socket.error:
-                log.exception("Failed to send packet with a newly binded socket")
+                self.close_socket()
+
+                log.exception("Failed to send packet with a newly bound socket")
 
     def _send_to_buffer(self, packet):
         self.buffer.append(packet)
@@ -317,7 +329,7 @@ class DogStatsd(object):
             string = '%s|#%s' % (string, ','.join(tags))
 
         if len(string) > 8 * 1024:
-            raise Exception(u'Event "%s" payload is too big (more that 8KB), '
+            raise Exception(u'Event "%s" payload is too big (more than 8KB), '
                             'event discarded' % title)
 
         self._send(string)

@@ -127,6 +127,7 @@ class ThreadStats(object):
               tags=None, hostname=None):
         """
         Send an event. Attributes are the same as the Event API. (http://docs.datadoghq.com/api/)
+
         >>> stats.event('Man down!', 'This server needs assistance.')
         >>> stats.event('The web server restarted', \
             'The web server is up again', alert_type='success')
@@ -147,7 +148,7 @@ class ThreadStats(object):
 
     def gauge(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
         """
-        Record the current ``value`` of a metric. They most recent value in
+        Record the current ``value`` of a metric. The most recent value in
         a given flush interval will be recorded. Optionally, specify a set of
         tags to associate with the metric. This should be used for sum values
         such as total hard disk space, process uptime, total number of active
@@ -188,9 +189,9 @@ class ThreadStats(object):
     def histogram(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
         """
         Sample a histogram value. Histograms will produce metrics that
-        describe the distribution of the recorded values, namely the minimum,
-        maximum, average, count and the 75th, 85th, 95th and 99th percentiles.
-        Optionally, specify a list of ``tags`` to associate with the metric.
+        describe the distribution of the recorded values, namely the maximum,
+        median, average, count and the 95th percentile. Optionally, specify
+        a list of ``tags`` to associate with the metric.
 
         >>> stats.histogram('uploaded_file.size', uploaded_file.size())
         """

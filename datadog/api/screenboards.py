@@ -20,7 +20,7 @@ class Screenboard(GetableAPIResource, CreateableAPIResource,
         :param board_id: screenboard to share
         :type board_id: id
 
-        :returns: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
         """
         return super(Screenboard, cls)._trigger_action('GET', 'screen/share', board_id)
 
@@ -32,6 +32,6 @@ class Screenboard(GetableAPIResource, CreateableAPIResource,
         :param board_id: screenboard to revoke
         :type board_id: id
 
-        :returns: JSON response from HTTP request
+        :returns: Dictionary representing the API's JSON response
         """
         return super(Screenboard, cls)._trigger_action('DELETE', 'screen/share', board_id)
