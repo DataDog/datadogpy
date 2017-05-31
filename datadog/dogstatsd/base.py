@@ -286,16 +286,8 @@ class DogStatsd(object):
             # dogstatsd is overflowing, drop the packets (mimicks the UDP behaviour)
             return
         except socket.error:
-            log.info("Error submitting packet, will try refreshing the socket")
-
+            log.info("Error submitting packet, dropping the packet and closing the socket")
             self.close_socket()
-
-            try:
-                self.get_socket().send(packet.encode(self.encoding))
-            except socket.error:
-                self.close_socket()
-
-                log.exception("Failed to send packet with a newly bound socket")
 
     def _send_to_buffer(self, packet):
         self.buffer.append(packet)
