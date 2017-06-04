@@ -1,5 +1,17 @@
-from setuptools import setup
 import sys
+from setuptools import setup
+try:
+    from pypandoc import convert
+except ImportError:
+    print('WARNING: Please, run `pip install pypandoc` to convert the README for PyPI.')
+
+    def convert(filename, fmt):
+        if sys.version_info[0] < 3:
+            with open(filename) as fd:
+                return fd.read()
+        else:
+            with open(filename, encoding="utf-8") as fd:
+                return fd.read()
 
 install_reqs = [
     "decorator>=3.3.2",
@@ -30,6 +42,7 @@ setup(
     author="Datadog, Inc.",
     author_email="dev@datadoghq.com",
     description="The Datadog Python library",
+    long_description=convert('README.md', 'rst'),
     license="BSD",
     keywords="datadog",
     url="https://www.datadoghq.com",
