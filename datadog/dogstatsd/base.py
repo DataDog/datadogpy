@@ -24,7 +24,8 @@ class DogStatsd(object):
     OK, WARNING, CRITICAL, UNKNOWN = (0, 1, 2, 3)
 
     def __init__(self, host='localhost', port=8125, max_buffer_size=50, namespace=None,
-                 constant_tags=None, use_ms=False, use_default_route=False):
+                 constant_tags=None, use_ms=False, use_default_route=False,
+                 socket_path=None):
         """
         Initialize a DogStatsd object.
 
@@ -56,10 +57,20 @@ class DogStatsd(object):
         (Useful when running the client in a container) (Linux only)
         :type use_default_route: boolean
 
+        :param socket_path: Communicate with dogstatsd through a UNIX socket instead of
+        UDP. If set, disables UDP transmission (Linux only)
+        :type socket_path: string
         """
+
         # Connection
-        self.host = self.resolve_host(host, use_default_route)
-        self.port = int(port)
+        if socket_path is not None:
+            self.socket_path = socket_path
+            self.host = None
+            self.port = None
+        else:
+            self.socket_path = None
+            self.host = self.resolve_host(host, use_default_route)
+            self.port = int(port)
 
         # Socket
         self.socket = None
@@ -105,9 +116,15 @@ class DogStatsd(object):
         avoid bad thread race conditions.
         """
         if not self.socket:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.connect((self.host, self.port))
-            self.socket = sock
+            if self.socket_path is not None:
+                sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+                sock.connect(self.socket_path)
+                sock.setblocking(0)
+                self.socket = sock
+            else:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.connect((self.host, self.port))
+                self.socket = sock
 
         return self.socket
 
@@ -265,17 +282,12 @@ class DogStatsd(object):
         try:
             # If set, use socket directly
             (self.socket or self.get_socket()).send(packet.encode(self.encoding))
+        except socket.timeout:
+            # dogstatsd is overflowing, drop the packets (mimicks the UDP behaviour)
+            return
         except socket.error:
-            log.info("Error submitting packet, will try refreshing the socket")
-
+            log.info("Error submitting packet, dropping the packet and closing the socket")
             self.close_socket()
-
-            try:
-                self.get_socket().send(packet.encode(self.encoding))
-            except socket.error:
-                self.close_socket()
-
-                log.exception("Failed to send packet with a newly bound socket")
 
     def _send_to_buffer(self, packet):
         self.buffer.append(packet)

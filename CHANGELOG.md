@@ -1,6 +1,9 @@
 CHANGELOG
 =========
 
+# 0.17.0 / unreleased
+* [FEATURE] DogStatsD: add socket_path option to enable unix socket traffic to dogstatsd6 [199][]
+
 # 0.16.0 / 2017-04-26
 * [FEATURE] Dogshell: Add filtering options to the `monitor show_all` command, [#194][]
 
