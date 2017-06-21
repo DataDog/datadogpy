@@ -141,6 +141,10 @@ class TestDogStatsd(object):
         self.statsd.histogram('histo', 123.4)
         t.assert_equal('histo:123.4|h', self.recv())
 
+    def test_distribution(self):
+        self.statsd.distribution('dist', 5.0)
+        t.assert_equal('dist:5.0|d', self.recv())
+
     def test_tagged_gauge(self):
         self.statsd.gauge('gt', 123.4, tags=['country:china', 'age:45', 'blue'])
         t.assert_equal('gt:123.4|g|#country:china,age:45,blue', self.recv())
@@ -152,6 +156,10 @@ class TestDogStatsd(object):
     def test_tagged_histogram(self):
         self.statsd.histogram('h', 1, tags=['red'])
         t.assert_equal('h:1|h|#red', self.recv())
+
+    def test_tagged_distribution(self):
+        self.statsd.distribution('d', 2.2, tags=['topic:a', 'algorithm'])
+        t.assert_equal('d:2.2|d|#topic:a,algorithm', self.recv())
 
     def test_sample_rate(self):
         self.statsd.increment('c', sample_rate=0)
@@ -564,4 +572,8 @@ class TestDogStatsd(object):
 
     def test_histogram_doesnt_send_None(self):
         self.statsd.histogram('metric', None)
+        assert self.recv() is None
+
+    def test_distribution_doesnt_send_None(self):
+        self.statsd.distribution('metric', None)
         assert self.recv() is None

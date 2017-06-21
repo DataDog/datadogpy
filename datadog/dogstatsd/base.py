@@ -189,6 +189,16 @@ class DogStatsd(object):
         """
         self._report(metric, 'h', value, tags, sample_rate)
 
+    def distribution(self, metric, value, tags=None, sample_rate=1):
+        """
+        Record the value of a distribution, optionally setting tags and a 
+        sample rate.
+
+        >>> statsd.distribution('query.duration', 1.5)
+        >>> statsd.distribution('store.fetch_time', 0.8, tags=["format:s3"])
+        """
+        self._report(metric, 'd', value, tags, sample_rate)
+
     def timing(self, metric, value, tags=None, sample_rate=1):
         """
         Record a timing, optionally setting tags and a sample rate.
