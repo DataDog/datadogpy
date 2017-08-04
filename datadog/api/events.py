@@ -48,7 +48,7 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, De
         :type tags: list of strings
 
         :param host: host to post the event with
-        :type host: list of strings
+        :type host: string
 
         :param device_name: device_name to post the event with
         :type device_name: list of strings
