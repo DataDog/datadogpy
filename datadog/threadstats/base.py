@@ -4,7 +4,7 @@ performance. It collects metrics in the application thread with very little over
 and allows flushing metrics in process, in a thread or in a greenlet, depending
 on your application's needs.
 """
-#stdlib
+# stdlib
 from contextlib import contextmanager
 from functools import wraps
 from time import time
