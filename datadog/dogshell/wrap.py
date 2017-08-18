@@ -16,6 +16,10 @@ And you can give the command a timeout too:
 
 dogwrap -n test-job -k $API_KEY --timeout=1 "sleep 3"
 
+And, if you need proxies:
+
+dogwrap -n test-job -k $API_KEY --proxy $PROXY "sleep 3"
+
 '''
 # stdlib
 import optparse
@@ -259,6 +263,8 @@ case of error.")
 returned (the command outputs remains buffered in dogwrap meanwhile)")
     parser.add_option('--tags', action='store', type='string', dest='tags', default='',
                       help="comma separated list of tags")
+    parser.add_option('--proxy', action='store', type='string', dest='proxy', default='',
+                      help="a proxy to go through for outbound requests")
 
     options, args = parser.parse_args()
 
@@ -273,7 +279,12 @@ returned (the command outputs remains buffered in dogwrap meanwhile)")
         options.sigterm_timeout, options.sigkill_timeout,
         options.proc_poll_interval, options.buffer_outs)
 
-    initialize(api_key=options.api_key)
+    proxies = {
+        'http': options.proxy,
+        'https': options.proxy,
+    }
+
+    initialize(api_key=options.api_key, proxies=proxies)
     host = api._host_name
 
     if returncode == 0:
