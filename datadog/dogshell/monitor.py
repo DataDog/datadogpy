@@ -1,10 +1,15 @@
+# stdlib
+import platform
+
 # 3p
-from datadog.util.format import pretty_json
+import argparse
 
 # datadog
 from datadog import api
-from datadog.dogshell.common import report_errors, report_warnings
+from datadog.dogshell.common import report_errors, report_warnings, print_err
 from datadog.util.compat import json
+from datadog.util.format import pretty_json
+from datetime import datetime
 
 
 class MonitorClient(object):
@@ -60,6 +65,18 @@ class MonitorClient(object):
         )
 
         show_all_parser.set_defaults(func=cls._show_all)
+
+        pull_parser = verb_parsers.add_parser('pull', help="Pull a monitor on the server"
+                                              " into a local file")
+        pull_parser.add_argument('monitor_id', help="ID of monitor to pull")
+        pull_parser.add_argument('filename', help="file to pull monitor into")
+        pull_parser.set_defaults(func=cls._pull)
+
+        push_parser = verb_parsers.add_parser('push', help="Push updates to monitors"
+                                              " from local files to the server")
+        push_parser.add_argument('file', help="monitor files to push to the server",
+                                 nargs='+', type=argparse.FileType('r'))
+        push_parser.set_defaults(func=cls._push)
 
         delete_parser = verb_parsers.add_parser('delete', help="Delete a monitor")
         delete_parser.add_argument('monitor_id', help="monitor to delete")
@@ -172,6 +189,59 @@ class MonitorClient(object):
                                  (str(d["org_id"])),
                                  (d["query"]),
                                  (d["type"])]))
+
+    @classmethod
+    def _pull(cls, args):
+        cls._write_monitor_to_file(
+            args.monitor_id, args.filename,
+            args.timeout, args.format)
+
+    @classmethod
+    def _push(cls, args):
+        api._timeout = args.timeout
+        for f in args.file:
+            try:
+                monitor_obj = json.load(f)
+            except Exception as err:
+                raise Exception("Could not parse {0}: {1}".format(f.name, err))
+
+            if 'id' in monitor_obj:
+                # Always convert to int, in case it was originally a string.
+                monitor_obj["id"] = int(monitor_obj["id"])
+                res = api.Monitor.update(**monitor_obj)
+            else:
+                res = api.Monitor.create(**monitor_obj)
+
+            if 'errors' in res:
+                print_err('Upload of monitor {0} from file {1} failed.'
+                          .format(monitor_obj["id"], f.name))
+
+            report_warnings(res)
+            report_errors(res)
+
+            if format == 'pretty':
+                print(pretty_json(res))
+            else:
+                print(json.dumps(res))
+
+            if args.format == 'pretty':
+                print("Uploaded file {0} (monitor {1})".format(f.name, monitor_obj["id"]))
+
+    @classmethod
+    def _write_monitor_to_file(cls, monitor_id, filename, timeout, format='raw'):
+        api._timeout = timeout
+        with open(filename, "w") as f:
+            res = api.Monitor.get(monitor_id)
+            report_warnings(res)
+            report_errors(res)
+            keys = ('id', 'message', 'query', 'options', 'type', 'tags', 'name')
+            monitor_obj = {k: v for k, v in res.items() if k in keys}
+            json.dump(monitor_obj, f, indent=2)
+
+            if format == 'pretty':
+                print("Downloaded monitor {0} to file {1}".format(monitor_id, filename))
+            else:
+                print("{0} {1}".format(monitor_id, filename))
 
     @classmethod
     def _delete(cls, args):
