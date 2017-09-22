@@ -79,7 +79,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
 
         try:
             seconds = int(from_epoch)
-            params={'from':seconds}
+            params = {'from': seconds}
         except ValueError:
             raise ApiError("Parameter 'from_epoch' must be an integer")
 
