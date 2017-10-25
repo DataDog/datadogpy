@@ -11,10 +11,7 @@ import socket
 # datadog
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.dogstatsd.route import get_default_route
-from datadog.util.compat import (
-    imap,
-    text,
-)
+from datadog.util.compat import text
 
 # Logging
 log = logging.getLogger('datadog.dogstatsd')
@@ -83,6 +80,8 @@ class DogStatsd(object):
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
+        if namespace is not None:
+            namespace = text(namespace)
         self.namespace = namespace
         self.use_ms = use_ms
 
@@ -253,8 +252,6 @@ class DogStatsd(object):
         if sample_rate != 1 and random() > sample_rate:
             return
 
-        payload = []
-
         # Resolve the full tag list
         if self.constant_tags:
             if tags:
@@ -263,20 +260,17 @@ class DogStatsd(object):
                 tags = self.constant_tags
 
         # Create/format the metric packet
-        if self.namespace:
-            payload.extend([self.namespace, "."])
-        payload.extend([metric, ":", value, "|", metric_type])
-
-        if sample_rate != 1:
-            payload.extend(["|@", sample_rate])
-
-        if tags:
-            payload.extend(["|#", ",".join(tags)])
-
-        encoded = "".join(imap(text, payload))
+        payload = "%s%s:%s|%s%s%s" % (
+            (self.namespace + ".") if self.namespace else "",
+            metric,
+            value,
+            metric_type,
+            ("|@" + text(sample_rate)) if sample_rate != 1 else "",
+            ("|#" + ",".join(tags)) if tags else "",
+        )
 
         # Send it
-        self._send(encoded)
+        self._send(payload)
 
     def _send_to_server(self, packet):
         try:
