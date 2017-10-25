@@ -1,5 +1,6 @@
 # stdlib
 from collections import deque
+from functools import reduce
 import threading
 import time
 import unittest
@@ -54,9 +55,9 @@ class TestDogStatsdThreadSafety(unittest.TestCase):
         count = len(values)
 
         # Split packet per metric (required when buffered) and discard empty packets
-        packets = map(lambda x: x.split("\n"), self.socket.recv())
+        packets = map(lambda x: x.split(b"\n"), self.socket.recv())
         packets = reduce(lambda prev, ele: prev + ele, packets, [])
-        packets = filter(lambda x: x, packets)
+        packets = list(filter(lambda x: x, packets))
 
         # Count
         self.assertEquals(
@@ -67,7 +68,7 @@ class TestDogStatsdThreadSafety(unittest.TestCase):
         )
         # Values
         for packet in packets:
-            metric_value = int(packet.split(':', 1)[1].split('|', 1)[0])
+            metric_value = int(packet.split(b':', 1)[1].split(b'|', 1)[0])
             self.assertIn(
                 metric_value, values,
                 u"Metric assertion failed: unexpected metric value {metric_value}".format(
@@ -255,7 +256,7 @@ class TestDogStatsdThreadSafety(unittest.TestCase):
             t.join()
 
         # All metrics were properly submitted
-        expected_values = [2 for _ in xrange(0, 10)]
+        expected_values = [2 for _ in range(0, 10)]
         self.assertMetrics(expected_values)
 
     @patch('datadog.dogstatsd.context.time')
@@ -302,5 +303,5 @@ class TestDogStatsdThreadSafety(unittest.TestCase):
             t.join()
 
         # All metrics were properly submitted
-        expected_values = [2 for _ in xrange(0, 10)]
+        expected_values = [2 for _ in range(0, 10)]
         self.assertMetrics(expected_values)
