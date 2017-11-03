@@ -1,8 +1,13 @@
 CHANGELOG
 =========
 
-# 0.17.0 / unreleased
-* [FEATURE] DogStatsD: add socket_path option to enable unix socket traffic to dogstatsd6 [199][]
+# 0.17.0 / Unreleased
+* [BUGFIX] API: Discard non-null parameters in `api.ServiceCheck.check`method, [#206][], [#207][] (thanks [@ronindesign][])
+* [BUGFIX] API: Update HTTP method from `GET` to `POST` for `api.Screenboard.share` method, [#234][] (thanks [@seiro-ogasawara][])
+* [BUGFIX] Dogwrap: Encode from unicode before writing to stdout, stderr, [#201][], [#203][] (thanks [@ronindesign][])
+* [FEATURE] API: Add `list` method to `Metric` resource, [#230][] (thanks [@jbain][])
+* [FEATURE] DogStatsD: Add `socket_path` option to enable Unix socket traffic to DogStatsD 6, [#199][]
+* [IMPROVEMENT] DogStatsD: Improve performances, speed up payload construction, [#233][] (thanks [@shargan][])
 
 # 0.16.0 / 2017-04-26
 * [FEATURE] Dogshell: Add filtering options to the `monitor show_all` command, [#194][]
@@ -42,7 +47,7 @@ logging.getLogger("datadog").addHandler(...)
 * [BUGFIX] Dogshell: Fix `UnicodeError` exceptions when a timeboard name contains non ascii characters, [#140][]
 * [BUGFIX] DogStatsD: Support unicode characters in tags, [#132][], [#152][]
 * [BUGFIX] ThreadStats: Fix `RuntimeError` exceptions on flush caused by an unsafe thread operation, [#143][], [#151][] (thanks [@leozc][])
-* [FEATURE] API: Add `delete` method for `Event` resource, [#145][]
+* [FEATURE] API: Add `delete` method to `Event` resource, [#145][]
 * [IMPROVEMENT] DogStatsD: Have `timed` context manager to return itself, [#147][] (thanks [@ross][])
 
 # 0.12.0 / 2016-05-27
@@ -51,7 +56,6 @@ logging.getLogger("datadog").addHandler(...)
 * [IMPROVEMENT] API: Enhance compatibility with Google App Engine, support `urlfetch` as a HTTP library [#106][]
 
 # 0.11.0 / 2016-03-14
-
 * [BUGFIX] Dogshell: Print usage when no argument is given on Python 3, [#123][]
 * [BUGFIX] DogStatsD: Do not modify metric-level `tags` parameters when `constant_tags` is set, [#94][] (thanks [@steven-liu][])
 * [BUGFIX] DogStatsD: Fix thread-safety of the `[@timed][]` decorator, [#126][] (thanks [@mgood][])
@@ -220,6 +224,14 @@ See [#8][], thanks [@benweatherman][]
 [#184]: https://github.com/DataDog/datadogpy/issues/184
 [#185]: https://github.com/DataDog/datadogpy/issues/185
 [#194]: https://github.com/DataDog/datadogpy/issues/194
+[#199]: https://github.com/DataDog/datadogpy/issues/199
+[#201]: https://github.com/DataDog/datadogpy/issues/201
+[#203]: https://github.com/DataDog/datadogpy/issues/203
+[#206]: https://github.com/DataDog/datadogpy/issues/206
+[#207]: https://github.com/DataDog/datadogpy/issues/207
+[#230]: https://github.com/DataDog/datadogpy/issues/230
+[#233]: https://github.com/DataDog/datadogpy/issues/233
+[#234]: https://github.com/DataDog/datadogpy/issues/234
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
 [@aristiden7o]: https://github.com/aristiden7o
@@ -232,6 +244,7 @@ See [#8][], thanks [@benweatherman][]
 [@ewdurbin]: https://github.com/ewdurbin
 [@g--]: https://github.com/g--
 [@gnarf]: https://github.com/gnarf
+[@jbain]: https://github.com/jbain
 [@jofusa]: https://github.com/jofusa
 [@kuzmich]: https://github.com/kuzmich
 [@leozc]: https://github.com/leozc
@@ -240,7 +253,10 @@ See [#8][], thanks [@benweatherman][]
 [@miketheman]: https://github.com/miketheman
 [@ogst]: https://github.com/ogst
 [@ojongerius]: https://github.com/ojongerius
+[@ronindesign]: https://github.com/ronindesign
 [@ross]: https://github.com/ross
+[@seiro-ogasawara]: https://github.com/seiro-ogasawara
+[@shargan]: https://github.com/shargan
 [@steven-liu]: https://github.com/steven-liu
 [@thehesiod]: https://github.com/thehesiod
 [@timed]: https://github.com/timed
