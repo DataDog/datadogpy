@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.17.0 / Unreleased
+# 0.17.0 / 2017-11-06
 * [BUGFIX] API: Discard non-null parameters in `api.ServiceCheck.check`method, [#206][], [#207][] (thanks [@ronindesign][])
 * [BUGFIX] API: Update HTTP method from `GET` to `POST` for `api.Screenboard.share` method, [#234][] (thanks [@seiro-ogasawara][])
 * [BUGFIX] Dogwrap: Encode from unicode before writing to stdout, stderr, [#201][], [#203][] (thanks [@ronindesign][])
