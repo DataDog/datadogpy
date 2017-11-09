@@ -1,4 +1,5 @@
 # stdlib
+import os.path
 import argparse
 import sys
 import platform
@@ -60,6 +61,9 @@ class ScreenboardClient(object):
         show_parser.add_argument('screenboard_id', help="screenboard to show")
         show_parser.set_defaults(func=cls._show)
 
+        show_all_parser = verb_parsers.add_parser('show_all', help="Show a list of all screenboards")
+        show_all_parser.set_defaults(func=cls._show_all)
+
         delete_parser = verb_parsers.add_parser('delete', help="Delete a screenboard.")
         delete_parser.add_argument('screenboard_id', help="screenboard to delete")
         delete_parser.set_defaults(func=cls._delete)
@@ -79,6 +83,11 @@ class ScreenboardClient(object):
         pull_parser.add_argument('screenboard_id', help="ID of screenboard to pull")
         pull_parser.add_argument('filename', help="file to pull screenboard into")
         pull_parser.set_defaults(func=cls._pull)
+
+        pull_all_parser = verb_parsers.add_parser('pull_all', help="Pull all screenboards"
+                                                  " into files in a directory")
+        pull_all_parser.add_argument('pull_dir', help="directory to pull screenboards into")
+        pull_all_parser.set_defaults(func=cls._pull_all)
 
         push_parser = verb_parsers.add_parser('push', help="Push updates to screenboards"
                                               " from local files to the server")
@@ -101,6 +110,38 @@ class ScreenboardClient(object):
     def _pull(cls, args):
         cls._write_screen_to_file(args.screenboard_id, args.filename, args.timeout,
                                   args.format, args.string_ids)
+
+    @classmethod
+    def _pull_all(cls, args):
+        api._timeout = args.timeout
+
+        def _title_to_filename(title):
+            # Get a lowercased version with most punctuation stripped out...
+            no_punct = ''.join([c for c in title.lower() if c.isalnum() or c in [" ", "_", "-"]])
+            # Now replace all -'s, _'s and spaces with "_", and strip trailing _
+            return no_punct.replace(" ", "_").replace("-", "_").strip("_")
+
+        format = args.format
+        res = api.Screenboard.get_all()
+        report_warnings(res)
+        report_errors(res)
+
+        if not os.path.exists(args.pull_dir):
+            os.mkdir(args.pull_dir, 0o755)
+
+        used_filenames = set()
+        for dash_summary in res['screenboards']:
+            filename = _title_to_filename(dash_summary['title'])
+            if filename in used_filenames:
+                filename = filename + "-" + dash_summary['id']
+            used_filenames.add(filename)
+
+            cls._write_screen_to_file(
+                dash_summary['id'], os.path.join(args.pull_dir, filename + ".json"),
+                args.timeout, format, args.string_ids)
+        if format == 'pretty':
+            print(("\n### Total: {0} dashboards to {1} ###"
+                  .format(len(used_filenames), os.path.realpath(args.pull_dir))))
 
     # TODO Is there a test for this one ?
     @classmethod
@@ -230,6 +271,28 @@ class ScreenboardClient(object):
             print(pretty_json(res))
         else:
             print(json.dumps(res))
+
+    @classmethod
+    def _show_all(cls, args):
+        api._timeout = args.timeout
+        format = args.format
+        res = api.Screenboard.get_all()
+        report_warnings(res)
+        report_errors(res)
+
+        if args.string_ids:
+            for d in res["screenboards"]:
+                d["id"] = str(d["id"])
+
+        if format == 'pretty':
+            print(pretty_json(res))
+        elif format == 'raw':
+            print(json.dumps(res))
+        else:
+            for d in res["screenboards"]:
+                print("\t".join([(str(d["id"])),
+                                 (d["resource"]),
+                                 (d["title"])]))
 
     @classmethod
     def _delete(cls, args):
