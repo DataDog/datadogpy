@@ -61,7 +61,8 @@ class ScreenboardClient(object):
         show_parser.add_argument('screenboard_id', help="screenboard to show")
         show_parser.set_defaults(func=cls._show)
 
-        show_all_parser = verb_parsers.add_parser('show_all', help="Show a list of all screenboards")
+        show_all_parser = verb_parsers.add_parser('show_all', help="Show a list of all"
+                                                  "screenboards")
         show_all_parser.set_defaults(func=cls._show_all)
 
         delete_parser = verb_parsers.add_parser('delete', help="Delete a screenboard.")
