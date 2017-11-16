@@ -6,7 +6,7 @@ import random
 import itertools
 
 from datadog.util.compat import iternext
-
+from datadog.threadstats.constants import MetricType
 
 class Metric(object):
     """
@@ -38,7 +38,7 @@ class Gauge(Metric):
         self.value = value
 
     def flush(self, timestamp):
-        return [(timestamp, self.value, self.name, self.tags, self.host)]
+        return [(timestamp, self.value, self.name, self.tags, self.host, MetricType.Gauge)]
 
 
 class Counter(Metric):
@@ -57,7 +57,7 @@ class Counter(Metric):
 
     def flush(self, timestamp):
         count = sum(self.count, 0)
-        return [(timestamp, count, self.name, self.tags, self.host)]
+        return [(timestamp, count, self.name, self.tags, self.host, MetricType.Count)]
 
 
 class Histogram(Metric):
@@ -92,17 +92,17 @@ class Histogram(Metric):
         if not self.count:
             return []
         metrics = [
-            (timestamp, self.min, '%s.min' % self.name, self.tags, self.host),
-            (timestamp, self.max, '%s.max' % self.name, self.tags, self.host),
-            (timestamp, self.count, '%s.count' % self.name, self.tags, self.host),
-            (timestamp, self.average(), '%s.avg' % self.name, self.tags, self.host)
+            (timestamp, self.min, '%s.min' % self.name, self.tags, self.host, MetricType.Gauge),
+            (timestamp, self.max, '%s.max' % self.name, self.tags, self.host, MetricType.Gauge),
+            (timestamp, self.count, '%s.count' % self.name, self.tags, self.host, MetricType.Count),
+            (timestamp, self.average(), '%s.avg' % self.name, self.tags, self.host, MetricType.Gauge)
         ]
         length = len(self.samples)
         self.samples.sort()
         for p in self.percentiles:
             val = self.samples[int(round(p * length - 1))]
             name = '%s.%spercentile' % (self.name, int(p * 100))
-            metrics.append((timestamp, val, name, self.tags, self.host))
+            metrics.append((timestamp, val, name, self.tags, self.host, MetricType.Gauge))
         return metrics
 
     def average(self):

@@ -670,3 +670,33 @@ class TestUnitThreadStats(unittest.TestCase):
         nt.assert_equal(event['date_happened'], event1_date_happened)
         nt.assert_equal(event['tags'], [event1_tag] + constant_tags + test_tags)
         dog.start(flush_interval=1, roll_up_interval=1)
+
+    def test_metric_type(self):
+        """
+        Checks the submitted metric's metric type.
+        """
+        # Set up ThreadStats with a namespace
+        dog = ThreadStats(namespace="foo")
+        dog.start(roll_up_interval=1, flush_in_thread=False)
+        reporter = dog.reporter = self.reporter
+
+        # Send a few metrics
+        dog.gauge("gauge", 20, timestamp=100.0)
+        dog.increment("counter", timestamp=100.0)
+        dog.histogram('histogram.1', 20, 100.0)
+        dog.flush(200.0)
+		
+        (first, second, p75, p85, p95, p99, avg, cnt, 
+        max_, min_) = self.sort_metrics(reporter.metrics)
+		
+		# Assert Metric type
+        nt.assert_equal(first['type'], 'count')
+        nt.assert_equal(second['type'], 'gauge')
+        nt.assert_equal(p75['type'], 'gauge')
+        nt.assert_equal(p85['type'], 'gauge')
+        nt.assert_equal(p95['type'], 'gauge')
+        nt.assert_equal(p99['type'], 'gauge')
+        nt.assert_equal(avg['type'], 'gauge')
+        nt.assert_equal(cnt['type'], 'count')
+        nt.assert_equal(max_['type'], 'gauge')
+        nt.assert_equal(min_['type'], 'gauge')

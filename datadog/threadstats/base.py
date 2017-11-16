@@ -319,7 +319,7 @@ class ThreadStats(object):
 
         # FIXME: emit a dictionary from the aggregator
         metrics = []
-        for timestamp, value, name, tags, host in rolled_up_metrics:
+        for timestamp, value, name, tags, host, metric_type in rolled_up_metrics:
             metric_tags = tags
             metric_name = name
 
@@ -337,7 +337,7 @@ class ThreadStats(object):
             metric = {
                 'metric': metric_name,
                 'points': [[timestamp, value]],
-                'type': MetricType.Gauge,
+                'type': metric_type,
                 'host': host,
                 'device': self.device,
                 'tags': metric_tags
