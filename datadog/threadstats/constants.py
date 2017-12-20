@@ -4,6 +4,7 @@ class MetricType(object):
     Histogram = "histogram"
     Count = "count"
 
+
 class MonitorType(object):
     SERVICE_CHECK = 'service check'
     METRIC_ALERT = 'metric alert'

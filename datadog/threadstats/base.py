@@ -12,7 +12,6 @@ from contextlib import contextmanager
 from time import time
 
 from datadog.api.exceptions import ApiNotInitialized
-from datadog.threadstats.constants import MetricType
 from datadog.threadstats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing
 from datadog.threadstats.events import EventsAggregator
 from datadog.threadstats.reporters import HttpReporter
@@ -206,7 +205,7 @@ class ThreadStats(object):
         >>> stats.timing("query.response.time", 1234)
         """
         if not self._disabled:
-            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value, 
+            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
                                               Timing, sample_rate=sample_rate, host=host)
 
     @contextmanager
