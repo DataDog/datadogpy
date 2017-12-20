@@ -94,8 +94,10 @@ class Histogram(Metric):
         metrics = [
             (timestamp, self.min, '%s.min' % self.name, self.tags, self.host, MetricType.Gauge),
             (timestamp, self.max, '%s.max' % self.name, self.tags, self.host, MetricType.Gauge),
-            (timestamp, self.count, '%s.count' % self.name, self.tags, self.host, MetricType.Count),
-            (timestamp, self.average(), '%s.avg' % self.name, self.tags, self.host, MetricType.Gauge)
+            (timestamp, self.count, '%s.count' % self.name, 
+             self.tags, self.host, MetricType.Count),
+            (timestamp, self.average(), '%s.avg' % self.name, 
+             self.tags, self.host, MetricType.Gauge)
         ]
         length = len(self.samples)
         self.samples.sort()

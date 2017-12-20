@@ -454,12 +454,14 @@ class TestUnitThreadStats(unittest.TestCase):
 
         # Assertions on gauges
         self.assertMetric(name='gauge', value=10, tags=["type:constant"], count=1)
-        self.assertMetric(name="gauge", value=15, tags=["env:production", "db", "type:constant"], count=1)  # noqa
+        self.assertMetric(name="gauge", value=15, 
+                          tags=["env:production", "db", "type:constant"], count=1)  # noqa
         self.assertMetric(name="gauge", value=20, tags=["env:staging", "type:constant"], count=1)
 
         # Assertions on counters
         self.assertMetric(name="counter", value=1, tags=["type:constant"], count=1)
-        self.assertMetric(name="counter", value=1, tags=["env:production", "db", "type:constant"], count=1)  # noqa
+        self.assertMetric(name="counter", value=1, 
+                          tags=["env:production", "db", "type:constant"], count=1)  # noqa
         self.assertMetric(name="counter", value=1, tags=["env:staging", "type:constant"], count=1)
 
         # Ensure histograms work as well.

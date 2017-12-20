@@ -206,8 +206,8 @@ class ThreadStats(object):
         >>> stats.timing("query.response.time", 1234)
         """
         if not self._disabled:
-            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value, Timing,
-                                              sample_rate=sample_rate, host=host)
+            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value, 
+                                              Timing, sample_rate=sample_rate, host=host)
 
     @contextmanager
     def timer(self, metric_name, sample_rate=1, tags=None, host=None):
