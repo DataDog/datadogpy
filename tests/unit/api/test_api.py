@@ -10,7 +10,7 @@ import mock
 
 # datadog
 from datadog import initialize, api
-from datadog.api import Metric
+from datadog.api import Metric, ServiceCheck
 from datadog.api.exceptions import ApiError, ApiNotInitialized
 from datadog.util.compat import is_p3k
 from tests.unit.api.helper import (
@@ -327,3 +327,19 @@ class TestMetricResource(DatadogAPIWithInitialization):
         for point in supported_data_types:
             serie = dict(metric='metric.numerical', points=point)
             self.submit_and_assess_metric_payload(serie)
+
+class TestServiceCheckResource(DatadogAPIWithInitialization):
+
+    def test_service_check_supports_none_parameters(self):
+        """
+        ServiceCheck should support none parameters
+
+        ```
+        $ dog service_check check check_pg host0 1
+        ```
+
+        resulted in `RuntimeError: dictionary changed size during iteration`
+        """
+        ServiceCheck.check(
+            check='check_pg', host_name='host0', status=1, message=None,
+            timestamp=None, tags=None)
