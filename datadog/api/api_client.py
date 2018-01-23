@@ -3,6 +3,8 @@ import logging
 import time
 
 # datadog
+import zlib
+
 from datadog.api import _api_version, _max_timeouts, _backoff_period
 from datadog.api.exceptions import (
     ClientError,
@@ -110,7 +112,9 @@ class APIClient(object):
             headers = {}
             if isinstance(body, dict):
                 body = json.dumps(body)
-                headers['Content-Type'] = 'application/json'
+                headers = {'Content-Type': 'application/json',
+                               'Content-Encoding': 'deflate'}
+                body = zlib.compress(body)
 
             # Construct the URL
             url = "{api_host}/api/{api_version}/{path}".format(
