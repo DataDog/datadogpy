@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+# 0.18.0 / Unreleased
+* [BUGFIX] Dogshell: Service checks can be sent with optional parameters set to null values, [#241][] (thanks [@timvisher][])
+* [BUGFIX] Dogwrap: Respect the ouput channel encoding format, [#236][] (thanks [@martin308][])
+* [FEATURE] DogstatsD: Add beta support for sending global distribution metrics, [#249][]
+
 # 0.17.0 / 2017-11-06
 * [BUGFIX] API: Discard non-null parameters in `api.ServiceCheck.check`method, [#206][], [#207][] (thanks [@ronindesign][])
 * [BUGFIX] API: Update HTTP method from `GET` to `POST` for `api.Screenboard.share` method, [#234][] (thanks [@seiro-ogasawara][])
@@ -232,6 +237,9 @@ See [#8][], thanks [@benweatherman][]
 [#230]: https://github.com/DataDog/datadogpy/issues/230
 [#233]: https://github.com/DataDog/datadogpy/issues/233
 [#234]: https://github.com/DataDog/datadogpy/issues/234
+[#236]: https://github.com/DataDog/datadogpy/issues/236
+[#241]: https://github.com/DataDog/datadogpy/issues/241
+[#249]: https://github.com/DataDog/datadogpy/issues/249
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
 [@aristiden7o]: https://github.com/aristiden7o
@@ -248,6 +256,7 @@ See [#8][], thanks [@benweatherman][]
 [@jofusa]: https://github.com/jofusa
 [@kuzmich]: https://github.com/kuzmich
 [@leozc]: https://github.com/leozc
+[@martin308]: https://github.com/martin308
 [@meawoppl]: https://github.com/meawoppl
 [@mgood]: https://github.com/mgood
 [@miketheman]: https://github.com/miketheman
@@ -260,4 +269,5 @@ See [#8][], thanks [@benweatherman][]
 [@steven-liu]: https://github.com/steven-liu
 [@thehesiod]: https://github.com/thehesiod
 [@timed]: https://github.com/timed
+[@timvisher]: https://github.com/timvisher
 [@tuukkamustonen]: https://github.com/tuukkamustonen
