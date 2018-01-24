@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.18.0 / Unreleased
+# 0.18.0 / 2018-01-24
 * [BUGFIX] Dogshell: Service checks can be sent with optional parameters set to null values, [#241][] (thanks [@timvisher][])
 * [BUGFIX] Dogwrap: Respect the ouput channel encoding format, [#236][] (thanks [@martin308][])
 * [FEATURE] DogstatsD: Add beta support for sending global distribution metrics, [#249][]
