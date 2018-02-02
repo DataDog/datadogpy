@@ -556,8 +556,8 @@ class TestUnitThreadStats(unittest.TestCase):
 
     def test_disabled_mode(self):
         dog = ThreadStats()
-        reporter = dog.reporter = MemoryReporter()
         dog.start(disabled=True, flush_interval=1, roll_up_interval=1)
+        reporter = dog.reporter = MemoryReporter()
         dog.gauge('testing', 1, timestamp=1000)
         dog.gauge('testing', 2, timestamp=1000)
         dog.flush(2000.0)
@@ -566,6 +566,7 @@ class TestUnitThreadStats(unittest.TestCase):
     def test_stop(self):
         dog = ThreadStats()
         dog.start(flush_interval=1, roll_up_interval=1)
+        dog.reporter = MemoryReporter()
         for i in range(10):
             dog.gauge('metric', i)
         time.sleep(2)
