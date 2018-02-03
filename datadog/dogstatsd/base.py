@@ -188,6 +188,17 @@ class DogStatsd(object):
         """
         self._report(metric, 'h', value, tags, sample_rate)
 
+    def distribution(self, metric, value, tags=None, sample_rate=1):
+        """
+        Send a global distribution value, optionally setting tags and a sample rate.
+
+        >>> statsd.distribution('uploaded.file.size', 1445)
+        >>> statsd.distribution('album.photo.count', 26, tags=["gender:female"])
+
+        This is a beta feature that must be enabled specifically for your organization.
+        """
+        self._report(metric, 'd', value, tags, sample_rate)
+
     def timing(self, metric, value, tags=None, sample_rate=1):
         """
         Record a timing, optionally setting tags and a sample rate.

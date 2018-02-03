@@ -4,16 +4,18 @@ performance. It collects metrics in the application thread with very little over
 and allows flushing metrics in process, in a thread or in a greenlet, depending
 on your application's needs.
 """
-
+# stdlib
+from contextlib import contextmanager
+from functools import wraps
+from time import time
+import atexit
 import logging
 import os
-from functools import wraps
-from contextlib import contextmanager
-from time import time
 
+# datadog
 from datadog.api.exceptions import ApiNotInitialized
-from datadog.threadstats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing
 from datadog.threadstats.events import EventsAggregator
+from datadog.threadstats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing
 from datadog.threadstats.reporters import HttpReporter
 
 # Loggers
@@ -112,6 +114,9 @@ class ThreadStats(object):
                 self._start_flush_greenlet()
             elif flush_in_thread:
                 self._start_flush_thread()
+
+        # Flush all remaining metrics on exit
+        atexit.register(lambda: self.flush(float('inf')))
 
     def stop(self):
         if not self._is_auto_flushing:
@@ -301,10 +306,10 @@ class ThreadStats(object):
                 log.debug("No events to flush. Continuing.")
         except ApiNotInitialized:
             raise
-        except:
+        except Exception:
             try:
                 log.exception("Error flushing metrics and events")
-            except:
+            except Exception:
                 pass
         finally:
             self._is_flush_in_progress = False
