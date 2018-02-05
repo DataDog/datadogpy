@@ -39,7 +39,7 @@ class Gauge(Metric):
         self.value = value
 
     def flush(self, timestamp, interval):
-        return [(timestamp, self.value, self.name, self.tags, 
+        return [(timestamp, self.value, self.name, self.tags,
                 self.host, MetricType.Gauge, interval)]
 
 
