@@ -39,7 +39,8 @@ class Gauge(Metric):
         self.value = value
 
     def flush(self, timestamp, interval):
-        return [(timestamp, self.value, self.name, self.tags, self.host, MetricType.Gauge, interval)]
+        return [(timestamp, self.value, self.name, self.tags, 
+                self.host, MetricType.Gauge, interval)]
 
 
 class Counter(Metric):
@@ -107,7 +108,7 @@ class Histogram(Metric):
         for p in self.percentiles:
             val = self.samples[int(round(p * length - 1))]
             name = '%s.%spercentile' % (self.name, int(p * 100))
-            metrics.append((timestamp, val, name, 
+            metrics.append((timestamp, val, name,
                            self.tags, self.host, MetricType.Gauge, interval))
         return metrics
 

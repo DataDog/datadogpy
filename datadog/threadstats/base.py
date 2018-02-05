@@ -345,7 +345,7 @@ class ThreadStats(object):
                 'host': host,
                 'device': self.device,
                 'tags': metric_tags,
-				'interval': interval
+                'interval': interval
             }
             metrics.append(metric)
         return metrics
