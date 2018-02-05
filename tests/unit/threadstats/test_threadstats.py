@@ -693,13 +693,13 @@ class TestUnitThreadStats(unittest.TestCase):
         max_, min_) = self.sort_metrics(reporter.metrics)
 		
 		# Assert Metric type
-        nt.assert_equal(first['type'], 'count')
+        nt.assert_equal(first['type'], 'rate')
         nt.assert_equal(second['type'], 'gauge')
         nt.assert_equal(p75['type'], 'gauge')
         nt.assert_equal(p85['type'], 'gauge')
         nt.assert_equal(p95['type'], 'gauge')
         nt.assert_equal(p99['type'], 'gauge')
         nt.assert_equal(avg['type'], 'gauge')
-        nt.assert_equal(cnt['type'], 'count')
+        nt.assert_equal(cnt['type'], 'rate')
         nt.assert_equal(max_['type'], 'gauge')
         nt.assert_equal(min_['type'], 'gauge')
