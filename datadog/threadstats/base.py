@@ -14,7 +14,6 @@ import os
 
 # datadog
 from datadog.api.exceptions import ApiNotInitialized
-from datadog.threadstats.constants import MetricType
 from datadog.threadstats.events import EventsAggregator
 from datadog.threadstats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing
 from datadog.threadstats.reporters import HttpReporter
@@ -211,8 +210,8 @@ class ThreadStats(object):
         >>> stats.timing("query.response.time", 1234)
         """
         if not self._disabled:
-            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value, Timing,
-                                              sample_rate=sample_rate, host=host)
+            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
+                                              Timing, sample_rate=sample_rate, host=host)
 
     @contextmanager
     def timer(self, metric_name, sample_rate=1, tags=None, host=None):
@@ -324,7 +323,7 @@ class ThreadStats(object):
 
         # FIXME: emit a dictionary from the aggregator
         metrics = []
-        for timestamp, value, name, tags, host in rolled_up_metrics:
+        for timestamp, value, name, tags, host, metric_type, interval in rolled_up_metrics:
             metric_tags = tags
             metric_name = name
 
@@ -342,10 +341,11 @@ class ThreadStats(object):
             metric = {
                 'metric': metric_name,
                 'points': [[timestamp, value]],
-                'type': MetricType.Gauge,
+                'type': metric_type,
                 'host': host,
                 'device': self.device,
-                'tags': metric_tags
+                'tags': metric_tags,
+                'interval': interval
             }
             metrics.append(metric)
         return metrics

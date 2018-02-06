@@ -6,6 +6,7 @@ import random
 import itertools
 
 from datadog.util.compat import iternext
+from datadog.threadstats.constants import MetricType
 
 
 class Metric(object):
@@ -18,7 +19,7 @@ class Metric(object):
         """ Add a point to the given metric. """
         raise NotImplementedError()
 
-    def flush(self, timestamp):
+    def flush(self, timestamp, interval):
         """ Flush all metrics up to the given timestamp. """
         raise NotImplementedError()
 
@@ -37,12 +38,13 @@ class Gauge(Metric):
     def add_point(self, value):
         self.value = value
 
-    def flush(self, timestamp):
-        return [(timestamp, self.value, self.name, self.tags, self.host)]
+    def flush(self, timestamp, interval):
+        return [(timestamp, self.value, self.name, self.tags,
+                self.host, MetricType.Gauge, interval)]
 
 
 class Counter(Metric):
-    """ A counter metric. """
+    """ A metric that tracks a counter value. """
 
     stats_tag = 'c'
 
@@ -55,9 +57,10 @@ class Counter(Metric):
     def add_point(self, value):
         self.count.append(value)
 
-    def flush(self, timestamp):
+    def flush(self, timestamp, interval):
         count = sum(self.count, 0)
-        return [(timestamp, count, self.name, self.tags, self.host)]
+        return [(timestamp, count/float(interval), self.name,
+                self.tags, self.host, MetricType.Rate, interval)]
 
 
 class Histogram(Metric):
@@ -88,21 +91,26 @@ class Histogram(Metric):
             self.samples[random.randrange(0, self.sample_size)] = value
         self.count = iternext(self.iter_counter)
 
-    def flush(self, timestamp):
+    def flush(self, timestamp, interval):
         if not self.count:
             return []
         metrics = [
-            (timestamp, self.min, '%s.min' % self.name, self.tags, self.host),
-            (timestamp, self.max, '%s.max' % self.name, self.tags, self.host),
-            (timestamp, self.count, '%s.count' % self.name, self.tags, self.host),
-            (timestamp, self.average(), '%s.avg' % self.name, self.tags, self.host)
+            (timestamp, self.min, '%s.min' % self.name,
+             self.tags, self.host, MetricType.Gauge, interval),
+            (timestamp, self.max, '%s.max' % self.name,
+             self.tags, self.host, MetricType.Gauge, interval),
+            (timestamp, self.count/float(interval), '%s.count' % self.name,
+             self.tags, self.host, MetricType.Rate, interval),
+            (timestamp, self.average(), '%s.avg' % self.name,
+             self.tags, self.host, MetricType.Gauge, interval)
         ]
         length = len(self.samples)
         self.samples.sort()
         for p in self.percentiles:
             val = self.samples[int(round(p * length - 1))]
             name = '%s.%spercentile' % (self.name, int(p * 100))
-            metrics.append((timestamp, val, name, self.tags, self.host))
+            metrics.append((timestamp, val, name,
+                           self.tags, self.host, MetricType.Gauge, interval))
         return metrics
 
     def average(self):
@@ -147,5 +155,5 @@ class MetricsAggregator(object):
         metrics = []
         for i in past_intervals:
             for m in list(self._metrics.pop(i).values()):
-                metrics += m.flush(i)
+                metrics += m.flush(i, self._roll_up_interval)
         return metrics
