@@ -233,7 +233,7 @@ class TestUnitThreadStats(unittest.TestCase):
         nt.assert_equal(h1avg1['points'][0][1], 35)
         nt.assert_equal(h1cnt1['metric'], 'histogram.1.count')
         nt.assert_equal(h1cnt1['points'][0][0], 100.0)
-        nt.assert_equal(h1cnt1['points'][0][1], 4)
+        nt.assert_equal(h1cnt1['points'][0][1], 0.4)
         nt.assert_equal(h1min1['metric'], 'histogram.1.min')
         nt.assert_equal(h1min1['points'][0][1], 20)
         nt.assert_equal(h1max1['metric'], 'histogram.1.max')
@@ -248,7 +248,7 @@ class TestUnitThreadStats(unittest.TestCase):
         nt.assert_equal(h1avg2['points'][0][1], 40)
         nt.assert_equal(h1cnt2['metric'], 'histogram.1.count')
         nt.assert_equal(h1cnt2['points'][0][0], 110.0)
-        nt.assert_equal(h1cnt2['points'][0][1], 3)
+        nt.assert_equal(h1cnt2['points'][0][1], 0.3)
         nt.assert_equal(h1752['metric'], 'histogram.1.75percentile')
         nt.assert_equal(h1752['points'][0][0], 110.0)
         nt.assert_equal(h1752['points'][0][1], 40.0)
@@ -261,7 +261,7 @@ class TestUnitThreadStats(unittest.TestCase):
         nt.assert_equal(h2avg1['points'][0][1], 40)
         nt.assert_equal(h2cnt1['metric'], 'histogram.2.count')
         nt.assert_equal(h2cnt1['points'][0][0], 100.0)
-        nt.assert_equal(h2cnt1['points'][0][1], 1)
+        nt.assert_equal(h2cnt1['points'][0][1], 0.1)
 
         # Flush again ensure they're gone.
         dog.reporter.metrics = []
@@ -347,7 +347,7 @@ class TestUnitThreadStats(unittest.TestCase):
         (first, second) = metrics
         nt.assert_equal(first['metric'], 'test.counter.1')
         nt.assert_equal(first['points'][0][0], 1000.0)
-        nt.assert_equal(first['points'][0][1], 3)
+        nt.assert_equal(first['points'][0][1], 0.3)
         nt.assert_equal(second['metric'], 'test.counter.2')
 
         # Test decrement
@@ -361,7 +361,7 @@ class TestUnitThreadStats(unittest.TestCase):
         first, = metrics
         nt.assert_equal(first['metric'], 'test.counter.1')
         nt.assert_equal(first['points'][0][0], 1000.0)
-        nt.assert_equal(first['points'][0][1], 8)
+        nt.assert_equal(first['points'][0][1], 0.8)
         nt.assert_equal(second['metric'], 'test.counter.2')
 
         # Flush again and make sure we're progressing.
@@ -416,11 +416,11 @@ class TestUnitThreadStats(unittest.TestCase):
         [c1, c2, c3, g1, g2, g3] = metrics
         (nt.assert_equal(c['metric'], 'counter') for c in [c1, c2, c3])
         nt.assert_equal(c1['tags'], None)
-        nt.assert_equal(c1['points'][0][1], 1)
+        nt.assert_equal(c1['points'][0][1], 0.1)
         nt.assert_equal(c2['tags'], ['env:production', 'db'])
-        nt.assert_equal(c2['points'][0][1], 1)
+        nt.assert_equal(c2['points'][0][1], 0.1)
         nt.assert_equal(c3['tags'], ['env:staging'])
-        nt.assert_equal(c3['points'][0][1], 1)
+        nt.assert_equal(c3['points'][0][1], 0.1)
 
         (nt.assert_equal(c['metric'], 'gauge') for c in [g1, g2, g3])
         nt.assert_equal(g1['tags'], None)
@@ -529,13 +529,13 @@ class TestUnitThreadStats(unittest.TestCase):
         (nt.assert_equal(c['metric'], 'counter') for c in [c1, c2, c3])
         nt.assert_equal(c1['host'], None)
         nt.assert_equal(c1['tags'], None)
-        nt.assert_equal(c1['points'][0][1], 2)
+        nt.assert_equal(c1['points'][0][1], 0.2)
         nt.assert_equal(c2['host'], 'test')
         nt.assert_equal(c2['tags'], None)
-        nt.assert_equal(c2['points'][0][1], 1)
+        nt.assert_equal(c2['points'][0][1], 0.1)
         nt.assert_equal(c3['host'], 'test')
         nt.assert_equal(c3['tags'], ['tag'])
-        nt.assert_equal(c3['points'][0][1], 2)
+        nt.assert_equal(c3['points'][0][1], 0.2)
 
         (nt.assert_equal(g['metric'], 'gauge') for g in [g1, g2, g3])
         nt.assert_equal(g1['host'], None)

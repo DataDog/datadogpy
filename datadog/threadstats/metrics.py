@@ -59,7 +59,8 @@ class Counter(Metric):
 
     def flush(self, timestamp, interval):
         count = sum(self.count, 0)
-        return [(timestamp, count, self.name, self.tags, self.host, MetricType.Rate, interval)]
+        return [(timestamp, count/float(interval), self.name,
+                self.tags, self.host, MetricType.Rate, interval)]
 
 
 class Histogram(Metric):
@@ -98,7 +99,7 @@ class Histogram(Metric):
              self.tags, self.host, MetricType.Gauge, interval),
             (timestamp, self.max, '%s.max' % self.name,
              self.tags, self.host, MetricType.Gauge, interval),
-            (timestamp, self.count, '%s.count' % self.name,
+            (timestamp, self.count/float(interval), '%s.count' % self.name,
              self.tags, self.host, MetricType.Rate, interval),
             (timestamp, self.average(), '%s.avg' % self.name,
              self.tags, self.host, MetricType.Gauge, interval)
