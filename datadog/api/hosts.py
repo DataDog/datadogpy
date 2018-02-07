@@ -8,7 +8,7 @@ class Host(ActionAPIResource):
     _class_url = '/host'
 
     @classmethod
-    def mute(cls, host_name, **params):
+    def mute(cls, host_name, **body):
         """
         Mute a host.
 
@@ -28,7 +28,7 @@ class Host(ActionAPIResource):
         :returns: Dictionary representing the API's JSON response
 
         """
-        return super(Host, cls)._trigger_class_action('POST', 'mute', host_name, **params)
+        return super(Host, cls)._trigger_class_action('POST', 'mute', host_name, **body)
 
     @classmethod
     def unmute(cls, host_name):

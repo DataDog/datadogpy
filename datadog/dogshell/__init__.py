@@ -8,6 +8,7 @@ import argparse
 from datadog import initialize
 from datadog.dogshell.comment import CommentClient
 from datadog.dogshell.common import DogshellConfig
+from datadog.dogshell.dashboard_list import DashboardListClient
 from datadog.dogshell.downtime import DowntimeClient
 from datadog.dogshell.event import EventClient
 from datadog.dogshell.host import HostClient
@@ -56,6 +57,7 @@ def main():
     MonitorClient.setup_parser(subparsers)
     TimeboardClient.setup_parser(subparsers)
     ScreenboardClient.setup_parser(subparsers)
+    DashboardListClient.setup_parser(subparsers)
     HostClient.setup_parser(subparsers)
     DowntimeClient.setup_parser(subparsers)
     ServiceCheckClient.setup_parser(subparsers)

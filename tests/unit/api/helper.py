@@ -59,12 +59,12 @@ class MyActionable(ActionAPIResource):
     _class_url = '/actionables'
 
     @classmethod
-    def trigger_class_action(cls, method, name, id=None, **params):
-        super(MyActionable, cls)._trigger_class_action(method, name, id, **params)
+    def trigger_class_action(cls, method, name, id=None, params=None, **body):
+        super(MyActionable, cls)._trigger_class_action(method, name, id, params, **body)
 
     @classmethod
-    def trigger_action(cls, method, name, id=None, **params):
-        super(MyActionable, cls)._trigger_action(method, name, id, **params)
+    def trigger_action(cls, method, name, id=None, **body):
+        super(MyActionable, cls)._trigger_action(method, name, id, **body)
 
 
 # Test classes

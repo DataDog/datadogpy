@@ -243,14 +243,59 @@ class TestResources(DatadogAPIWithInitialization):
         Actionable resource logic.
         """
         actionable_object_id = 123
-        MyActionable.trigger_class_action('POST', "actionname", id=actionable_object_id,
-                                          mydata="val")
-        self.request_called_with('POST', "host/api/v1/actionables/" + str(actionable_object_id) +
-                                 "/actionname", data={'mydata': "val"})
+        MyActionable.trigger_class_action(
+            'POST',
+            'actionname',
+            id=actionable_object_id,
+            params={'myparam': 'val1'},
+            mydata='val',
+            mydata2='val2'
+        )
+        self.request_called_with(
+            'POST',
+            'host/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            params={'myparam': 'val1'},
+            data={'mydata': 'val', 'mydata2': 'val2'}
+        )
 
-        MyActionable.trigger_action('POST', "actionname", id=actionable_object_id, mydata="val")
-        self.request_called_with('POST', "host/api/v1/actionname/" + str(actionable_object_id),
-                                 data={'mydata': "val"})
+        MyActionable.trigger_class_action(
+            'POST',
+            'actionname',
+            id=actionable_object_id,
+            mydata='val',
+            mydata2='val2'
+        )
+        self.request_called_with(
+            'POST',
+            'host/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            params={},
+            data={'mydata': 'val', 'mydata2': 'val2'}
+        )
+
+        MyActionable.trigger_class_action(
+            'GET',
+            'actionname',
+            id=actionable_object_id,
+            params={'param1': 'val1', 'param2': 'val2'}
+        )
+        self.request_called_with(
+            'GET',
+            'host/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            params={'param1': 'val1', 'param2': 'val2'},
+            data={}
+        )
+
+        MyActionable.trigger_action(
+            'POST',
+            'actionname',
+            id=actionable_object_id,
+            mydata="val"
+        )
+        self.request_called_with(
+            'POST',
+            'host/api/v1/actionname/{0}'.format(actionable_object_id),
+            data={'mydata': "val"}
+        )
 
 
 class TestMetricResource(DatadogAPIWithInitialization):

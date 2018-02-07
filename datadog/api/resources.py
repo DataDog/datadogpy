@@ -169,7 +169,7 @@ class ActionAPIResource(object):
     Actionable API Resource
     """
     @classmethod
-    def _trigger_class_action(cls, method, name, id=None, **params):
+    def _trigger_class_action(cls, method, name, id=None, params=None, **body):
         """
         Trigger an action
 
@@ -185,15 +185,20 @@ class ActionAPIResource(object):
         :param params: action parameters
         :type params: dictionary
 
+        :param body: action body
+        :type body: dictionary
+
         :returns: Dictionary representing the API's JSON response
         """
+        if params is None:
+            params = {}
         if id is None:
-            return APIClient.submit(method, cls._class_url + "/" + name, params)
+            return APIClient.submit(method, cls._class_url + "/" + name, body, **params)
         else:
-            return APIClient.submit(method, cls._class_url + "/" + str(id) + "/" + name, params)
+            return APIClient.submit(method, cls._class_url + "/" + str(id) + "/" + name, body, **params)
 
     @classmethod
-    def _trigger_action(cls, method, name, id=None, **params):
+    def _trigger_action(cls, method, name, id=None, **body):
         """
         Trigger an action
 
@@ -206,12 +211,12 @@ class ActionAPIResource(object):
         :param id: trigger the action for the specified resource object
         :type id: id
 
-        :param params: action parameters
-        :type params: dictionary
+        :param body: action body
+        :type body: dictionary
 
         :returns: Dictionary representing the API's JSON response
         """
         if id is None:
-            return APIClient.submit(method, name, params)
+            return APIClient.submit(method, name, body)
         else:
-            return APIClient.submit(method, name + "/" + str(id), params)
+            return APIClient.submit(method, name + "/" + str(id), body)
