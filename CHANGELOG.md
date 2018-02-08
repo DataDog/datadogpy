@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.19.0 / Unreleased
+# 0.19.0 / 2018-02-08
 
 **ThreadStats: metric type change**
 
