@@ -1,6 +1,22 @@
 CHANGELOG
 =========
 
+# 0.19.0 / Unreleased
+
+**ThreadStats: metric type change**
+
+`ThreadStats` count metrics (produced from the `increment`/`decrement` and `histogram` methods) are now reported with the `count`/`rate` metric type, instead of `gauge`.
+As a result, for the corresponding metrics:
+1. Metric queries can use the `.as_count()`/ `.as_rate()` functions to switch between count and rate representations.
+2. The default time aggregation uses a sum instead of an average. **This may affect the representation of existing metric queries, thus, monitors' definitions and metric graphs.**
+
+See [#242][] (thanks [@nilabhsagar][]) for more details.
+
+
+* [BUGFIX] ThreadStats: Send count metrics with `Rate` metric type, [#242][] (thanks [@nilabhsagar][])
+* [IMPROVEMENT] ThreadStats: Flush all metrics on exit, [#221][]
+
+
 # 0.18.0 / 2018-01-24
 * [BUGFIX] Dogshell: Service checks can be sent with optional parameters set to null values, [#241][] (thanks [@timvisher][])
 * [BUGFIX] Dogwrap: Respect the ouput channel encoding format, [#236][] (thanks [@martin308][])
@@ -234,11 +250,13 @@ See [#8][], thanks [@benweatherman][]
 [#203]: https://github.com/DataDog/datadogpy/issues/203
 [#206]: https://github.com/DataDog/datadogpy/issues/206
 [#207]: https://github.com/DataDog/datadogpy/issues/207
+[#221]: https://github.com/DataDog/datadogpy/issues/221
 [#230]: https://github.com/DataDog/datadogpy/issues/230
 [#233]: https://github.com/DataDog/datadogpy/issues/233
 [#234]: https://github.com/DataDog/datadogpy/issues/234
 [#236]: https://github.com/DataDog/datadogpy/issues/236
 [#241]: https://github.com/DataDog/datadogpy/issues/241
+[#242]: https://github.com/DataDog/datadogpy/issues/242
 [#249]: https://github.com/DataDog/datadogpy/issues/249
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
@@ -260,6 +278,7 @@ See [#8][], thanks [@benweatherman][]
 [@meawoppl]: https://github.com/meawoppl
 [@mgood]: https://github.com/mgood
 [@miketheman]: https://github.com/miketheman
+[@nilabhsagar]: https://github.com/nilabhsagar
 [@ogst]: https://github.com/ogst
 [@ojongerius]: https://github.com/ojongerius
 [@ronindesign]: https://github.com/ronindesign
