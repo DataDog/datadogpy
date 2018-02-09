@@ -11,9 +11,6 @@ class DashboardListClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
         parser = subparsers.add_parser('dashboard_list', help="Create, edit, and delete dashboard lists")
-        parser.add_argument('--string_ids', action='store_true', dest='string_ids',
-                            help="Represent dashboard list IDs as strings instead of ints in JSON")
-
         verb_parsers = parser.add_subparsers(title='Verbs', dest='verb')
         verb_parsers.required = True
 
@@ -56,6 +53,15 @@ class DashboardListClient(object):
             help='A JSON list of dashboard dicts, e.g. ' +
                  '[{"type": "custom_timeboard", "id": 1234}, {"type": "custom_screenboard", "id": 123}]')
         add_dashboards_parser.set_defaults(func=cls._add_dashboards)
+
+        # Update Dashboards of Dashboard List parser
+        update_dashboards_parser = verb_parsers.add_parser('update_dashboards',
+            help="Update dashboards of an existing dashboard list")
+        update_dashboards_parser.add_argument('dashboard_list_id', help="Dashboard list to update with dashboards")
+        update_dashboards_parser.add_argument('dashboards',
+            help='A JSON list of dashboard dicts, e.g. ' +
+                 '[{"type": "custom_timeboard", "id": 1234}, {"type": "custom_screenboard", "id": 123}]')
+        update_dashboards_parser.set_defaults(func=cls._update_dashboards)
 
         # Delete Dashboards from Dashboard List parser
         delete_dashboards_parser = verb_parsers.add_parser('delete_dashboards',
@@ -107,9 +113,6 @@ class DashboardListClient(object):
         report_warnings(res)
         report_errors(res)
 
-        if args.string_ids:
-            res['id'] = str(res['id'])
-
         if format == 'pretty':
             print(pretty_json(res))
         else:
@@ -123,10 +126,6 @@ class DashboardListClient(object):
         res = api.DashboardList.get_all()
         report_warnings(res)
         report_errors(res)
-
-        if args.string_ids:
-            for dashboard_list in res['dashboard_lists']:
-                dashboard_list['id'] = str(dashboard_list['id'])
 
         if format == 'pretty':
             print(pretty_json(res))
@@ -158,10 +157,6 @@ class DashboardListClient(object):
         report_warnings(res)
         report_errors(res)
 
-        if args.string_ids:
-            for dashboard in res['dashboards']:
-                dashboard['id'] = str(dashboard['id'])
-
         if format == 'pretty':
             print(pretty_json(res))
         else:
@@ -175,6 +170,22 @@ class DashboardListClient(object):
         dashboards = json.loads(args.dashboards)
 
         res = api.DashboardList.add_dashboards(dashboard_list_id, dashboards=dashboards)
+        report_warnings(res)
+        report_errors(res)
+
+        if format == 'pretty':
+            print(pretty_json(res))
+        else:
+            print(json.dumps(res))
+
+    @classmethod
+    def _update_dashboards(cls, args):
+        api._timeout = args.timeout
+        format = args.format
+        dashboard_list_id = args.dashboard_list_id
+        dashboards = json.loads(args.dashboards)
+
+        res = api.DashboardList.update_dashboards(dashboard_list_id, dashboards=dashboards)
         report_warnings(res)
         report_errors(res)
 

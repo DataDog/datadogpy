@@ -36,6 +36,18 @@ class DashboardList(ActionAPIResource, CreateableAPIResource, DeletableAPIResour
         return super(DashboardList, cls)._trigger_class_action('POST', 'dashboards', id, params=None, **body)
 
     @classmethod
+    def update_dashboards(cls, id, **body):
+        """
+        Update dashboards of a dashboard list.
+
+        :param dashboards: dashboards of the dashboard list
+        :type dashboards: list of dashboard dicts, e.g. [{"type": "custom_timeboard", "id": 1104}]
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        return super(DashboardList, cls)._trigger_class_action('PUT', 'dashboards', id, params=None, **body)
+
+    @classmethod
     def delete_dashboards(cls, id, **body):
         """
         Delete dashboards from a dashboard list.
