@@ -7,8 +7,9 @@ from datadog.api.resources import (
     UpdatableAPIResource
 )
 
-class DashboardList(ActionAPIResource, CreateableAPIResource, DeletableAPIResource, GetableAPIResource,
-    ListableAPIResource, UpdatableAPIResource):
+
+class DashboardList(ActionAPIResource, CreateableAPIResource, DeletableAPIResource,
+                    GetableAPIResource, ListableAPIResource, UpdatableAPIResource):
     """
     A wrapper around Dashboard List HTTP API.
     """
@@ -33,7 +34,9 @@ class DashboardList(ActionAPIResource, CreateableAPIResource, DeletableAPIResour
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(DashboardList, cls)._trigger_class_action('POST', 'dashboards', id, params=None, **body)
+        return super(DashboardList, cls)._trigger_class_action(
+            'POST', 'dashboards', id, params=None, **body
+        )
 
     @classmethod
     def update_dashboards(cls, id, **body):
@@ -45,7 +48,9 @@ class DashboardList(ActionAPIResource, CreateableAPIResource, DeletableAPIResour
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(DashboardList, cls)._trigger_class_action('PUT', 'dashboards', id, params=None, **body)
+        return super(DashboardList, cls)._trigger_class_action(
+            'PUT', 'dashboards', id, params=None, **body
+        )
 
     @classmethod
     def delete_dashboards(cls, id, **body):
@@ -57,4 +62,6 @@ class DashboardList(ActionAPIResource, CreateableAPIResource, DeletableAPIResour
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(DashboardList, cls)._trigger_class_action('DELETE', 'dashboards', id, params=None, **body)
+        return super(DashboardList, cls)._trigger_class_action(
+            'DELETE', 'dashboards', id, params=None, **body
+        )

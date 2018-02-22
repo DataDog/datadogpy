@@ -6,11 +6,14 @@ from datadog import api
 from datadog.dogshell.common import report_errors, report_warnings
 from datadog.util.compat import json
 
+
 class DashboardListClient(object):
 
     @classmethod
     def setup_parser(cls, subparsers):
-        parser = subparsers.add_parser('dashboard_list', help="Create, edit, and delete dashboard lists")
+        parser = subparsers.add_parser(
+            'dashboard_list', help="Create, edit, and delete dashboard lists"
+        )
         verb_parsers = parser.add_subparsers(title='Verbs', dest='verb')
         verb_parsers.required = True
 
@@ -21,7 +24,9 @@ class DashboardListClient(object):
 
         # Update Dashboard List parser
         update_parser = verb_parsers.add_parser('update', help="Update existing dashboard list")
-        update_parser.add_argument('dashboard_list_id', help="Dashboard list to replace with the new definition")
+        update_parser.add_argument(
+            'dashboard_list_id', help="Dashboard list to replace with the new definition"
+        )
         update_parser.add_argument('name', help="Name for the dashboard list")
         update_parser.set_defaults(func=cls._update)
 
@@ -31,7 +36,9 @@ class DashboardListClient(object):
         show_parser.set_defaults(func=cls._show)
 
         # Show All Dashboard Lists parser
-        show_all_parser = verb_parsers.add_parser('show_all', help="Show a list of all dashboard lists")
+        show_all_parser = verb_parsers.add_parser(
+            'show_all', help="Show a list of all dashboard lists"
+        )
         show_all_parser.set_defaults(func=cls._show_all)
 
         # Delete Dashboard List parser
@@ -40,36 +47,57 @@ class DashboardListClient(object):
         delete_parser.set_defaults(func=cls._delete)
 
         # Get Dashboards for Dashboard List parser
-        get_dashboards_parser = verb_parsers.add_parser('show_dashboards',
-            help="Show a list of all dashboards for an existing dashboard list")
-        get_dashboards_parser.add_argument('dashboard_list_id', help="Dashboard list to show dashboards from")
+        get_dashboards_parser = verb_parsers.add_parser(
+            'show_dashboards', help="Show a list of all dashboards for an existing dashboard list"
+        )
+        get_dashboards_parser.add_argument(
+            'dashboard_list_id', help="Dashboard list to show dashboards from"
+        )
         get_dashboards_parser.set_defaults(func=cls._show_dashboards)
 
         # Add Dashboards to Dashboard List parser
-        add_dashboards_parser = verb_parsers.add_parser('add_dashboards',
-            help="Add dashboards to an existing dashboard list")
-        add_dashboards_parser.add_argument('dashboard_list_id', help="Dashboard list to add dashboards to")
-        add_dashboards_parser.add_argument('dashboards',
+        add_dashboards_parser = verb_parsers.add_parser(
+            'add_dashboards', help="Add dashboards to an existing dashboard list"
+        )
+        add_dashboards_parser.add_argument(
+            'dashboard_list_id', help="Dashboard list to add dashboards to"
+        )
+        add_dashboards_parser.add_argument(
+            'dashboards',
             help='A JSON list of dashboard dicts, e.g. ' +
-                 '[{"type": "custom_timeboard", "id": 1234}, {"type": "custom_screenboard", "id": 123}]')
+                 '[{"type": "custom_timeboard", "id": 1234}, ' +
+                 '{"type": "custom_screenboard", "id": 123}]'
+        )
         add_dashboards_parser.set_defaults(func=cls._add_dashboards)
 
         # Update Dashboards of Dashboard List parser
-        update_dashboards_parser = verb_parsers.add_parser('update_dashboards',
-            help="Update dashboards of an existing dashboard list")
-        update_dashboards_parser.add_argument('dashboard_list_id', help="Dashboard list to update with dashboards")
-        update_dashboards_parser.add_argument('dashboards',
+        update_dashboards_parser = verb_parsers.add_parser(
+            'update_dashboards', help="Update dashboards of an existing dashboard list"
+        )
+        update_dashboards_parser.add_argument(
+            'dashboard_list_id', help="Dashboard list to update with dashboards"
+        )
+        update_dashboards_parser.add_argument(
+            'dashboards',
             help='A JSON list of dashboard dicts, e.g. ' +
-                 '[{"type": "custom_timeboard", "id": 1234}, {"type": "custom_screenboard", "id": 123}]')
+                 '[{"type": "custom_timeboard", "id": 1234}, ' +
+                 '{"type": "custom_screenboard", "id": 123}]'
+        )
         update_dashboards_parser.set_defaults(func=cls._update_dashboards)
 
         # Delete Dashboards from Dashboard List parser
-        delete_dashboards_parser = verb_parsers.add_parser('delete_dashboards',
-            help="Delete dashboards from an existing dashboard list")
-        delete_dashboards_parser.add_argument('dashboard_list_id', help="Dashboard list to delete dashboards from")
-        delete_dashboards_parser.add_argument('dashboards',
+        delete_dashboards_parser = verb_parsers.add_parser(
+            'delete_dashboards', help="Delete dashboards from an existing dashboard list"
+        )
+        delete_dashboards_parser.add_argument(
+            'dashboard_list_id', help="Dashboard list to delete dashboards from"
+        )
+        delete_dashboards_parser.add_argument(
+            'dashboards',
             help='A JSON list of dashboard dicts, e.g. ' +
-                 '[{"type": "custom_timeboard", "id": 1234}, {"type": "custom_screenboard", "id": 123}]')
+                 '[{"type": "custom_timeboard", "id": 1234}, ' +
+                 '{"type": "custom_screenboard", "id": 123}]'
+        )
         delete_dashboards_parser.set_defaults(func=cls._delete_dashboards)
 
     @classmethod
@@ -209,4 +237,3 @@ class DashboardListClient(object):
             print(pretty_json(res))
         else:
             print(json.dumps(res))
-

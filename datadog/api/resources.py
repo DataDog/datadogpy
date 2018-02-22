@@ -195,7 +195,9 @@ class ActionAPIResource(object):
         if id is None:
             return APIClient.submit(method, cls._class_url + "/" + name, body, **params)
         else:
-            return APIClient.submit(method, cls._class_url + "/" + str(id) + "/" + name, body, **params)
+            return APIClient.submit(
+                method, cls._class_url + "/" + str(id) + "/" + name, body, **params
+            )
 
     @classmethod
     def _trigger_action(cls, method, name, id=None, **body):
