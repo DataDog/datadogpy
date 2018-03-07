@@ -21,6 +21,10 @@ from tests.unit.api.helper import (
     MyDeletable,
     MyGetable,
     MyListable,
+    MyListableSubResource,
+    MyAddableSubResource,
+    MyUpdatableSubResource,
+    MyDeletableSubResource,
     MyActionable,
     API_KEY,
     APP_KEY,
@@ -237,6 +241,57 @@ class TestResources(DatadogAPIWithInitialization):
         MyDeletable.delete(deletable_object_id, otherparam="val")
         self.request_called_with('DELETE', "host/api/v1/deletables/" + str(deletable_object_id),
                                  params={'otherparam': "val"})
+
+    def test_listable_sub_resources(self):
+        """
+        Listable sub-resources logic.
+        """
+        resource_id = 123
+        MyListableSubResource.get_items(resource_id, otherparam="val")
+        self.request_called_with(
+            'GET',
+            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            params={'otherparam': "val"}
+        )
+
+    def test_addable_sub_resources(self):
+        """
+        Addable sub-resources logic.
+        """
+        resource_id = 123
+        MyAddableSubResource.add_items(resource_id, params={'myparam': 'val1'}, mydata='val2')
+        self.request_called_with(
+            'POST',
+            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            params={'myparam': 'val1'},
+            data={'mydata': 'val2'}
+        )
+
+    def test_updatable_sub_resources(self):
+        """
+        Updatable sub-resources logic.
+        """
+        resource_id = 123
+        MyUpdatableSubResource.update_items(resource_id, params={'myparam': 'val1'}, mydata='val2')
+        self.request_called_with(
+            'PUT',
+            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            params={'myparam': 'val1'},
+            data={'mydata': 'val2'}
+        )
+
+    def test_deletable_sub_resources(self):
+        """
+        Deletable sub-resources logic.
+        """
+        resource_id = 123
+        MyDeletableSubResource.delete_items(resource_id, params={'myparam': 'val1'}, mydata='val2')
+        self.request_called_with(
+            'DELETE',
+            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            params={'myparam': 'val1'},
+            data={'mydata': 'val2'}
+        )
 
     def test_actionable(self):
         """

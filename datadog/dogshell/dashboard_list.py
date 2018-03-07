@@ -181,7 +181,7 @@ class DashboardListClient(object):
         format = args.format
         dashboard_list_id = args.dashboard_list_id
 
-        res = api.DashboardList.get_dashboards(dashboard_list_id)
+        res = api.DashboardList.get_items(dashboard_list_id)
         report_warnings(res)
         report_errors(res)
 
@@ -197,7 +197,7 @@ class DashboardListClient(object):
         dashboard_list_id = args.dashboard_list_id
         dashboards = json.loads(args.dashboards)
 
-        res = api.DashboardList.add_dashboards(dashboard_list_id, dashboards=dashboards)
+        res = api.DashboardList.add_items(dashboard_list_id, dashboards=dashboards)
         report_warnings(res)
         report_errors(res)
 
@@ -213,7 +213,7 @@ class DashboardListClient(object):
         dashboard_list_id = args.dashboard_list_id
         dashboards = json.loads(args.dashboards)
 
-        res = api.DashboardList.update_dashboards(dashboard_list_id, dashboards=dashboards)
+        res = api.DashboardList.update_items(dashboard_list_id, dashboards=dashboards)
         report_warnings(res)
         report_errors(res)
 
@@ -229,7 +229,7 @@ class DashboardListClient(object):
         dashboard_list_id = args.dashboard_list_id
         dashboards = json.loads(args.dashboards)
 
-        res = api.DashboardList.delete_dashboards(dashboard_list_id, dashboards=dashboards)
+        res = api.DashboardList.delete_items(dashboard_list_id, dashboards=dashboards)
         report_warnings(res)
         report_errors(res)
 

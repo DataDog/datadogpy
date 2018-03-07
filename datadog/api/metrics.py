@@ -11,12 +11,11 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
     """
     A wrapper around Metric HTTP API
     """
-    _class_url = None
-    _json_name = 'series'
+    _resource_name = None
 
-    _METRIC_QUERY_ENDPOINT = '/query'
-    _METRIC_SUBMIT_ENDPOINT = '/series'
-    _METRIC_LIST_ENDPOINT = '/metrics'
+    _METRIC_QUERY_ENDPOINT = 'query'
+    _METRIC_SUBMIT_ENDPOINT = 'series'
+    _METRIC_LIST_ENDPOINT = 'metrics'
 
     @classmethod
     def _process_points(cls, points):
@@ -75,7 +74,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
         :returns: Dictionary containing a list of active metrics
         """
 
-        cls._class_url = cls._METRIC_LIST_ENDPOINT
+        cls._resource_name = cls._METRIC_LIST_ENDPOINT
 
         try:
             seconds = int(from_epoch)
@@ -119,7 +118,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
                 metric['type'] = metric.pop('metric_type')
 
         # Set the right endpoint
-        cls._class_url = cls._METRIC_SUBMIT_ENDPOINT
+        cls._resource_name = cls._METRIC_SUBMIT_ENDPOINT
 
         # Format the payload
         try:
@@ -163,7 +162,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
                              query='avg:system.cpu.idle{*}')
         """
         # Set the right endpoint
-        cls._class_url = cls._METRIC_QUERY_ENDPOINT
+        cls._resource_name = cls._METRIC_QUERY_ENDPOINT
 
         # `from` is a reserved keyword in Python, therefore
         # `api.Metric.query(from=...)` is not permited

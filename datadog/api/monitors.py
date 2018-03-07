@@ -8,7 +8,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
     """
     A wrapper around Monitor HTTP API.
     """
-    _class_url = '/monitor'
+    _resource_name = 'monitor'
 
     @classmethod
     def get(cls, id, **params):

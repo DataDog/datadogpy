@@ -5,7 +5,7 @@ class Host(ActionAPIResource):
     """
     A wrapper around Host HTTP API.
     """
-    _class_url = '/host'
+    _resource_name = 'host'
 
     @classmethod
     def mute(cls, host_name, **body):

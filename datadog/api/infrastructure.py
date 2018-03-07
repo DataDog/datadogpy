@@ -5,8 +5,7 @@ class Infrastructure(SearchableAPIResource):
     """
     A wrapper around Infrastructure HTTP API.
     """
-    _class_url = '/search'
-    _plural_class_name = 'results'
+    _resource_name = 'search'
 
     @classmethod
     def search(cls, **params):
