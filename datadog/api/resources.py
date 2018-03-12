@@ -168,6 +168,7 @@ class ListableAPIResource(object):
         """
         return APIClient.submit('GET', cls._resource_name, **params)
 
+
 class ListableAPISubResource(object):
     """
     Listable API Sub-Resource
@@ -191,6 +192,7 @@ class ListableAPISubResource(object):
             sub_resource_name=cls._sub_resource_name
         )
         return APIClient.submit('GET', path, **params)
+
 
 class AddableAPISubResource(object):
     """
@@ -222,6 +224,7 @@ class AddableAPISubResource(object):
         )
         return APIClient.submit('POST', path, body, **params)
 
+
 class UpdatableAPISubResource(object):
     """
     Updatable API Sub-Resource
@@ -252,6 +255,7 @@ class UpdatableAPISubResource(object):
         )
         return APIClient.submit('PUT', path, body, **params)
 
+
 class DeletableAPISubResource(object):
     """
     Deletable API Sub-Resource
@@ -281,6 +285,7 @@ class DeletableAPISubResource(object):
             sub_resource_name=cls._sub_resource_name
         )
         return APIClient.submit('DELETE', path, body, **params)
+
 
 class SearchableAPIResource(object):
     """
