@@ -7,10 +7,7 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, De
     """
     A wrapper around Event HTTP API.
     """
-    _class_name = 'event'
-    _class_url = '/events'
-    _plural_class_name = 'events'
-    _json_name = 'event'
+    _resource_name = 'events'
     _timestamp_keys = set(['start', 'end'])
 
     @classmethod

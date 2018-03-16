@@ -8,9 +8,7 @@ class Screenboard(GetableAPIResource, CreateableAPIResource,
     """
     A wrapper around Screenboard HTTP API.
     """
-    _class_name = 'screen'
-    _class_url = '/screen'
-    _json_name = 'board'
+    _resource_name = 'screen'
 
     @classmethod
     def share(cls, board_id):

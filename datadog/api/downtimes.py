@@ -7,4 +7,4 @@ class Downtime(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
     """
     A wrapper around Monitor Downtiming HTTP API.
     """
-    _class_url = '/downtime'
+    _resource_name = 'downtime'

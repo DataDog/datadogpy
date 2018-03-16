@@ -8,8 +8,18 @@ import requests
 # datadog
 from datadog import initialize, api
 from datadog.api.exceptions import ApiError
-from datadog.api.resources import CreateableAPIResource, UpdatableAPIResource, DeletableAPIResource,\
-    GetableAPIResource, ListableAPIResource, ActionAPIResource
+from datadog.api.resources import (
+    CreateableAPIResource,
+    UpdatableAPIResource,
+    DeletableAPIResource,
+    GetableAPIResource,
+    ListableAPIResource,
+    ListableAPISubResource,
+    AddableAPISubResource,
+    UpdatableAPISubResource,
+    DeletableAPISubResource,
+    ActionAPIResource
+)
 from datadog.util.compat import iteritems, json
 
 
@@ -36,35 +46,50 @@ class MockResponse(requests.Response):
 
 # A few API Resources
 class MyCreatable(CreateableAPIResource):
-    _class_url = '/creatables'
+    _resource_name = 'creatables'
 
 
 class MyUpdatable(UpdatableAPIResource):
-    _class_url = '/updatables'
+    _resource_name = 'updatables'
 
 
 class MyGetable(GetableAPIResource):
-    _class_url = '/getables'
+    _resource_name = 'getables'
 
 
 class MyListable(ListableAPIResource):
-    _class_url = '/listables'
+    _resource_name = 'listables'
 
 
 class MyDeletable(DeletableAPIResource):
-    _class_url = '/deletables'
+    _resource_name = 'deletables'
 
+class MyListableSubResource(ListableAPISubResource):
+    _resource_name = 'resource_name'
+    _sub_resource_name = 'sub_resource_name'
+
+class MyAddableSubResource(AddableAPISubResource):
+    _resource_name = 'resource_name'
+    _sub_resource_name = 'sub_resource_name'
+
+class MyUpdatableSubResource(UpdatableAPISubResource):
+    _resource_name = 'resource_name'
+    _sub_resource_name = 'sub_resource_name'
+
+class MyDeletableSubResource(DeletableAPISubResource):
+    _resource_name = 'resource_name'
+    _sub_resource_name = 'sub_resource_name'
 
 class MyActionable(ActionAPIResource):
-    _class_url = '/actionables'
+    _resource_name = 'actionables'
 
     @classmethod
-    def trigger_class_action(cls, method, name, id=None, **params):
-        super(MyActionable, cls)._trigger_class_action(method, name, id, **params)
+    def trigger_class_action(cls, method, name, id=None, params=None, **body):
+        super(MyActionable, cls)._trigger_class_action(method, name, id, params, **body)
 
     @classmethod
-    def trigger_action(cls, method, name, id=None, **params):
-        super(MyActionable, cls)._trigger_action(method, name, id, **params)
+    def trigger_action(cls, method, name, id=None, **body):
+        super(MyActionable, cls)._trigger_action(method, name, id, **body)
 
 
 # Test classes

@@ -6,8 +6,7 @@ class Metadata(GetableAPIResource, UpdatableAPIResource):
     """
     A wrapper around Metric Metadata HTTP API
     """
-    _class_url = '/metrics'
-    _json_name = 'metrics'
+    _resource_name = 'metrics'
 
     @classmethod
     def get(cls, metric_name):

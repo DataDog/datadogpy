@@ -7,9 +7,7 @@ class Tag(CreateableAPIResource, UpdatableAPIResource, GetableAPIResource,
     """
     A wrapper around Tag HTTP API.
     """
-    _class_name = 'tags'
-    _class_url = '/tags/hosts'
-    _plural_class_name = 'tags'
+    _resource_name = 'tags/hosts'
 
     @classmethod
     def create(cls, host, **body):
