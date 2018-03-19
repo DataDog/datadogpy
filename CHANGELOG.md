@@ -1,6 +1,9 @@
 CHANGELOG
 =========
 
+# 0.20.0 / Unreleased
+* [FEATURE] API: New `DashboardList` resource, [#252][]
+
 # 0.19.0 / 2018-02-08
 
 **ThreadStats: metric type change**
@@ -258,6 +261,7 @@ See [#8][], thanks [@benweatherman][]
 [#241]: https://github.com/DataDog/datadogpy/issues/241
 [#242]: https://github.com/DataDog/datadogpy/issues/242
 [#249]: https://github.com/DataDog/datadogpy/issues/249
+[#252]: https://github.com/DataDog/datadogpy/issues/252
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
 [@aristiden7o]: https://github.com/aristiden7o
