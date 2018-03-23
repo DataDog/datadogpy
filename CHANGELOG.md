@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.20.0 / Unreleased
+# 0.20.0 / 2018-03-23
 * [FEATURE] API: New `DashboardList` resource, [#252][]
 
 # 0.19.0 / 2018-02-08
