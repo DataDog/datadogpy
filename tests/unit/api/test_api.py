@@ -182,7 +182,7 @@ class TestInitialization(DatadogAPINoInitialization):
         # Default values
         test_api_params_default("DATADOG_API_KEY", "_api_key", None)
         test_api_params_default("DATADOG_APP_KEY", "_application_key", None)
-        test_api_params_default("DATADOG_HOST", "_api_host", "https://app.datadoghq.com")
+        test_api_params_default("DATADOG_HOST", "_api_host", "https://api.datadoghq.com")
 
         # From environment
         test_api_params_from_env("DATADOG_API_KEY", "_api_key", env_value="apikey")
