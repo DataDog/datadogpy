@@ -167,8 +167,8 @@ def trim_text(text, max_len):
         u"*...trimmed...*\n" \
         u"```\n" \
         u"{bottom_two_third}\n".format(
-            top_third=text[:max_len / 3],
-            bottom_two_third=text[len(text) - (2 * max_len) / 3:]
+            top_third=text[:max_len // 3],
+            bottom_two_third=text[len(text) - (2 * max_len) // 3:]
         )
 
     return trimmed_text
