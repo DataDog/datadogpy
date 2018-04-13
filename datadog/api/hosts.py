@@ -43,6 +43,7 @@ class Host(ActionAPIResource):
         """
         return super(Host, cls)._trigger_class_action('POST', 'unmute', host_name)
 
+
 class Hosts(ActionAPIResource, ListableAPIResource):
     """
     A wrapper around Hosts HTTP API.
@@ -57,4 +58,3 @@ class Hosts(ActionAPIResource, ListableAPIResource):
         :returns: Dictionary representing the API's JSON response
         """
         return super(Hosts, cls)._trigger_class_action('GET', 'totals')
-
