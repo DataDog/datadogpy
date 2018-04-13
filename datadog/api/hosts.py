@@ -1,4 +1,4 @@
-from datadog.api.resources import ActionAPIResource
+from datadog.api.resources import ActionAPIResource, ListableAPIResource
 
 
 class Host(ActionAPIResource):
@@ -42,3 +42,19 @@ class Host(ActionAPIResource):
 
         """
         return super(Host, cls)._trigger_class_action('POST', 'unmute', host_name)
+
+class Hosts(ActionAPIResource, ListableAPIResource):
+    """
+    A wrapper around Hosts HTTP API.
+    """
+    _resource_name = 'hosts'
+
+    @classmethod
+    def totals(cls):
+        """
+        Get total number of hosts active and up.
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        return super(Hosts, cls)._trigger_class_action('GET', 'totals')
+
