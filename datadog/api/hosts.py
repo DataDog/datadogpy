@@ -76,7 +76,6 @@ class Hosts(ActionAPIResource, SearchableAPIResource):
         """
         return super(Hosts, cls)._search(**params)
 
-
     @classmethod
     def totals(cls):
         """
