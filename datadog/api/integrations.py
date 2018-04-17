@@ -1,12 +1,8 @@
-from datadog.api.resources import (
-    CreateableAPIResource,
-    DeletableAPIResource,
-    GetableAPIResource,
-    UpdatableAPIResource
-)
+from datadog.api.api_client import APIClient
+from datadog.api.resources import CreateableAPIResource
 
 
-class Aws(CreateableAPIResource, GetableAPIResource, DeletableAPIResource):
+class Aws(CreateableAPIResource):
     """
     A wrapper around Integration AWS HTTP API.
     """
@@ -19,8 +15,10 @@ class Aws(CreateableAPIResource, GetableAPIResource, DeletableAPIResource):
 
         :returns: Dictionary representing the API's JSON response
         """
-
-        return super(Aws, cls).get(id="", **params)
+        path = '{resource_name}'.format(
+            resource_name=cls._resource_name
+        )
+        return APIClient.submit('GET', path, **params)
 
     @classmethod
     def delete(cls, **params):
@@ -35,11 +33,13 @@ class Aws(CreateableAPIResource, GetableAPIResource, DeletableAPIResource):
 
         :returns: Dictionary representing the API's JSON response
         """
+        path = '{resource_name}'.format(
+            resource_name=cls._resource_name
+        )
+        return APIClient.submit('DELETE', path, **params)
 
-        return super(Aws, cls).get(id="", **params)
 
-
-class Slack(CreateableAPIResource, GetableAPIResource, DeletableAPIResource, UpdatableAPIResource):
+class Slack(CreateableAPIResource):
     """
     A wrapper around Integration AWS HTTP API.
     """
@@ -53,7 +53,10 @@ class Slack(CreateableAPIResource, GetableAPIResource, DeletableAPIResource, Upd
         :returns: Dictionary representing the API's JSON response
         """
 
-        return super(Slack, cls).get(id="", **params)
+        path = '{resource_name}'.format(
+            resource_name=cls._resource_name
+        )
+        return APIClient.submit('GET', path, **params)
 
     @classmethod
     def delete(cls, **params):
@@ -63,7 +66,10 @@ class Slack(CreateableAPIResource, GetableAPIResource, DeletableAPIResource, Upd
         :returns:
         """
 
-        return super(Slack, cls).get(id="", **params)
+        path = '{resource_name}'.format(
+            resource_name=cls._resource_name
+        )
+        return APIClient.submit('DELETE', path, **params)
 
     @classmethod
     def update(cls, params=None, **body):
@@ -72,5 +78,10 @@ class Slack(CreateableAPIResource, GetableAPIResource, DeletableAPIResource, Upd
 
         :returns:
         """
+        if params is None:
+            params = {}
 
-        return super(Slack, cls).update(id="", params=params, **body)
+        path = '{resource_name}'.format(
+            resource_name=cls._resource_name
+        )
+        return APIClient.submit('PUT', path, body, **params)
