@@ -94,7 +94,7 @@ class TestDatadog(unittest.TestCase):
 
         event_id = dog.Event.create(title='test host and device',
                                     text='test host and device',
-                                    host=self.host_name,)['event']['id']
+                                    host=self.host_name, )['event']['id']
         time.sleep(self.wait_time)
         event = dog.Event.get(event_id)
 
@@ -580,7 +580,7 @@ class TestDatadog(unittest.TestCase):
 
         eq(monitor['query'], query)
         eq(monitor['options']['notify_no_data'],
-            options['notify_no_data'])
+           options['notify_no_data'])
         eq(monitor['options']['silenced'], options['silenced'])
 
         query2 = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200"
@@ -935,6 +935,97 @@ class TestDatadog(unittest.TestCase):
         # test get all users
         u = dog.User.get_all()
         assert len(u['users']) >= 1
+
+    @attr('aws')
+    def test_create_aws(self):
+        result = dog.Aws.create(
+            account_id="01919191919",
+            filter_tags=["env:test"],
+            host_tags=["account:customer1"],
+            role_name="DatadogAWSIntegrationRole",
+            account_specific_namespace_rules={"auto_scaling": False, "opsworks": False}
+        )
+        assert "external_id" in result
+
+    @attr('aws')
+    def test_get_aws(self):
+        result = dog.Aws.get()
+        assert "accounts" in result
+        accounts = result["accounts"]
+        assert len(accounts) == 1
+        assert "account_id" in accounts[0]
+
+    @attr('aws')
+    def test_delete_aws(self):
+        result = dog.Aws.get()
+        assert "accounts" in result
+        accounts = result["accounts"]
+        assert len(accounts) == 1
+        assert "account_id" in accounts[0]
+        result = dog.Aws.delete(account_id=accounts[0]['account_id'], role_name=accounts[0]['role_name'])
+        ok(result)
+
+    @attr('slack')
+    def test_create_slack(self):
+        service_hooks = [{"account": "Main_Account",
+                          "url": "https://hooks.slack.com/services/1/1"},
+                         {"account": "doghouse",
+                          "url": "https://hooks.slack.com/services/2/2"}]
+        channels = [
+            {
+                "channel_name": "#private",
+                "transfer_all_user_comments": "false",
+                "account": "Main_Account"
+            },
+            {
+                "channel_name": "#heresachannel",
+                "transfer_all_user_comments": "false",
+                "account": "doghouse"
+            }
+        ]
+        result = dog.Slack.create(
+            service_hooks=service_hooks,
+            channels=channels
+        )
+        ok(result)
+
+    @attr('slack')
+    def test_get_slack(self):
+        result = dog.Slack.get()
+        assert "channels" in result
+        assert len(result["channels"]) == 2
+        assert "service_hooks" in result
+        assert len(result["service_hooks"]) == 2
+
+    @attr('slack')
+    def test_update_slack(self):
+        service_hooks = [{"account": "Main_Account",
+                          "url": "https://hooks.slack.com/services/2/2"},
+                         {"account": "doghouse",
+                          "url": "https://hooks.slack.com/services/3/3"}]
+        channels = [
+            {
+                "channel_name": "#private_me",
+                "transfer_all_user_comments": "false",
+                "account": "Main_Account"
+            },
+            {
+                "channel_name": "#heresachannelpt2",
+                "transfer_all_user_comments": "false",
+                "account": "doghouse"
+            }
+        ]
+        result = dog.Slack.update(
+            service_hooks=service_hooks,
+            channels=channels
+        )
+        ok(result)
+
+    @attr('slack')
+    def test_delete_slack(self):
+        result = dog.Slack.delete()
+        ok(result)
+
 
 if __name__ == '__main__':
     unittest.main()

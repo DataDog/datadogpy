@@ -32,3 +32,5 @@ from datadog.api.hosts import Host
 from datadog.api.service_checks import ServiceCheck
 from datadog.api.tags import Tag
 from datadog.api.users import User
+from datadog.api.integrations import Aws
+from datadog.api.integrations import Slack
