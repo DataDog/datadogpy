@@ -146,7 +146,10 @@ class DogStatsd(object):
         Flush the buffer and switch back to single metric packets.
         """
         self._send = self._send_to_server
-        self._flush_buffer()
+
+        if self.buffer:
+            # Only send packets if there are packets to send
+            self._flush_buffer()
 
     def gauge(self, metric, value, tags=None, sample_rate=1):
         """
