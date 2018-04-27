@@ -1,4 +1,4 @@
-from datadog.api.resources import ActionAPIResource
+from datadog.api.resources import ActionAPIResource, SearchableAPIResource
 
 
 class Host(ActionAPIResource):
@@ -42,3 +42,45 @@ class Host(ActionAPIResource):
 
         """
         return super(Host, cls)._trigger_class_action('POST', 'unmute', host_name)
+
+
+class Hosts(ActionAPIResource, SearchableAPIResource):
+    """
+    A wrapper around Hosts HTTP API.
+    """
+    _resource_name = 'hosts'
+
+    @classmethod
+    def search(cls, **params):
+        """
+        Search among hosts live within the past 2 hours. Max 100
+        results at a time.
+
+        :param filter: query to filter search results
+        :type filter: string
+
+        :param sort_field: "status", "apps", "cpu", "iowait", or "load"
+        :type sort_field: string
+
+        :param sort_dir: "asc" or "desc"
+        :type sort_dir: string
+
+        :param start: host result to start at
+        :type start: integer
+
+        :param count: number of host results to return
+        :type count: integer
+
+        :returns: Dictionary representing the API's JSOn response
+
+        """
+        return super(Hosts, cls)._search(**params)
+
+    @classmethod
+    def totals(cls):
+        """
+        Get total number of hosts active and up.
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        return super(Hosts, cls)._trigger_class_action('GET', 'totals')
