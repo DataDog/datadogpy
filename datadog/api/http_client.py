@@ -27,6 +27,12 @@ from datadog.api.exceptions import ClientError, HTTPError, HttpTimeout
 log = logging.getLogger('datadog.api')
 
 
+def _remove_context(exc):
+    """Python3: remove context from chained exceptions to prevent leaking API keys in tracebacks."""
+    exc.__cause__ = None
+    return exc
+
+
 class HTTPClient(object):
     """
     An abstract generic HTTP client. Subclasses must implement the `request` methods.
@@ -73,15 +79,15 @@ class RequestClient(HTTPClient):
             result.raise_for_status()
 
         except requests.ConnectionError as e:
-            raise ClientError(method, url, e)
+            raise _remove_context(ClientError(method, url, e))
         except requests.exceptions.Timeout:
-            raise HttpTimeout(method, url, timeout)
+            raise _remove_context(HttpTimeout(method, url, timeout))
         except requests.exceptions.HTTPError as e:
             if e.response.status_code in (400, 403, 404, 409):
                 # This gets caught afterwards and raises an ApiError exception
                 pass
             else:
-                raise HTTPError(e.response.status_code, result.reason)
+                raise _remove_context(HTTPError(e.response.status_code, result.reason))
         except TypeError as e:
             raise TypeError(
                 u"Your installed version of `requests` library seems not compatible with"
