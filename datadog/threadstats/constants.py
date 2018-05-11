@@ -2,6 +2,7 @@ class MetricType(object):
     Gauge = "gauge"
     Counter = "counter"
     Histogram = "histogram"
+    Rate = "rate"
 
 
 class MonitorType(object):

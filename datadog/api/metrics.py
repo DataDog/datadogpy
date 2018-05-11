@@ -4,18 +4,18 @@ from numbers import Number
 
 # datadog
 from datadog.api.exceptions import ApiError
-from datadog.api.resources import SearchableAPIResource, SendableAPIResource
+from datadog.api.resources import SearchableAPIResource, SendableAPIResource, ListableAPIResource
 
 
-class Metric(SearchableAPIResource, SendableAPIResource):
+class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
     """
     A wrapper around Metric HTTP API
     """
-    _class_url = None
-    _json_name = 'series'
+    _resource_name = None
 
-    _METRIC_QUERY_ENDPOINT = '/query'
-    _METRIC_SUBMIT_ENDPOINT = '/series'
+    _METRIC_QUERY_ENDPOINT = 'query'
+    _METRIC_SUBMIT_ENDPOINT = 'series'
+    _METRIC_LIST_ENDPOINT = 'metrics'
 
     @classmethod
     def _process_points(cls, points):
@@ -65,6 +65,26 @@ class Metric(SearchableAPIResource, SendableAPIResource):
         return rec_parse(points_lst)
 
     @classmethod
+    def list(cls, from_epoch):
+        """
+        Get a list of active metrics since a given time (Unix Epoc)
+
+        :param from_epoch: Start time in Unix Epoc (seconds)
+
+        :returns: Dictionary containing a list of active metrics
+        """
+
+        cls._resource_name = cls._METRIC_LIST_ENDPOINT
+
+        try:
+            seconds = int(from_epoch)
+            params = {'from': seconds}
+        except ValueError:
+            raise ApiError("Parameter 'from_epoch' must be an integer")
+
+        return super(Metric, cls).get_all(**params)
+
+    @classmethod
     def send(cls, metrics=None, **single_metric):
         """
         Submit a metric or a list of metrics to the metric API
@@ -98,7 +118,7 @@ class Metric(SearchableAPIResource, SendableAPIResource):
                 metric['type'] = metric.pop('metric_type')
 
         # Set the right endpoint
-        cls._class_url = cls._METRIC_SUBMIT_ENDPOINT
+        cls._resource_name = cls._METRIC_SUBMIT_ENDPOINT
 
         # Format the payload
         try:
@@ -142,7 +162,7 @@ class Metric(SearchableAPIResource, SendableAPIResource):
                              query='avg:system.cpu.idle{*}')
         """
         # Set the right endpoint
-        cls._class_url = cls._METRIC_QUERY_ENDPOINT
+        cls._resource_name = cls._METRIC_QUERY_ENDPOINT
 
         # `from` is a reserved keyword in Python, therefore
         # `api.Metric.query(from=...)` is not permited

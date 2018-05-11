@@ -233,7 +233,7 @@ class TestUnitThreadStats(unittest.TestCase):
         nt.assert_equal(h1avg1['points'][0][1], 35)
         nt.assert_equal(h1cnt1['metric'], 'histogram.1.count')
         nt.assert_equal(h1cnt1['points'][0][0], 100.0)
-        nt.assert_equal(h1cnt1['points'][0][1], 4)
+        nt.assert_equal(h1cnt1['points'][0][1], 0.4)
         nt.assert_equal(h1min1['metric'], 'histogram.1.min')
         nt.assert_equal(h1min1['points'][0][1], 20)
         nt.assert_equal(h1max1['metric'], 'histogram.1.max')
@@ -248,7 +248,7 @@ class TestUnitThreadStats(unittest.TestCase):
         nt.assert_equal(h1avg2['points'][0][1], 40)
         nt.assert_equal(h1cnt2['metric'], 'histogram.1.count')
         nt.assert_equal(h1cnt2['points'][0][0], 110.0)
-        nt.assert_equal(h1cnt2['points'][0][1], 3)
+        nt.assert_equal(h1cnt2['points'][0][1], 0.3)
         nt.assert_equal(h1752['metric'], 'histogram.1.75percentile')
         nt.assert_equal(h1752['points'][0][0], 110.0)
         nt.assert_equal(h1752['points'][0][1], 40.0)
@@ -261,7 +261,7 @@ class TestUnitThreadStats(unittest.TestCase):
         nt.assert_equal(h2avg1['points'][0][1], 40)
         nt.assert_equal(h2cnt1['metric'], 'histogram.2.count')
         nt.assert_equal(h2cnt1['points'][0][0], 100.0)
-        nt.assert_equal(h2cnt1['points'][0][1], 1)
+        nt.assert_equal(h2cnt1['points'][0][1], 0.1)
 
         # Flush again ensure they're gone.
         dog.reporter.metrics = []
@@ -347,7 +347,7 @@ class TestUnitThreadStats(unittest.TestCase):
         (first, second) = metrics
         nt.assert_equal(first['metric'], 'test.counter.1')
         nt.assert_equal(first['points'][0][0], 1000.0)
-        nt.assert_equal(first['points'][0][1], 3)
+        nt.assert_equal(first['points'][0][1], 0.3)
         nt.assert_equal(second['metric'], 'test.counter.2')
 
         # Test decrement
@@ -361,7 +361,7 @@ class TestUnitThreadStats(unittest.TestCase):
         first, = metrics
         nt.assert_equal(first['metric'], 'test.counter.1')
         nt.assert_equal(first['points'][0][0], 1000.0)
-        nt.assert_equal(first['points'][0][1], 8)
+        nt.assert_equal(first['points'][0][1], 0.8)
         nt.assert_equal(second['metric'], 'test.counter.2')
 
         # Flush again and make sure we're progressing.
@@ -416,11 +416,11 @@ class TestUnitThreadStats(unittest.TestCase):
         [c1, c2, c3, g1, g2, g3] = metrics
         (nt.assert_equal(c['metric'], 'counter') for c in [c1, c2, c3])
         nt.assert_equal(c1['tags'], None)
-        nt.assert_equal(c1['points'][0][1], 1)
+        nt.assert_equal(c1['points'][0][1], 0.1)
         nt.assert_equal(c2['tags'], ['env:production', 'db'])
-        nt.assert_equal(c2['points'][0][1], 1)
+        nt.assert_equal(c2['points'][0][1], 0.1)
         nt.assert_equal(c3['tags'], ['env:staging'])
-        nt.assert_equal(c3['points'][0][1], 1)
+        nt.assert_equal(c3['points'][0][1], 0.1)
 
         (nt.assert_equal(c['metric'], 'gauge') for c in [g1, g2, g3])
         nt.assert_equal(g1['tags'], None)
@@ -454,12 +454,14 @@ class TestUnitThreadStats(unittest.TestCase):
 
         # Assertions on gauges
         self.assertMetric(name='gauge', value=10, tags=["type:constant"], count=1)
-        self.assertMetric(name="gauge", value=15, tags=["env:production", "db", "type:constant"], count=1)  # noqa
+        self.assertMetric(name="gauge", value=15, 
+                          tags=["env:production", "db", "type:constant"], count=1)  # noqa
         self.assertMetric(name="gauge", value=20, tags=["env:staging", "type:constant"], count=1)
 
         # Assertions on counters
         self.assertMetric(name="counter", value=1, tags=["type:constant"], count=1)
-        self.assertMetric(name="counter", value=1, tags=["env:production", "db", "type:constant"], count=1)  # noqa
+        self.assertMetric(name="counter", value=1, 
+                          tags=["env:production", "db", "type:constant"], count=1)  # noqa
         self.assertMetric(name="counter", value=1, tags=["env:staging", "type:constant"], count=1)
 
         # Ensure histograms work as well.
@@ -527,13 +529,13 @@ class TestUnitThreadStats(unittest.TestCase):
         (nt.assert_equal(c['metric'], 'counter') for c in [c1, c2, c3])
         nt.assert_equal(c1['host'], None)
         nt.assert_equal(c1['tags'], None)
-        nt.assert_equal(c1['points'][0][1], 2)
+        nt.assert_equal(c1['points'][0][1], 0.2)
         nt.assert_equal(c2['host'], 'test')
         nt.assert_equal(c2['tags'], None)
-        nt.assert_equal(c2['points'][0][1], 1)
+        nt.assert_equal(c2['points'][0][1], 0.1)
         nt.assert_equal(c3['host'], 'test')
         nt.assert_equal(c3['tags'], ['tag'])
-        nt.assert_equal(c3['points'][0][1], 2)
+        nt.assert_equal(c3['points'][0][1], 0.2)
 
         (nt.assert_equal(g['metric'], 'gauge') for g in [g1, g2, g3])
         nt.assert_equal(g1['host'], None)
@@ -556,8 +558,8 @@ class TestUnitThreadStats(unittest.TestCase):
 
     def test_disabled_mode(self):
         dog = ThreadStats()
-        reporter = dog.reporter = MemoryReporter()
         dog.start(disabled=True, flush_interval=1, roll_up_interval=1)
+        reporter = dog.reporter = MemoryReporter()
         dog.gauge('testing', 1, timestamp=1000)
         dog.gauge('testing', 2, timestamp=1000)
         dog.flush(2000.0)
@@ -566,6 +568,7 @@ class TestUnitThreadStats(unittest.TestCase):
     def test_stop(self):
         dog = ThreadStats()
         dog.start(flush_interval=1, roll_up_interval=1)
+        dog.reporter = MemoryReporter()
         for i in range(10):
             dog.gauge('metric', i)
         time.sleep(2)
@@ -670,3 +673,33 @@ class TestUnitThreadStats(unittest.TestCase):
         nt.assert_equal(event['date_happened'], event1_date_happened)
         nt.assert_equal(event['tags'], [event1_tag] + constant_tags + test_tags)
         dog.start(flush_interval=1, roll_up_interval=1)
+
+    def test_metric_type(self):
+        """
+        Checks the submitted metric's metric type.
+        """
+        # Set up ThreadStats with a namespace
+        dog = ThreadStats(namespace="foo")
+        dog.start(roll_up_interval=1, flush_in_thread=False)
+        reporter = dog.reporter = self.reporter
+
+        # Send a few metrics
+        dog.gauge("gauge", 20, timestamp=100.0)
+        dog.increment("counter", timestamp=100.0)
+        dog.histogram('histogram.1', 20, 100.0)
+        dog.flush(200.0)
+		
+        (first, second, p75, p85, p95, p99, avg, cnt, 
+        max_, min_) = self.sort_metrics(reporter.metrics)
+		
+		# Assert Metric type
+        nt.assert_equal(first['type'], 'rate')
+        nt.assert_equal(second['type'], 'gauge')
+        nt.assert_equal(p75['type'], 'gauge')
+        nt.assert_equal(p85['type'], 'gauge')
+        nt.assert_equal(p95['type'], 'gauge')
+        nt.assert_equal(p99['type'], 'gauge')
+        nt.assert_equal(avg['type'], 'gauge')
+        nt.assert_equal(cnt['type'], 'rate')
+        nt.assert_equal(max_['type'], 'gauge')
+        nt.assert_equal(min_['type'], 'gauge')

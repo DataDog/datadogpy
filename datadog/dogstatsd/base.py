@@ -11,10 +11,7 @@ import socket
 # datadog
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.dogstatsd.route import get_default_route
-from datadog.util.compat import (
-    imap,
-    text,
-)
+from datadog.util.compat import text
 
 # Logging
 log = logging.getLogger('datadog.dogstatsd')
@@ -24,7 +21,8 @@ class DogStatsd(object):
     OK, WARNING, CRITICAL, UNKNOWN = (0, 1, 2, 3)
 
     def __init__(self, host='localhost', port=8125, max_buffer_size=50, namespace=None,
-                 constant_tags=None, use_ms=False, use_default_route=False):
+                 constant_tags=None, use_ms=False, use_default_route=False,
+                 socket_path=None):
         """
         Initialize a DogStatsd object.
 
@@ -56,10 +54,20 @@ class DogStatsd(object):
         (Useful when running the client in a container) (Linux only)
         :type use_default_route: boolean
 
+        :param socket_path: Communicate with dogstatsd through a UNIX socket instead of
+        UDP. If set, disables UDP transmission (Linux only)
+        :type socket_path: string
         """
+
         # Connection
-        self.host = self.resolve_host(host, use_default_route)
-        self.port = int(port)
+        if socket_path is not None:
+            self.socket_path = socket_path
+            self.host = None
+            self.port = None
+        else:
+            self.socket_path = None
+            self.host = self.resolve_host(host, use_default_route)
+            self.port = int(port)
 
         # Socket
         self.socket = None
@@ -72,6 +80,8 @@ class DogStatsd(object):
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
+        if namespace is not None:
+            namespace = text(namespace)
         self.namespace = namespace
         self.use_ms = use_ms
 
@@ -105,9 +115,15 @@ class DogStatsd(object):
         avoid bad thread race conditions.
         """
         if not self.socket:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.connect((self.host, self.port))
-            self.socket = sock
+            if self.socket_path is not None:
+                sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+                sock.connect(self.socket_path)
+                sock.setblocking(0)
+                self.socket = sock
+            else:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.connect((self.host, self.port))
+                self.socket = sock
 
         return self.socket
 
@@ -171,6 +187,17 @@ class DogStatsd(object):
         >>> statsd.histogram('album.photo.count', 26, tags=["gender:female"])
         """
         self._report(metric, 'h', value, tags, sample_rate)
+
+    def distribution(self, metric, value, tags=None, sample_rate=1):
+        """
+        Send a global distribution value, optionally setting tags and a sample rate.
+
+        >>> statsd.distribution('uploaded.file.size', 1445)
+        >>> statsd.distribution('album.photo.count', 26, tags=["gender:female"])
+
+        This is a beta feature that must be enabled specifically for your organization.
+        """
+        self._report(metric, 'd', value, tags, sample_rate)
 
     def timing(self, metric, value, tags=None, sample_rate=1):
         """
@@ -236,8 +263,6 @@ class DogStatsd(object):
         if sample_rate != 1 and random() > sample_rate:
             return
 
-        payload = []
-
         # Resolve the full tag list
         if self.constant_tags:
             if tags:
@@ -246,36 +271,28 @@ class DogStatsd(object):
                 tags = self.constant_tags
 
         # Create/format the metric packet
-        if self.namespace:
-            payload.extend([self.namespace, "."])
-        payload.extend([metric, ":", value, "|", metric_type])
-
-        if sample_rate != 1:
-            payload.extend(["|@", sample_rate])
-
-        if tags:
-            payload.extend(["|#", ",".join(tags)])
-
-        encoded = "".join(imap(text, payload))
+        payload = "%s%s:%s|%s%s%s" % (
+            (self.namespace + ".") if self.namespace else "",
+            metric,
+            value,
+            metric_type,
+            ("|@" + text(sample_rate)) if sample_rate != 1 else "",
+            ("|#" + ",".join(tags)) if tags else "",
+        )
 
         # Send it
-        self._send(encoded)
+        self._send(payload)
 
     def _send_to_server(self, packet):
         try:
             # If set, use socket directly
             (self.socket or self.get_socket()).send(packet.encode(self.encoding))
+        except socket.timeout:
+            # dogstatsd is overflowing, drop the packets (mimicks the UDP behaviour)
+            return
         except socket.error:
-            log.info("Error submitting packet, will try refreshing the socket")
-
+            log.info("Error submitting packet, dropping the packet and closing the socket")
             self.close_socket()
-
-            try:
-                self.get_socket().send(packet.encode(self.encoding))
-            except socket.error:
-                self.close_socket()
-
-                log.exception("Failed to send packet with a newly bound socket")
 
     def _send_to_buffer(self, packet):
         self.buffer.append(packet)

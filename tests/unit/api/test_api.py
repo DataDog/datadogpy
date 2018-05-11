@@ -10,7 +10,7 @@ import mock
 
 # datadog
 from datadog import initialize, api
-from datadog.api import Metric
+from datadog.api import Metric, ServiceCheck
 from datadog.api.exceptions import ApiError, ApiNotInitialized
 from datadog.util.compat import is_p3k
 from tests.unit.api.helper import (
@@ -21,6 +21,10 @@ from tests.unit.api.helper import (
     MyDeletable,
     MyGetable,
     MyListable,
+    MyListableSubResource,
+    MyAddableSubResource,
+    MyUpdatableSubResource,
+    MyDeletableSubResource,
     MyActionable,
     API_KEY,
     APP_KEY,
@@ -238,19 +242,115 @@ class TestResources(DatadogAPIWithInitialization):
         self.request_called_with('DELETE', "host/api/v1/deletables/" + str(deletable_object_id),
                                  params={'otherparam': "val"})
 
+    def test_listable_sub_resources(self):
+        """
+        Listable sub-resources logic.
+        """
+        resource_id = 123
+        MyListableSubResource.get_items(resource_id, otherparam="val")
+        self.request_called_with(
+            'GET',
+            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            params={'otherparam': "val"}
+        )
+
+    def test_addable_sub_resources(self):
+        """
+        Addable sub-resources logic.
+        """
+        resource_id = 123
+        MyAddableSubResource.add_items(resource_id, params={'myparam': 'val1'}, mydata='val2')
+        self.request_called_with(
+            'POST',
+            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            params={'myparam': 'val1'},
+            data={'mydata': 'val2'}
+        )
+
+    def test_updatable_sub_resources(self):
+        """
+        Updatable sub-resources logic.
+        """
+        resource_id = 123
+        MyUpdatableSubResource.update_items(resource_id, params={'myparam': 'val1'}, mydata='val2')
+        self.request_called_with(
+            'PUT',
+            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            params={'myparam': 'val1'},
+            data={'mydata': 'val2'}
+        )
+
+    def test_deletable_sub_resources(self):
+        """
+        Deletable sub-resources logic.
+        """
+        resource_id = 123
+        MyDeletableSubResource.delete_items(resource_id, params={'myparam': 'val1'}, mydata='val2')
+        self.request_called_with(
+            'DELETE',
+            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            params={'myparam': 'val1'},
+            data={'mydata': 'val2'}
+        )
+
     def test_actionable(self):
         """
         Actionable resource logic.
         """
         actionable_object_id = 123
-        MyActionable.trigger_class_action('POST', "actionname", id=actionable_object_id,
-                                          mydata="val")
-        self.request_called_with('POST', "host/api/v1/actionables/" + str(actionable_object_id) +
-                                 "/actionname", data={'mydata': "val"})
+        MyActionable.trigger_class_action(
+            'POST',
+            'actionname',
+            id=actionable_object_id,
+            params={'myparam': 'val1'},
+            mydata='val',
+            mydata2='val2'
+        )
+        self.request_called_with(
+            'POST',
+            'host/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            params={'myparam': 'val1'},
+            data={'mydata': 'val', 'mydata2': 'val2'}
+        )
 
-        MyActionable.trigger_action('POST', "actionname", id=actionable_object_id, mydata="val")
-        self.request_called_with('POST', "host/api/v1/actionname/" + str(actionable_object_id),
-                                 data={'mydata': "val"})
+        MyActionable.trigger_class_action(
+            'POST',
+            'actionname',
+            id=actionable_object_id,
+            mydata='val',
+            mydata2='val2'
+        )
+        self.request_called_with(
+            'POST',
+            'host/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            params={},
+            data={'mydata': 'val', 'mydata2': 'val2'}
+        )
+
+        MyActionable.trigger_class_action(
+            'GET',
+            'actionname',
+            id=actionable_object_id,
+            params={'param1': 'val1', 'param2': 'val2'}
+        )
+        self.request_called_with(
+            'GET',
+            'host/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            params={'param1': 'val1', 'param2': 'val2'},
+            data={}
+        )
+
+        MyActionable.trigger_action(
+            'POST',
+            'actionname',
+            id=actionable_object_id,
+            mydata="val"
+        )
+        self.request_called_with(
+            'POST',
+            'host/api/v1/actionname/{0}'.format(actionable_object_id),
+            data={'mydata': "val"}
+        )
 
 
 class TestMetricResource(DatadogAPIWithInitialization):
@@ -327,3 +427,19 @@ class TestMetricResource(DatadogAPIWithInitialization):
         for point in supported_data_types:
             serie = dict(metric='metric.numerical', points=point)
             self.submit_and_assess_metric_payload(serie)
+
+class TestServiceCheckResource(DatadogAPIWithInitialization):
+
+    def test_service_check_supports_none_parameters(self):
+        """
+        ServiceCheck should support none parameters
+
+        ```
+        $ dog service_check check check_pg host0 1
+        ```
+
+        resulted in `RuntimeError: dictionary changed size during iteration`
+        """
+        ServiceCheck.check(
+            check='check_pg', host_name='host0', status=1, message=None,
+            timestamp=None, tags=None)

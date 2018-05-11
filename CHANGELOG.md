@@ -1,6 +1,38 @@
 CHANGELOG
 =========
 
+# 0.20.0 / 2018-03-23
+* [FEATURE] API: New `DashboardList` resource, [#252][]
+
+# 0.19.0 / 2018-02-08
+
+**ThreadStats: metric type change**
+
+`ThreadStats` count metrics (produced from the `increment`/`decrement` and `histogram` methods) are now reported with the `count`/`rate` metric type, instead of `gauge`.
+As a result, for the corresponding metrics:
+1. Metric queries can use the `.as_count()`/ `.as_rate()` functions to switch between count and rate representations.
+2. The default time aggregation uses a sum instead of an average. **This may affect the representation of existing metric queries, thus, monitors' definitions and metric graphs.**
+
+See [#242][] (thanks [@nilabhsagar][]) for more details.
+
+
+* [BUGFIX] ThreadStats: Send count metrics with `Rate` metric type, [#242][] (thanks [@nilabhsagar][])
+* [IMPROVEMENT] ThreadStats: Flush all metrics on exit, [#221][]
+
+
+# 0.18.0 / 2018-01-24
+* [BUGFIX] Dogshell: Service checks can be sent with optional parameters set to null values, [#241][] (thanks [@timvisher][])
+* [BUGFIX] Dogwrap: Respect the ouput channel encoding format, [#236][] (thanks [@martin308][])
+* [FEATURE] DogstatsD: Add beta support for sending global distribution metrics, [#249][]
+
+# 0.17.0 / 2017-11-06
+* [BUGFIX] API: Discard non-null parameters in `api.ServiceCheck.check`method, [#206][], [#207][] (thanks [@ronindesign][])
+* [BUGFIX] API: Update HTTP method from `GET` to `POST` for `api.Screenboard.share` method, [#234][] (thanks [@seiro-ogasawara][])
+* [BUGFIX] Dogwrap: Encode from unicode before writing to stdout, stderr, [#201][], [#203][] (thanks [@ronindesign][])
+* [FEATURE] API: Add `list` method to `Metric` resource, [#230][] (thanks [@jbain][])
+* [FEATURE] DogStatsD: Add `socket_path` option to enable Unix socket traffic to DogStatsD 6, [#199][]
+* [IMPROVEMENT] DogStatsD: Improve performances, speed up payload construction, [#233][] (thanks [@shargan][])
+
 # 0.16.0 / 2017-04-26
 * [FEATURE] Dogshell: Add filtering options to the `monitor show_all` command, [#194][]
 
@@ -39,7 +71,7 @@ logging.getLogger("datadog").addHandler(...)
 * [BUGFIX] Dogshell: Fix `UnicodeError` exceptions when a timeboard name contains non ascii characters, [#140][]
 * [BUGFIX] DogStatsD: Support unicode characters in tags, [#132][], [#152][]
 * [BUGFIX] ThreadStats: Fix `RuntimeError` exceptions on flush caused by an unsafe thread operation, [#143][], [#151][] (thanks [@leozc][])
-* [FEATURE] API: Add `delete` method for `Event` resource, [#145][]
+* [FEATURE] API: Add `delete` method to `Event` resource, [#145][]
 * [IMPROVEMENT] DogStatsD: Have `timed` context manager to return itself, [#147][] (thanks [@ross][])
 
 # 0.12.0 / 2016-05-27
@@ -48,7 +80,6 @@ logging.getLogger("datadog").addHandler(...)
 * [IMPROVEMENT] API: Enhance compatibility with Google App Engine, support `urlfetch` as a HTTP library [#106][]
 
 # 0.11.0 / 2016-03-14
-
 * [BUGFIX] Dogshell: Print usage when no argument is given on Python 3, [#123][]
 * [BUGFIX] DogStatsD: Do not modify metric-level `tags` parameters when `constant_tags` is set, [#94][] (thanks [@steven-liu][])
 * [BUGFIX] DogStatsD: Fix thread-safety of the `[@timed][]` decorator, [#126][] (thanks [@mgood][])
@@ -217,6 +248,20 @@ See [#8][], thanks [@benweatherman][]
 [#184]: https://github.com/DataDog/datadogpy/issues/184
 [#185]: https://github.com/DataDog/datadogpy/issues/185
 [#194]: https://github.com/DataDog/datadogpy/issues/194
+[#199]: https://github.com/DataDog/datadogpy/issues/199
+[#201]: https://github.com/DataDog/datadogpy/issues/201
+[#203]: https://github.com/DataDog/datadogpy/issues/203
+[#206]: https://github.com/DataDog/datadogpy/issues/206
+[#207]: https://github.com/DataDog/datadogpy/issues/207
+[#221]: https://github.com/DataDog/datadogpy/issues/221
+[#230]: https://github.com/DataDog/datadogpy/issues/230
+[#233]: https://github.com/DataDog/datadogpy/issues/233
+[#234]: https://github.com/DataDog/datadogpy/issues/234
+[#236]: https://github.com/DataDog/datadogpy/issues/236
+[#241]: https://github.com/DataDog/datadogpy/issues/241
+[#242]: https://github.com/DataDog/datadogpy/issues/242
+[#249]: https://github.com/DataDog/datadogpy/issues/249
+[#252]: https://github.com/DataDog/datadogpy/issues/252
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
 [@aristiden7o]: https://github.com/aristiden7o
@@ -229,16 +274,23 @@ See [#8][], thanks [@benweatherman][]
 [@ewdurbin]: https://github.com/ewdurbin
 [@g--]: https://github.com/g--
 [@gnarf]: https://github.com/gnarf
+[@jbain]: https://github.com/jbain
 [@jofusa]: https://github.com/jofusa
 [@kuzmich]: https://github.com/kuzmich
 [@leozc]: https://github.com/leozc
+[@martin308]: https://github.com/martin308
 [@meawoppl]: https://github.com/meawoppl
 [@mgood]: https://github.com/mgood
 [@miketheman]: https://github.com/miketheman
+[@nilabhsagar]: https://github.com/nilabhsagar
 [@ogst]: https://github.com/ogst
 [@ojongerius]: https://github.com/ojongerius
+[@ronindesign]: https://github.com/ronindesign
 [@ross]: https://github.com/ross
+[@seiro-ogasawara]: https://github.com/seiro-ogasawara
+[@shargan]: https://github.com/shargan
 [@steven-liu]: https://github.com/steven-liu
 [@thehesiod]: https://github.com/thehesiod
 [@timed]: https://github.com/timed
+[@timvisher]: https://github.com/timvisher
 [@tuukkamustonen]: https://github.com/tuukkamustonen
