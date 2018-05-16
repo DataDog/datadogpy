@@ -102,7 +102,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
         :type tags: string list
 
         :param type: type of the metric
-        :type type: 'gauge' or 'counter' string
+        :type type: 'gauge' or 'count' or 'rate' string
 
         :returns: Dictionary representing the API's JSON response
         """
