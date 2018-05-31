@@ -96,8 +96,6 @@ class RequestClient(HTTPClient):
                 u"Datadog's usage. We recommand upgrading it ('pip install -U requests')."
                 u"If you need help or have any question, please contact support@datadoghq.com"
             )
-        finally:
-            s.close()
 
         return result
 
