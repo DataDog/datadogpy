@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.21.0 / Unreleased
+# 0.21.0 / 2018-06-04
 
 **Search hosts: `Infrastructure.search` is deprecated**
 The `Infrastructure.search` method is deprecated in favor of the new `Hosts.search` method.
