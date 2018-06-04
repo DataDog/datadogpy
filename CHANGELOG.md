@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+# 0.21.0 / Unreleased
+
+**Search hosts: `Infrastructure.search` is deprecated**
+The `Infrastructure.search` method is deprecated in favor of the new `Hosts.search` method.
+
+* [BUGFIX] API: Prevent exception contexts from logging URLs and credentials, [#266][]
+* [FEATURE] API: Add `search` and `totals` methods to the `Hosts` resource, [#261][]
+
 # 0.20.0 / 2018-03-23
 * [FEATURE] API: New `DashboardList` resource, [#252][]
 
@@ -262,6 +270,8 @@ See [#8][], thanks [@benweatherman][]
 [#242]: https://github.com/DataDog/datadogpy/issues/242
 [#249]: https://github.com/DataDog/datadogpy/issues/249
 [#252]: https://github.com/DataDog/datadogpy/issues/252
+[#261]: https://github.com/DataDog/datadogpy/issues/261
+[#266]: https://github.com/DataDog/datadogpy/issues/266
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
 [@aristiden7o]: https://github.com/aristiden7o
