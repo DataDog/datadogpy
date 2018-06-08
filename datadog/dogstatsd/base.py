@@ -264,11 +264,7 @@ class DogStatsd(object):
             return
 
         # Resolve the full tag list
-        if self.constant_tags:
-            if tags:
-                tags = tags + self.constant_tags
-            else:
-                tags = self.constant_tags
+        tags = self._add_constant_tags(tags)
 
         # Create/format the metric packet
         payload = "%s%s:%s|%s%s%s" % (
@@ -323,11 +319,7 @@ class DogStatsd(object):
         text = self._escape_event_content(text)
 
         # Append all client level tags to every event
-        if self.constant_tags:
-            if tags:
-                tags += self.constant_tags
-            else:
-                tags = self.constant_tags
+        tags = self._add_constant_tags(tags)
 
         string = u'_e{%d,%d}:%s|%s' % (len(title), len(text), title, text)
         if date_happened:
@@ -362,6 +354,9 @@ class DogStatsd(object):
 
         string = u'_sc|{0}|{1}'.format(check_name, status)
 
+        # Append all client level tags to every status check
+        tags = self._add_constant_tags(tags)
+
         if timestamp:
             string = u'{0}|d:{1}'.format(string, timestamp)
         if hostname:
@@ -372,6 +367,14 @@ class DogStatsd(object):
             string = u'{0}|m:{1}'.format(string, message)
 
         self._send(string)
+
+    def _add_constant_tags(self, tags):
+        if self.constant_tags:
+            if tags:
+                return tags + self.constant_tags
+            else:
+                return self.constant_tags
+        return tags
 
 
 statsd = DogStatsd()
