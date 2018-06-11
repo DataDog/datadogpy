@@ -3,7 +3,7 @@ The Datadog Python library
 [![Build Status](https://travis-ci.org/DataDog/datadogpy.svg?branch=master)](https://travis-ci.org/DataDog/datadogpy)
 [![Documentation Status](https://readthedocs.org/projects/datadogpy/badge/?version=latest)](https://readthedocs.org/projects/datadogpy/?badge=latest)
 
-Datadogpy is a collection of tools suitable for inclusion in existing Python projects or for development of standalone scripts. It provides an abstraction on top of Datadog's raw HTTP interface and agent's StatsD metrics aggregation server, to interact with Datadog and efficiently report events and metrics.
+Datadogpy is a collection of tools suitable for inclusion in existing Python projects or for development of standalone scripts. It provides an abstraction on top of Datadog's raw HTTP interface and the Agent's StatsD metrics aggregation server, to interact with Datadog and efficiently report events and metrics.
 
 - Library Documentation: http://datadogpy.readthedocs.org/en/latest/
 - HTTP API Documentation: http://docs.datadoghq.com/api/
@@ -24,7 +24,7 @@ To install from source:
 
 Quick Start Guide
 -----------------
-``` python
+```python
 # Configure the module according to your needs
 from datadog import initialize
 
@@ -59,6 +59,6 @@ stats.increment('home.page.hits')
 
 ```
 
-Threadsafety
-------------
-`DogStatsd` and `ThreadStats` are threadsafe.
+Thread Safety
+-------------
+`DogStatsD` and `ThreadStats` are thread-safe.
