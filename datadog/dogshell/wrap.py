@@ -167,8 +167,8 @@ def trim_text(text, max_len):
         u"*...trimmed...*\n" \
         u"```\n" \
         u"{bottom_two_third}\n".format(
-            top_third=text[:max_len / 3],
-            bottom_two_third=text[len(text) - (2 * max_len) / 3:]
+            top_third=text[:max_len // 3],
+            bottom_two_third=text[len(text) - (2 * max_len) // 3:]
         )
 
     return trimmed_text
@@ -184,7 +184,7 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
     fmt_stderr = u""
     fmt_notifications = u""
 
-    max_length = MAX_EVENT_BODY_LENGTH / 2 if stdout and stderr else MAX_EVENT_BODY_LENGTH
+    max_length = MAX_EVENT_BODY_LENGTH // 2 if stdout and stderr else MAX_EVENT_BODY_LENGTH
 
     if stdout:
         fmt_stdout = u"**>>>> STDOUT <<<<**\n```\n{stdout} \n```\n".format(
