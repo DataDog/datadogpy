@@ -106,6 +106,13 @@ class TestDogStatsd(object):
         t.assert_equal(statsd.host, "172.17.0.1")
         t.assert_equal(statsd.port, 1234)
 
+        # Add UNIX socket
+        options['statsd_socket_path'] = '/var/run/dogstatsd.sock'
+        initialize(**options)
+        t.assert_equal(statsd.socket_path, options['statsd_socket_path'])
+        t.assert_equal(statsd.host, None)
+        t.assert_equal(statsd.port, None)
+
     def test_default_route(self):
         """
         Dogstatsd host can be dynamically set to the default route.
