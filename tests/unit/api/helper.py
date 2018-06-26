@@ -99,7 +99,7 @@ class DatadogAPITestCase(unittest.TestCase):
         # Mock patch requests
         self.request_patcher = patch('requests.Session')
         request_class_mock = self.request_patcher.start()
-        self.request_mock = request_class_mock.return_value
+        self.request_mock = request_class_mock.return_value.__enter__.return_value
         self.request_mock.request = Mock(return_value=MockResponse())
 
     def tearDown(self):
