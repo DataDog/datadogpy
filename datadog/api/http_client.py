@@ -12,6 +12,7 @@ import urllib
 # 3p
 try:
     import requests
+    import requests.adapters
 except ImportError:
     requests = None
 
@@ -64,19 +65,20 @@ class RequestClient(HTTPClient):
     def request(cls, method, url, headers, params, data, timeout, proxies, verify, max_retries):
         """
         """
-        # Use a session to set a max_retries parameters
-        s = requests.Session()
-        http_adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
-        s.mount('https://', http_adapter)
-
         try:
-            result = s.request(
-                method, url,
-                headers=headers, params=params, data=data,
-                timeout=timeout,
-                proxies=proxies, verify=verify)
+            # Use a session to set a max_retries parameters
+            with requests.Session() as s:
+                http_adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
+                s.mount('https://', http_adapter)
 
-            result.raise_for_status()
+                # Since stream=False we can close the session after this call
+                result = s.request(
+                    method, url,
+                    headers=headers, params=params, data=data,
+                    timeout=timeout,
+                    proxies=proxies, verify=verify)
+
+                result.raise_for_status()
 
         except requests.ConnectionError as e:
             raise _remove_context(ClientError(method, url, e))
