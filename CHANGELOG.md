@@ -1,6 +1,18 @@
 CHANGELOG
 =========
 
+# 0.22.0 / Unreleased
+
+**New API endpoint: https://api.datadoghq.com/api**
+The Datadog API client now uses https://api.datadoghq.com/api endpoint instead of https://app.datadoghq.com/api.
+See [#257][] for more details.
+
+* [BUGFIX] API: Close requests' sessions to limit memory usage, [#272][] (thanks [@thehesiod][])
+* [BUGFIX] Dogwrap: Fix `TypeError` exceptions when truncating `stdout`, `stderr` with Python 3, [#260][], [#267][] (thanks [@cabouffard][], [@glasnt][])
+* [FEATURE] DogStatsD: Add client level tags to status checks, [#279][] (thanks [@marshallbrekka][])
+* [FEATURE] DogStatsD: Add support for `statsd_socket_path` option in `initialize` function, [#282][]
+* [IMPROVEMENT] Dogwrap: Default output encoding to UTF-8, [#268][] (thanks [@glasnt][])
+
 # 0.21.0 / 2018-06-04
 
 **Search hosts: `Infrastructure.search` is deprecated**
@@ -270,12 +282,20 @@ See [#8][], thanks [@benweatherman][]
 [#242]: https://github.com/DataDog/datadogpy/issues/242
 [#249]: https://github.com/DataDog/datadogpy/issues/249
 [#252]: https://github.com/DataDog/datadogpy/issues/252
+[#257]: https://github.com/DataDog/datadogpy/issues/257
+[#260]: https://github.com/DataDog/datadogpy/issues/260
 [#261]: https://github.com/DataDog/datadogpy/issues/261
 [#266]: https://github.com/DataDog/datadogpy/issues/266
+[#267]: https://github.com/DataDog/datadogpy/issues/267
+[#268]: https://github.com/DataDog/datadogpy/issues/268
+[#272]: https://github.com/DataDog/datadogpy/issues/272
+[#279]: https://github.com/DataDog/datadogpy/issues/279
+[#282]: https://github.com/DataDog/datadogpy/issues/282
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
 [@aristiden7o]: https://github.com/aristiden7o
 [@benweatherman]: https://github.com/benweatherman
+[@cabouffard]: https://github.com/cabouffard
 [@clokep]: https://github.com/clokep
 [@dcrosta]: https://github.com/dcrosta
 [@drstevens]: https://github.com/drstevens
@@ -283,11 +303,13 @@ See [#8][], thanks [@benweatherman][]
 [@evanj]: https://github.com/evanj
 [@ewdurbin]: https://github.com/ewdurbin
 [@g--]: https://github.com/g--
+[@glasnt]: https://github.com/glasnt
 [@gnarf]: https://github.com/gnarf
 [@jbain]: https://github.com/jbain
 [@jofusa]: https://github.com/jofusa
 [@kuzmich]: https://github.com/kuzmich
 [@leozc]: https://github.com/leozc
+[@marshallbrekka]: https://github.com/marshallbrekka
 [@martin308]: https://github.com/martin308
 [@meawoppl]: https://github.com/meawoppl
 [@mgood]: https://github.com/mgood
