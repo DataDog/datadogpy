@@ -1,9 +1,10 @@
 CHANGELOG
 =========
 
-# 0.22.0 / Unreleased
+# 0.22.0 / 2018-06-27
 
 **New API endpoint: https://api.datadoghq.com/api**
+
 The Datadog API client now uses https://api.datadoghq.com/api endpoint instead of https://app.datadoghq.com/api.
 See [#257][] for more details.
 
