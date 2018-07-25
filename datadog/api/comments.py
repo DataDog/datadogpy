@@ -6,6 +6,4 @@ class Comment(CreateableAPIResource, UpdatableAPIResource, DeletableAPIResource)
     """
     A wrapper around Comment HTTP API.
     """
-    _class_name = 'comment'
-    _class_url = '/comments'
-    _json_name = 'comment'
+    _resource_name = 'comments'

@@ -11,10 +11,7 @@ import socket
 # datadog
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.dogstatsd.route import get_default_route
-from datadog.util.compat import (
-    imap,
-    text,
-)
+from datadog.util.compat import text
 
 # Logging
 log = logging.getLogger('datadog.dogstatsd')
@@ -86,6 +83,8 @@ class DogStatsd(object):
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
+        if namespace is not None:
+            namespace = text(namespace)
         self.namespace = namespace
         self.use_ms = use_ms
         self.default_sample_rate = default_sample_rate
@@ -193,6 +192,17 @@ class DogStatsd(object):
         """
         self._report(metric, 'h', value, tags, sample_rate)
 
+    def distribution(self, metric, value, tags=None, sample_rate=None):
+        """
+        Send a global distribution value, optionally setting tags and a sample rate.
+
+        >>> statsd.distribution('uploaded.file.size', 1445)
+        >>> statsd.distribution('album.photo.count', 26, tags=["gender:female"])
+
+        This is a beta feature that must be enabled specifically for your organization.
+        """
+        self._report(metric, 'd', value, tags, sample_rate)
+
     def timing(self, metric, value, tags=None, sample_rate=None):
         """
         Record a timing, optionally setting tags and a sample rate.
@@ -260,30 +270,21 @@ class DogStatsd(object):
         if sample_rate != 1 and random() > sample_rate:
             return
 
-        payload = []
-
         # Resolve the full tag list
-        if self.constant_tags:
-            if tags:
-                tags = tags + self.constant_tags
-            else:
-                tags = self.constant_tags
+        tags = self._add_constant_tags(tags)
 
         # Create/format the metric packet
-        if self.namespace:
-            payload.extend([self.namespace, "."])
-        payload.extend([metric, ":", value, "|", metric_type])
-
-        if sample_rate != 1:
-            payload.extend(["|@", sample_rate])
-
-        if tags:
-            payload.extend(["|#", ",".join(tags)])
-
-        encoded = "".join(imap(text, payload))
+        payload = "%s%s:%s|%s%s%s" % (
+            (self.namespace + ".") if self.namespace else "",
+            metric,
+            value,
+            metric_type,
+            ("|@" + text(sample_rate)) if sample_rate != 1 else "",
+            ("|#" + ",".join(tags)) if tags else "",
+        )
 
         # Send it
-        self._send(encoded)
+        self._send(payload)
 
     def _send_to_server(self, packet):
         try:
@@ -325,11 +326,7 @@ class DogStatsd(object):
         text = self._escape_event_content(text)
 
         # Append all client level tags to every event
-        if self.constant_tags:
-            if tags:
-                tags += self.constant_tags
-            else:
-                tags = self.constant_tags
+        tags = self._add_constant_tags(tags)
 
         string = u'_e{%d,%d}:%s|%s' % (len(title), len(text), title, text)
         if date_happened:
@@ -364,6 +361,9 @@ class DogStatsd(object):
 
         string = u'_sc|{0}|{1}'.format(check_name, status)
 
+        # Append all client level tags to every status check
+        tags = self._add_constant_tags(tags)
+
         if timestamp:
             string = u'{0}|d:{1}'.format(string, timestamp)
         if hostname:
@@ -374,6 +374,14 @@ class DogStatsd(object):
             string = u'{0}|m:{1}'.format(string, message)
 
         self._send(string)
+
+    def _add_constant_tags(self, tags):
+        if self.constant_tags:
+            if tags:
+                return tags + self.constant_tags
+            else:
+                return self.constant_tags
+        return tags
 
 
 statsd = DogStatsd()

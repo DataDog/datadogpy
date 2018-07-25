@@ -8,7 +8,4 @@ class Timeboard(GetableAPIResource, CreateableAPIResource,
     """
     A wrapper around Timeboard HTTP API.
     """
-    _class_name = 'dash'
-    _class_url = '/dash'
-    _plural_class_name = 'dashes'
-    _json_name = 'dash'
+    _resource_name = 'dash'

@@ -7,6 +7,7 @@ from collections import deque
 import os
 import socket
 import time
+import unittest
 
 # 3p
 from mock import (
@@ -59,7 +60,7 @@ class BrokenSocket(FakeSocket):
         raise socket.error("Socket error")
 
 
-class TestDogStatsd(object):
+class TestDogStatsd(unittest.TestCase):
 
     def setUp(self):
         """
@@ -105,6 +106,13 @@ class TestDogStatsd(object):
         initialize(statsd_use_default_route=True, **options)
         t.assert_equal(statsd.host, "172.17.0.1")
         t.assert_equal(statsd.port, 1234)
+
+        # Add UNIX socket
+        options['statsd_socket_path'] = '/var/run/dogstatsd.sock'
+        initialize(**options)
+        t.assert_equal(statsd.socket_path, options['statsd_socket_path'])
+        t.assert_equal(statsd.host, None)
+        t.assert_equal(statsd.port, None)
 
     def test_default_route(self):
         """
@@ -206,6 +214,25 @@ class TestDogStatsd(object):
             hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪")
         t.assert_equal(
             u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}'
+            .format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\: T0µ ♪"), self.recv())
+
+    def test_service_check_constant_tags(self):
+        self.statsd.constant_tags = ['bar:baz', 'foo']
+        now = int(time.time())
+        self.statsd.service_check(
+            'my_check.name', self.statsd.WARNING,
+            timestamp=now,
+            hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪")
+        t.assert_equal(
+            u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#bar:baz,foo|m:{2}'
+            .format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\: T0µ ♪"), self.recv())
+
+        self.statsd.service_check(
+            'my_check.name', self.statsd.WARNING,
+            tags=['key1:val1', 'key2:val2'], timestamp=now,
+            hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪")
+        t.assert_equal(
+            u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2,bar:baz,foo|m:{2}'
             .format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\: T0µ ♪"), self.recv())
 
     def test_metric_namespace(self):

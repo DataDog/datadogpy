@@ -4,17 +4,18 @@ performance. It collects metrics in the application thread with very little over
 and allows flushing metrics in process, in a thread or in a greenlet, depending
 on your application's needs.
 """
-
+# stdlib
+from contextlib import contextmanager
+from functools import wraps
+from time import time
+import atexit
 import logging
 import os
-from functools import wraps
-from contextlib import contextmanager
-from time import time
 
+# datadog
 from datadog.api.exceptions import ApiNotInitialized
-from datadog.threadstats.constants import MetricType
-from datadog.threadstats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing
 from datadog.threadstats.events import EventsAggregator
+from datadog.threadstats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing
 from datadog.threadstats.reporters import HttpReporter
 
 # Loggers
@@ -114,6 +115,9 @@ class ThreadStats(object):
             elif flush_in_thread:
                 self._start_flush_thread()
 
+        # Flush all remaining metrics on exit
+        atexit.register(lambda: self.flush(float('inf')))
+
     def stop(self):
         if not self._is_auto_flushing:
             return True
@@ -206,8 +210,8 @@ class ThreadStats(object):
         >>> stats.timing("query.response.time", 1234)
         """
         if not self._disabled:
-            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value, Timing,
-                                              sample_rate=sample_rate, host=host)
+            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
+                                              Timing, sample_rate=sample_rate, host=host)
 
     @contextmanager
     def timer(self, metric_name, sample_rate=1, tags=None, host=None):
@@ -302,10 +306,10 @@ class ThreadStats(object):
                 log.debug("No events to flush. Continuing.")
         except ApiNotInitialized:
             raise
-        except:
+        except Exception:
             try:
                 log.exception("Error flushing metrics and events")
-            except:
+            except Exception:
                 pass
         finally:
             self._is_flush_in_progress = False
@@ -319,7 +323,7 @@ class ThreadStats(object):
 
         # FIXME: emit a dictionary from the aggregator
         metrics = []
-        for timestamp, value, name, tags, host in rolled_up_metrics:
+        for timestamp, value, name, tags, host, metric_type, interval in rolled_up_metrics:
             metric_tags = tags
             metric_name = name
 
@@ -337,10 +341,11 @@ class ThreadStats(object):
             metric = {
                 'metric': metric_name,
                 'points': [[timestamp, value]],
-                'type': MetricType.Gauge,
+                'type': metric_type,
                 'host': host,
                 'device': self.device,
-                'tags': metric_tags
+                'tags': metric_tags,
+                'interval': interval
             }
             metrics.append(metric)
         return metrics

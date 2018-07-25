@@ -8,9 +8,7 @@ class Screenboard(GetableAPIResource, CreateableAPIResource,
     """
     A wrapper around Screenboard HTTP API.
     """
-    _class_name = 'screen'
-    _class_url = '/screen'
-    _json_name = 'board'
+    _resource_name = 'screen'
 
     @classmethod
     def share(cls, board_id):
@@ -22,7 +20,7 @@ class Screenboard(GetableAPIResource, CreateableAPIResource,
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Screenboard, cls)._trigger_action('GET', 'screen/share', board_id)
+        return super(Screenboard, cls)._trigger_action('POST', 'screen/share', board_id)
 
     @classmethod
     def revoke(cls, board_id):

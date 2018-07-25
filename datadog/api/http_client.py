@@ -12,6 +12,7 @@ import urllib
 # 3p
 try:
     import requests
+    import requests.adapters
 except ImportError:
     requests = None
 
@@ -25,6 +26,12 @@ from datadog.api.exceptions import ClientError, HTTPError, HttpTimeout
 
 
 log = logging.getLogger('datadog.api')
+
+
+def _remove_context(exc):
+    """Python3: remove context from chained exceptions to prevent leaking API keys in tracebacks."""
+    exc.__cause__ = None
+    return exc
 
 
 class HTTPClient(object):
@@ -58,30 +65,31 @@ class RequestClient(HTTPClient):
     def request(cls, method, url, headers, params, data, timeout, proxies, verify, max_retries):
         """
         """
-        # Use a session to set a max_retries parameters
-        s = requests.Session()
-        http_adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
-        s.mount('https://', http_adapter)
-
         try:
-            result = s.request(
-                method, url,
-                headers=headers, params=params, data=data,
-                timeout=timeout,
-                proxies=proxies, verify=verify)
+            # Use a session to set a max_retries parameters
+            with requests.Session() as s:
+                http_adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
+                s.mount('https://', http_adapter)
 
-            result.raise_for_status()
+                # Since stream=False we can close the session after this call
+                result = s.request(
+                    method, url,
+                    headers=headers, params=params, data=data,
+                    timeout=timeout,
+                    proxies=proxies, verify=verify)
+
+                result.raise_for_status()
 
         except requests.ConnectionError as e:
-            raise ClientError(method, url, e)
+            raise _remove_context(ClientError(method, url, e))
         except requests.exceptions.Timeout:
-            raise HttpTimeout(method, url, timeout)
+            raise _remove_context(HttpTimeout(method, url, timeout))
         except requests.exceptions.HTTPError as e:
             if e.response.status_code in (400, 403, 404, 409):
                 # This gets caught afterwards and raises an ApiError exception
                 pass
             else:
-                raise HTTPError(e.response.status_code, result.reason)
+                raise _remove_context(HTTPError(e.response.status_code, result.reason))
         except TypeError as e:
             raise TypeError(
                 u"Your installed version of `requests` library seems not compatible with"
