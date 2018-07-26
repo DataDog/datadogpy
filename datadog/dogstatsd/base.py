@@ -48,7 +48,7 @@ class DogStatsd(object):
         :type use_ms: boolean
 
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by dogstatsd client
-        :type constant_tags: list of strings
+        :type DATADOG_TAGS: list of strings
 
         :param use_default_route: Dynamically set the DogStatsd host to the default route
         (Useful when running the client in a container) (Linux only)

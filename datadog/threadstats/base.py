@@ -26,13 +26,16 @@ class ThreadStats(object):
 
     def __init__(self, namespace="", constant_tags=None):
         """
-        Initialize a dogstats object.
+        Initialize a threadstats object.
+
+        :param namespace: Namespace to prefix all metric names
+        :type namespace: string
 
         :param constant_tags: Tags to attach to every metric reported by this client
         :type constant_tags: list of strings
 
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by ThreadStats client
-        :type constant_tags: list of strings
+        :type DATADOG_TAGS: list of strings
         """
         # Parameters
         self.namespace = namespace
