@@ -303,7 +303,7 @@ class DogStatsd(object):
         return string.replace('\n', '\\n')
 
     def _escape_service_check_message(self, string):
-        return string.replace('\n', '\\n').replace('m:', 'm\:')
+        return string.replace('\n', '\\n').replace('m:', 'm\\:')
 
     def event(self, title, text, alert_type=None, aggregation_key=None,
               source_type_name=None, date_happened=None, priority=None,
