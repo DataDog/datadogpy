@@ -62,7 +62,7 @@ class DowntimeClient(object):
         if format == 'pretty':
             print(pretty_json(res))
         else:
-            print(json.dumps(res))
+            print(res['id'])
 
     @classmethod
     def _update_downtime(cls, args):
