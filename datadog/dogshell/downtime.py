@@ -19,7 +19,7 @@ class DowntimeClient(object):
 
         post_parser = verb_parsers.add_parser('post', help="Create a downtime")
         post_parser.add_argument('scope', help="scope to apply downtime to")
-        post_parser.add_argument('start', help="POSIX timestamp to start the downtime",
+        post_parser.add_argument('--start', help="POSIX timestamp to start the downtime",
                                  default=None)
         post_parser.add_argument('--end', help="POSIX timestamp to end the downtime", default=None)
         post_parser.add_argument('--message', help="message to include with notifications"
@@ -62,7 +62,7 @@ class DowntimeClient(object):
         if format == 'pretty':
             print(pretty_json(res))
         else:
-            print(json.dumps(res))
+            print(res['id'])
 
     @classmethod
     def _update_downtime(cls, args):
