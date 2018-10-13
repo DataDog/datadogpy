@@ -104,3 +104,21 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
         :returns: Dictionary representing the API's JSON response
         """
         return super(Monitor, cls)._trigger_class_action('POST', 'unmute_all')
+
+    @classmethod
+    def search_monitors(cls, **params):
+        """
+        Search monitors
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        return super(Monitor, cls)._trigger_class_action('GET', 'search', params=params)
+
+    @classmethod
+    def search_monitor_groups(cls, **params):
+        """
+        Search monitor monitor groups
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        return super(Monitor, cls)._trigger_class_action('GET', 'groups/search', params=params)
