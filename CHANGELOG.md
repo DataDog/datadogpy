@@ -1,6 +1,6 @@
 CHANGELOG
 =========
-# 0.23.0 / 2018-10-13
+# 0.23.0 / Unreleased
 
 Add [monitor search](https://docs.datadoghq.com/api/?lang=python#monitors-search) and [monitor groups search](https://docs.datadoghq.com/api/?lang=python#monitors-group-search) API endpoints.
 
