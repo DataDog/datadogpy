@@ -58,12 +58,12 @@ class TimedContextManagerDecorator(object):
     def __enter__(self):
         if not self.metric:
             raise TypeError("Cannot used timed without a metric!")
-        self.start = time()
+        self._start = time()
         return self
 
     def __exit__(self, type, value, traceback):
         # Report the elapsed time of the context manager.
-        self._send(self.start)
+        self._send(self._start)
 
     def _send(self, start):
         elapsed = time() - start
