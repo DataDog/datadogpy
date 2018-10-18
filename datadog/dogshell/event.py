@@ -72,7 +72,7 @@ class EventClient(object):
 
         post_parser = verb_parsers.add_parser('post', help="Post events.")
         post_parser.add_argument('title', help="event title")
-        post_parser.add_argument('--date_happened', help="POSIX timestamp"
+        post_parser.add_argument('--date_happened', help="POSIX timestamp", type=int,
                                  " when the event occurred. if unset defaults to the current time.")
         post_parser.add_argument('--handle', help="user to post as. if unset, submits "
                                  "as the generic API user.")
@@ -121,6 +121,7 @@ class EventClient(object):
         api._timeout = args.timeout
         format = args.format
         message = args.message
+        date_happened = int(=args.date_happened)
         if message is None:
             message = sys.stdin.read()
         if args.tags is not None:
@@ -133,8 +134,7 @@ class EventClient(object):
         # Submit event
         res = api.Event.create(
             title=args.title, text=message,
-            # TODO FXIME
-            # date_happened=args.date_happened,
+            date_happened=args.date_happened,
             handle=args.handle, priority=args.priority,
             related_event_id=args.related_event_id, tags=tags, host=host,
             device=args.device, aggregation_key=args.aggregation_key,
