@@ -1,6 +1,6 @@
 CHANGELOG
 =========
-# 0.23.0 / Unreleased
+# 0.23.0 / 2018-10-18
 
 * [BUGFIX] Dogshell: Submit `--date_happened` timestamp when posting events, [#287][], [#301][] (thanks [@gplasky][])
 * [FEATURE] API: Add [search](https://docs.datadoghq.com/api/?lang=python#monitors-search) and [groups search](https://docs.datadoghq.com/api/?lang=python#monitors-group-search) methods to the `Monitor` resource, [#299][]
