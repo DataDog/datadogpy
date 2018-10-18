@@ -2,7 +2,11 @@ CHANGELOG
 =========
 # 0.23.0 / Unreleased
 
-Add [monitor search](https://docs.datadoghq.com/api/?lang=python#monitors-search) and [monitor groups search](https://docs.datadoghq.com/api/?lang=python#monitors-group-search) API endpoints.
+* [BUGFIX] Dogshell: Submit `--date_happened` timestamp when posting events, [#287][], [#301][] (thanks [@gplasky][])
+* [FEATURE] API: Add [search](https://docs.datadoghq.com/api/?lang=python#monitors-search) and [groups search](https://docs.datadoghq.com/api/?lang=python#monitors-group-search) methods to the `Monitor` resource, [#299][]
+* [IMPROVEMENT] Dogshell: Set API and APP keys with environment variables, [#228][] (thanks [@taraslayshchuk][])
+* [IMPROVEMENT] DogStatsD: Prevent an issue that was causing the `timed` context manager object from overwritting a method with an instance variable, [#263][] (thanks [@florean][])
+* [OTHER] Include tests in PyPI tarball, [#259][] (thanks [@dotlambda][])
 
 # 0.22.0 / 2018-06-27
 
@@ -278,6 +282,7 @@ See [#8][], thanks [@benweatherman][]
 [#206]: https://github.com/DataDog/datadogpy/issues/206
 [#207]: https://github.com/DataDog/datadogpy/issues/207
 [#221]: https://github.com/DataDog/datadogpy/issues/221
+[#228]: https://github.com/DataDog/datadogpy/issues/228
 [#230]: https://github.com/DataDog/datadogpy/issues/230
 [#233]: https://github.com/DataDog/datadogpy/issues/233
 [#234]: https://github.com/DataDog/datadogpy/issues/234
@@ -287,14 +292,19 @@ See [#8][], thanks [@benweatherman][]
 [#249]: https://github.com/DataDog/datadogpy/issues/249
 [#252]: https://github.com/DataDog/datadogpy/issues/252
 [#257]: https://github.com/DataDog/datadogpy/issues/257
+[#259]: https://github.com/DataDog/datadogpy/issues/259
 [#260]: https://github.com/DataDog/datadogpy/issues/260
 [#261]: https://github.com/DataDog/datadogpy/issues/261
+[#263]: https://github.com/DataDog/datadogpy/issues/263
 [#266]: https://github.com/DataDog/datadogpy/issues/266
 [#267]: https://github.com/DataDog/datadogpy/issues/267
 [#268]: https://github.com/DataDog/datadogpy/issues/268
 [#272]: https://github.com/DataDog/datadogpy/issues/272
 [#279]: https://github.com/DataDog/datadogpy/issues/279
 [#282]: https://github.com/DataDog/datadogpy/issues/282
+[#287]: https://github.com/DataDog/datadogpy/issues/287
+[#299]: https://github.com/DataDog/datadogpy/issues/299
+[#301]: https://github.com/DataDog/datadogpy/issues/301
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@aknuds1]: https://github.com/aknuds1
 [@aristiden7o]: https://github.com/aristiden7o
@@ -302,13 +312,16 @@ See [#8][], thanks [@benweatherman][]
 [@cabouffard]: https://github.com/cabouffard
 [@clokep]: https://github.com/clokep
 [@dcrosta]: https://github.com/dcrosta
+[@dotlambda]: https://github.com/dotlambda
 [@drstevens]: https://github.com/drstevens
 [@emad]: https://github.com/emad
 [@evanj]: https://github.com/evanj
 [@ewdurbin]: https://github.com/ewdurbin
+[@florean]: https://github.com/florean
 [@g--]: https://github.com/g--
 [@glasnt]: https://github.com/glasnt
 [@gnarf]: https://github.com/gnarf
+[@gplasky]: https://github.com/gplasky
 [@jbain]: https://github.com/jbain
 [@jofusa]: https://github.com/jofusa
 [@kuzmich]: https://github.com/kuzmich
@@ -326,6 +339,7 @@ See [#8][], thanks [@benweatherman][]
 [@seiro-ogasawara]: https://github.com/seiro-ogasawara
 [@shargan]: https://github.com/shargan
 [@steven-liu]: https://github.com/steven-liu
+[@taraslayshchuk]: https://github.com/taraslayshchuk
 [@thehesiod]: https://github.com/thehesiod
 [@timed]: https://github.com/timed
 [@timvisher]: https://github.com/timvisher
