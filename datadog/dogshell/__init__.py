@@ -29,10 +29,10 @@ def main():
                         default=os.path.expanduser('~/.dogrc'))
     parser.add_argument('--api-key', help="your API key, from "
                         "https://app.datadoghq.com/account/settings#api",
-                        dest='api_key', default=None)
+                        dest='api_key', default=os.environ.get('DATADOG_API_KEY'))
     parser.add_argument('--application-key', help="your Application key, from "
                         "https://app.datadoghq.com/account/settings#api",
-                        dest='app_key', default=None)
+                        dest='app_key', default=os.environ.get('DATADOG_APP_KEY'))
     parser.add_argument('--pretty', help="pretty-print output (suitable for human consumption, "
                         "less useful for scripting)", dest='format',
                         action='store_const', const='pretty')
