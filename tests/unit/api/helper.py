@@ -125,7 +125,8 @@ class DatadogAPITestCase(unittest.TestCase):
 
         if data:
             self.assertIn('data', others)
-            self.assertEquals(json.dumps(data), others['data'], others['data'])
+            others_data = json.loads(others['data'])
+            self.assertEqual(data, others_data, others['data'])
 
         if params:
             self.assertIn('params', others)
