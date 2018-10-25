@@ -14,10 +14,11 @@ install_reqs = [
     "requests>=2.6.0",
 ]
 
-if sys.version_info[0] == 2:
-    install_reqs.append("simplejson>=2.0.9")
-else:
-    install_reqs.append("simplejson>=3.0.0")
+try:
+    import json
+except ImportError:
+    if sys.version_info[0] == 2:
+        install_reqs.append("simplejson>=2.0.9")
 
 if [sys.version_info[0], sys.version_info[1]] < [2, 7]:
     install_reqs.append("argparse>=1.2")
