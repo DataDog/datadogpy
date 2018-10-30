@@ -1,1 +1,1 @@
-recursive-include tests/ *.py
+graft tests
