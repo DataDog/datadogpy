@@ -50,10 +50,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
                 else:
                     timestamp = point[0]
                     if isinstance(point[1], list):
-                        float_points = []
-                        for p in point[1]:
-                            float_points.append(float(p))
-                        value = float_points
+                        value = [float(p) for p in point[1]]
                     else:
                         value = float(point[1])
 

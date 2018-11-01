@@ -385,6 +385,36 @@ class TestMetricResource(DatadogAPIWithInitialization):
             # it's time not so far from current time
             assert now - 1 < metric['points'][0][0] < now + 1
 
+    def submit_and_assess_dist_payload(self, serie):
+        """
+        Helper to assess the metric payload format.
+        """
+        now = time()
+
+        if isinstance(serie, dict):
+            Metric.send_dist(**deepcopy(serie))
+            serie = [serie]
+        else:
+            Metric.send_dist(deepcopy(serie))
+
+        payload = self.get_request_data()
+
+        for i, metric in enumerate(payload['series']):
+            self.assertEquals(set(metric.keys()), set(['metric', 'points', 'host']))
+
+            self.assertEquals(metric['metric'], serie[i]['metric'])
+            self.assertEquals(metric['host'], api._host_name)
+
+            # points is a list of 1 point
+            self.assertTrue(isinstance(metric['points'], list))
+            self.assertEquals(len(metric['points']), 1)
+            # it consists of a [time, value] pair
+            self.assertEquals(len(metric['points'][0]), 2)
+            # its value == value we sent
+            self.assertEquals(metric['points'][0][1], serie[i]['points'][0][1])
+            # it's time not so far from current time
+            assert now - 1 < metric['points'][0][0] < now + 1
+
     def test_metric_submit_query_switch(self):
         """
         Endpoints are different for submission and queries.
@@ -409,6 +439,20 @@ class TestMetricResource(DatadogAPIWithInitialization):
         serie = [dict(metric='metric.1', points=13),
                  dict(metric='metric.2', points=19)]
         self.submit_and_assess_metric_payload(serie)
+
+    def test_dist_points_submission(self):
+        """
+        Assess the distribution data payload format, when submitting a single or multiple points.
+        """
+        # Single point
+        serie = dict(metric='metric.1', points=[[time(), [13]]])
+        self.submit_and_assess_dist_payload(serie)
+
+        # Multiple point
+        serie = [dict(metric='metric.1', points=[[time(), [13]]]),
+                 dict(metric='metric.2', points=[[time(), [19]]])]
+        self.submit_and_assess_dist_payload(serie)
+
 
     def test_data_type_support(self):
         """
