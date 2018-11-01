@@ -3,6 +3,7 @@ class MetricType(object):
     Counter = "counter"
     Histogram = "histogram"
     Rate = "rate"
+    Distribution = "distribution"
 
 
 class MonitorType(object):
