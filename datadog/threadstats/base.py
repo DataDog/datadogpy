@@ -16,7 +16,8 @@ import os
 from datadog.api.exceptions import ApiNotInitialized
 from datadog.threadstats.constants import MetricType
 from datadog.threadstats.events import EventsAggregator
-from datadog.threadstats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing, Distribution
+from datadog.threadstats.metrics import (MetricsAggregator, Counter, Gauge, Histogram, Timing,
+                                         Distribution)
 from datadog.threadstats.reporters import HttpReporter
 
 # Loggers

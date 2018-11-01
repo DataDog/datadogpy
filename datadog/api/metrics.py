@@ -76,7 +76,6 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
 
         return rec_parse(points_lst)
 
-
     @classmethod
     def list(cls, from_epoch):
         """
@@ -126,7 +125,8 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
     @classmethod
     def send_dist(cls, metrics=None, **single_metric):
         """
-        Submit a distribution metric or a list of distribution metrics to the distribution metric API
+        Submit a distribution metric or a list of distribution metrics to the distribution metric
+        API
 
         :param metric: the name of the time series
         :type metric: string

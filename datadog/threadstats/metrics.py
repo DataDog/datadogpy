@@ -62,6 +62,7 @@ class Counter(Metric):
         return [(timestamp, count/float(interval), self.name,
                 self.tags, self.host, MetricType.Rate, interval)]
 
+
 class Distribution(Metric):
     """ A distribution metric. """
 
@@ -79,6 +80,7 @@ class Distribution(Metric):
     def flush(self, timestamp, interval):
         return [(timestamp, self.value, self.name, self.tags,
                 self.host, MetricType.Distribution, interval)]
+
 
 class Histogram(Metric):
     """ A histogram metric. """
