@@ -16,6 +16,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
     _METRIC_QUERY_ENDPOINT = 'query'
     _METRIC_SUBMIT_ENDPOINT = 'series'
     _METRIC_LIST_ENDPOINT = 'metrics'
+    _METRIC_DIST_ENDPOINT = 'distribution_points'
 
     @classmethod
     def _process_points(cls, points):
@@ -42,8 +43,19 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
                     return []
 
                 point = points_lst.pop()
-                timestamp = now if isinstance(point, Number) else point[0]
-                value = float(point) if isinstance(point, Number) else float(point[1])
+                if isinstance(point, Number):
+                    timestamp = now
+                    value = float(point)
+                # Distributions contain a list of points
+                else:
+                    timestamp = point[0]
+                    if isinstance(point[1], list):
+                        float_points = []
+                        for p in point[1]:
+                            float_points.append(float(p))
+                        value = float_points
+                    else:
+                        value = float(point[1])
 
                 point = [(timestamp, value)]
 
@@ -63,6 +75,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
                 )
 
         return rec_parse(points_lst)
+
 
     @classmethod
     def list(cls, from_epoch):
@@ -106,6 +119,38 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
 
         :returns: Dictionary representing the API's JSON response
         """
+        # Set the right endpoint
+        cls._resource_name = cls._METRIC_SUBMIT_ENDPOINT
+        cls._send_common(metrics, **single_metric)
+
+    @classmethod
+    def send_dist(cls, metrics=None, **single_metric):
+        """
+        Submit a distribution metric or a list of distribution metrics to the distribution metric API
+
+        :param metric: the name of the time series
+        :type metric: string
+
+        :param points: a (timestamp, value) pair or list of (timestamp, value) pairs
+        :type points: list
+
+        :param host: host name that produced the metric
+        :type host: string
+
+        :param tags:  list of tags associated with the metric.
+        :type tags: string list
+
+        :param type: type of the metric
+        :type type: 'gauge' or 'count' or 'rate' string
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        # Set the right endpoint
+        cls._resource_name = cls._METRIC_DIST_ENDPOINT
+        cls._send_common(metrics, **single_metric)
+
+    @classmethod
+    def _send_common(cls, metrics=None, **single_metric):
         def rename_metric_type(metric):
             """
             FIXME DROPME in 1.0:
@@ -116,9 +161,6 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
             """
             if 'metric_type' in metric:
                 metric['type'] = metric.pop('metric_type')
-
-        # Set the right endpoint
-        cls._resource_name = cls._METRIC_SUBMIT_ENDPOINT
 
         # Format the payload
         try:

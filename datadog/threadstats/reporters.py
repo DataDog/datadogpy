@@ -14,6 +14,9 @@ class Reporter(object):
 
 class HttpReporter(Reporter):
 
+    def flush_distributions(self, distributions):
+        api.Metric.send_dist(distributions)
+
     def flush_metrics(self, metrics):
         api.Metric.send(metrics)
 

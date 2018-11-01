@@ -62,6 +62,23 @@ class Counter(Metric):
         return [(timestamp, count/float(interval), self.name,
                 self.tags, self.host, MetricType.Rate, interval)]
 
+class Distribution(Metric):
+    """ A distribution metric. """
+
+    stats_tag = 'd'
+
+    def __init__(self, name, tags, host):
+        self.name = name
+        self.tags = tags
+        self.host = host
+        self.value = []
+
+    def add_point(self, value):
+        self.value.append(value)
+
+    def flush(self, timestamp, interval):
+        return [(timestamp, self.value, self.name, self.tags,
+                self.host, MetricType.Distribution, interval)]
 
 class Histogram(Metric):
     """ A histogram metric. """
