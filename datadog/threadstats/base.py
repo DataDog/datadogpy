@@ -304,7 +304,7 @@ class ThreadStats(object):
             self._is_flush_in_progress = True
 
             # Process metrics
-            (metrics, dists) = self._get_aggregate_metrics_and_dists(timestamp or time())
+            metrics, dists = self._get_aggregate_metrics_and_dists(timestamp or time())
             count_metrics = len(metrics)
             if count_metrics:
                 self.flush_count += 1
