@@ -1,5 +1,6 @@
 # stdlib
 import time
+from collections import Iterable
 from numbers import Number
 
 # datadog
@@ -49,7 +50,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
                 # Distributions contain a list of points
                 else:
                     timestamp = point[0]
-                    if isinstance(point[1], list):
+                    if isinstance(point[1], Iterable):
                         value = [float(p) for p in point[1]]
                     else:
                         value = float(point[1])

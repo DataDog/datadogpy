@@ -210,7 +210,7 @@ class ThreadStats(object):
 
     def distribution(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
         """
-        Sample a distirbution value. Distributions will produce metrics that
+        Sample a distribution value. Distributions will produce metrics that
         describe the distribution of the recorded values, namely the maximum,
         median, average, count and the 50/75/90/95/99 percentiles. Optionally,
         specify a list of ``tags`` to associate with the metric.
@@ -374,10 +374,10 @@ class ThreadStats(object):
                 'tags': metric_tags,
                 'interval': interval
             }
-            if metric_type != MetricType.Distribution:
-                metrics.append(metric)
-            else:
+            if metric_type == MetricType.Distribution:
                 dists.append(metric)
+            else:
+                metrics.append(metric)
         return (metrics, dists)
 
     def _get_aggregate_events(self):
