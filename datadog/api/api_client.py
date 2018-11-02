@@ -1,4 +1,5 @@
 # stdlib
+import json
 import logging
 import time
 
@@ -12,7 +13,7 @@ from datadog.api.exceptions import (
     ApiNotInitialized
 )
 from datadog.api.http_client import resolve_http_client
-from datadog.util.compat import json, is_p3k
+from datadog.util.compat import is_p3k
 
 log = logging.getLogger('datadog.api')
 

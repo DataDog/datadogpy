@@ -1,4 +1,5 @@
 # stdlib
+import json
 import os.path
 import platform
 import sys
@@ -10,7 +11,6 @@ import argparse
 # datadog
 from datadog import api
 from datadog.dogshell.common import report_errors, report_warnings, print_err
-from datadog.util.compat import json
 from datadog.util.format import pretty_json
 from datetime import datetime
 

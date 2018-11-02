@@ -3,11 +3,11 @@ import datetime
 import time
 import re
 import sys
+import json
 
 # datadog
 from datadog import api
 from datadog.dogshell.common import report_errors, report_warnings
-from datadog.util.compat import json
 
 
 time_pat = re.compile(r'(?P<delta>[0-9]*\.?[0-9]+)(?P<unit>[mhd])')

@@ -1,10 +1,10 @@
 # stdlib
+import json
 import sys
 
 # datadog
 from datadog import api
 from datadog.dogshell.common import report_errors, report_warnings
-from datadog.util.compat import json
 
 
 class CommentClient(object):

@@ -1,5 +1,6 @@
 # stdlib
 import unittest
+import json
 
 # 3p
 from mock import patch, Mock
@@ -20,7 +21,7 @@ from datadog.api.resources import (
     DeletableAPISubResource,
     ActionAPIResource
 )
-from datadog.util.compat import iteritems, json
+from datadog.util.compat import iteritems
 
 
 API_KEY = "apikey"

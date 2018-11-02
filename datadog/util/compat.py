@@ -96,11 +96,6 @@ try:
 except ImportError:
     pkg = None
 
-try:
-    import simplejson as json
-except ImportError:
-    import json
-
 #Python 2.6.x
 try:
     from logging import NullHandler

@@ -1,10 +1,12 @@
+# stdlib
+import json
+
 # 3p
 from datadog.util.format import pretty_json
 
 # datadog
 from datadog import api
 from datadog.dogshell.common import report_errors, report_warnings
-from datadog.util.compat import json
 
 
 class DashboardListClient(object):
