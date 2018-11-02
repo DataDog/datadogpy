@@ -64,3 +64,4 @@ stats.increment('home.page.hits')
 Thread Safety
 -------------
 `DogStatsD` and `ThreadStats` are thread-safe.
+
