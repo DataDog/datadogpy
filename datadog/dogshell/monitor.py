@@ -1,10 +1,14 @@
+# stdlib
+import os.path
+
 # 3p
-from datadog.util.format import pretty_json
+import argparse
 
 # datadog
 from datadog import api
-from datadog.dogshell.common import report_errors, report_warnings
+from datadog.dogshell.common import report_errors, report_warnings, print_err
 from datadog.util.compat import json
+from datadog.util.format import pretty_json
 
 
 class MonitorClient(object):
@@ -60,6 +64,36 @@ class MonitorClient(object):
         )
 
         show_all_parser.set_defaults(func=cls._show_all)
+
+        pull_parser = verb_parsers.add_parser('pull', help="Pull a monitor on the server"
+                                              " into a local file")
+        pull_parser.add_argument('monitor_id', help="ID of monitor to pull")
+        pull_parser.add_argument('filename', help="file to pull monitor into")
+        pull_parser.set_defaults(func=cls._pull)
+
+        pull_all_parser = verb_parsers.add_parser('pull_all', help="Pull all monitors"
+                                                  " into files in a directory")
+        pull_all_parser.add_argument('pull_dir', help="directory to pull monitors into")
+        pull_all_parser.add_argument(
+            '--group_states', help="comma separated list of group states to filter by",
+            choices=['all', 'alert', 'warn', 'no data']
+        )
+        pull_all_parser.add_argument('--name', help="string to filter monitors by name")
+        pull_all_parser.add_argument(
+            '--tags', help="comma separated list indicating what tags, if any, "
+            "should be used to filter the list of monitors by scope (e.g. 'host:host0')"
+        )
+        pull_all_parser.add_argument(
+            '--monitor_tags', help="comma separated list indicating what service "
+            "and/or custom tags, if any, should be used to filter the list of monitors"
+        )
+        pull_all_parser.set_defaults(func=cls._pull_all)
+
+        push_parser = verb_parsers.add_parser('push', help="Push updates to monitors"
+                                              " from local files to the server")
+        push_parser.add_argument('file', help="monitor files to push to the server",
+                                 nargs='+', type=argparse.FileType('r'))
+        push_parser.set_defaults(func=cls._push)
 
         delete_parser = verb_parsers.add_parser('delete', help="Delete a monitor")
         delete_parser.add_argument('monitor_id', help="monitor to delete")
@@ -172,6 +206,100 @@ class MonitorClient(object):
                                  (str(d["org_id"])),
                                  (d["query"]),
                                  (d["type"])]))
+
+    @classmethod
+    def _pull(cls, args):
+        api._timeout = args.timeout
+        res = api.Monitor.get(args.monitor_id)
+        report_warnings(res)
+        report_errors(res)
+
+        cls._write_monitor_to_file(
+            res, args.filename,
+            args.format, args.string_ids)
+
+    @classmethod
+    def _pull_all(cls, args):
+        api._timeout = args.timeout
+
+        def _name_to_filename(name):
+            # Get a lowercased version with most punctuation stripped out...
+            no_punct = ''.join([c for c in name.lower() if c.isalnum() or c in [" ", "_", "-"]])
+            # Now replace all -'s, _'s and spaces with "_", and strip trailing _
+            return no_punct.replace(" ", "_").replace("-", "_").strip("_")
+
+        format = args.format
+        res = api.Monitor.get_all(
+            group_states=args.group_states, name=args.name,
+            tags=args.tags, monitor_tags=args.monitor_tags
+        )
+        report_warnings(res)
+        report_errors(res)
+
+        if not os.path.exists(args.pull_dir):
+            os.mkdir(args.pull_dir, 0o755)
+
+        used_filenames = set()
+        for monitor_summary in res:
+            filename = _name_to_filename(monitor_summary['name'])
+            if filename in used_filenames:
+                filename = "{0}-{1}".format(filename, monitor_summary['id'])
+            used_filenames.add(filename)
+
+            cls._write_monitor_to_file(
+                monitor_summary, os.path.join(args.pull_dir, filename + ".json"),
+                format, args.string_ids)
+        if format == 'pretty':
+            print(("\n### Total: {0} monitors to {1} ###"
+                  .format(len(used_filenames), os.path.realpath(args.pull_dir))))
+
+    @classmethod
+    def _push(cls, args):
+        api._timeout = args.timeout
+        for f in args.file:
+            try:
+                monitor_obj = json.load(f)
+            except Exception as err:
+                raise Exception("Could not parse {0}: {1}".format(f.name, err))
+
+            if 'id' in monitor_obj:
+                # Always convert to int, in case it was originally a string.
+                monitor_obj["id"] = int(monitor_obj["id"])
+                res = api.Monitor.update(**monitor_obj)
+            else:
+                res = api.Monitor.create(**monitor_obj)
+
+            if 'errors' in res:
+                print_err('Upload of monitor {0} from file {1} failed.'
+                          .format(monitor_obj["id"], f.name))
+
+            report_warnings(res)
+            report_errors(res)
+
+            if format == 'pretty':
+                print(pretty_json(res))
+            else:
+                print(json.dumps(res))
+
+            if args.format == 'pretty':
+                print("Uploaded file {0} (monitor {1})".format(f.name, monitor_obj["id"]))
+
+    @classmethod
+    def _write_monitor_to_file(cls, monitor, filename, format='raw', string_ids=False):
+        with open(filename, "w") as f:
+            keys = ('id', 'message', 'query', 'options', 'type', 'tags', 'name')
+            monitor_obj = {k: v for k, v in monitor.items() if k in keys}
+            monitor_id = monitor_obj['id']
+
+            if string_ids:
+                monitor_obj['id'] = str(monitor_id)
+
+            json.dump(monitor_obj, f, indent=2)
+
+            if format == 'pretty':
+                print("Downloaded monitor {0} to file {1}".format(monitor_id, filename))
+            else:
+                print("{0} {1}".format(monitor_id, filename))
 
     @classmethod
     def _delete(cls, args):
