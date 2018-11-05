@@ -1,5 +1,6 @@
 # stdlib
 import unittest
+import json
 
 # 3p
 from mock import patch, Mock
@@ -20,7 +21,7 @@ from datadog.api.resources import (
     DeletableAPISubResource,
     ActionAPIResource
 )
-from datadog.util.compat import iteritems, json
+from datadog.util.compat import iteritems
 
 
 API_KEY = "apikey"
@@ -125,7 +126,8 @@ class DatadogAPITestCase(unittest.TestCase):
 
         if data:
             self.assertIn('data', others)
-            self.assertEquals(json.dumps(data), others['data'], others['data'])
+            others_data = json.loads(others['data'])
+            self.assertEqual(data, others_data, others['data'])
 
         if params:
             self.assertIn('params', others)

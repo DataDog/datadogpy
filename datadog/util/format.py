@@ -1,5 +1,5 @@
-# datadog
-from datadog.util.compat import json
+# stdlib
+import json
 
 
 def pretty_json(obj):
