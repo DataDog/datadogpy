@@ -10,7 +10,11 @@ import mock
 
 # datadog
 from datadog import initialize, api
-from datadog.api import Metric, ServiceCheck
+from datadog.api import (
+    Distribution,
+    Metric,
+    ServiceCheck
+)
 from datadog.api.exceptions import ApiError, ApiNotInitialized
 from datadog.util.compat import is_p3k
 from tests.unit.api.helper import (
@@ -30,7 +34,8 @@ from tests.unit.api.helper import (
     APP_KEY,
     API_HOST,
     HOST_NAME,
-    FAKE_PROXY)
+    FAKE_PROXY
+)
 
 
 def preserve_environ_datadog(func):
@@ -392,10 +397,10 @@ class TestMetricResource(DatadogAPIWithInitialization):
         now = time()
 
         if isinstance(serie, dict):
-            Metric.send_dist(**deepcopy(serie))
+            Distribution.send(**deepcopy(serie))
             serie = [serie]
         else:
-            Metric.send_dist(deepcopy(serie))
+            Distribution.send(deepcopy(serie))
 
         payload = self.get_request_data()
 
@@ -452,7 +457,6 @@ class TestMetricResource(DatadogAPIWithInitialization):
         serie = [dict(metric='metric.1', points=[[time(), [13]]]),
                  dict(metric='metric.2', points=[[time(), [19]]])]
         self.submit_and_assess_dist_payload(serie)
-
 
     def test_data_type_support(self):
         """
