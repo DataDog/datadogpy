@@ -21,8 +21,6 @@ class Distribution(SendableAPIResource):
         :type host: string
         :param tags:  list of tags associated with the metric.
         :type tags: string list
-        :param type: type of the metric
-        :type type: 'gauge' or 'count' or 'rate' string
         :returns: Dictionary representing the API's JSON response
         """
         if distributions:
