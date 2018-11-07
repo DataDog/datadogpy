@@ -14,7 +14,8 @@ class Distribution(SendableAPIResource):
         API
         :param metric: the name of the time series
         :type metric: string
-        :param points: a (timestamp, [list of values]) pair or list of (timestamp, [list of values]) pairs
+        :param points: a (timestamp, [list of values]) pair or
+        list of (timestamp, [list of values]) pairs
         :type points: list
         :param host: host name that produced the metric
         :type host: string
