@@ -19,6 +19,7 @@ _mute = True
 # Resources
 from datadog.api.comments import Comment
 from datadog.api.dashboard_lists import DashboardList
+from datadog.api.distributions import Distribution
 from datadog.api.downtimes import Downtime
 from datadog.api.timeboards import Timeboard
 from datadog.api.events import Event

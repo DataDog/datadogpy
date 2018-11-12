@@ -29,8 +29,12 @@ class MemoryReporter(object):
     """
 
     def __init__(self):
+        self.distributions = []
         self.metrics = []
         self.events = []
+
+    def flush_distributions(self, distributions):
+        self.distributions += distributions
 
     def flush_metrics(self, metrics):
         self.metrics += metrics
@@ -374,6 +378,39 @@ class TestUnitThreadStats(unittest.TestCase):
         dog.flush(1050.0)
         nt.assert_equal(len(reporter.metrics), 0)
 
+    def test_distribution(self):
+        # Create some fake metrics.
+        dog = ThreadStats()
+        dog.start(roll_up_interval=10, flush_in_thread=False)
+        reporter = dog.reporter = MemoryReporter()
+
+        dog.distribution('test.dist.1', 20, 100.0)
+        dog.distribution('test.dist.1', 22, 105.0)
+        dog.distribution('test.dist.2', 30, 115.0)
+        dog.distribution('test.dist.3', 30, 125.0)
+        dog.flush(120.0)
+
+        # Assert they've been properly flushed.
+        dists = self.sort_metrics(reporter.distributions)
+        nt.assert_equal(len(dists), 2)
+
+        (first, second) = dists
+        nt.assert_equal(first['metric'], 'test.dist.1')
+        nt.assert_equal(first['points'][0][0], 100.0)
+        nt.assert_equal(first['points'][0][1], [20, 22])
+        nt.assert_equal(second['metric'], 'test.dist.2')
+
+        # Flush again and make sure we're progressing.
+        reporter.distributions = []
+        dog.flush(130.0)
+        nt.assert_equal(len(reporter.distributions), 1)
+
+        # Finally, make sure we've flushed all metrics.
+        reporter.distributions = []
+        dog.flush(150.0)
+        nt.assert_equal(len(reporter.distributions), 0)
+
+
     def test_default_host_and_device(self):
         dog = ThreadStats()
         dog.start(roll_up_interval=1, flush_in_thread=False)
@@ -454,13 +491,13 @@ class TestUnitThreadStats(unittest.TestCase):
 
         # Assertions on gauges
         self.assertMetric(name='gauge', value=10, tags=["type:constant"], count=1)
-        self.assertMetric(name="gauge", value=15, 
+        self.assertMetric(name="gauge", value=15,
                           tags=["env:production", "db", "type:constant"], count=1)  # noqa
         self.assertMetric(name="gauge", value=20, tags=["env:staging", "type:constant"], count=1)
 
         # Assertions on counters
         self.assertMetric(name="counter", value=1, tags=["type:constant"], count=1)
-        self.assertMetric(name="counter", value=1, 
+        self.assertMetric(name="counter", value=1,
                           tags=["env:production", "db", "type:constant"], count=1)  # noqa
         self.assertMetric(name="counter", value=1, tags=["env:staging", "type:constant"], count=1)
 
@@ -688,10 +725,10 @@ class TestUnitThreadStats(unittest.TestCase):
         dog.increment("counter", timestamp=100.0)
         dog.histogram('histogram.1', 20, 100.0)
         dog.flush(200.0)
-		
-        (first, second, p75, p85, p95, p99, avg, cnt, 
+
+        (first, second, p75, p85, p95, p99, avg, cnt,
         max_, min_) = self.sort_metrics(reporter.metrics)
-		
+
 		# Assert Metric type
         nt.assert_equal(first['type'], 'rate')
         nt.assert_equal(second['type'], 'gauge')
