@@ -1,6 +1,6 @@
 CHANGELOG
 =========
-# 0.24.0 / Unreleased
+# 0.24.0 / 2018-11-12
 
 * [BUGFIX] DogStatsD: Do not send empty UDP packets, [#264][] (thanks [@Tenzer][])
 * [FEATURE] API: Add support for distributions, [#312][]
