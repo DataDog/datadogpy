@@ -1,5 +1,12 @@
 CHANGELOG
 =========
+# 0.24.0 / Unreleased
+
+* [BUGFIX] DogStatsD: Do not send empty UDP packets, [#264][] (thanks [@Tenzer][])
+* [FEATURE] API: Add support for distributions, [#312][]
+* [FEATURE] ThreadStats: Add support for distributions, [#312][]
+* [OTHER] Remove `simplejson` 3p dependency, [#304][], [#309][] (thanks [@alexpjohnson][])
+
 # 0.23.0 / 2018-10-18
 
 * [BUGFIX] Dogshell: Submit `--date_happened` timestamp when posting events, [#287][], [#301][] (thanks [@gplasky][])
@@ -296,6 +303,7 @@ See [#8][], thanks [@benweatherman][]
 [#260]: https://github.com/DataDog/datadogpy/issues/260
 [#261]: https://github.com/DataDog/datadogpy/issues/261
 [#263]: https://github.com/DataDog/datadogpy/issues/263
+[#264]: https://github.com/DataDog/datadogpy/issues/264
 [#266]: https://github.com/DataDog/datadogpy/issues/266
 [#267]: https://github.com/DataDog/datadogpy/issues/267
 [#268]: https://github.com/DataDog/datadogpy/issues/268
@@ -305,8 +313,13 @@ See [#8][], thanks [@benweatherman][]
 [#287]: https://github.com/DataDog/datadogpy/issues/287
 [#299]: https://github.com/DataDog/datadogpy/issues/299
 [#301]: https://github.com/DataDog/datadogpy/issues/301
+[#304]: https://github.com/DataDog/datadogpy/issues/304
+[#309]: https://github.com/DataDog/datadogpy/issues/309
+[#312]: https://github.com/DataDog/datadogpy/issues/312
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
+[@Tenzer]: https://github.com/Tenzer
 [@aknuds1]: https://github.com/aknuds1
+[@alexpjohnson]: https://github.com/alexpjohnson
 [@aristiden7o]: https://github.com/aristiden7o
 [@benweatherman]: https://github.com/benweatherman
 [@cabouffard]: https://github.com/cabouffard
