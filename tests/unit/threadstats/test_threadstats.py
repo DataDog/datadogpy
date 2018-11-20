@@ -16,6 +16,7 @@ import nose.tools as nt
 # datadog
 from datadog import ThreadStats
 from tests.util.contextmanagers import preserve_environment_variable
+from datadog.aws_lambda import lambda_stats, datadog_lambda_wrapper, _Wrappers_state
 
 
 # Silence the logger.
@@ -740,3 +741,49 @@ class TestUnitThreadStats(unittest.TestCase):
         nt.assert_equal(cnt['type'], 'rate')
         nt.assert_equal(max_['type'], 'gauge')
         nt.assert_equal(min_['type'], 'gauge')
+
+
+    def test_lambda_decorator(self):
+        """
+        Test that the lambda decorator flushes metrics correctly and only once
+        """
+
+        @datadog_lambda_wrapper
+        def wrapped_init():
+            pass
+
+        @datadog_lambda_wrapper
+        def wrapped_function_1():
+            lambda_stats.gauge("lambda.gauge.1", 10, 100)
+            nt.assert_equal(_Wrappers_state.opened_wrappers, 2)
+
+        @datadog_lambda_wrapper
+        def wrapped_function_2():
+            wrapped_function_1()  # Embedded wrappers
+
+            # Check that wrapper_function_1() didn't flush
+            metrics = self.sort_metrics(lambda_stats.reporter.metrics)
+            nt.assert_equal(len(metrics), 0)
+
+            lambda_stats.gauge("lambda.gauge.2", 30, 200)
+            nt.assert_equal(_Wrappers_state.opened_wrappers, 1)
+
+        wrapped_init()  # Empty run to make the initialization
+
+        lambda_stats.reporter = MemoryReporter()
+
+        nt.assert_equal(_Wrappers_state.opened_wrappers, 0)
+        wrapped_function_2()
+        nt.assert_equal(_Wrappers_state.opened_wrappers, 0)
+        lambda_stats.flush(float('inf'))
+
+        metrics = self.sort_metrics(lambda_stats.reporter.metrics)
+        nt.assert_equal(len(metrics), 2)
+
+        (first, second) = metrics
+        nt.assert_equal(first['metric'], 'lambda.gauge.1')
+        nt.assert_equal(first['points'][0][0], 100)
+        nt.assert_equal(first['points'][0][1], 10)
+        nt.assert_equal(second['metric'], 'lambda.gauge.2')
+        nt.assert_equal(second['points'][0][0], 200)
+        nt.assert_equal(second['points'][0][1], 30)
