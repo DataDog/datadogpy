@@ -787,3 +787,5 @@ class TestUnitThreadStats(unittest.TestCase):
         nt.assert_equal(second['metric'], 'lambda.gauge.2')
         nt.assert_equal(second['points'][0][0], 200)
         nt.assert_equal(second['points'][0][1], 30)
+
+        lambda_stats.reporter.metrics = []
