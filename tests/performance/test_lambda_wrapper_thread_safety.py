@@ -1,6 +1,6 @@
 import re
 import time
-import unittest
+# import unittest
 import threading
 from nose import tools as t
 
@@ -46,7 +46,7 @@ def wrapped_init():
     pass
 
 
-class TestWrapperThreadSafety(unittest.TestCase):
+class TestWrapperThreadSafety(object):
 
     def test_wrapper_thread_safety(self):
 
