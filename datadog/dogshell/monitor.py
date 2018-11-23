@@ -1,4 +1,5 @@
 # stdlib
+import argparse
 import json
 
 # 3p
@@ -30,6 +31,11 @@ class MonitorClient(object):
         post_parser.add_argument('--options', help="json options for the monitor", default=None)
         post_parser.set_defaults(func=cls._post)
 
+        file_post_parser = verb_parsers.add_parser('fpost', help="Create a monitor from file")
+        file_post_parser.add_argument('file', help='json file holding all details',
+                                        type=argparse.FileType('r'))
+        file_post_parser.set_defaults(func=cls._file_post)
+
         update_parser = verb_parsers.add_parser('update', help="Update existing monitor")
         update_parser.add_argument('monitor_id', help="monitor to replace with the new definition")
         update_parser.add_argument('type', help="type of the monitor, e.g. "
@@ -41,6 +47,11 @@ class MonitorClient(object):
                                    "notifications for this monitor", default=None)
         update_parser.add_argument('--options', help="json options for the monitor", default=None)
         update_parser.set_defaults(func=cls._update)
+
+        file_update_parser = verb_parsers.add_parser('fupdate', help="Update existing monitor from file")
+        file_update_parser.add_argument('file', help='json file holding all details',
+                                        type=argparse.FileType('r'))
+        file_update_parser.set_defaults(func=cls._file_update)
 
         show_parser = verb_parsers.add_parser('show', help="Show a monitor definition")
         show_parser.add_argument('monitor_id', help="monitor to show")
@@ -111,6 +122,20 @@ class MonitorClient(object):
             print(json.dumps(res))
 
     @classmethod
+    def _file_post(cls, args):
+        api._timeout = args.timeout
+        format = args.format
+        monitor = json.load(args.file)
+        res = api.Monitor.create( type=monitor['type'], query=monitor['query'], name=monitor['name'],
+                                  message=monitor['message'], options=monitor['options'])
+        report_warnings(res)
+        report_errors(res)
+        if format == 'pretty':
+            print(pretty_json(res))
+        else:
+            print(json.dumps(res))
+
+    @classmethod
     def _update(cls, args):
         api._timeout = args.timeout
         format = args.format
@@ -122,6 +147,20 @@ class MonitorClient(object):
                 raise Exception('bad json parameter')
         res = api.Monitor.update(args.monitor_id, type=args.type, query=args.query,
                                  name=args.name, message=args.message, options=options)
+        report_warnings(res)
+        report_errors(res)
+        if format == 'pretty':
+            print(pretty_json(res))
+        else:
+            print(json.dumps(res))
+
+    @classmethod
+    def _file_update(cls, args):
+        api._timeout = args.timeout
+        format = args.format
+        monitor = json.load(args.file)
+        res = api.Monitor.update(monitor['id'], type=monitor['type'], query=monitor['query'],
+                                 name=monitor['name'], message=monitor['message'], options=monitor['options'])
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
