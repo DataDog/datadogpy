@@ -48,7 +48,8 @@ class MonitorClient(object):
         update_parser.add_argument('--options', help="json options for the monitor", default=None)
         update_parser.set_defaults(func=cls._update)
 
-        file_update_parser = verb_parsers.add_parser('fupdate', help="Update existing monitor from file")
+        file_update_parser = verb_parsers.add_parser('fupdate', help="Update existing"
+                                                     " monitor from file")
         file_update_parser.add_argument('file', help='json file holding all details',
                                         type=argparse.FileType('r'))
         file_update_parser.set_defaults(func=cls._file_update)
@@ -126,8 +127,9 @@ class MonitorClient(object):
         api._timeout = args.timeout
         format = args.format
         monitor = json.load(args.file)
-        res = api.Monitor.create( type=monitor['type'], query=monitor['query'], name=monitor['name'],
-                                  message=monitor['message'], options=monitor['options'])
+        res = api.Monitor.create(type=monitor['type'], query=monitor['query'],
+                                 name=monitor['name'], message=monitor['message'],
+                                 options=monitor['options'])
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
@@ -160,7 +162,8 @@ class MonitorClient(object):
         format = args.format
         monitor = json.load(args.file)
         res = api.Monitor.update(monitor['id'], type=monitor['type'], query=monitor['query'],
-                                 name=monitor['name'], message=monitor['message'], options=monitor['options'])
+                                 name=monitor['name'], message=monitor['message'],
+                                 options=monitor['options'])
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
