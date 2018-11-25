@@ -33,7 +33,7 @@ class MonitorClient(object):
 
         file_post_parser = verb_parsers.add_parser('fpost', help="Create a monitor from file")
         file_post_parser.add_argument('file', help='json file holding all details',
-                                        type=argparse.FileType('r'))
+                                      type=argparse.FileType('r'))
         file_post_parser.set_defaults(func=cls._file_post)
 
         update_parser = verb_parsers.add_parser('update', help="Update existing monitor")
