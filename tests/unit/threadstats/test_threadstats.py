@@ -14,9 +14,8 @@ from mock import patch
 import nose.tools as nt
 
 # datadog
-from datadog import ThreadStats
+from datadog import ThreadStats, lambda_stats, datadog_lambda_wrapper
 from tests.util.contextmanagers import preserve_environment_variable
-
 
 # Silence the logger.
 logger = logging.getLogger('dd.datadogpy')
@@ -41,6 +40,12 @@ class MemoryReporter(object):
 
     def flush_events(self, events):
         self.events += events
+
+
+@datadog_lambda_wrapper
+def wrapped_init():
+    """The first opened wrapper calls the "start" method, which would override the MemoryReporter"""
+    pass
 
 
 class TestUnitThreadStats(unittest.TestCase):
@@ -740,3 +745,61 @@ class TestUnitThreadStats(unittest.TestCase):
         nt.assert_equal(cnt['type'], 'rate')
         nt.assert_equal(max_['type'], 'gauge')
         nt.assert_equal(min_['type'], 'gauge')
+
+
+    # Test lambda_wrapper (uses ThreadStats under the hood)
+
+    def test_basic_lambda_decorator(self):
+
+        @datadog_lambda_wrapper
+        def basic_wrapped_function():  # Test custom_metric function
+            lambda_stats.distribution("lambda.somemetric", 100, 300)
+
+        wrapped_init()  # Empty run to make the initialization
+
+        lambda_stats.reporter = self.reporter
+        basic_wrapped_function()
+
+        dists = self.sort_metrics(lambda_stats.reporter.distributions)
+        nt.assert_equal(len(dists), 1)
+        lambda_stats.reporter.distributions = []
+
+    def test_embedded_lambda_decorator(self):
+        """
+        Test that the lambda decorator flushes metrics correctly and only once
+        """
+
+        @datadog_lambda_wrapper
+        def wrapped_function_1():
+            lambda_stats.gauge("lambda.gauge.1", 10, 100)
+            nt.assert_equal(datadog_lambda_wrapper._counter, 2)
+
+        @datadog_lambda_wrapper
+        def wrapped_function_2():
+            wrapped_function_1()  # Embedded wrappers
+
+            # Check that wrapper_function_1() didn't flush
+            metrics = self.sort_metrics(lambda_stats.reporter.metrics)
+            nt.assert_equal(len(metrics), 0)
+
+            lambda_stats.gauge("lambda.gauge.2", 30, 200)
+            nt.assert_equal(datadog_lambda_wrapper._counter, 1)
+
+        wrapped_init()  # Empty run to make the initialization
+
+        lambda_stats.reporter = self.reporter
+
+        nt.assert_equal(datadog_lambda_wrapper._counter, 0)
+        wrapped_function_2()
+        nt.assert_equal(datadog_lambda_wrapper._counter, 0)
+
+        metrics = self.sort_metrics(lambda_stats.reporter.metrics)
+        nt.assert_equal(len(metrics), 2)
+
+        (first, second) = metrics
+        nt.assert_equal(first['metric'], 'lambda.gauge.1')
+        nt.assert_equal(first['points'][0][0], 100)
+        nt.assert_equal(first['points'][0][1], 10)
+        nt.assert_equal(second['metric'], 'lambda.gauge.2')
+        nt.assert_equal(second['points'][0][0], 200)
+        nt.assert_equal(second['points'][0][1], 30)
