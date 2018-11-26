@@ -1,6 +1,16 @@
-from datadog import initialize
 from datadog.threadstats import ThreadStats
 from threading import Lock
+
+
+"""
+Usage:
+
+from datadog import datadog_lambda_wrapper, lambda_stats
+
+@datadog_lambda_wrapper
+def my_lambda_handle(event, context):
+    lambda_stats.increment("some_metric", 10)
+"""
 
 
 class _LambdaDecorator(object):
@@ -15,6 +25,7 @@ class _LambdaDecorator(object):
         with self._counter_lock:
             if not self._was_initialized:
                 self._was_initialized = True
+                from datadog import initialize  # Got blood on my hands now
                 initialize()
                 lambda_stats.start(flush_in_greenlet=False, flush_in_thread=False)
             self._counter = self._counter + 1
@@ -35,6 +46,7 @@ class _LambdaDecorator(object):
         result = self.func(*args, **kw)
         self._close()
         return result
+
 
 lambda_stats = ThreadStats()
 datadog_lambda_wrapper = _LambdaDecorator
