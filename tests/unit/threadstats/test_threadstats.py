@@ -16,8 +16,7 @@ import nose.tools as nt
 # datadog
 from datadog import ThreadStats
 from tests.util.contextmanagers import preserve_environment_variable
-from datadog.aws_lambda import lambda_stats, datadog_lambda_wrapper, _Wrappers_state, custom_metric
-
+from datadog.aws_lambda import lambda_stats, datadog_lambda_wrapper, _Wrappers_state
 
 # Silence the logger.
 logger = logging.getLogger('dd.datadogpy')
@@ -755,7 +754,7 @@ class TestUnitThreadStats(unittest.TestCase):
 
         @datadog_lambda_wrapper
         def basic_wrapped_function():  # Test custom_metric function
-            custom_metric("lambda.somemetric", 100, 300)
+            lambda_stats.distribution("lambda.somemetric", 100, 300)
 
         wrapped_init()  # Empty run to make the initialization
 
