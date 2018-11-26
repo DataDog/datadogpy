@@ -16,7 +16,7 @@ import nose.tools as nt
 # datadog
 from datadog import ThreadStats
 from tests.util.contextmanagers import preserve_environment_variable
-from datadog.aws_lambda import lambda_stats, datadog_lambda_wrapper, _Wrappers_state
+from datadog.aws_lambda import lambda_stats, datadog_lambda_wrapper, _Wrappers_state, custom_metric
 
 
 # Silence the logger.
@@ -42,6 +42,12 @@ class MemoryReporter(object):
 
     def flush_events(self, events):
         self.events += events
+
+
+@datadog_lambda_wrapper
+def wrapped_init():
+    """The first opened wrapper calls the "start" method, which would override the MemoryReporter"""
+    pass
 
 
 class TestUnitThreadStats(unittest.TestCase):
@@ -743,14 +749,27 @@ class TestUnitThreadStats(unittest.TestCase):
         nt.assert_equal(min_['type'], 'gauge')
 
 
-    def test_lambda_decorator(self):
+    # Test lambda_wrapper (uses ThreadStats under the hood)
+
+    def test_basic_lambda_decorator(self):
+
+        @datadog_lambda_wrapper
+        def basic_wrapped_function():  # Test custom_metric function
+            custom_metric("lambda.somemetric", 100, 300)
+
+        wrapped_init()  # Empty run to make the initialization
+
+        lambda_stats.reporter = self.reporter
+        basic_wrapped_function()
+
+        dists = self.sort_metrics(lambda_stats.reporter.distributions)
+        nt.assert_equal(len(dists), 1)
+        lambda_stats.reporter.distributions = []
+
+    def test_embedded_lambda_decorator(self):
         """
         Test that the lambda decorator flushes metrics correctly and only once
         """
-
-        @datadog_lambda_wrapper
-        def wrapped_init():
-            pass
 
         @datadog_lambda_wrapper
         def wrapped_function_1():
@@ -770,12 +789,11 @@ class TestUnitThreadStats(unittest.TestCase):
 
         wrapped_init()  # Empty run to make the initialization
 
-        lambda_stats.reporter = MemoryReporter()
+        lambda_stats.reporter = self.reporter
 
         nt.assert_equal(_Wrappers_state.opened_wrappers, 0)
         wrapped_function_2()
         nt.assert_equal(_Wrappers_state.opened_wrappers, 0)
-        lambda_stats.flush(float('inf'))
 
         metrics = self.sort_metrics(lambda_stats.reporter.metrics)
         nt.assert_equal(len(metrics), 2)
@@ -787,5 +805,3 @@ class TestUnitThreadStats(unittest.TestCase):
         nt.assert_equal(second['metric'], 'lambda.gauge.2')
         nt.assert_equal(second['points'][0][0], 200)
         nt.assert_equal(second['points'][0][1], 30)
-
-        lambda_stats.reporter.metrics = []
