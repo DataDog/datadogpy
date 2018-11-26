@@ -15,6 +15,11 @@ class _Wrappers_state(object):  # Trick used to share state variables between mo
     was_initalized = False
 
 
+def custom_metric(*args, **kw):
+    """Aliases ThreadStats.distribution to simplify AWS Lambda usage of ThreadStats"""
+    lambda_stats.distribution(*args, **kw)
+
+
 @decorator
 def datadog_lambda_wrapper(func, *args, **kw):
     """ Wrapper to automatically initialize the client & flush
