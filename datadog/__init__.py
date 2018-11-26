@@ -15,7 +15,7 @@ import os.path
 # datadog
 from datadog import api
 from datadog.dogstatsd import DogStatsd, statsd  # noqa
-from datadog.threadstats import ThreadStats  # noqa
+from datadog.threadstats import ThreadStats, datadog_lambda_wrapper, lambda_stats  # noqa
 from datadog.util.compat import iteritems, NullHandler
 from datadog.util.config import get_version
 from datadog.util.hostname import get_hostname
