@@ -2,6 +2,17 @@ from datadog.threadstats import ThreadStats
 from threading import Lock
 
 
+"""
+Usage:
+
+from datadog import datadog_lambda_wrapper, lambda_stats
+
+@datadog_lambda_wrapper
+def my_lambda_handle(event, context):
+    lambda_stats.increment("some_metric", 10)
+"""
+
+
 class _LambdaDecorator(object):
     _counter = 0  # Number of opened wrappers, flush when 0
     _counter_lock = Lock()
@@ -35,6 +46,7 @@ class _LambdaDecorator(object):
         result = self.func(*args, **kw)
         self._close()
         return result
+
 
 lambda_stats = ThreadStats()
 datadog_lambda_wrapper = _LambdaDecorator
