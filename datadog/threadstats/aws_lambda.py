@@ -1,3 +1,4 @@
+from datadog import initialize
 from datadog.threadstats import ThreadStats
 from threading import Lock
 
@@ -14,7 +15,6 @@ class _LambdaDecorator(object):
         with self._counter_lock:
             if not self._was_initialized:
                 self._was_initialized = True
-                from datadog import initialize  # Got blood on my hands now
                 initialize()
                 lambda_stats.start(flush_in_greenlet=False, flush_in_thread=False)
             self._counter = self._counter + 1

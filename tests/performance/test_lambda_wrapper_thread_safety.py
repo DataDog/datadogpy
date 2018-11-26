@@ -4,7 +4,7 @@ import time
 import threading
 from nose import tools as t
 
-from datadog.aws_lambda import lambda_stats, datadog_lambda_wrapper, _Wrappers_state
+from datadog import lambda_stats, datadog_lambda_wrapper
 
 
 class MemoryReporter(object):
@@ -24,7 +24,7 @@ class MemoryReporter(object):
 @datadog_lambda_wrapper
 def wrapped_function(id):
 
-    t.assert_greater(_Wrappers_state.opened_wrappers, 1)
+    t.assert_greater(datadog_lambda_wrapper._counter, 1)
     # Increment
     lambda_stats.increment("counter", timestamp=12345)
     time.sleep(0.001)  # sleep makes the os continue another thread
@@ -52,7 +52,7 @@ class TestWrapperThreadSafety(object):
 
         wrapped_init()  # Empty run to make the initialization
         lambda_stats.reporter = MemoryReporter()
-        _Wrappers_state.opened_wrappers = 1
+        datadog_lambda_wrapper._counter = 1
 
         for i in range(10000):
             threading.Thread(target=wrapped_function, args=[i]).start()
@@ -60,7 +60,7 @@ class TestWrapperThreadSafety(object):
         time.sleep(10)
 
         # Flush and check
-        t.assert_equal(_Wrappers_state.opened_wrappers, 1)
+        t.assert_equal(datadog_lambda_wrapper._counter, 1)
         lambda_stats.flush(float("inf"))
 
         metrics = lambda_stats.reporter.metrics

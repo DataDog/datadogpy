@@ -14,9 +14,8 @@ from mock import patch
 import nose.tools as nt
 
 # datadog
-from datadog import ThreadStats
+from datadog import ThreadStats, lambda_stats, datadog_lambda_wrapper
 from tests.util.contextmanagers import preserve_environment_variable
-from datadog.aws_lambda import lambda_stats, datadog_lambda_wrapper, _Wrappers_state
 
 # Silence the logger.
 logger = logging.getLogger('dd.datadogpy')
@@ -773,7 +772,7 @@ class TestUnitThreadStats(unittest.TestCase):
         @datadog_lambda_wrapper
         def wrapped_function_1():
             lambda_stats.gauge("lambda.gauge.1", 10, 100)
-            nt.assert_equal(_Wrappers_state.opened_wrappers, 2)
+            nt.assert_equal(datadog_lambda_wrapper._counter, 2)
 
         @datadog_lambda_wrapper
         def wrapped_function_2():
@@ -784,15 +783,15 @@ class TestUnitThreadStats(unittest.TestCase):
             nt.assert_equal(len(metrics), 0)
 
             lambda_stats.gauge("lambda.gauge.2", 30, 200)
-            nt.assert_equal(_Wrappers_state.opened_wrappers, 1)
+            nt.assert_equal(datadog_lambda_wrapper._counter, 1)
 
         wrapped_init()  # Empty run to make the initialization
 
         lambda_stats.reporter = self.reporter
 
-        nt.assert_equal(_Wrappers_state.opened_wrappers, 0)
+        nt.assert_equal(datadog_lambda_wrapper._counter, 0)
         wrapped_function_2()
-        nt.assert_equal(_Wrappers_state.opened_wrappers, 0)
+        nt.assert_equal(datadog_lambda_wrapper._counter, 0)
 
         metrics = self.sort_metrics(lambda_stats.reporter.metrics)
         nt.assert_equal(len(metrics), 2)
