@@ -1,49 +1,40 @@
-from decorator import decorator
 from datadog import initialize
 from datadog.threadstats import ThreadStats
 from threading import Lock
 
-import logging
-log = logging.getLogger('datadog.lambda')
 
-lambda_stats = ThreadStats()
-_counter_lock = Lock()
+class _LambdaDecorator(object):
+    _counter = 0  # Number of opened wrappers, flush when 0
+    _counter_lock = Lock()
+    _was_initialized = False
 
+    def __init__(self, func):
+        self.func = func
 
-class _Wrappers_state(object):  # Trick used to share state variables between modules
-    opened_wrappers = 0  # Flush only once all wrapped functions are done running
-    was_initalized = False
+    def _enter(self):
+        with self._counter_lock:
+            if not self._was_initialized:
+                self._was_initialized = True
+                initialize()
+                lambda_stats.start(flush_in_greenlet=False, flush_in_thread=False)
+            self._counter = self._counter + 1
 
+    def _close(self):
+        should_flush = False
+        with self._counter_lock:
+            self._counter = self._counter - 1
 
-def custom_metric(*args, **kw):
-    """Aliases ThreadStats.distribution to simplify AWS Lambda usage of ThreadStats"""
-    lambda_stats.distribution(*args, **kw)
+            if self._counter <= 0:  # Flush only when all wrappers are closed
+                should_flush = True
 
-
-@decorator
-def datadog_lambda_wrapper(func, *args, **kw):
-    """ Wrapper to automatically initialize the client & flush
-
-    Usage for lambdas:
-
-    @datadog_lambda_wrapper  # Use env variables DATADOG_API_KEY & DATADOG_APP_KEY
-    def my_lambda_function(event, context):
-        ....
-
-    """
-
-    with _counter_lock:
-        if not(_Wrappers_state.was_initalized):
-            _Wrappers_state.was_initalized = True
-            initialize()
-            lambda_stats.start(flush_in_greenlet=False, flush_in_thread=False)
-        _Wrappers_state.opened_wrappers = _Wrappers_state.opened_wrappers + 1
-
-    result = func(*args, **kw)  # Run the lambda
-
-    with _counter_lock:
-        _Wrappers_state.opened_wrappers = _Wrappers_state.opened_wrappers - 1
-        if _Wrappers_state.opened_wrappers <= 0:
+        if should_flush:
             lambda_stats.flush(float("inf"))
 
-    return result
+    def __call__(self, *args, **kw):
+        self._enter()
+        result = self.func(*args, **kw)
+        self._close()
+        return result
+
+lambda_stats = ThreadStats()
+datadog_lambda_wrapper = _LambdaDecorator
