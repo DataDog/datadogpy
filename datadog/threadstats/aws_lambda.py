@@ -21,30 +21,32 @@ class _LambdaDecorator(object):
     def __init__(self, func):
         self.func = func
 
-    def _enter(self):
-        with self._counter_lock:
-            if not self._was_initialized:
-                self._was_initialized = True
+    @classmethod
+    def _enter(cls):
+        with cls._counter_lock:
+            if not cls._was_initialized:
+                cls._was_initialized = True
                 from datadog import initialize  # Got blood on my hands now
                 initialize()
                 lambda_stats.start(flush_in_greenlet=False, flush_in_thread=False)
-            self._counter = self._counter + 1
+            cls._counter = cls._counter + 1
 
-    def _close(self):
+    @classmethod
+    def _close(cls):
         should_flush = False
-        with self._counter_lock:
-            self._counter = self._counter - 1
+        with cls._counter_lock:
+            cls._counter = cls._counter - 1
 
-            if self._counter <= 0:  # Flush only when all wrappers are closed
+            if cls._counter <= 0:  # Flush only when all wrappers are closed
                 should_flush = True
 
         if should_flush:
             lambda_stats.flush(float("inf"))
 
     def __call__(self, *args, **kw):
-        self._enter()
+        _LambdaDecorator._enter()
         result = self.func(*args, **kw)
-        self._close()
+        _LambdaDecorator._close()
         return result
 
 
