@@ -6,6 +6,7 @@ from nose import tools as t
 
 from datadog import lambda_stats, datadog_lambda_wrapper
 
+import unittest
 
 class MemoryReporter(object):
     """ A reporting class that reports to memory for testing. """
@@ -46,7 +47,7 @@ def wrapped_init():
     pass
 
 
-class TestWrapperThreadSafety(object):
+class TestWrapperThreadSafety(unittest.TestCase):
 
     def test_wrapper_thread_safety(self):
 
