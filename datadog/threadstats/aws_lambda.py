@@ -48,7 +48,7 @@ class _LambdaDecorator(object):
                     if cls._counter > 0:
                         should_flush = False
                 if should_flush:
-                    lambda_stats.flush(float("inf"))
+                    _lambda_stats.flush(float("inf"))
 
     def __call__(self, *args, **kw):
         _LambdaDecorator._enter()
@@ -57,6 +57,11 @@ class _LambdaDecorator(object):
         return result
 
 
-lambda_stats = ThreadStats()
-lambda_stats.start(flush_in_greenlet=False, flush_in_thread=False)
+_lambda_stats = ThreadStats()
+_lambda_stats.start(flush_in_greenlet=False, flush_in_thread=False)
 datadog_lambda_wrapper = _LambdaDecorator
+
+
+def lambda_stats(*args, **kw):
+    """ Alias to expose only distributions for lambda functions"""
+    _lambda_stats.distribution(*args, **kw)
