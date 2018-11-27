@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.25.0 / Unreleased
+# 0.25.0 / 2018-11-27
 
 * [FEATURE] ThreadStats: Add AWS Lambda wrapper, [#324][]
 
