@@ -14,7 +14,7 @@ from mock import patch
 import nose.tools as nt
 
 # datadog
-from datadog import ThreadStats, lambda_stats, datadog_lambda_wrapper
+from datadog import ThreadStats, lambda_metric, datadog_lambda_wrapper
 from datadog.threadstats.aws_lambda import _lambda_stats
 from tests.util.contextmanagers import preserve_environment_variable
 
@@ -750,7 +750,7 @@ class TestUnitThreadStats(unittest.TestCase):
 
         @datadog_lambda_wrapper
         def basic_wrapped_function():
-            lambda_stats("lambda.somemetric", 100)
+            lambda_metric("lambda.somemetric", 100)
 
         _lambda_stats.reporter = self.reporter
         basic_wrapped_function()
@@ -766,12 +766,12 @@ class TestUnitThreadStats(unittest.TestCase):
 
         @datadog_lambda_wrapper
         def wrapped_function_1():
-            lambda_stats("lambda.dist.1", 10)
+            lambda_metric("lambda.dist.1", 10)
 
         @datadog_lambda_wrapper
         def wrapped_function_2():
             wrapped_function_1()
-            lambda_stats("lambda.dist.2", 30)
+            lambda_metric("lambda.dist.2", 30)
 
         _lambda_stats.reporter = self.reporter
         wrapped_function_2()

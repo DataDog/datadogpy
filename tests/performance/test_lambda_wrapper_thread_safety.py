@@ -2,7 +2,7 @@ import time
 # import unittest
 import threading
 
-from datadog import lambda_stats, datadog_lambda_wrapper
+from datadog import lambda_metric, datadog_lambda_wrapper
 from datadog.threadstats.aws_lambda import _lambda_stats
 
 
@@ -23,11 +23,11 @@ class MemoryReporter(object):
 
 @datadog_lambda_wrapper
 def wrapped_function(id):
-    lambda_stats("dist_" + str(id), 42)
+    lambda_metric("dist_" + str(id), 42)
     # sleep makes the os continue another thread
     time.sleep(0.001)
 
-    lambda_stats("common_dist", 42)
+    lambda_metric("common_dist", 42)
 
 
 class TestWrapperThreadSafety(object):

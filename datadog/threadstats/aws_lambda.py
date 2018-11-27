@@ -7,11 +7,11 @@ import os
 """
 Usage:
 
-from datadog import datadog_lambda_wrapper, lambda_stats
+from datadog import datadog_lambda_wrapper, lambda_metric
 
 @datadog_lambda_wrapper
 def my_lambda_handle(event, context):
-    lambda_stats.increment("some_metric", 10)
+    lambda_metric("some_metric", 10)
 """
 
 
@@ -67,6 +67,6 @@ _lambda_stats.start(flush_in_greenlet=False, flush_in_thread=False)
 datadog_lambda_wrapper = _LambdaDecorator
 
 
-def lambda_stats(*args, **kw):
+def lambda_metric(*args, **kw):
     """ Alias to expose only distributions for lambda functions"""
     _lambda_stats.distribution(*args, **kw)
