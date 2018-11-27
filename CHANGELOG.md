@@ -1,5 +1,10 @@
 CHANGELOG
 =========
+
+# 0.25.0 / Unreleased
+
+* [FEATURE] ThreadStats: Add AWS Lambda wrapper, [#324][]
+
 # 0.24.0 / 2018-11-12
 
 * [BUGFIX] DogStatsD: Do not send empty UDP packets, [#264][] (thanks [@Tenzer][])
@@ -316,6 +321,7 @@ See [#8][], thanks [@benweatherman][]
 [#304]: https://github.com/DataDog/datadogpy/issues/304
 [#309]: https://github.com/DataDog/datadogpy/issues/309
 [#312]: https://github.com/DataDog/datadogpy/issues/312
+[#324]: https://github.com/DataDog/datadogpy/issues/324
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@Tenzer]: https://github.com/Tenzer
 [@aknuds1]: https://github.com/aknuds1
