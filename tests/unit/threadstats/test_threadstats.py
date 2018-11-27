@@ -749,7 +749,7 @@ class TestUnitThreadStats(unittest.TestCase):
     def test_basic_lambda_decorator(self):
 
         @datadog_lambda_wrapper
-        def basic_wrapped_function():  # Test custom_metric function
+        def basic_wrapped_function():
             lambda_stats("lambda.somemetric", 100)
 
         _lambda_stats.reporter = self.reporter

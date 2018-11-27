@@ -24,7 +24,8 @@ class MemoryReporter(object):
 @datadog_lambda_wrapper
 def wrapped_function(id):
     lambda_stats("dist_" + str(id), 42)
-    time.sleep(0.001)  # sleep makes the os continue another thread
+    # sleep makes the os continue another thread
+    time.sleep(0.001)
 
     lambda_stats("common_dist", 42)
 

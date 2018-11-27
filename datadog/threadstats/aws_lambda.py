@@ -16,7 +16,10 @@ def my_lambda_handle(event, context):
 
 
 class _LambdaDecorator(object):
-    _counter = 0  # Number of opened wrappers, flush when 0
+    """ Decorator to automatically init & flush metrics, created for Lambda functions"""
+
+    # Number of opened wrappers, flush when 0
+    _counter = 0
     _counter_lock = Lock()
     _flush_lock = Lock()
     _was_initialized = False
@@ -38,7 +41,8 @@ class _LambdaDecorator(object):
         with cls._counter_lock:
             cls._counter = cls._counter - 1
 
-            if cls._counter <= 0:  # Flush only when all wrappers are closed
+            # Flush only when all wrappers are closed
+            if cls._counter <= 0:
                 should_flush = True
 
         if should_flush:
