@@ -18,6 +18,7 @@ def my_lambda_handle(event, context):
 class _LambdaDecorator(object):
     _counter = 0  # Number of opened wrappers, flush when 0
     _counter_lock = Lock()
+    _flush_lock = Lock()
     _was_initialized = False
 
     def __init__(self, func):
@@ -41,7 +42,13 @@ class _LambdaDecorator(object):
                 should_flush = True
 
         if should_flush:
-            lambda_stats.flush(float("inf"))
+            with cls._flush_lock:
+                # Don't flush if other wrappers were opened while _flush_lock was locked
+                with cls._counter_lock:
+                    if cls._counter > 0:
+                        should_flush = False
+                if should_flush:
+                    lambda_stats.flush(float("inf"))
 
     def __call__(self, *args, **kw):
         _LambdaDecorator._enter()
