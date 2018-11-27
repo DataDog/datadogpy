@@ -42,12 +42,6 @@ class MemoryReporter(object):
         self.events += events
 
 
-@datadog_lambda_wrapper
-def wrapped_init():
-    """The first opened wrapper calls the "start" method, which would override the MemoryReporter"""
-    pass
-
-
 class TestUnitThreadStats(unittest.TestCase):
     """
     Unit tests for ThreadStats.
@@ -755,8 +749,6 @@ class TestUnitThreadStats(unittest.TestCase):
         def basic_wrapped_function():  # Test custom_metric function
             lambda_stats.distribution("lambda.somemetric", 100, 300)
 
-        wrapped_init()  # Empty run to make the initialization
-
         lambda_stats.reporter = self.reporter
         basic_wrapped_function()
 
@@ -784,8 +776,6 @@ class TestUnitThreadStats(unittest.TestCase):
 
             lambda_stats.gauge("lambda.gauge.2", 30, 200)
             nt.assert_equal(datadog_lambda_wrapper._counter, 1)
-
-        wrapped_init()  # Empty run to make the initialization
 
         lambda_stats.reporter = self.reporter
 

@@ -1,5 +1,7 @@
 from datadog.threadstats import ThreadStats
 from threading import Lock
+from datadog import api
+import os
 
 
 """
@@ -26,9 +28,7 @@ class _LambdaDecorator(object):
         with cls._counter_lock:
             if not cls._was_initialized:
                 cls._was_initialized = True
-                from datadog import initialize  # Got blood on my hands now
-                initialize()
-                lambda_stats.start(flush_in_greenlet=False, flush_in_thread=False)
+                api._api_key = os.environ.get('DATADOG_API_KEY')
             cls._counter = cls._counter + 1
 
     @classmethod
@@ -51,4 +51,5 @@ class _LambdaDecorator(object):
 
 
 lambda_stats = ThreadStats()
+lambda_stats.start(flush_in_greenlet=False, flush_in_thread=False)
 datadog_lambda_wrapper = _LambdaDecorator

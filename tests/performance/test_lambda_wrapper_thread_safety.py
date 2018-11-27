@@ -41,16 +41,9 @@ def wrapped_function(id):
     lambda_stats.event("title", "content")
 
 
-@datadog_lambda_wrapper
-def wrapped_init():
-    pass
-
-
 class TestWrapperThreadSafety(object):
 
     def test_wrapper_thread_safety(self):
-
-        wrapped_init()  # Empty run to make the initialization
         lambda_stats.reporter = MemoryReporter()
         datadog_lambda_wrapper._counter = 1
 
