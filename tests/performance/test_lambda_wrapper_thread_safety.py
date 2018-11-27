@@ -1,5 +1,5 @@
 import time
-import unittest
+# import unittest
 import threading
 
 from datadog import lambda_stats, datadog_lambda_wrapper
@@ -30,7 +30,7 @@ def wrapped_function(id):
     lambda_stats("common_dist", 42)
 
 
-class TestWrapperThreadSafety(unittest.TestCase):
+class TestWrapperThreadSafety(object):
 
     def test_wrapper_thread_safety(self):
         _lambda_stats.reporter = MemoryReporter()
