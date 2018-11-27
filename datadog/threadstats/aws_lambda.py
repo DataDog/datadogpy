@@ -33,6 +33,7 @@ class _LambdaDecorator(object):
             if not cls._was_initialized:
                 cls._was_initialized = True
                 api._api_key = os.environ.get('DATADOG_API_KEY')
+                api._api_host = os.environ.get('DATADOG_HOST', 'https://api.datadoghq.com')
             cls._counter = cls._counter + 1
 
     @classmethod
