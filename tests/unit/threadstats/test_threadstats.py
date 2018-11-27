@@ -14,9 +14,9 @@ from mock import patch
 import nose.tools as nt
 
 # datadog
-from datadog import ThreadStats
+from datadog import ThreadStats, lambda_metric, datadog_lambda_wrapper
+from datadog.threadstats.aws_lambda import _lambda_stats
 from tests.util.contextmanagers import preserve_environment_variable
-
 
 # Silence the logger.
 logger = logging.getLogger('dd.datadogpy')
@@ -32,9 +32,11 @@ class MemoryReporter(object):
         self.distributions = []
         self.metrics = []
         self.events = []
+        self.dist_flush_counter = 0
 
     def flush_distributions(self, distributions):
         self.distributions += distributions
+        self.dist_flush_counter = self.dist_flush_counter + 1
 
     def flush_metrics(self, metrics):
         self.metrics += metrics
@@ -740,3 +742,40 @@ class TestUnitThreadStats(unittest.TestCase):
         nt.assert_equal(cnt['type'], 'rate')
         nt.assert_equal(max_['type'], 'gauge')
         nt.assert_equal(min_['type'], 'gauge')
+
+
+    # Test lambda_wrapper (uses ThreadStats under the hood)
+
+    def test_basic_lambda_decorator(self):
+
+        @datadog_lambda_wrapper
+        def basic_wrapped_function():
+            lambda_metric("lambda.somemetric", 100)
+
+        _lambda_stats.reporter = self.reporter
+        basic_wrapped_function()
+
+        nt.assert_equal(_lambda_stats.reporter.dist_flush_counter, 1)
+        dists = self.sort_metrics(_lambda_stats.reporter.distributions)
+        nt.assert_equal(len(dists), 1)
+
+    def test_embedded_lambda_decorator(self):
+        """
+        Test that the lambda decorator flushes metrics correctly and only once
+        """
+
+        @datadog_lambda_wrapper
+        def wrapped_function_1():
+            lambda_metric("lambda.dist.1", 10)
+
+        @datadog_lambda_wrapper
+        def wrapped_function_2():
+            wrapped_function_1()
+            lambda_metric("lambda.dist.2", 30)
+
+        _lambda_stats.reporter = self.reporter
+        wrapped_function_2()
+        nt.assert_equal(_lambda_stats.reporter.dist_flush_counter, 1)
+
+        dists = self.sort_metrics(_lambda_stats.reporter.distributions)
+        nt.assert_equal(len(dists), 2)
