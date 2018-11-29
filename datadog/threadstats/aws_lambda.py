@@ -88,6 +88,6 @@ def _init_api_client():
     By making the initial request async, we spare a lot of execution time in the lambdas.
     """
     try:
-        _ = api.api_client.APIClient.submit('GET', 'validate')
+        api.api_client.APIClient.submit('GET', 'validate')
     except Exception:
         pass
