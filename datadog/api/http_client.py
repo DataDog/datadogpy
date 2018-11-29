@@ -8,6 +8,7 @@ Priority:
 # stdlib
 import logging
 import urllib
+from threading import Lock
 
 # 3p
 try:
@@ -59,26 +60,30 @@ class HTTPClient(object):
 
 class RequestClient(HTTPClient):
     """
-    HTTP client based on 3rd party `requests` module.
+    HTTP client based on 3rd party `requests` module, using a single session.
+    This allows us to keep the session alive to spare some execution time.
     """
+
+    _session = None
+    _session_lock = Lock()
+
     @classmethod
     def request(cls, method, url, headers, params, data, timeout, proxies, verify, max_retries):
-        """
-        """
         try:
-            # Use a session to set a max_retries parameters
-            with requests.Session() as s:
-                http_adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
-                s.mount('https://', http_adapter)
 
-                # Since stream=False we can close the session after this call
-                result = s.request(
-                    method, url,
-                    headers=headers, params=params, data=data,
-                    timeout=timeout,
-                    proxies=proxies, verify=verify)
+            with cls._session_lock:
+                if cls._session is None:
+                    cls._session = requests.Session()
+                    http_adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
+                    cls._session.mount('https://', http_adapter)
 
-                result.raise_for_status()
+            result = cls._session.request(
+                method, url,
+                headers=headers, params=params, data=data,
+                timeout=timeout,
+                proxies=proxies, verify=verify)
+
+            result.raise_for_status()
 
         except requests.ConnectionError as e:
             raise _remove_context(ClientError(method, url, e))

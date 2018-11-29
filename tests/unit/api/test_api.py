@@ -73,7 +73,7 @@ class TestInitialization(DatadogAPINoInitialization):
         # Finally, initialize with an API key
         initialize(api_key=API_KEY, api_host=API_HOST)
         MyCreatable.create()
-        self.assertEquals(self.request_mock.request.call_count, 1)
+        self.assertEquals(self.request_mock.call_count(), 1)
 
     @mock.patch('datadog.util.config.get_config_path')
     def test_get_hostname(self, mock_config_path):
@@ -105,7 +105,7 @@ class TestInitialization(DatadogAPINoInitialization):
         # Make a simple API call
         MyCreatable.create()
 
-        _, options = self.request_mock.request.call_args
+        _, options = self.request_mock.call_args()
 
         # Assert `requests` parameters
         self.assertIn('params', options)
@@ -128,7 +128,7 @@ class TestInitialization(DatadogAPINoInitialization):
         # Make a simple API call
         MyCreatable.create()
 
-        _, options = self.request_mock.request.call_args
+        _, options = self.request_mock.call_args()
 
         # Assert `requests` parameters
         self.assertIn('proxies', options)
