@@ -1,5 +1,5 @@
 from datadog.threadstats import ThreadStats
-from threading import Lock
+from threading import Lock, Thread
 from datadog import api
 import os
 
@@ -34,6 +34,11 @@ class _LambdaDecorator(object):
                 cls._was_initialized = True
                 api._api_key = os.environ.get('DATADOG_API_KEY')
                 api._api_host = os.environ.get('DATADOG_HOST', 'https://api.datadoghq.com')
+
+                # Async initialization of the TLS connection with our endpoints
+                # This avoids adding execution time at the end of the lambda run
+                t = Thread(target=init_connection)
+                t.start()
             cls._counter = cls._counter + 1
 
     @classmethod
@@ -70,3 +75,16 @@ datadog_lambda_wrapper = _LambdaDecorator
 def lambda_metric(*args, **kw):
     """ Alias to expose only distributions for lambda functions"""
     _lambda_stats.distribution(*args, **kw)
+
+
+def init_connection():
+    """ No-op POST to initialize the requests connection with DD's endpoints
+
+    The goal here is to make the final flush faster:
+    we keep alive the Requests session, this means that we can re-use the connection
+    The consequence is that the HTTP Handshake, which can take hundreds of ms,
+    is now made at the beginning of a lambda instead of at the end.
+
+    By making the initial request async, we spare a lot of execution time in the lambdas.
+    """
+    api.api_client.APIClient.submit('GET', 'validate')
