@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+# 0.26.0 / Unreleased
+
+* [IMPROVEMENT] API: Keep HTTP connections alive when using `requests`, [#328][]
+
+
 # 0.25.0 / 2018-11-27
 
 * [FEATURE] ThreadStats: Add AWS Lambda wrapper, [#324][]
@@ -322,6 +327,7 @@ See [#8][], thanks [@benweatherman][]
 [#309]: https://github.com/DataDog/datadogpy/issues/309
 [#312]: https://github.com/DataDog/datadogpy/issues/312
 [#324]: https://github.com/DataDog/datadogpy/issues/324
+[#328]: https://github.com/DataDog/datadogpy/issues/328
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@Tenzer]: https://github.com/Tenzer
 [@aknuds1]: https://github.com/aknuds1
