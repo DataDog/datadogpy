@@ -37,7 +37,7 @@ class _LambdaDecorator(object):
 
                 # Async initialization of the TLS connection with our endpoints
                 # This avoids adding execution time at the end of the lambda run
-                t = Thread(target=init_connection)
+                t = Thread(target=_init_api_client)
                 t.start()
             cls._counter = cls._counter + 1
 
@@ -77,8 +77,8 @@ def lambda_metric(*args, **kw):
     _lambda_stats.distribution(*args, **kw)
 
 
-def init_connection():
-    """ No-op POST to initialize the requests connection with DD's endpoints
+def _init_api_client():
+    """ No-op GET to initialize the requests connection with DD's endpoints
 
     The goal here is to make the final flush faster:
     we keep alive the Requests session, this means that we can re-use the connection
@@ -87,4 +87,7 @@ def init_connection():
 
     By making the initial request async, we spare a lot of execution time in the lambdas.
     """
-    api.api_client.APIClient.submit('GET', 'validate')
+    try:
+        _ = api.api_client.APIClient.submit('GET', 'validate')
+    except Exception:
+        pass
