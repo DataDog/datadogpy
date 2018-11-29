@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.26.0 / Unreleased
+# 0.26.0 / 2018-11-29
 
 * [IMPROVEMENT] API: Keep HTTP connections alive when using `requests`, [#328][]
 
