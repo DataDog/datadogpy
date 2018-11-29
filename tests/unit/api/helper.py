@@ -8,6 +8,7 @@ import requests
 
 # datadog
 from datadog import initialize, api
+from datadog.api.http_client import RequestClient
 from datadog.api.exceptions import ApiError
 from datadog.api.resources import (
     CreateableAPIResource,
@@ -31,6 +32,25 @@ HOST_NAME = "agent.hostname"
 FAKE_PROXY = {
     "https": "http://user:pass@10.10.1.10:3128/",
 }
+
+
+class MockSession(object):
+    """docstring for MockSession"""
+    _args = None
+    _kwargs = None
+    _count = 0
+
+    def request(self, *args, **kwargs):
+        self._args = args
+        self._kwargs = kwargs
+        self._count += 1
+        return MockResponse()
+
+    def call_args(self):
+        return self._args, self._kwargs
+
+    def call_count(self):
+        return self._count
 
 
 class MockResponse(requests.Response):
@@ -98,13 +118,15 @@ class DatadogAPITestCase(unittest.TestCase):
 
     def setUp(self):
         # Mock patch requests
-        self.request_patcher = patch('requests.Session')
-        request_class_mock = self.request_patcher.start()
-        self.request_mock = request_class_mock.return_value.__enter__.return_value
-        self.request_mock.request = Mock(return_value=MockResponse())
+        self.request_mock = MockSession()
+        RequestClient._session = self.request_mock
+        # self.request_patcher = patch('requests.Session')
+        # request_class_mock = self.request_patcher.start()
+        # self.request_mock = request_class_mock.return_value
+        # self.request_mock.request = Mock(return_value=MockResponse())
 
     def tearDown(self):
-        self.request_patcher.stop()
+        del RequestClient._session
 
     def arm_requests_to_raise(self):
         """
@@ -116,11 +138,11 @@ class DatadogAPITestCase(unittest.TestCase):
         """
         Returns JSON formatted data from the submitted `requests`.
         """
-        _, kwargs = self.request_mock.request.call_args
+        _, kwargs = self.request_mock.call_args()
         return json.loads(kwargs['data'])
 
     def request_called_with(self, method, url, data=None, params=None):
-        (req_method, req_url), others = self.request_mock.request.call_args
+        (req_method, req_url), others = self.request_mock.call_args()
         self.assertEquals(method, req_method, req_method)
         self.assertEquals(url, req_url, req_url)
 
