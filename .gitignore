@@ -43,3 +43,6 @@ nosetests.xml
 .eggs/
 .env/
 .idea/
+
+# Lambda layers zips
+layers/
