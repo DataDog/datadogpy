@@ -1,0 +1,29 @@
+before_script:
+  - pip install awscli==1.16.69
+
+stages:
+  - build
+  - deploy
+
+build_zips:
+  stage: build
+  when:
+    - tags
+    - manual
+  artifacts:
+    paths:
+      - layers/
+  script:
+    - rake -f ./Rakefile.rb build_layer_zips PIP_TARGET="git+https://github.com/DataDog/datadogpy.git@$CI_COMMIT_REF_NAME"
+
+publish:
+  stage: deploy
+  dependencies:
+    - build_zips
+  script:
+    - >
+      aws sts assume-role --role-arn $AWS_STS_ROLE --role-session-name datadogpy
+      | jq -r '@sh "rake -f ./Rakefile.rb publish_layer
+      AWS_ACCESS_KEY_ID=\(.Credentials.AccessKeyId)
+      AWS_SECRET_ACCESS_KEY=\(.Credentials.SecretAccessKey)
+      AWS_SESSION_TOKEN=\(.Credentials.SessionToken)"'
