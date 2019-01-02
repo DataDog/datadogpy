@@ -4,7 +4,7 @@ import sys
 
 def get_readme_md_contents():
     """read the contents of your README file"""
-    with open('README.md') as f:
+    with open('README.rst') as f:
         long_description = f.read()
         return long_description
 
@@ -32,7 +32,6 @@ setup(
     ],
     author="Datadog, Inc.",
     long_description=get_readme_md_contents(),
-    long_description_content_type='text/markdown',
     author_email="dev@datadoghq.com",
     description="The Datadog Python library",
     license="BSD",
