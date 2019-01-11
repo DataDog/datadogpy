@@ -15,6 +15,8 @@ matrix:
       env: TOXENV=py27
     - python: 3.3
       env: TOXENV=py33
+      # Python 3.3 is deprecated and thus not available on Xenial
+      dist: trusty
     - python: 3.4
       env: TOXENV=py34
     - python: 3.5
@@ -23,6 +25,8 @@ matrix:
       env: TOXENV=py36
     - python: pypy
       env: TOXENV=pypy
+      # PyPy isn't yet available on Xenial
+      dist: trusty
 
 install:
   - pip install tox
