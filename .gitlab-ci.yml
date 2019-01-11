@@ -1,0 +1,85 @@
+stages:
+  - build
+  - deploy
+
+build_zip_27:
+  stage: build
+  tags: [ "runner:main", "size:large" ]
+  image: python:2.7
+  only:
+    - /^v(\d+\.)?(\d+\.)?(\*|\d+)$/
+  except:
+    - branches
+  before_script:
+    - apt-get update && apt-get -y install --no-install-recommends zip
+  artifacts:
+    paths:
+      - layers/datadogpy27.zip
+  script:
+    - echo "Release tag found $CI_COMMIT_REF_NAME"
+    - mkdir -p layers/python/lib/python2.7/site-packages
+    - pip install "git+https://github.com/DataDog/datadogpy.git@$CI_COMMIT_REF_NAME" -t ./layers/python/lib/python2.7/site-packages
+    - (cd layers; zip -r -q datadogpy27.zip ./)
+
+build_zip_36:
+  stage: build
+  tags: [ "runner:main", "size:large" ]
+  image: python:3.6
+  only:
+    - /^v(\d+\.)?(\d+\.)?(\*|\d+)$/
+  except:
+    - branches
+  before_script:
+    - apt-get update && apt-get -y install --no-install-recommends zip
+  artifacts:
+    paths:
+      - layers/datadogpy36.zip
+  script:
+    - echo "Release tag found $CI_COMMIT_REF_NAME"
+    - mkdir -p layers/python/lib/python3.6/site-packages
+    - pip install "git+https://github.com/DataDog/datadogpy.git@$CI_COMMIT_REF_NAME" -t ./layers/python/lib/python3.6/site-packages
+    - (cd layers; zip -r -q datadogpy36.zip ./)
+
+build_zip_37:
+  stage: build
+  tags: [ "runner:main", "size:large" ]
+  image: python:3.7
+  only:
+    - /^v(\d+\.)?(\d+\.)?(\*|\d+)$/
+  except:
+    - branches
+  before_script:
+    - apt-get update && apt-get -y install --no-install-recommends zip
+  artifacts:
+    paths:
+      - layers/datadogpy37.zip
+  script:
+    - echo "Release tag found $CI_COMMIT_REF_NAME"
+    - mkdir -p layers/python/lib/python3.7/site-packages
+    - pip install "git+https://github.com/DataDog/datadogpy.git@$CI_COMMIT_REF_NAME" -t ./layers/python/lib/python3.7/site-packages
+    - (cd layers; zip -r -q datadogpy37.zip ./)
+
+publish:
+  stage: deploy
+  image: python:3
+  when: on_success
+  tags: [ "runner:main", "size:large" ]
+  only:
+    - /^v(\d+\.)?(\d+\.)?(\*|\d+)$/
+  except:
+    - branches
+  before_script:
+    - pip install awscli==1.16.87
+    - apt-get update && apt-get -y install --no-install-recommends jq
+  dependencies:
+    - build_zip_27
+    - build_zip_36
+    - build_zip_37
+  script:
+    - ls layers
+    - >
+      aws sts assume-role --role-arn $ROLE_ARN --role-session-name "datadogpy-ci" | 
+      jq -r '@sh "AWS_ACCESS_KEY_ID=\(.Credentials.AccessKeyId) 
+      AWS_SECRET_ACCESS_KEY=\(.Credentials.SecretAccessKey)
+      AWS_SESSION_TOKEN=\(.Credentials.SessionToken) 
+      ./publish_layer.sh "'
