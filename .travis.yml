@@ -1,13 +1,31 @@
+dist: xenial
 language: python
-python:
-  - "2.7"
-  - "pypy"
-  - "3.3"
-  - "3.4"
-  - "3.5"
-  - "3.6"
+
+cache:
+  directories:
+    - $HOME/.cache/pip
+
+branches:
+  only:
+    - master
+
+matrix:
+  include:
+    - python: 2.7
+      env: TOXENV=py27
+    - python: 3.4
+      env: TOXENV=py34
+    - python: 3.5
+      env: TOXENV=py35,flake8
+    - python: 3.6
+      env: TOXENV=py36
+    - python: pypy
+      env: TOXENV=pypy
+      # PyPy isn't yet available on Xenial
+      dist: trusty
+
 install:
-  - pip install flake8==3.4.1
+  - pip install tox
+
 script:
-  - if [[ $TRAVIS_PYTHON_VERSION == '3.5' ]]; then flake8 --max-line-length=100 datadog; fi
-  - if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then python -Wall setup.py test; else python -Wall setup.py test -s tests.unit; fi
+  - tox
