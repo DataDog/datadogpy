@@ -19,6 +19,8 @@ matrix:
       env: TOXENV=py35,flake8
     - python: 3.6
       env: TOXENV=py36
+    - python: 3.7
+      env: TOXENV=py37
     - python: pypy
       env: TOXENV=pypy
       # PyPy isn't yet available on Xenial
