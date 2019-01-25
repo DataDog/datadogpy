@@ -289,9 +289,12 @@ class DogStatsd(object):
         except socket.timeout:
             # dogstatsd is overflowing, drop the packets (mimicks the UDP behaviour)
             return
-        except socket.error:
+        except (socket.error, socket.herror, socket.gaierror) as se:
             log.info("Error submitting packet, dropping the packet and closing the socket")
             self.close_socket()
+        except Exception as e:
+            log.info("Unexpected error: ", e)
+            return
 
     def _send_to_buffer(self, packet):
         self.buffer.append(packet)
