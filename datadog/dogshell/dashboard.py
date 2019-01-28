@@ -1,6 +1,5 @@
 # stdlib
 import json
-import os.path
 import platform
 import sys
 import webbrowser
