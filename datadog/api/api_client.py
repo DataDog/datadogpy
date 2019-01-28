@@ -171,7 +171,7 @@ class APIClient(object):
         except ApiError as e:
             if _mute:
                 for error in e.args[0]['errors']:
-                    log.error(str(error))
+                    log.error(error)
                 if error_formatter is None:
                     return e.args[0]
                 else:
