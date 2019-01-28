@@ -26,9 +26,6 @@ class DashboardClient(object):
         post_parser = verb_parsers.add_parser('post', help="Create dashboards")
         post_parser.add_argument('title', help="title for the new dashboard")
         post_parser.add_argument('description', help="short description of the dashboard")
-        # TODO: Only `ordered` is supported for now so we can default to `ordered` for now.
-        # `free` will be added when we migrate screenboard to the new API
-        # post_parser.add_argument('layout_type', choices=['ordered', 'free'], help="The dashboard layout type.")
         post_parser.add_argument('widgets', help="widget definitions as a JSON string. if unset,"
                                  " reads from stdin.", nargs="?")
         post_parser.add_argument('--template_variables', type=_template_variables, default=[],
@@ -148,15 +145,21 @@ class DashboardClient(object):
                 dash_obj["description"] += auto_text
             tpl_vars = dash_obj.get("template_variables", [])
 
-            print(dash_obj)
             if 'id' in dash_obj:
-                res = api.Dashboard.update(dash_obj["id"], title=dash_obj["title"],
-                                           description=dash_obj["description"], widgets=dash_obj["widgets"],
-                                           layout_type="ordered", template_variables=tpl_vars)
+                res = api.Dashboard.update(
+                    dash_obj["id"],
+                    title=dash_obj["title"],
+                    description=dash_obj["description"],
+                    widgets=dash_obj["widgets"],
+                    layout_type="ordered",
+                    template_variables=tpl_vars)
             else:
-                res = api.Dashboard.create(title=dash_obj["title"],
-                                           description=dash_obj["description"], widgets=dash_obj["widgets"],
-                                       layout_type="ordered", template_variables=tpl_vars)
+                res = api.Dashboard.create(
+                    title=dash_obj["title"],
+                    description=dash_obj["description"],
+                    widgets=dash_obj["widgets"],
+                    layout_type="ordered",
+                    template_variables=tpl_vars)
             if 'errors' in res:
                 print_err('Upload of dashboard {0} from file {1} failed.'
                           .format(dash_obj["id"], f.name))
@@ -183,8 +186,12 @@ class DashboardClient(object):
             widgets = json.loads(widgets)
         except:
             raise Exception('bad json parameter')
-        res = api.Dashboard.create(title=args.title, description=args.description, widgets=widgets,
-                                   layout_type="ordered", template_variables=args.template_variables)
+        res = api.Dashboard.create(
+            title=args.title,
+            description=args.description,
+            widgets=widgets,
+            layout_type="ordered",
+            template_variables=args.template_variables)
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
@@ -204,9 +211,13 @@ class DashboardClient(object):
         except:
             raise Exception('bad json parameter')
 
-        res = api.Dashboard.update(args.dashboard_id, title=args.title,
-                                   description=args.description, widgets=widgets,
-                                   layout_type="ordered", template_variables=args.template_variables)
+        res = api.Dashboard.update(
+            args.dashboard_id,
+            title=args.title,
+            description=args.description,
+            widgets=widgets,
+            layout_type="ordered",
+            template_variables=args.template_variables)
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
