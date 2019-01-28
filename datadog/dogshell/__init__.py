@@ -19,6 +19,7 @@ from datadog.dogshell.search import SearchClient
 from datadog.dogshell.service_check import ServiceCheckClient
 from datadog.dogshell.tag import TagClient
 from datadog.dogshell.timeboard import TimeboardClient
+from datadog.dogshell.dashboard import DashboardClient
 from datadog.util.config import get_version
 
 
@@ -56,6 +57,7 @@ def main():
     EventClient.setup_parser(subparsers)
     MonitorClient.setup_parser(subparsers)
     TimeboardClient.setup_parser(subparsers)
+    DashboardClient.setup_parser(subparsers)
     ScreenboardClient.setup_parser(subparsers)
     DashboardListClient.setup_parser(subparsers)
     HostClient.setup_parser(subparsers)
