@@ -80,7 +80,7 @@ Datadog.api client requires to run :mod:`datadog` `initialize` method first.
 .. autoclass:: datadog.api.Dashboard
     :members:
     :inherited-members:
-    
+
 .. autoclass:: datadog.api.DashboardList
     :members:
     :inherited-members:
