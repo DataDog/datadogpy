@@ -7,6 +7,7 @@ from random import random
 import logging
 import os
 import socket
+from threading import Lock
 
 # datadog
 from datadog.dogstatsd.context import TimedContextManagerDecorator
@@ -58,6 +59,8 @@ class DogStatsd(object):
         UDP. If set, disables UDP transmission (Linux only)
         :type socket_path: string
         """
+
+        self.lock = Lock()
 
         # Connection
         if socket_path is not None:
@@ -114,16 +117,17 @@ class DogStatsd(object):
         Note: connect the socket before assigning it to the class instance to
         avoid bad thread race conditions.
         """
-        if not self.socket:
-            if self.socket_path is not None:
-                sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-                sock.connect(self.socket_path)
-                sock.setblocking(0)
-                self.socket = sock
-            else:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                sock.connect((self.host, self.port))
-                self.socket = sock
+        with self.lock:
+            if not self.socket:
+                if self.socket_path is not None:
+                    sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+                    sock.connect(self.socket_path)
+                    sock.setblocking(0)
+                    self.socket = sock
+                else:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    sock.connect((self.host, self.port))
+                    self.socket = sock
 
         return self.socket
 
@@ -293,7 +297,7 @@ class DogStatsd(object):
             log.warning("Error submitting packet: {}, dropping the packet and closing the socket".format(str(se)))
             self.close_socket()
         except Exception as e:
-            log.error("Unexpected error: ", str(e))
+            log.error("Unexpected error: %s", str(e))
             return
 
     def _send_to_buffer(self, packet):
