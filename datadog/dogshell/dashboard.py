@@ -163,13 +163,6 @@ class DashboardClient(object):
             report_warnings(res)
             report_errors(res)
 
-    @classmethod
-    def _web_view(cls, args):
-        dash_id = json.load(args.file)['id']
-        # url = api._api_host + "/dashboard/{0}".format(dash_id)
-        url = api._api_host + "/dashboard/{0}".format(dash_id)
-        webbrowser.open(url)
-
 
 def _json_string(str):
     try:
