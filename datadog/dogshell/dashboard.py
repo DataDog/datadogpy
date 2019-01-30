@@ -1,6 +1,5 @@
 # stdlib
 import json
-import platform
 import sys
 import webbrowser
 
@@ -9,9 +8,8 @@ import argparse
 
 # datadog
 from datadog import api
-from datadog.dogshell.common import report_errors, report_warnings, print_err
+from datadog.dogshell.common import report_errors, report_warnings
 from datadog.util.format import pretty_json
-from datetime import datetime
 
 
 class DashboardClient(object):
@@ -67,131 +65,9 @@ class DashboardClient(object):
         show_parser.add_argument('dashboard_id', help="Dashboard to show")
         show_parser.set_defaults(func=cls._show)
 
-        pull_parser = verb_parsers.add_parser('pull', help="Pull a dashboard on the server"
-                                              " into a local file")
-        pull_parser.add_argument('dashboard_id', help="ID of dashboard to pull")
-        pull_parser.add_argument('filename', help="File to pull dashboard into")
-        pull_parser.set_defaults(func=cls._pull)
-
-        push_parser = verb_parsers.add_parser('push', help="Push updates to dashboards"
-                                              " from local files to the server")
-        push_parser.add_argument('--append_auto_text', action='store_true', dest='append_auto_text',
-                                 help="When pushing to the server, appends filename"
-                                 " and timestamp to the end of the dashboard description")
-        push_parser.add_argument('file', help="Dashboard files to push to the server",
-                                 nargs='+', type=argparse.FileType('r'))
-        push_parser.set_defaults(func=cls._push)
-
-        new_file_parser = verb_parsers.add_parser('new_file', help="Create a new dashboard"
-                                                  " and put its contents in a file")
-        new_file_parser.add_argument('filename', help="Name of file to create with empty dashboard")
-        new_file_parser.add_argument('widgets', help="Widget definitions as a JSON string."
-                                     " If unset, reads from stdin.", nargs="?")
-        new_file_parser.set_defaults(func=cls._new_file)
-
-        web_view_parser = verb_parsers.add_parser('web_view',
-                                                  help="View the dashboard in a web browser")
-        web_view_parser.add_argument('file', help="Dashboard file", type=argparse.FileType('r'))
-        web_view_parser.set_defaults(func=cls._web_view)
-
         delete_parser = verb_parsers.add_parser('delete', help="Delete dashboards")
         delete_parser.add_argument('dashboard_id', help="Dashboard to delete")
         delete_parser.set_defaults(func=cls._delete)
-
-    @classmethod
-    def _pull(cls, args):
-        cls._write_dash_to_file(
-            args.dashboard_id, args.filename,
-            args.timeout, args.format)
-
-    @classmethod
-    def _new_file(cls, args):
-        api._timeout = args.timeout
-        format = args.format
-        widgets = args.widgets
-        if args.widgets is None:
-            widgets = sys.stdin.read()
-        try:
-            widgets = json.loads(widgets)
-        except:
-            raise Exception('bad json parameter')
-        res = api.Dashboard.create(
-            title=args.filename,
-            description="Description for {0}".format(args.filename),
-            widgets=widgets, layout_type="ordered")
-        report_warnings(res)
-        report_errors(res)
-
-        cls._write_dash_to_file(res['id'], args.filename,
-                                args.timeout, format)
-
-        if format == 'pretty':
-            print(pretty_json(res))
-        else:
-            print(json.dumps(res))
-
-    @classmethod
-    def _write_dash_to_file(cls, dash_id, filename, timeout, format='raw'):
-        with open(filename, "w") as f:
-            res = api.Dashboard.get(dash_id)
-            report_warnings(res)
-            report_errors(res)
-
-            json.dump(res, f, indent=2)
-
-            if format == 'pretty':
-                print(u"Downloaded dashboard {0} to file {1}".format(dash_id, filename))
-            else:
-                print(u"{0} {1}".format(dash_id, filename))
-
-    @classmethod
-    def _push(cls, args):
-        api._timeout = args.timeout
-        for f in args.file:
-            try:
-                payload = json.load(f)
-            except Exception as err:
-                raise Exception("Could not parse {0}: {1}".format(f.name, err))
-
-            if args.append_auto_text:
-                if 'description' not in payload or payload['description'] is None:
-                    payload["description"] = ""
-
-                datetime_str = datetime.now().strftime('%x %X')
-                auto_text = ("\nUpdated at {0} from {1} ({2}) on {3}"
-                             .format(datetime_str, f.name, payload["id"], platform.node()))
-                payload["description"] += auto_text
-            tpl_vars = payload.get("template_variables", [])
-
-            if 'id' in payload:
-                res = api.Dashboard.update(
-                    payload["id"],
-                    title=payload["title"],
-                    description=payload["description"],
-                    widgets=payload["widgets"],
-                    layout_type="ordered",
-                    template_variables=tpl_vars)
-            else:
-                res = api.Dashboard.create(
-                    title=payload["title"],
-                    description=payload["description"],
-                    widgets=payload["widgets"],
-                    layout_type="ordered",
-                    template_variables=tpl_vars)
-            if 'errors' in res:
-                print_err('Upload of dashboard {0} from file {1} failed.'
-                          .format(payload["id"], f.name))
-
-            report_warnings(res)
-            report_errors(res)
-
-            if format == 'pretty':
-                print(pretty_json(res))
-            else:
-                print(json.dumps(res))
-
-            if args.format == 'pretty':
-                print("Uploaded file {0} (dashboard {1})".format(f.name, payload["id"]))
 
     @classmethod
     def _post(cls, args):
