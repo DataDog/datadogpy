@@ -1,7 +1,6 @@
 # stdlib
 import json
 import sys
-import webbrowser
 
 # 3p
 import argparse
