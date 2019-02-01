@@ -25,6 +25,9 @@ class DashboardClient(object):
         post_parser.add_argument('title', help="title for the new dashboard")
         post_parser.add_argument('widgets', help="widget definitions as a JSON string. If unset,"
                                  " reads from stdin.", nargs="?")
+        # for now, only "ordered" layout - current timeboard layout - is supported.
+        post_parser.add_argument('layout_type', choices=['ordered'],
+                                 help="Layout type of the dashboard.")
         # Optional arguments:
         post_parser.add_argument('--description', help="Short description of the dashboard")
         post_parser.add_argument('--read_only', help="Whether this dashboard is read-only. "
@@ -46,6 +49,9 @@ class DashboardClient(object):
         update_parser.add_argument('title', help="New title for the dashboard")
         update_parser.add_argument('widgets', help="Widget definitions as a JSON string."
                                    " If unset, reads from stdin", nargs="?")
+        # for now, only "ordered" layout - current timeboard layout - is supported.
+        update_parser.add_argument('layout_type', choices=['ordered'],
+                                   help="Layout type of the dashboard.")
         # Optional arguments:
         update_parser.add_argument('--description', help="Short description of the dashboard")
         update_parser.add_argument('--read_only', help="Whether this dashboard is read-only. "
@@ -84,7 +90,7 @@ class DashboardClient(object):
         payload = {
             "title": args.title,
             "widgets": widgets,
-            "layout_type": "ordered"
+            "layout_type": args.layout_type
         }
         # Optional arguments
         if(args.description):
@@ -120,7 +126,7 @@ class DashboardClient(object):
         payload = {
             "title": args.title,
             "widgets": widgets,
-            "layout_type": "ordered"
+            "layout_type": args.layout_type
         }
         # Optional arguments
         if(args.description):
