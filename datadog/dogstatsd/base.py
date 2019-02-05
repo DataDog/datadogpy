@@ -294,7 +294,7 @@ class DogStatsd(object):
             # dogstatsd is overflowing, drop the packets (mimicks the UDP behaviour)
             return
         except (socket.error, socket.herror, socket.gaierror) as se:
-            log.warning("Error submitting packet: {}, dropping the packet and closing the socket".format(str(se)))
+            log.warning("Error submitting packet: {}, dropping the packet and closing the socket".format(se))
             self.close_socket()
         except Exception as e:
             log.error("Unexpected error: %s", str(e))
