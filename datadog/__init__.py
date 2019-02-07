@@ -16,7 +16,7 @@ import os.path
 from datadog import api
 from datadog.dogstatsd import DogStatsd, statsd  # noqa
 from datadog.threadstats import ThreadStats, datadog_lambda_wrapper, lambda_metric  # noqa
-from datadog.util.compat import iteritems, NullHandler
+from datadog.util.compat import iteritems, NullHandler, text
 from datadog.util.config import get_version
 from datadog.util.hostname import get_hostname
 
@@ -31,7 +31,7 @@ logging.getLogger('datadog.threadstats').addHandler(NullHandler())
 
 def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
                statsd_host=None, statsd_port=None, statsd_use_default_route=False,
-               statsd_socket_path=None, **kwargs):
+               statsd_socket_path=None, statsd_namespace=None, **kwargs):
     """
     Initialize and configure Datadog.api and Datadog.statsd modules
 
@@ -86,6 +86,8 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
             statsd.host = statsd.resolve_host(statsd_host, statsd_use_default_route)
         if statsd_port:
             statsd.port = int(statsd_port)
+    if statsd_namespace:
+        statsd.namespace = text(statsd_namespace)
 
     # HTTP client and API options
     for key, value in iteritems(kwargs):

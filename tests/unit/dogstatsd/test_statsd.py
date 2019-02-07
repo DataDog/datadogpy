@@ -102,6 +102,13 @@ class TestDogStatsd(unittest.TestCase):
         t.assert_equal(statsd.host, "myhost")
         t.assert_equal(statsd.port, 1234)
 
+        # Add namespace
+        options['statsd_namespace'] = "mynamespace"
+        initialize(**options)
+        t.assert_equal(statsd.host, "myhost")
+        t.assert_equal(statsd.port, 1234)
+        t.assert_equal(statsd.namespace, "mynamespace")
+
         # Set `statsd` host to the system's default route
         initialize(statsd_use_default_route=True, **options)
         t.assert_equal(statsd.host, "172.17.0.1")
