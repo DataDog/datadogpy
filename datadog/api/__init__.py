@@ -22,6 +22,7 @@ from datadog.api.dashboard_lists import DashboardList
 from datadog.api.distributions import Distribution
 from datadog.api.downtimes import Downtime
 from datadog.api.timeboards import Timeboard
+from datadog.api.dashboards import Dashboard
 from datadog.api.events import Event
 from datadog.api.infrastructure import Infrastructure
 from datadog.api.metadata import Metadata

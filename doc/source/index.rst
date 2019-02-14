@@ -77,6 +77,14 @@ Datadog.api client requires to run :mod:`datadog` `initialize` method first.
     :inherited-members:
     :exclude-members: invite
 
+.. autoclass:: datadog.api.Dashboard
+    :members:
+    :inherited-members:
+
+.. autoclass:: datadog.api.DashboardList
+    :members:
+    :inherited-members:
+
 
 Datadog.threadstats module
 ==========================
