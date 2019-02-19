@@ -11,7 +11,7 @@ class Graph(CreateableAPIResource, ActionAPIResource):
     """
     A wrapper around Graph HTTP API.
     """
-    _class_url = '/graph/snapshot'
+    _resource_name = 'graph/snapshot'
 
     @classmethod
     def create(cls, **params):
@@ -56,7 +56,7 @@ class Embed(ListableAPIResource, GetableAPIResource, ActionAPIResource, Createab
     """
     A wrapper around Embed HTTP API.
     """
-    _class_url = '/graph/embed'
+    _resource_name = 'graph/embed'
 
     @classmethod
     def enable(cls, embed_id):

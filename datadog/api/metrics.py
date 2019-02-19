@@ -1,9 +1,6 @@
-# stdlib
-import time
-from numbers import Number
-
 # datadog
 from datadog.api.exceptions import ApiError
+from datadog.api.format import format_points
 from datadog.api.resources import SearchableAPIResource, SendableAPIResource, ListableAPIResource
 
 
@@ -11,59 +8,11 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
     """
     A wrapper around Metric HTTP API
     """
-    _class_url = None
-    _json_name = 'series'
+    _resource_name = None
 
-    _METRIC_QUERY_ENDPOINT = '/query'
-    _METRIC_SUBMIT_ENDPOINT = '/series'
-    _METRIC_LIST_ENDPOINT = '/metrics'
-
-    @classmethod
-    def _process_points(cls, points):
-        """
-        Format `points` parameter.
-
-        Input:
-            a value or (timestamp, value) pair or a list of value or (timestamp, value) pairs
-
-        Returns:
-            list of (timestamp, float value) pairs
-
-        """
-        now = time.time()
-        points_lst = points if isinstance(points, list) else [points]
-
-        def rec_parse(points_lst):
-            """
-            Recursively parse a list of values or a list of (timestamp, value) pairs to a list of
-            (timestamp, `float` value) pairs.
-            """
-            try:
-                if not points_lst:
-                    return []
-
-                point = points_lst.pop()
-                timestamp = now if isinstance(point, Number) else point[0]
-                value = float(point) if isinstance(point, Number) else float(point[1])
-
-                point = [(timestamp, value)]
-
-                return point + rec_parse(points_lst)
-
-            except TypeError as e:
-                raise TypeError(
-                    u"{0}: "
-                    "`points` parameter must use real numerical values.".format(e)
-                )
-
-            except IndexError as e:
-                raise IndexError(
-                    u"{0}: "
-                    u"`points` must be a list of values or "
-                    u"a list of (timestamp, value) pairs".format(e)
-                )
-
-        return rec_parse(points_lst)
+    _METRIC_QUERY_ENDPOINT = 'query'
+    _METRIC_SUBMIT_ENDPOINT = 'series'
+    _METRIC_LIST_ENDPOINT = 'metrics'
 
     @classmethod
     def list(cls, from_epoch):
@@ -75,7 +24,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
         :returns: Dictionary containing a list of active metrics
         """
 
-        cls._class_url = cls._METRIC_LIST_ENDPOINT
+        cls._resource_name = cls._METRIC_LIST_ENDPOINT
 
         try:
             seconds = int(from_epoch)
@@ -84,6 +33,18 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
             raise ApiError("Parameter 'from_epoch' must be an integer")
 
         return super(Metric, cls).get_all(**params)
+
+    @staticmethod
+    def _rename_metric_type(metric):
+        """
+        FIXME DROPME in 1.0:
+
+        API documentation was illegitimately promoting usage of `metric_type` parameter
+        instead of `type`.
+        To be consistent and avoid 'backward incompatibilities', properly rename this parameter.
+        """
+        if 'metric_type' in metric:
+            metric['type'] = metric.pop('metric_type')
 
     @classmethod
     def send(cls, metrics=None, **single_metric):
@@ -103,35 +64,24 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
         :type tags: string list
 
         :param type: type of the metric
-        :type type: 'gauge' or 'counter' string
+        :type type: 'gauge' or 'count' or 'rate' string
 
         :returns: Dictionary representing the API's JSON response
         """
-        def rename_metric_type(metric):
-            """
-            FIXME DROPME in 1.0:
-
-            API documentation was illegitimately promoting usage of `metric_type` parameter
-            instead of `type`.
-            To be consistent and avoid 'backward incompatibilities', properly rename this parameter.
-            """
-            if 'metric_type' in metric:
-                metric['type'] = metric.pop('metric_type')
-
         # Set the right endpoint
-        cls._class_url = cls._METRIC_SUBMIT_ENDPOINT
+        cls._resource_name = cls._METRIC_SUBMIT_ENDPOINT
 
         # Format the payload
         try:
             if metrics:
                 for metric in metrics:
                     if isinstance(metric, dict):
-                        rename_metric_type(metric)
-                        metric['points'] = cls._process_points(metric['points'])
+                        cls._rename_metric_type(metric)
+                        metric['points'] = format_points(metric['points'])
                 metrics_dict = {"series": metrics}
             else:
-                rename_metric_type(single_metric)
-                single_metric['points'] = cls._process_points(single_metric['points'])
+                cls._rename_metric_type(single_metric)
+                single_metric['points'] = format_points(single_metric['points'])
                 metrics = [single_metric]
                 metrics_dict = {"series": metrics}
 
@@ -163,7 +113,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
                              query='avg:system.cpu.idle{*}')
         """
         # Set the right endpoint
-        cls._class_url = cls._METRIC_QUERY_ENDPOINT
+        cls._resource_name = cls._METRIC_QUERY_ENDPOINT
 
         # `from` is a reserved keyword in Python, therefore
         # `api.Metric.query(from=...)` is not permited

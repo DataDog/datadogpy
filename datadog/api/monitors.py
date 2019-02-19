@@ -8,7 +8,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
     """
     A wrapper around Monitor HTTP API.
     """
-    _class_url = '/monitor'
+    _resource_name = 'monitor'
 
     @classmethod
     def get(cls, id, **params):
@@ -57,7 +57,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
         return super(Monitor, cls).get_all(**params)
 
     @classmethod
-    def mute(cls, id, **params):
+    def mute(cls, id, **body):
         """
         Mute a monitor.
 
@@ -70,10 +70,10 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Monitor, cls)._trigger_class_action('POST', 'mute', id, **params)
+        return super(Monitor, cls)._trigger_class_action('POST', 'mute', id, **body)
 
     @classmethod
-    def unmute(cls, id, **params):
+    def unmute(cls, id, **body):
         """
         Unmute a monitor.
 
@@ -85,7 +85,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Monitor, cls)._trigger_class_action('POST', 'unmute', id, **params)
+        return super(Monitor, cls)._trigger_class_action('POST', 'unmute', id, **body)
 
     @classmethod
     def mute_all(cls):
@@ -104,3 +104,21 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
         :returns: Dictionary representing the API's JSON response
         """
         return super(Monitor, cls)._trigger_class_action('POST', 'unmute_all')
+
+    @classmethod
+    def search(cls, **params):
+        """
+        Search monitors.
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        return super(Monitor, cls)._trigger_class_action('GET', 'search', params=params)
+
+    @classmethod
+    def search_groups(cls, **params):
+        """
+        Search monitor groups.
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        return super(Monitor, cls)._trigger_class_action('GET', 'groups/search', params=params)

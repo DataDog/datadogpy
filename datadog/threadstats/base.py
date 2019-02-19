@@ -4,17 +4,20 @@ performance. It collects metrics in the application thread with very little over
 and allows flushing metrics in process, in a thread or in a greenlet, depending
 on your application's needs.
 """
-
+# stdlib
+from contextlib import contextmanager
+from functools import wraps
+from time import time
+import atexit
 import logging
 import os
-from functools import wraps
-from contextlib import contextmanager
-from time import time
 
+# datadog
 from datadog.api.exceptions import ApiNotInitialized
 from datadog.threadstats.constants import MetricType
-from datadog.threadstats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing
 from datadog.threadstats.events import EventsAggregator
+from datadog.threadstats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing,\
+    Distribution
 from datadog.threadstats.reporters import HttpReporter
 
 # Loggers
@@ -25,13 +28,16 @@ class ThreadStats(object):
 
     def __init__(self, namespace="", constant_tags=None):
         """
-        Initialize a dogstats object.
+        Initialize a threadstats object.
+
+        :param namespace: Namespace to prefix all metric names
+        :type namespace: string
 
         :param constant_tags: Tags to attach to every metric reported by this client
         :type constant_tags: list of strings
 
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by ThreadStats client
-        :type constant_tags: list of strings
+        :type DATADOG_TAGS: list of strings
         """
         # Parameters
         self.namespace = namespace
@@ -113,6 +119,9 @@ class ThreadStats(object):
                 self._start_flush_greenlet()
             elif flush_in_thread:
                 self._start_flush_thread()
+
+        # Flush all remaining metrics on exit
+        atexit.register(lambda: self.flush(float('inf')))
 
     def stop(self):
         if not self._is_auto_flushing:
@@ -199,6 +208,19 @@ class ThreadStats(object):
             self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
                                               Histogram, sample_rate=sample_rate, host=host)
 
+    def distribution(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
+        """
+        Sample a distribution value. Distributions will produce metrics that
+        describe the distribution of the recorded values, namely the maximum,
+        median, average, count and the 50/75/90/95/99 percentiles. Optionally,
+        specify a list of ``tags`` to associate with the metric.
+
+        >>> stats.distribution('uploaded_file.size', uploaded_file.size())
+        """
+        if not self._disabled:
+            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
+                                              Distribution, sample_rate=sample_rate, host=host)
+
     def timing(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
         """
         Record a timing, optionally setting tags and a sample rate.
@@ -206,8 +228,8 @@ class ThreadStats(object):
         >>> stats.timing("query.response.time", 1234)
         """
         if not self._disabled:
-            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value, Timing,
-                                              sample_rate=sample_rate, host=host)
+            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
+                                              Timing, sample_rate=sample_rate, host=host)
 
     @contextmanager
     def timer(self, metric_name, sample_rate=1, tags=None, host=None):
@@ -282,7 +304,7 @@ class ThreadStats(object):
             self._is_flush_in_progress = True
 
             # Process metrics
-            metrics = self._get_aggregate_metrics(timestamp or time())
+            metrics, dists = self._get_aggregate_metrics_and_dists(timestamp or time())
             count_metrics = len(metrics)
             if count_metrics:
                 self.flush_count += 1
@@ -290,6 +312,14 @@ class ThreadStats(object):
                 self.reporter.flush_metrics(metrics)
             else:
                 log.debug("No metrics to flush. Continuing.")
+
+            count_dists = len(dists)
+            if count_dists:
+                self.flush_count += 1
+                log.debug("Flush #%s sending %s distributions" % (self.flush_count, count_dists))
+                self.reporter.flush_distributions(dists)
+            else:
+                log.debug("No distributions to flush. Continuing.")
 
             # Process events
             events = self._get_aggregate_events()
@@ -302,15 +332,15 @@ class ThreadStats(object):
                 log.debug("No events to flush. Continuing.")
         except ApiNotInitialized:
             raise
-        except:
+        except Exception:
             try:
                 log.exception("Error flushing metrics and events")
-            except:
+            except Exception:
                 pass
         finally:
             self._is_flush_in_progress = False
 
-    def _get_aggregate_metrics(self, flush_time=None):
+    def _get_aggregate_metrics_and_dists(self, flush_time=None):
         """
         Get, format and return the rolled up metrics from the aggregator.
         """
@@ -319,7 +349,8 @@ class ThreadStats(object):
 
         # FIXME: emit a dictionary from the aggregator
         metrics = []
-        for timestamp, value, name, tags, host in rolled_up_metrics:
+        dists = []
+        for timestamp, value, name, tags, host, metric_type, interval in rolled_up_metrics:
             metric_tags = tags
             metric_name = name
 
@@ -337,13 +368,17 @@ class ThreadStats(object):
             metric = {
                 'metric': metric_name,
                 'points': [[timestamp, value]],
-                'type': MetricType.Gauge,
+                'type': metric_type,
                 'host': host,
                 'device': self.device,
-                'tags': metric_tags
+                'tags': metric_tags,
+                'interval': interval
             }
-            metrics.append(metric)
-        return metrics
+            if metric_type == MetricType.Distribution:
+                dists.append(metric)
+            else:
+                metrics.append(metric)
+        return (metrics, dists)
 
     def _get_aggregate_events(self):
         # Get events

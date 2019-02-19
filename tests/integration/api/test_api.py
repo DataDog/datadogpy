@@ -4,7 +4,7 @@ import os
 import time
 import unittest
 import requests
-import simplejson as json
+import json
 
 # 3p
 from nose.plugins.attrib import attr

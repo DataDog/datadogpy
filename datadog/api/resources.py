@@ -33,14 +33,20 @@ class CreateableAPIResource(object):
         """
         if params is None:
             params = {}
+
+        path = cls._resource_name
+
         if method == 'GET':
-            return APIClient.submit('GET', cls._class_url, **body)
+            return APIClient.submit('GET', path, **body)
         if id is None:
-            return APIClient.submit('POST', cls._class_url, body,
+            return APIClient.submit('POST', path, body,
                                     attach_host_name=attach_host_name, **params)
-        else:
-            return APIClient.submit('POST', cls._class_url + "/" + str(id), body,
-                                    attach_host_name=attach_host_name, **params)
+
+        path = '{resource_name}/{resource_id}'.format(
+            resource_name=cls._resource_name,
+            resource_id=id
+        )
+        return APIClient.submit('POST', path, body, attach_host_name=attach_host_name, **params)
 
 
 class SendableAPIResource(object):
@@ -64,11 +70,14 @@ class SendableAPIResource(object):
         :returns: Dictionary representing the API's JSON response
         """
         if id is None:
-            return APIClient.submit('POST', cls._class_url, body,
+            return APIClient.submit('POST', cls._resource_name, body,
                                     attach_host_name=attach_host_name)
-        else:
-            return APIClient.submit('POST', cls._class_url + "/" + str(id), body,
-                                    attach_host_name=attach_host_name)
+
+        path = '{resource_name}/{resource_id}'.format(
+            resource_name=cls._resource_name,
+            resource_id=id
+        )
+        return APIClient.submit('POST', path, body, attach_host_name=attach_host_name)
 
 
 class UpdatableAPIResource(object):
@@ -90,7 +99,12 @@ class UpdatableAPIResource(object):
         """
         if params is None:
             params = {}
-        return APIClient.submit('PUT', cls._class_url + "/" + str(id), body, **params)
+
+        path = '{resource_name}/{resource_id}'.format(
+            resource_name=cls._resource_name,
+            resource_id=id
+        )
+        return APIClient.submit('PUT', path, body, **params)
 
 
 class DeletableAPIResource(object):
@@ -107,7 +121,11 @@ class DeletableAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        return APIClient.submit('DELETE', cls._class_url + "/" + str(id), **params)
+        path = '{resource_name}/{resource_id}'.format(
+            resource_name=cls._resource_name,
+            resource_id=id
+        )
+        return APIClient.submit('DELETE', path, **params)
 
 
 class GetableAPIResource(object):
@@ -127,7 +145,11 @@ class GetableAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        return APIClient.submit('GET', cls._class_url + "/" + str(id), **params)
+        path = '{resource_name}/{resource_id}'.format(
+            resource_name=cls._resource_name,
+            resource_id=id
+        )
+        return APIClient.submit('GET', path, **params)
 
 
 class ListableAPIResource(object):
@@ -144,7 +166,125 @@ class ListableAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        return APIClient.submit('GET', cls._class_url, **params)
+        return APIClient.submit('GET', cls._resource_name, **params)
+
+
+class ListableAPISubResource(object):
+    """
+    Listable API Sub-Resource
+    """
+    @classmethod
+    def get_items(cls, id, **params):
+        """
+        List API sub-resource objects from a resource
+
+        :param id: resource id to retrieve sub-resource objects from
+        :type id: id
+
+        :param params: parameters to filter API sub-resource stream
+        :type params: dictionary
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        path = '{resource_name}/{resource_id}/{sub_resource_name}'.format(
+            resource_name=cls._resource_name,
+            resource_id=id,
+            sub_resource_name=cls._sub_resource_name
+        )
+        return APIClient.submit('GET', path, **params)
+
+
+class AddableAPISubResource(object):
+    """
+    Addable API Sub-Resource
+    """
+    @classmethod
+    def add_items(cls, id, params=None, **body):
+        """
+        Add new API sub-resource objects to a resource
+
+        :param id: resource id to add sub-resource objects to
+        :type id: id
+
+        :param params: request parameters
+        :type params: dictionary
+
+        :param body: new sub-resource objects attributes
+        :type body: dictionary
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        if params is None:
+            params = {}
+
+        path = '{resource_name}/{resource_id}/{sub_resource_name}'.format(
+            resource_name=cls._resource_name,
+            resource_id=id,
+            sub_resource_name=cls._sub_resource_name
+        )
+        return APIClient.submit('POST', path, body, **params)
+
+
+class UpdatableAPISubResource(object):
+    """
+    Updatable API Sub-Resource
+    """
+    @classmethod
+    def update_items(cls, id, params=None, **body):
+        """
+        Update API sub-resource objects of a resource
+
+        :param id: resource id to update sub-resource objects from
+        :type id: id
+
+        :param params: request parameters
+        :type params: dictionary
+
+        :param body: updated sub-resource objects attributes
+        :type body: dictionary
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        if params is None:
+            params = {}
+
+        path = '{resource_name}/{resource_id}/{sub_resource_name}'.format(
+            resource_name=cls._resource_name,
+            resource_id=id,
+            sub_resource_name=cls._sub_resource_name
+        )
+        return APIClient.submit('PUT', path, body, **params)
+
+
+class DeletableAPISubResource(object):
+    """
+    Deletable API Sub-Resource
+    """
+    @classmethod
+    def delete_items(cls, id, params=None, **body):
+        """
+        Delete API sub-resource objects from a resource
+
+        :param id: resource id to delete sub-resource objects from
+        :type id: id
+
+        :param params: request parameters
+        :type params: dictionary
+
+        :param body: deleted sub-resource objects attributes
+        :type body: dictionary
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        if params is None:
+            params = {}
+
+        path = '{resource_name}/{resource_id}/{sub_resource_name}'.format(
+            resource_name=cls._resource_name,
+            resource_id=id,
+            sub_resource_name=cls._sub_resource_name
+        )
+        return APIClient.submit('DELETE', path, body, **params)
 
 
 class SearchableAPIResource(object):
@@ -161,7 +301,7 @@ class SearchableAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        return APIClient.submit('GET', cls._class_url, **params)
+        return APIClient.submit('GET', cls._resource_name, **params)
 
 
 class ActionAPIResource(object):
@@ -169,7 +309,7 @@ class ActionAPIResource(object):
     Actionable API Resource
     """
     @classmethod
-    def _trigger_class_action(cls, method, name, id=None, **params):
+    def _trigger_class_action(cls, method, name, id=None, params=None, **body):
         """
         Trigger an action
 
@@ -185,15 +325,30 @@ class ActionAPIResource(object):
         :param params: action parameters
         :type params: dictionary
 
+        :param body: action body
+        :type body: dictionary
+
         :returns: Dictionary representing the API's JSON response
         """
+        if params is None:
+            params = {}
+
         if id is None:
-            return APIClient.submit(method, cls._class_url + "/" + name, params)
-        else:
-            return APIClient.submit(method, cls._class_url + "/" + str(id) + "/" + name, params)
+            path = '{resource_name}/{action_name}'.format(
+                resource_name=cls._resource_name,
+                action_name=name
+            )
+            return APIClient.submit(method, path, body, **params)
+
+        path = '{resource_name}/{resource_id}/{action_name}'.format(
+            resource_name=cls._resource_name,
+            resource_id=id,
+            action_name=name
+        )
+        return APIClient.submit(method, path, body, **params)
 
     @classmethod
-    def _trigger_action(cls, method, name, id=None, **params):
+    def _trigger_action(cls, method, name, id=None, **body):
         """
         Trigger an action
 
@@ -206,12 +361,16 @@ class ActionAPIResource(object):
         :param id: trigger the action for the specified resource object
         :type id: id
 
-        :param params: action parameters
-        :type params: dictionary
+        :param body: action body
+        :type body: dictionary
 
         :returns: Dictionary representing the API's JSON response
         """
         if id is None:
-            return APIClient.submit(method, name, params)
-        else:
-            return APIClient.submit(method, name + "/" + str(id), params)
+            return APIClient.submit(method, name, body)
+
+        path = '{action_name}/{resource_id}'.format(
+            action_name=name,
+            resource_id=id
+        )
+        return APIClient.submit(method, path, body)

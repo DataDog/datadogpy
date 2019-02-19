@@ -10,7 +10,11 @@ import mock
 
 # datadog
 from datadog import initialize, api
-from datadog.api import Metric, ServiceCheck
+from datadog.api import (
+    Distribution,
+    Metric,
+    ServiceCheck
+)
 from datadog.api.exceptions import ApiError, ApiNotInitialized
 from datadog.util.compat import is_p3k
 from tests.unit.api.helper import (
@@ -21,12 +25,17 @@ from tests.unit.api.helper import (
     MyDeletable,
     MyGetable,
     MyListable,
+    MyListableSubResource,
+    MyAddableSubResource,
+    MyUpdatableSubResource,
+    MyDeletableSubResource,
     MyActionable,
     API_KEY,
     APP_KEY,
     API_HOST,
     HOST_NAME,
-    FAKE_PROXY)
+    FAKE_PROXY
+)
 
 
 def preserve_environ_datadog(func):
@@ -64,7 +73,7 @@ class TestInitialization(DatadogAPINoInitialization):
         # Finally, initialize with an API key
         initialize(api_key=API_KEY, api_host=API_HOST)
         MyCreatable.create()
-        self.assertEquals(self.request_mock.request.call_count, 1)
+        self.assertEquals(self.request_mock.call_count(), 1)
 
     @mock.patch('datadog.util.config.get_config_path')
     def test_get_hostname(self, mock_config_path):
@@ -96,7 +105,7 @@ class TestInitialization(DatadogAPINoInitialization):
         # Make a simple API call
         MyCreatable.create()
 
-        _, options = self.request_mock.request.call_args
+        _, options = self.request_mock.call_args()
 
         # Assert `requests` parameters
         self.assertIn('params', options)
@@ -119,7 +128,7 @@ class TestInitialization(DatadogAPINoInitialization):
         # Make a simple API call
         MyCreatable.create()
 
-        _, options = self.request_mock.request.call_args
+        _, options = self.request_mock.call_args()
 
         # Assert `requests` parameters
         self.assertIn('proxies', options)
@@ -178,7 +187,7 @@ class TestInitialization(DatadogAPINoInitialization):
         # Default values
         test_api_params_default("DATADOG_API_KEY", "_api_key", None)
         test_api_params_default("DATADOG_APP_KEY", "_application_key", None)
-        test_api_params_default("DATADOG_HOST", "_api_host", "https://app.datadoghq.com")
+        test_api_params_default("DATADOG_HOST", "_api_host", "https://api.datadoghq.com")
 
         # From environment
         test_api_params_from_env("DATADOG_API_KEY", "_api_key", env_value="apikey")
@@ -238,19 +247,115 @@ class TestResources(DatadogAPIWithInitialization):
         self.request_called_with('DELETE', "host/api/v1/deletables/" + str(deletable_object_id),
                                  params={'otherparam': "val"})
 
+    def test_listable_sub_resources(self):
+        """
+        Listable sub-resources logic.
+        """
+        resource_id = 123
+        MyListableSubResource.get_items(resource_id, otherparam="val")
+        self.request_called_with(
+            'GET',
+            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            params={'otherparam': "val"}
+        )
+
+    def test_addable_sub_resources(self):
+        """
+        Addable sub-resources logic.
+        """
+        resource_id = 123
+        MyAddableSubResource.add_items(resource_id, params={'myparam': 'val1'}, mydata='val2')
+        self.request_called_with(
+            'POST',
+            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            params={'myparam': 'val1'},
+            data={'mydata': 'val2'}
+        )
+
+    def test_updatable_sub_resources(self):
+        """
+        Updatable sub-resources logic.
+        """
+        resource_id = 123
+        MyUpdatableSubResource.update_items(resource_id, params={'myparam': 'val1'}, mydata='val2')
+        self.request_called_with(
+            'PUT',
+            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            params={'myparam': 'val1'},
+            data={'mydata': 'val2'}
+        )
+
+    def test_deletable_sub_resources(self):
+        """
+        Deletable sub-resources logic.
+        """
+        resource_id = 123
+        MyDeletableSubResource.delete_items(resource_id, params={'myparam': 'val1'}, mydata='val2')
+        self.request_called_with(
+            'DELETE',
+            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            params={'myparam': 'val1'},
+            data={'mydata': 'val2'}
+        )
+
     def test_actionable(self):
         """
         Actionable resource logic.
         """
         actionable_object_id = 123
-        MyActionable.trigger_class_action('POST', "actionname", id=actionable_object_id,
-                                          mydata="val")
-        self.request_called_with('POST', "host/api/v1/actionables/" + str(actionable_object_id) +
-                                 "/actionname", data={'mydata': "val"})
+        MyActionable.trigger_class_action(
+            'POST',
+            'actionname',
+            id=actionable_object_id,
+            params={'myparam': 'val1'},
+            mydata='val',
+            mydata2='val2'
+        )
+        self.request_called_with(
+            'POST',
+            'host/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            params={'myparam': 'val1'},
+            data={'mydata': 'val', 'mydata2': 'val2'}
+        )
 
-        MyActionable.trigger_action('POST', "actionname", id=actionable_object_id, mydata="val")
-        self.request_called_with('POST', "host/api/v1/actionname/" + str(actionable_object_id),
-                                 data={'mydata': "val"})
+        MyActionable.trigger_class_action(
+            'POST',
+            'actionname',
+            id=actionable_object_id,
+            mydata='val',
+            mydata2='val2'
+        )
+        self.request_called_with(
+            'POST',
+            'host/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            params={},
+            data={'mydata': 'val', 'mydata2': 'val2'}
+        )
+
+        MyActionable.trigger_class_action(
+            'GET',
+            'actionname',
+            id=actionable_object_id,
+            params={'param1': 'val1', 'param2': 'val2'}
+        )
+        self.request_called_with(
+            'GET',
+            'host/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            params={'param1': 'val1', 'param2': 'val2'},
+            data={}
+        )
+
+        MyActionable.trigger_action(
+            'POST',
+            'actionname',
+            id=actionable_object_id,
+            mydata="val"
+        )
+        self.request_called_with(
+            'POST',
+            'host/api/v1/actionname/{0}'.format(actionable_object_id),
+            data={'mydata': "val"}
+        )
 
 
 class TestMetricResource(DatadogAPIWithInitialization):
@@ -285,6 +390,36 @@ class TestMetricResource(DatadogAPIWithInitialization):
             # it's time not so far from current time
             assert now - 1 < metric['points'][0][0] < now + 1
 
+    def submit_and_assess_dist_payload(self, serie):
+        """
+        Helper to assess the metric payload format.
+        """
+        now = time()
+
+        if isinstance(serie, dict):
+            Distribution.send(**deepcopy(serie))
+            serie = [serie]
+        else:
+            Distribution.send(deepcopy(serie))
+
+        payload = self.get_request_data()
+
+        for i, metric in enumerate(payload['series']):
+            self.assertEquals(set(metric.keys()), set(['metric', 'points', 'host']))
+
+            self.assertEquals(metric['metric'], serie[i]['metric'])
+            self.assertEquals(metric['host'], api._host_name)
+
+            # points is a list of 1 point
+            self.assertTrue(isinstance(metric['points'], list))
+            self.assertEquals(len(metric['points']), 1)
+            # it consists of a [time, value] pair
+            self.assertEquals(len(metric['points'][0]), 2)
+            # its value == value we sent
+            self.assertEquals(metric['points'][0][1], serie[i]['points'][0][1])
+            # it's time not so far from current time
+            assert now - 1 < metric['points'][0][0] < now + 1
+
     def test_metric_submit_query_switch(self):
         """
         Endpoints are different for submission and queries.
@@ -309,6 +444,19 @@ class TestMetricResource(DatadogAPIWithInitialization):
         serie = [dict(metric='metric.1', points=13),
                  dict(metric='metric.2', points=19)]
         self.submit_and_assess_metric_payload(serie)
+
+    def test_dist_points_submission(self):
+        """
+        Assess the distribution data payload format, when submitting a single or multiple points.
+        """
+        # Single point
+        serie = dict(metric='metric.1', points=[[time(), [13]]])
+        self.submit_and_assess_dist_payload(serie)
+
+        # Multiple point
+        serie = [dict(metric='metric.1', points=[[time(), [13]]]),
+                 dict(metric='metric.2', points=[[time(), [19]]])]
+        self.submit_and_assess_dist_payload(serie)
 
     def test_data_type_support(self):
         """

@@ -7,6 +7,7 @@ from random import random
 import logging
 import os
 import socket
+from threading import Lock
 
 # datadog
 from datadog.dogstatsd.context import TimedContextManagerDecorator
@@ -48,7 +49,7 @@ class DogStatsd(object):
         :type use_ms: boolean
 
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by dogstatsd client
-        :type constant_tags: list of strings
+        :type DATADOG_TAGS: list of strings
 
         :param use_default_route: Dynamically set the DogStatsd host to the default route
         (Useful when running the client in a container) (Linux only)
@@ -58,6 +59,8 @@ class DogStatsd(object):
         UDP. If set, disables UDP transmission (Linux only)
         :type socket_path: string
         """
+
+        self.lock = Lock()
 
         # Connection
         if socket_path is not None:
@@ -114,16 +117,17 @@ class DogStatsd(object):
         Note: connect the socket before assigning it to the class instance to
         avoid bad thread race conditions.
         """
-        if not self.socket:
-            if self.socket_path is not None:
-                sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-                sock.connect(self.socket_path)
-                sock.setblocking(0)
-                self.socket = sock
-            else:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                sock.connect((self.host, self.port))
-                self.socket = sock
+        with self.lock:
+            if not self.socket:
+                if self.socket_path is not None:
+                    sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+                    sock.connect(self.socket_path)
+                    sock.setblocking(0)
+                    self.socket = sock
+                else:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    sock.connect((self.host, self.port))
+                    self.socket = sock
 
         return self.socket
 
@@ -146,7 +150,10 @@ class DogStatsd(object):
         Flush the buffer and switch back to single metric packets.
         """
         self._send = self._send_to_server
-        self._flush_buffer()
+
+        if self.buffer:
+            # Only send packets if there are packets to send
+            self._flush_buffer()
 
     def gauge(self, metric, value, tags=None, sample_rate=1):
         """
@@ -187,6 +194,17 @@ class DogStatsd(object):
         >>> statsd.histogram('album.photo.count', 26, tags=["gender:female"])
         """
         self._report(metric, 'h', value, tags, sample_rate)
+
+    def distribution(self, metric, value, tags=None, sample_rate=1):
+        """
+        Send a global distribution value, optionally setting tags and a sample rate.
+
+        >>> statsd.distribution('uploaded.file.size', 1445)
+        >>> statsd.distribution('album.photo.count', 26, tags=["gender:female"])
+
+        This is a beta feature that must be enabled specifically for your organization.
+        """
+        self._report(metric, 'd', value, tags, sample_rate)
 
     def timing(self, metric, value, tags=None, sample_rate=1):
         """
@@ -253,11 +271,7 @@ class DogStatsd(object):
             return
 
         # Resolve the full tag list
-        if self.constant_tags:
-            if tags:
-                tags = tags + self.constant_tags
-            else:
-                tags = self.constant_tags
+        tags = self._add_constant_tags(tags)
 
         # Create/format the metric packet
         payload = "%s%s:%s|%s%s%s" % (
@@ -279,9 +293,12 @@ class DogStatsd(object):
         except socket.timeout:
             # dogstatsd is overflowing, drop the packets (mimicks the UDP behaviour)
             return
-        except socket.error:
-            log.info("Error submitting packet, dropping the packet and closing the socket")
+        except (socket.error, socket.herror, socket.gaierror) as se:
+            log.warning("Error submitting packet: {}, dropping the packet and closing the socket".format(se))
             self.close_socket()
+        except Exception as e:
+            log.error("Unexpected error: %s", str(e))
+            return
 
     def _send_to_buffer(self, packet):
         self.buffer.append(packet)
@@ -296,7 +313,7 @@ class DogStatsd(object):
         return string.replace('\n', '\\n')
 
     def _escape_service_check_message(self, string):
-        return string.replace('\n', '\\n').replace('m:', 'm\:')
+        return string.replace('\n', '\\n').replace('m:', 'm\\:')
 
     def event(self, title, text, alert_type=None, aggregation_key=None,
               source_type_name=None, date_happened=None, priority=None,
@@ -312,11 +329,7 @@ class DogStatsd(object):
         text = self._escape_event_content(text)
 
         # Append all client level tags to every event
-        if self.constant_tags:
-            if tags:
-                tags += self.constant_tags
-            else:
-                tags = self.constant_tags
+        tags = self._add_constant_tags(tags)
 
         string = u'_e{%d,%d}:%s|%s' % (len(title), len(text), title, text)
         if date_happened:
@@ -351,6 +364,9 @@ class DogStatsd(object):
 
         string = u'_sc|{0}|{1}'.format(check_name, status)
 
+        # Append all client level tags to every status check
+        tags = self._add_constant_tags(tags)
+
         if timestamp:
             string = u'{0}|d:{1}'.format(string, timestamp)
         if hostname:
@@ -361,6 +377,14 @@ class DogStatsd(object):
             string = u'{0}|m:{1}'.format(string, message)
 
         self._send(string)
+
+    def _add_constant_tags(self, tags):
+        if self.constant_tags:
+            if tags:
+                return tags + self.constant_tags
+            else:
+                return self.constant_tags
+        return tags
 
 
 statsd = DogStatsd()

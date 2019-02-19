@@ -65,7 +65,8 @@ class OutputReader(threading.Thread):
         '''
         for line in iter(self._out.readline, b''):
             if self._fwd_out is not None:
-                self._fwd_out.write(line.decode(self._fwd_out.encoding))
+                fwd_out_encoding = self._fwd_out.encoding or 'UTF-8'
+                self._fwd_out.write(line.decode(fwd_out_encoding))
             line = line.decode('utf-8')
             self._out_content += line
         self._out.close()
@@ -167,8 +168,8 @@ def trim_text(text, max_len):
         u"*...trimmed...*\n" \
         u"```\n" \
         u"{bottom_two_third}\n".format(
-            top_third=text[:max_len / 3],
-            bottom_two_third=text[len(text) - (2 * max_len) / 3:]
+            top_third=text[:max_len // 3],
+            bottom_two_third=text[len(text) - (2 * max_len) // 3:]
         )
 
     return trimmed_text
@@ -184,7 +185,7 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
     fmt_stderr = u""
     fmt_notifications = u""
 
-    max_length = MAX_EVENT_BODY_LENGTH / 2 if stdout and stderr else MAX_EVENT_BODY_LENGTH
+    max_length = MAX_EVENT_BODY_LENGTH // 2 if stdout and stderr else MAX_EVENT_BODY_LENGTH
 
     if stdout:
         fmt_stdout = u"**>>>> STDOUT <<<<**\n```\n{stdout} \n```\n".format(

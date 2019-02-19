@@ -8,6 +8,7 @@ import argparse
 from datadog import initialize
 from datadog.dogshell.comment import CommentClient
 from datadog.dogshell.common import DogshellConfig
+from datadog.dogshell.dashboard_list import DashboardListClient
 from datadog.dogshell.downtime import DowntimeClient
 from datadog.dogshell.event import EventClient
 from datadog.dogshell.host import HostClient
@@ -18,6 +19,7 @@ from datadog.dogshell.search import SearchClient
 from datadog.dogshell.service_check import ServiceCheckClient
 from datadog.dogshell.tag import TagClient
 from datadog.dogshell.timeboard import TimeboardClient
+from datadog.dogshell.dashboard import DashboardClient
 from datadog.util.config import get_version
 
 
@@ -28,10 +30,10 @@ def main():
                         default=os.path.expanduser('~/.dogrc'))
     parser.add_argument('--api-key', help="your API key, from "
                         "https://app.datadoghq.com/account/settings#api",
-                        dest='api_key', default=None)
+                        dest='api_key', default=os.environ.get('DATADOG_API_KEY'))
     parser.add_argument('--application-key', help="your Application key, from "
                         "https://app.datadoghq.com/account/settings#api",
-                        dest='app_key', default=None)
+                        dest='app_key', default=os.environ.get('DATADOG_APP_KEY'))
     parser.add_argument('--pretty', help="pretty-print output (suitable for human consumption, "
                         "less useful for scripting)", dest='format',
                         action='store_const', const='pretty')
@@ -55,7 +57,9 @@ def main():
     EventClient.setup_parser(subparsers)
     MonitorClient.setup_parser(subparsers)
     TimeboardClient.setup_parser(subparsers)
+    DashboardClient.setup_parser(subparsers)
     ScreenboardClient.setup_parser(subparsers)
+    DashboardListClient.setup_parser(subparsers)
     HostClient.setup_parser(subparsers)
     DowntimeClient.setup_parser(subparsers)
     ServiceCheckClient.setup_parser(subparsers)
