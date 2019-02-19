@@ -115,7 +115,7 @@ class APIClient(object):
                 body = json.dumps(body)
                 headers = {'Content-Type': 'application/json',
                                'Content-Encoding': 'deflate'}
-                body = zlib.compress(body)
+                body = zlib.compress(body.encode('utf-8'))
 
             # Construct the URL
             url = "{api_host}/api/{api_version}/{path}".format(
