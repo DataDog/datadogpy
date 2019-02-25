@@ -52,6 +52,10 @@ api.Event.create(title=title, text=text, tags=tags)
 # Use Statsd, a Python client for DogStatsd
 from datadog import statsd
 
+# Uncomment to set namespace or add tags to everything
+# statsd.namespace = 'localdev'
+# statsd.constant_tags = ['testing', 'dogstats']
+
 statsd.increment('whatever')
 statsd.gauge('foo', 42)
 
