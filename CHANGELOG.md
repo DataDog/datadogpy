@@ -3,7 +3,7 @@ CHANGELOG
 
 # 0.27.0 / Unreleased
 
-**New Dashboarsds API: https://docs.datadoghq.com/api/?lang=python#dashboards**
+**New Dashboards API: https://docs.datadoghq.com/api/?lang=python#dashboards**
 
 The Timeboard and Screenboard API resources are deprecated in favor of the new Dashboard resource. See https://docs.datadoghq.com/api/?lang=python#dashboards for more details.
 
