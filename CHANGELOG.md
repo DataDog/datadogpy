@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.27.0 / Unreleased
+# 0.27.0 / 2019-03-06
 
 **New Dashboards API: https://docs.datadoghq.com/api/?lang=python#dashboards**
 
