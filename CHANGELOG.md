@@ -10,6 +10,8 @@ The Timeboard and Screenboard API resources are deprecated in favor of the new D
 * [BUGFIX] API: Fix `UnicodeError` exceptions raised by the API client on errors that contain non ascii characters, [#223][], [#346][]
 * [BUGFIX] DogStatsD: Fix unsafe socket creation on multithreaded applications and catch more exceptions, [#212][], [#364][]
 * [FEATURE] API: Add support for the new Dashboard API, [#351][]
+* [OTHER] Support `tox` for testing, [#342][]
+* [OTHER] Support Python 3.7, **drop support for Python 3.3**, [#345][]
 
 # 0.26.0 / 2018-11-29
 
@@ -340,6 +342,8 @@ See [#8][], thanks [@benweatherman][]
 [#312]: https://github.com/DataDog/datadogpy/issues/312
 [#324]: https://github.com/DataDog/datadogpy/issues/324
 [#328]: https://github.com/DataDog/datadogpy/issues/328
+[#342]: https://github.com/DataDog/datadogpy/issues/342
+[#345]: https://github.com/DataDog/datadogpy/issues/345
 [#346]: https://github.com/DataDog/datadogpy/issues/346
 [#351]: https://github.com/DataDog/datadogpy/issues/351
 [#364]: https://github.com/DataDog/datadogpy/issues/364
