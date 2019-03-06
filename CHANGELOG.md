@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+# 0.27.0 / Unreleased
+
+**New Dashboarsds API: https://docs.datadoghq.com/api/?lang=python#dashboards**
+
+The Timeboard and Screenboard API resources are deprecated in favor of the new Dashboard resource. See https://docs.datadoghq.com/api/?lang=python#dashboards for more details.
+
+* [BUGFIX] API: Fix `UnicodeError` exceptions raised by the API client on errors that contain non ascii characters, [#223][], [#346][]
+* [BUGFIX] DogStatsD: Fix unsafe socket creation on multithreaded applications and catch more exceptions, [#212][], [#364][]
+* [FEATURE] API: Add support for the new Dashboard API, [#351][]
+
 # 0.26.0 / 2018-11-29
 
 * [IMPROVEMENT] API: Keep HTTP connections alive when using `requests`, [#328][]
@@ -298,7 +308,9 @@ See [#8][], thanks [@benweatherman][]
 [#203]: https://github.com/DataDog/datadogpy/issues/203
 [#206]: https://github.com/DataDog/datadogpy/issues/206
 [#207]: https://github.com/DataDog/datadogpy/issues/207
+[#212]: https://github.com/DataDog/datadogpy/issues/212
 [#221]: https://github.com/DataDog/datadogpy/issues/221
+[#223]: https://github.com/DataDog/datadogpy/issues/223
 [#228]: https://github.com/DataDog/datadogpy/issues/228
 [#230]: https://github.com/DataDog/datadogpy/issues/230
 [#233]: https://github.com/DataDog/datadogpy/issues/233
@@ -328,6 +340,9 @@ See [#8][], thanks [@benweatherman][]
 [#312]: https://github.com/DataDog/datadogpy/issues/312
 [#324]: https://github.com/DataDog/datadogpy/issues/324
 [#328]: https://github.com/DataDog/datadogpy/issues/328
+[#346]: https://github.com/DataDog/datadogpy/issues/346
+[#351]: https://github.com/DataDog/datadogpy/issues/351
+[#364]: https://github.com/DataDog/datadogpy/issues/364
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@Tenzer]: https://github.com/Tenzer
 [@aknuds1]: https://github.com/aknuds1
