@@ -348,7 +348,7 @@ class ActionAPIResource(object):
         return APIClient.submit(method, path, body, **params)
 
     @classmethod
-    def _trigger_action(cls, method, name, id=None, **body):
+    def _trigger_action(cls, method, name, id=None, params=None, **body):
         """
         Trigger an action
 
@@ -361,16 +361,22 @@ class ActionAPIResource(object):
         :param id: trigger the action for the specified resource object
         :type id: id
 
+        :param params: action parameters
+        :type params: dictionary
+
         :param body: action body
         :type body: dictionary
 
         :returns: Dictionary representing the API's JSON response
         """
+        if params is None:
+            params = {}
+
         if id is None:
-            return APIClient.submit(method, name, body)
+            return APIClient.submit(method, name, body, **params)
 
         path = '{action_name}/{resource_id}'.format(
             action_name=name,
             resource_id=id
         )
-        return APIClient.submit(method, path, body)
+        return APIClient.submit(method, path, body, **params)

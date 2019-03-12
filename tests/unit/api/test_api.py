@@ -13,7 +13,8 @@ from datadog import initialize, api
 from datadog.api import (
     Distribution,
     Metric,
-    ServiceCheck
+    ServiceCheck,
+    Dashboard
 )
 from datadog.api.exceptions import ApiError, ApiNotInitialized
 from datadog.util.compat import is_p3k
@@ -491,3 +492,36 @@ class TestServiceCheckResource(DatadogAPIWithInitialization):
         ServiceCheck.check(
             check='check_pg', host_name='host0', status=1, message=None,
             timestamp=None, tags=None)
+
+class TestDashboardResource(DatadogAPIWithInitialization):
+
+    def test_dashboard_get_all_none_params(self):
+        """
+        `Dashboard.get_all` API with no layout_type param
+        """
+        Dashboard.get_all()
+        self.request_called_with('GET', "host/api/v1/dashboards",
+                                 params={'query': "in:preset_dashboard_list/1"})
+
+    def test_dashboard_get_all_ordered_param(self):
+        """
+        `Dashboard.get_all` API with 'ordered' layout_type param
+        """
+        Dashboard.get_all(layout_type='ordered')
+        self.request_called_with('GET', "host/api/v1/dashboards",
+                                 params={'query': "dashboard_type:custom_timeboard"})
+
+    def test_dashboard_get_all_free_param(self):
+        """
+        `Dashboard.get_all` API with 'free' layout_type param
+        """
+        Dashboard.get_all(layout_type='free')
+        self.request_called_with('GET', "host/api/v1/dashboards",
+                                 params={'query': "dashboard_type:custom_screenboard"})
+
+    def test_dashboard_get_all_free_param(self):
+        """
+        `Dashboard.get_all` API with invalid layout_type param
+        """
+        with self.assertRaises(ApiError):
+            Dashboard.get_all(layout_type='invalid_type')

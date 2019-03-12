@@ -25,8 +25,7 @@ class DashboardClient(object):
         post_parser.add_argument('title', help="title for the new dashboard")
         post_parser.add_argument('widgets', help="widget definitions as a JSON string. If unset,"
                                  " reads from stdin.", nargs="?")
-        # for now, only "ordered" layout - current timeboard layout - is supported.
-        post_parser.add_argument('layout_type', choices=['ordered'],
+        post_parser.add_argument('layout_type', choices=['ordered', 'free'],
                                  help="Layout type of the dashboard.")
         # Optional arguments:
         post_parser.add_argument('--description', help="Short description of the dashboard")
@@ -49,8 +48,7 @@ class DashboardClient(object):
         update_parser.add_argument('title', help="New title for the dashboard")
         update_parser.add_argument('widgets', help="Widget definitions as a JSON string."
                                    " If unset, reads from stdin", nargs="?")
-        # for now, only "ordered" layout - current timeboard layout - is supported.
-        update_parser.add_argument('layout_type', choices=['ordered'],
+        update_parser.add_argument('layout_type', choices=['ordered', 'free'],
                                    help="Layout type of the dashboard.")
         # Optional arguments:
         update_parser.add_argument('--description', help="Short description of the dashboard")
@@ -73,7 +71,7 @@ class DashboardClient(object):
         delete_parser = verb_parsers.add_parser('delete', help="Delete dashboards")
         delete_parser.add_argument('dashboard_id', help="Dashboard to delete")
         delete_parser.set_defaults(func=cls._delete)
-
+        
     @classmethod
     def _post(cls, args):
         api._timeout = args.timeout
