@@ -30,7 +30,7 @@ class Dashboard(GetableAPIResource, CreateableAPIResource,
             if layout_type not in ['ordered', 'free']:
                 raise ApiError('Invalid layout_type, expected one of: %s'
                                % ', '.join(['ordered', 'free']))
-            else :
+            else:
                 dashboard_type = 'custom_timeboard' if layout_type == 'ordered' else 'custom_screenboard'
                 params['query'] = 'dashboard_type:{0}'.format(dashboard_type)
 

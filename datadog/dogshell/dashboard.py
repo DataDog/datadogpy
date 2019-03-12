@@ -71,7 +71,7 @@ class DashboardClient(object):
         delete_parser = verb_parsers.add_parser('delete', help="Delete dashboards")
         delete_parser.add_argument('dashboard_id', help="Dashboard to delete")
         delete_parser.set_defaults(func=cls._delete)
-        
+
     @classmethod
     def _post(cls, args):
         api._timeout = args.timeout
