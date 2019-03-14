@@ -24,8 +24,8 @@ class Dashboard(GetableAPIResource, CreateableAPIResource,
         params = {}
 
         if layout_type is None:
-            # Get all custom dashboards via dashboard preset list 1
-            params['query'] = 'in:preset_dashboard_list/1'
+            # Get all custom dashboards
+            params['query'] = 'dashboard_type:custom_screenboard,custom_timeboard'
         else:
             if layout_type not in ['ordered', 'free']:
                 raise ApiError('Invalid layout_type, expected one of: %s'

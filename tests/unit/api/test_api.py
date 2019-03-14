@@ -501,7 +501,7 @@ class TestDashboardResource(DatadogAPIWithInitialization):
         """
         Dashboard.get_all()
         self.request_called_with('GET', "host/api/v1/dashboards",
-                                 params={'query': "in:preset_dashboard_list/1"})
+                                 params={'query': "dashboard_type:custom_screenboard,custom_timeboard"})
 
     def test_dashboard_get_all_ordered_param(self):
         """
