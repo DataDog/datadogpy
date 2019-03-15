@@ -97,6 +97,15 @@ class TestDogStatsd(unittest.TestCase):
         t.assert_equal(statsd.host, "localhost")
         t.assert_equal(statsd.port, 8125)
 
+        # Set `statsd` host and port using env vars
+        with preserve_environment_variable('DD_AGENT_HOST'):
+            os.environ['DD_AGENT_HOST'] = 'myenvvarhost'
+            with preserve_environment_variable('DD_DOGSTATSD_PORT'):
+                os.environ['DD_DOGSTATSD_PORT'] = '4321'
+                initialize()
+        t.assert_equal(statsd.host, "myenvvarhost")
+        t.assert_equal(statsd.port, 4321)
+
         # After initialization
         initialize(**options)
         t.assert_equal(statsd.host, "myhost")
@@ -106,15 +115,6 @@ class TestDogStatsd(unittest.TestCase):
         initialize(statsd_use_default_route=True, **options)
         t.assert_equal(statsd.host, "172.17.0.1")
         t.assert_equal(statsd.port, 1234)
-
-        # Set `statsd` host and port using env vars
-        with preserve_environment_variable('DD_AGENT_HOST'):
-            os.environ['DD_AGENT_HOST'] = 'myenvvarhost'
-            with preserve_environment_variable('DD_DOGSTATSD_PORT'):
-                os.environ['DD_DOGSTATSD_PORT'] = '4321'
-                initialize(**options)
-        t.assert_equal(statsd.host, "myenvvarhost")
-        t.assert_equal(statsd.port, 4321)
 
         # Add UNIX socket
         options['statsd_socket_path'] = '/var/run/dogstatsd.sock'

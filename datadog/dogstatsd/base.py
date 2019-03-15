@@ -30,19 +30,17 @@ class DogStatsd(object):
         >>> statsd = DogStatsd()
 
         :envvar DD_AGENT_HOST: the host of the DogStatsd server.
+        If set, it overrides default value.
         :type DD_AGENT_HOST: string
 
         :envvar DD_DOGSTATSD_PORT: the port of the DogStatsd server.
+        If set, it overrides default value.
         :type DD_DOGSTATSD_PORT: integer
 
-        :param host: the host of the DogStatsd server. If the environment variable
-        "DD_AGENT_HOST" is set, this parameter is overwritten by the environment
-        variable value
+        :param host: the host of the DogStatsd server.
         :type host: string
 
-        :param port: the port of the DogStatsd server. If the environment variable
-        "DD_DOGSTATSD_PORT" is set, this parameter is overwritten by the environment
-        variable value.
+        :param port: the port of the DogStatsd server.
         :type port: integer
 
         :param max_buffer_size: Maximum number of metrics to buffer before sending to the server
@@ -77,15 +75,16 @@ class DogStatsd(object):
 
         # Check host and port env vars
         DD_AGENT_HOST = os.environ.get('DD_AGENT_HOST', '')
-        if DD_AGENT_HOST != '':
+        if DD_AGENT_HOST != '' and host == 'localhost':
             host = DD_AGENT_HOST
 
         DD_DOGSTATSD_PORT = os.environ.get('DD_DOGSTATSD_PORT', '')
-        if DD_DOGSTATSD_PORT != '':
+        if DD_DOGSTATSD_PORT != '' and port == 8125:
             try:
                 port = int(DD_DOGSTATSD_PORT)
             except ValueError:
-                log.warning("Port number provided in DD_DOGSTATSD_PORT env var is not an integer: %s, using %s as port number", DD_DOGSTATSD_PORT, port)
+                log.warning("Port number provided in DD_DOGSTATSD_PORT env var is not an integer: \
+                %s, using %s as port number", DD_DOGSTATSD_PORT, port)
                 pass
 
         # Connection

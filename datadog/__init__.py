@@ -99,7 +99,6 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
             try:
                 statsd_port = int(DD_DOGSTATSD_PORT)
             except ValueError:
-                log.warning("Port number provided in DD_DOGSTATSD_PORT env var is not an integer: %s, using %s as port number", DD_DOGSTATSD_PORT, port)
                 pass
         if statsd_host or statsd_use_default_route:
             statsd.host = statsd.resolve_host(statsd_host, statsd_use_default_route)
