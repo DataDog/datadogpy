@@ -29,10 +29,20 @@ class DogStatsd(object):
 
         >>> statsd = DogStatsd()
 
-        :param host: the host of the DogStatsd server.
+        :envvar DD_AGENT_HOST: the host of the DogStatsd server.
+        :type DD_AGENT_HOST: string
+
+        :envvar DD_DOGSTATSD_PORT: the port of the DogStatsd server.
+        :type DD_DOGSTATSD_PORT: integer
+
+        :param host: the host of the DogStatsd server. If the environment variable
+        "DD_AGENT_HOST" is set, this parameter is overwritten by the environment
+        variable value
         :type host: string
 
-        :param port: the port of the DogStatsd server.
+        :param port: the port of the DogStatsd server. If the environment variable
+        "DD_DOGSTATSD_PORT" is set, this parameter is overwritten by the environment
+        variable value.
         :type port: integer
 
         :param max_buffer_size: Maximum number of metrics to buffer before sending to the server
@@ -51,6 +61,9 @@ class DogStatsd(object):
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by dogstatsd client
         :type DATADOG_TAGS: list of strings
 
+        :envvar DD_ENTITY_ID: Tag to identify the client entity.
+        :type DD_ENTITY_ID: string
+
         :param use_default_route: Dynamically set the DogStatsd host to the default route
         (Useful when running the client in a container) (Linux only)
         :type use_default_route: boolean
@@ -61,6 +74,19 @@ class DogStatsd(object):
         """
 
         self.lock = Lock()
+
+        # Check host and port env vars
+        DD_AGENT_HOST = os.environ.get('DD_AGENT_HOST', '')
+        if DD_AGENT_HOST != '':
+            host = DD_AGENT_HOST
+
+        DD_DOGSTATSD_PORT = os.environ.get('DD_DOGSTATSD_PORT', '')
+        if DD_DOGSTATSD_PORT != '':
+            try:
+                port = int(DD_DOGSTATSD_PORT)
+            except ValueError:
+                log.warning("Port number provided in DD_DOGSTATSD_PORT env var is not an integer: %s, using %s as port number", DD_DOGSTATSD_PORT, port)
+                pass
 
         # Connection
         if socket_path is not None:
@@ -83,6 +109,11 @@ class DogStatsd(object):
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
+        ENTITY_ID_TAG_NAME = "dd.internal.entity_id"
+        DD_ENTITY_ID = os.environ.get('DD_ENTITY_ID', '')
+        if DD_ENTITY_ID != '':
+            entity_tag = '{name}:{value}'.format(name=ENTITY_ID_TAG_NAME, value=DD_ENTITY_ID)
+            self.constant_tags.append(entity_tag)
         if namespace is not None:
             namespace = text(namespace)
         self.namespace = namespace

@@ -107,6 +107,15 @@ class TestDogStatsd(unittest.TestCase):
         t.assert_equal(statsd.host, "172.17.0.1")
         t.assert_equal(statsd.port, 1234)
 
+        # Set `statsd` host and port using env vars
+        with preserve_environment_variable('DD_AGENT_HOST'):
+            os.environ['DD_AGENT_HOST'] = 'myenvvarhost'
+            with preserve_environment_variable('DD_DOGSTATSD_PORT'):
+                os.environ['DD_DOGSTATSD_PORT'] = '4321'
+                initialize(**options)
+        t.assert_equal(statsd.host, "myenvvarhost")
+        t.assert_equal(statsd.port, 4321)
+
         # Add UNIX socket
         options['statsd_socket_path'] = '/var/run/dogstatsd.sock'
         initialize(**options)
@@ -572,6 +581,32 @@ class TestDogStatsd(unittest.TestCase):
         statsd.socket = FakeSocket()
         statsd.gauge('gt', 123.4)
         t.assert_equal('gt:123.4|g|#country:canada,red,country:china,age:45,blue', statsd.socket.recv())
+
+    def test_entity_tag_from_environment(self):
+        with preserve_environment_variable('DD_ENTITY_ID'):
+            os.environ['DD_ENTITY_ID'] = '04652bb7-19b7-11e9-9cc6-42010a9c016d'
+            statsd = DogStatsd()
+        statsd.socket = FakeSocket()
+        statsd.gauge('gt', 123.4)
+        t.assert_equal('gt:123.4|g|#dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d', statsd.socket.recv())
+
+    def test_entity_tag_from_environment_and_constant(self):
+        with preserve_environment_variable('DD_ENTITY_ID'):
+            os.environ['DD_ENTITY_ID'] = '04652bb7-19b7-11e9-9cc6-42010a9c016d'
+            statsd = DogStatsd(constant_tags=['country:canada', 'red'])
+        statsd.socket = FakeSocket()
+        statsd.gauge('gt', 123.4)
+        t.assert_equal('gt:123.4|g|#country:canada,red,dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d', statsd.socket.recv())
+    
+    def test_entity_tag_and_tags_from_environment_and_constant(self):
+        with preserve_environment_variable('DATADOG_TAGS'):
+            os.environ['DATADOG_TAGS'] = 'country:china,age:45,blue'
+            with preserve_environment_variable('DD_ENTITY_ID'):
+                os.environ['DD_ENTITY_ID'] = '04652bb7-19b7-11e9-9cc6-42010a9c016d'
+                statsd = DogStatsd(constant_tags=['country:canada', 'red'])
+        statsd.socket = FakeSocket()
+        statsd.gauge('gt', 123.4)
+        t.assert_equal('gt:123.4|g|#country:canada,red,country:china,age:45,blue,dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d', statsd.socket.recv())
 
     def test_gauge_doesnt_send_None(self):
         self.statsd.gauge('metric', None)
