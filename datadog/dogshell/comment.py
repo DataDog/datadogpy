@@ -17,24 +17,21 @@ class CommentClient(object):
         verb_parsers.required = True
 
         post_parser = verb_parsers.add_parser('post', help="Post comments.")
-        post_parser.add_argument('--handle', help="handle to post as. if unset, posts as the owner"
-                                 " of the application key used to authenticate")
+        post_parser.add_argument('handle', help="handle to post as.")
         post_parser.add_argument('comment', help="comment message to post. if unset,"
                                  " reads from stdin.", nargs='?')
         post_parser.set_defaults(func=cls._post)
 
         update_parser = verb_parsers.add_parser('update', help="Update existing comments.")
         update_parser.add_argument('comment_id', help="comment to update (by id)")
-        update_parser.add_argument('--handle', help="handle to post as. if unset, posts"
-                                   " as the owner of the application key used to authenticate")
+        update_parser.add_argument('handle', help="handle to post as.")
         update_parser.add_argument('comment', help="comment message to post."
                                    " if unset, reads from stdin.", nargs="?")
         update_parser.set_defaults(func=cls._update)
 
         reply_parser = verb_parsers.add_parser('reply', help="Reply to existing comments.")
         reply_parser.add_argument('comment_id', help="comment to reply to (by id)")
-        reply_parser.add_argument('--handle', help="handle to post as. if unset, "
-                                  "posts as the owner of the application key used to authenticate")
+        reply_parser.add_argument('handle', help="handle to post as.")
         reply_parser.add_argument('comment', help="comment message to post."
                                   " if unset, reads from stdin.", nargs="?")
         reply_parser.set_defaults(func=cls._reply)
@@ -55,6 +52,7 @@ class CommentClient(object):
         format = args.format
         if comment is None:
             comment = sys.stdin.read()
+            # this freezes with no comment
         res = api.Comment.create(handle=handle, message=comment)
         report_warnings(res)
         report_errors(res)
