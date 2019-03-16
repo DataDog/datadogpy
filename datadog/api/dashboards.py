@@ -1,6 +1,5 @@
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
     UpdatableAPIResource, DeletableAPIResource, ListableAPIResource
-from datadog.api.exceptions import ApiError
 
 
 class Dashboard(GetableAPIResource, CreateableAPIResource,
