@@ -52,7 +52,6 @@ class CommentClient(object):
         format = args.format
         if comment is None:
             comment = sys.stdin.read()
-            # this freezes with no comment
         res = api.Comment.create(handle=handle, message=comment)
         report_warnings(res)
         report_errors(res)
