@@ -103,7 +103,7 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
                     statsd_port = int(DD_DOGSTATSD_PORT)
                 except ValueError:
                     pass
-        
+
         if statsd_host or statsd_use_default_route:
             statsd.host = statsd.resolve_host(statsd_host, statsd_use_default_route)
         if statsd_port:
