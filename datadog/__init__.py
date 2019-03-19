@@ -89,17 +89,21 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
         statsd.host = None
         statsd.port = None
     else:
-        # Check host and port env vars, override arguments if env vars exist
-        DD_AGENT_HOST = os.environ.get('DD_AGENT_HOST', '')
-        if DD_AGENT_HOST != '':
-            statsd_host = DD_AGENT_HOST
+        # If statsd_host argument is not set, try to get host from DD_AGENT_HOST env var
+        if statsd_host is None:
+            DD_AGENT_HOST = os.environ.get('DD_AGENT_HOST', '')
+            if DD_AGENT_HOST != '':
+                statsd_host = DD_AGENT_HOST
 
-        DD_DOGSTATSD_PORT = os.environ.get('DD_DOGSTATSD_PORT', '')
-        if DD_DOGSTATSD_PORT != '':
-            try:
-                statsd_port = int(DD_DOGSTATSD_PORT)
-            except ValueError:
-                pass
+        # If statsd_port argument is not set, try to get port from DD_DOGSTATSD_PORT env var
+        if statsd_port is None:
+            DD_DOGSTATSD_PORT = os.environ.get('DD_DOGSTATSD_PORT', '')
+            if DD_DOGSTATSD_PORT != '':
+                try:
+                    statsd_port = int(DD_DOGSTATSD_PORT)
+                except ValueError:
+                    pass
+        
         if statsd_host or statsd_use_default_route:
             statsd.host = statsd.resolve_host(statsd_host, statsd_use_default_route)
         if statsd_port:
