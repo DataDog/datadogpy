@@ -17,11 +17,18 @@ from datadog.util.compat import text
 # Logging
 log = logging.getLogger('datadog.dogstatsd')
 
+# Default config
+DEFAULT_HOST = 'localhost'
+DEFAULT_PORT = 8125
+
+# Tag name of entity_id
+ENTITY_ID_TAG_NAME = "dd.internal.entity_id"
+
 
 class DogStatsd(object):
     OK, WARNING, CRITICAL, UNKNOWN = (0, 1, 2, 3)
 
-    def __init__(self, host='localhost', port=8125, max_buffer_size=50, namespace=None,
+    def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, max_buffer_size=50, namespace=None,
                  constant_tags=None, use_ms=False, use_default_route=False,
                  socket_path=None):
         """
@@ -74,18 +81,17 @@ class DogStatsd(object):
         self.lock = Lock()
 
         # Check host and port env vars
-        DD_AGENT_HOST = os.environ.get('DD_AGENT_HOST', '')
-        if DD_AGENT_HOST != '' and host == 'localhost':
-            host = DD_AGENT_HOST
+        agent_host = os.environ.get('DD_AGENT_HOST')
+        if agent_host and host == DEFAULT_HOST:
+            host = agent_host
 
-        DD_DOGSTATSD_PORT = os.environ.get('DD_DOGSTATSD_PORT', '')
-        if DD_DOGSTATSD_PORT != '' and port == 8125:
+        dogstatsd_port = os.environ.get('DD_DOGSTATSD_PORT')
+        if dogstatsd_port and port == DEFAULT_PORT:
             try:
-                port = int(DD_DOGSTATSD_PORT)
+                port = int(dogstatsd_port)
             except ValueError:
                 log.warning("Port number provided in DD_DOGSTATSD_PORT env var is not an integer: \
-                %s, using %s as port number", DD_DOGSTATSD_PORT, port)
-                pass
+                %s, using %s as port number", dogstatsd_port, port)
 
         # Connection
         if socket_path is not None:
@@ -108,10 +114,9 @@ class DogStatsd(object):
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
-        ENTITY_ID_TAG_NAME = "dd.internal.entity_id"
-        DD_ENTITY_ID = os.environ.get('DD_ENTITY_ID', '')
-        if DD_ENTITY_ID != '':
-            entity_tag = '{name}:{value}'.format(name=ENTITY_ID_TAG_NAME, value=DD_ENTITY_ID)
+        entity_id = os.environ.get('DD_ENTITY_ID')
+        if entity_id:
+            entity_tag = '{name}:{value}'.format(name=ENTITY_ID_TAG_NAME, value=entity_id)
             self.constant_tags.append(entity_tag)
         if namespace is not None:
             namespace = text(namespace)

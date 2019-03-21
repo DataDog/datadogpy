@@ -97,15 +97,6 @@ class TestDogStatsd(unittest.TestCase):
         t.assert_equal(statsd.host, "localhost")
         t.assert_equal(statsd.port, 8125)
 
-        # Set `statsd` host and port using env vars
-        with preserve_environment_variable('DD_AGENT_HOST'):
-            os.environ['DD_AGENT_HOST'] = 'myenvvarhost'
-            with preserve_environment_variable('DD_DOGSTATSD_PORT'):
-                os.environ['DD_DOGSTATSD_PORT'] = '4321'
-                initialize()
-        t.assert_equal(statsd.host, "myenvvarhost")
-        t.assert_equal(statsd.port, 4321)
-
         # After initialization
         initialize(**options)
         t.assert_equal(statsd.host, "myhost")
@@ -122,6 +113,22 @@ class TestDogStatsd(unittest.TestCase):
         t.assert_equal(statsd.socket_path, options['statsd_socket_path'])
         t.assert_equal(statsd.host, None)
         t.assert_equal(statsd.port, None)
+    
+    def test_dogstatsd_initialization_with_env_vars(self):
+        """
+        Dogstatsd can retrieve its config from env vars when
+        not provided in constructor.
+        """
+        # Setup
+        with preserve_environment_variable('DD_AGENT_HOST'):
+            os.environ['DD_AGENT_HOST'] = 'myenvvarhost'
+            with preserve_environment_variable('DD_DOGSTATSD_PORT'):
+                os.environ['DD_DOGSTATSD_PORT'] = '4321'
+                statsd = DogStatsd()
+
+        # Assert
+        t.assert_equal(statsd.host, "myenvvarhost")
+        t.assert_equal(statsd.port, 4321)
 
     def test_default_route(self):
         """
