@@ -1,9 +1,10 @@
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
-    UpdatableAPIResource, DeletableAPIResource
+    UpdatableAPIResource, DeletableAPIResource, ListableAPIResource
 
 
 class Dashboard(GetableAPIResource, CreateableAPIResource,
-                UpdatableAPIResource, DeletableAPIResource):
+                UpdatableAPIResource, DeletableAPIResource,
+                ListableAPIResource):
     """
     A wrapper around Dashboard HTTP API.
     """
