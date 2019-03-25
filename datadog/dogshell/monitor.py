@@ -104,7 +104,7 @@ class MonitorClient(object):
                 raise Exception('bad json parameter')
 
         if args.tags:
-            tags = sorted(set([t.strip() for t in args.tags.split(',') if t]))
+            tags = sorted(set([t.strip() for t in args.tags.split(',') if t.strip()]))
         else:
             tags = None
 
