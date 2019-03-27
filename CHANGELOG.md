@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+# 0.28.0 / Unreleased
+
+* [BUGFIX] Dogshell: Properly require `handle` as an argument to the `comment` subcommand, [#364][]
+* [FEATURE] API: Add support for the `Dashboard.get_all` API, [#362][]
+* [FEATURE] Dogshell: Add support for defining monitors as JSON files, [#322][] (thanks [@Hefeweizen][])
+* [FEATURE] DogStatsD: Add support for the `DD_AGENT_HOST`, `DD_DOGSTATSD_PORT`, and `DD_ENTITY_ID` environment variables, [#363][]
+* [IMPROVEMENT] API: Add support for the `free` layout_type in `Dashboard.create` and `Dashboard.update`, [#362][]
+
 # 0.27.0 / 2019-03-06
 
 **New Dashboards API: https://docs.datadoghq.com/api/?lang=python#dashboards**
@@ -8,7 +16,7 @@ CHANGELOG
 The Timeboard and Screenboard API resources are deprecated in favor of the new Dashboard resource. See https://docs.datadoghq.com/api/?lang=python#dashboards for more details.
 
 * [BUGFIX] API: Fix `UnicodeError` exceptions raised by the API client on errors that contain non ascii characters, [#223][], [#346][]
-* [BUGFIX] DogStatsD: Fix unsafe socket creation on multithreaded applications and catch more exceptions, [#212][], [#364][]
+* [BUGFIX] DogStatsD: Fix unsafe socket creation on multithreaded applications and catch more exceptions, [#212][], [#349][]
 * [FEATURE] API: Add support for the new Dashboard API, [#351][]
 * [OTHER] Support `tox` for testing, [#342][]
 * [OTHER] Support Python 3.7, **drop support for Python 3.3**, [#345][]
@@ -16,7 +24,6 @@ The Timeboard and Screenboard API resources are deprecated in favor of the new D
 # 0.26.0 / 2018-11-29
 
 * [IMPROVEMENT] API: Keep HTTP connections alive when using `requests`, [#328][]
-
 
 # 0.25.0 / 2018-11-27
 
@@ -340,14 +347,19 @@ See [#8][], thanks [@benweatherman][]
 [#304]: https://github.com/DataDog/datadogpy/issues/304
 [#309]: https://github.com/DataDog/datadogpy/issues/309
 [#312]: https://github.com/DataDog/datadogpy/issues/312
+[#322]: https://github.com/DataDog/datadogpy/issues/322
 [#324]: https://github.com/DataDog/datadogpy/issues/324
 [#328]: https://github.com/DataDog/datadogpy/issues/328
 [#342]: https://github.com/DataDog/datadogpy/issues/342
 [#345]: https://github.com/DataDog/datadogpy/issues/345
 [#346]: https://github.com/DataDog/datadogpy/issues/346
+[#349]: https://github.com/DataDog/datadogpy/issues/349
 [#351]: https://github.com/DataDog/datadogpy/issues/351
+[#362]: https://github.com/DataDog/datadogpy/issues/362
+[#363]: https://github.com/DataDog/datadogpy/issues/363
 [#364]: https://github.com/DataDog/datadogpy/issues/364
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
+[@Hefeweizen]: https://github.com/Hefeweizen
 [@Tenzer]: https://github.com/Tenzer
 [@aknuds1]: https://github.com/aknuds1
 [@alexpjohnson]: https://github.com/alexpjohnson
