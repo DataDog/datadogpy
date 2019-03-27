@@ -5,7 +5,7 @@ CHANGELOG
 
 * [BUGFIX] Dogshell: Properly require `handle` as an argument to the `comment` subcommand, [#364][]
 * [FEATURE] API: Add support for the `Dashboard.get_all` API, [#362][]
-* [FEATURE] Dogshell: Add support for defining monitors as JSON files, [#322][]
+* [FEATURE] Dogshell: Add support for defining monitors as JSON files, [#322][] (thanks [@Hefeweizen][])
 * [FEATURE] DogStatsD: Add support for the `DD_AGENT_HOST`, `DD_DOGSTATSD_PORT`, and `DD_ENTITY_ID` environment variables, [#363][]
 * [IMPROVEMENT] API: Add support for the `free` layout_type in `Dashboard.create` and `Dashboard.update`, [#362][]
 
@@ -359,6 +359,7 @@ See [#8][], thanks [@benweatherman][]
 [#363]: https://github.com/DataDog/datadogpy/issues/363
 [#364]: https://github.com/DataDog/datadogpy/issues/364
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
+[@Hefeweizen]: https://github.com/Hefeweizen
 [@Tenzer]: https://github.com/Tenzer
 [@aknuds1]: https://github.com/aknuds1
 [@alexpjohnson]: https://github.com/alexpjohnson
