@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.28.0 / Unreleased
+# 0.28.0 / 2019-03-27
 
 * [BUGFIX] Dogshell: Properly require `handle` as an argument to the `comment` subcommand, [#364][]
 * [FEATURE] API: Add support for the `Dashboard.get_all` API, [#362][]
