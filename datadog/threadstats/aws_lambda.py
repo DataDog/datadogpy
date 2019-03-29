@@ -62,9 +62,10 @@ class _LambdaDecorator(object):
 
     def __call__(self, *args, **kw):
         _LambdaDecorator._enter()
-        result = self.func(*args, **kw)
-        _LambdaDecorator._close()
-        return result
+        try:
+            return self.func(*args, **kw)
+        finally:
+            _LambdaDecorator._close()
 
 
 _lambda_stats = ThreadStats()
