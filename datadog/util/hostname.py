@@ -70,7 +70,7 @@ def get_hostname():
         def _get_hostname_unix():
             try:
                 # try fqdn
-                p = subprocess.Popen(['/bin/hostname', '-f'], stdout=subprocess.PIPE)
+                p = subprocess.Popen(['/bin/hostname', '-f'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
                 out, err = p.communicate()
                 if p.returncode == 0:
                     if is_p3k():
