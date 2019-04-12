@@ -4,6 +4,7 @@ Metric roll-up classes.
 from collections import defaultdict
 import random
 import itertools
+import threading
 
 from datadog.util.compat import iternext
 from datadog.threadstats.constants import MetricType
@@ -152,6 +153,7 @@ class MetricsAggregator(object):
     """
 
     def __init__(self, roll_up_interval=10):
+        self._lock = threading.RLock()
         self._metrics = defaultdict(lambda: {})
         self._roll_up_interval = roll_up_interval
 
@@ -159,9 +161,10 @@ class MetricsAggregator(object):
         # The sample rate is currently ignored for in process stuff
         interval = timestamp - timestamp % self._roll_up_interval
         key = (metric, host, tuple(sorted(tags)) if tags else None)
-        if key not in self._metrics[interval]:
-            self._metrics[interval][key] = metric_class(metric, tags, host)
-        self._metrics[interval][key].add_point(value)
+        with self._lock:
+            if key not in self._metrics[interval]:
+                self._metrics[interval][key] = metric_class(metric, tags, host)
+            self._metrics[interval][key].add_point(value)
 
     def flush(self, timestamp):
         """ Flush all metrics up to the given timestamp. """
@@ -170,9 +173,10 @@ class MetricsAggregator(object):
         else:
             interval = timestamp - timestamp % self._roll_up_interval
 
-        past_intervals = [i for i in self._metrics.keys() if i < interval]
-        metrics = []
-        for i in past_intervals:
-            for m in list(self._metrics.pop(i).values()):
-                metrics += m.flush(i, self._roll_up_interval)
+        with self._lock:
+            past_intervals = [i for i in self._metrics.keys() if i < interval]
+            metrics = []
+            for i in past_intervals:
+                for m in list(self._metrics.pop(i).values()):
+                    metrics += m.flush(i, self._roll_up_interval)
         return metrics
