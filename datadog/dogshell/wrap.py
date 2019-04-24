@@ -129,7 +129,7 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout,
         stderr = err_reader.content
 
         duration = time.time() - start_time
-    except Timeout:
+    except Exception:
         duration = time.time() - start_time
         try:
             proc.terminate()
