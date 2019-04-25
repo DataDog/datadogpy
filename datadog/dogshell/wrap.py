@@ -66,7 +66,7 @@ class OutputReader(threading.Thread):
         for line in iter(self._out.readline, b''):
             if self._fwd_out is not None:
                 fwd_out_encoding = self._fwd_out.encoding or 'UTF-8'
-                self._fwd_out.write(line.decode(fwd_out_encoding))
+                self._fwd_out.write(line.decode(fwd_out_encoding, 'ignore'))
             line = line.decode('utf-8')
             self._out_content += line
         self._out.close()
