@@ -32,7 +32,6 @@ class _LambdaDecorator(object):
         with cls._counter_lock:
             if not cls._was_initialized:
                 cls._was_initialized = True
-                # DD_ is consistent with APM configuration, fall back to it
                 api._api_key = os.environ.get('DATADOG_API_KEY', os.environ.get('DD_API_KEY'))
                 api._api_host = os.environ.get('DATADOG_HOST', 'https://api.datadoghq.com')
 
