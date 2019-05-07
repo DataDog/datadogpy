@@ -28,7 +28,6 @@ class APIClient(object):
     _max_timeouts = _max_timeouts
     _backoff_timestamp = None
     _timeout_counter = 0
-    _api_version = _api_version
 
     # Plugged HTTP client
     _http_client = None
@@ -44,8 +43,8 @@ class APIClient(object):
         return cls._http_client
 
     @classmethod
-    def submit(cls, method, path, body=None, attach_host_name=False, response_formatter=None,
-               error_formatter=None, **params):
+    def submit(cls, method, path, api_version=_api_version, body=None, attach_host_name=False,
+               response_formatter=None, error_formatter=None, **params):
         """
         Make an HTTP API request
 
@@ -112,11 +111,10 @@ class APIClient(object):
             if isinstance(body, dict):
                 body = json.dumps(body)
                 headers['Content-Type'] = 'application/json'
-
             # Construct the URL
             url = "{api_host}/api/{api_version}/{path}".format(
                   api_host=_api_host,
-                  api_version=cls._api_version,
+                  api_version=api_version,
                   path=path.lstrip("/"),
             )
 

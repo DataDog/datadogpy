@@ -2,6 +2,9 @@
 Datadog API resources.
 """
 # datadog
+
+from datadog.api import _api_version
+
 from datadog.api.api_client import APIClient
 
 
@@ -35,18 +38,19 @@ class CreateableAPIResource(object):
             params = {}
 
         path = cls._resource_name
+        api_version = getattr(cls, '_api_version', _api_version)
 
         if method == 'GET':
-            return APIClient.submit('GET', path, **body)
+            return APIClient.submit('GET', path, api_version, **body)
         if id is None:
-            return APIClient.submit('POST', path, body,
+            return APIClient.submit('POST', path, api_version, body,
                                     attach_host_name=attach_host_name, **params)
 
         path = '{resource_name}/{resource_id}'.format(
             resource_name=cls._resource_name,
             resource_id=id
         )
-        return APIClient.submit('POST', path, body, attach_host_name=attach_host_name, **params)
+        return APIClient.submit('POST', path, api_version, body, attach_host_name=attach_host_name, **params)
 
 
 class SendableAPIResource(object):
@@ -69,15 +73,17 @@ class SendableAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
+        api_version = getattr(cls, '_api_version', _api_version)
+
         if id is None:
-            return APIClient.submit('POST', cls._resource_name, body,
+            return APIClient.submit('POST', cls._resource_name, api_version, body,
                                     attach_host_name=attach_host_name)
 
         path = '{resource_name}/{resource_id}'.format(
             resource_name=cls._resource_name,
             resource_id=id
         )
-        return APIClient.submit('POST', path, body, attach_host_name=attach_host_name)
+        return APIClient.submit('POST', path, api_version, body, attach_host_name=attach_host_name)
 
 
 class UpdatableAPIResource(object):
@@ -104,7 +110,9 @@ class UpdatableAPIResource(object):
             resource_name=cls._resource_name,
             resource_id=id
         )
-        return APIClient.submit('PUT', path, body, **params)
+        api_version = getattr(cls, '_api_version', _api_version)
+
+        return APIClient.submit('PUT', path, api_version, body, **params)
 
 
 class DeletableAPIResource(object):
@@ -125,7 +133,9 @@ class DeletableAPIResource(object):
             resource_name=cls._resource_name,
             resource_id=id
         )
-        return APIClient.submit('DELETE', path, **params)
+        api_version = getattr(cls, '_api_version', _api_version)
+
+        return APIClient.submit('DELETE', path, api_version, **params)
 
 
 class GetableAPIResource(object):
@@ -149,7 +159,9 @@ class GetableAPIResource(object):
             resource_name=cls._resource_name,
             resource_id=id
         )
-        return APIClient.submit('GET', path, **params)
+        api_version = getattr(cls, '_api_version', _api_version)
+
+        return APIClient.submit('GET', path, api_version, **params)
 
 
 class ListableAPIResource(object):
@@ -166,13 +178,16 @@ class ListableAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        return APIClient.submit('GET', cls._resource_name, **params)
+        api_version = getattr(cls, '_api_version', _api_version)
+
+        return APIClient.submit('GET', cls._resource_name, api_version, **params)
 
 
 class ListableAPISubResource(object):
     """
     Listable API Sub-Resource
     """
+
     @classmethod
     def get_items(cls, id, **params):
         """
@@ -186,18 +201,22 @@ class ListableAPISubResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
+
         path = '{resource_name}/{resource_id}/{sub_resource_name}'.format(
             resource_name=cls._resource_name,
             resource_id=id,
             sub_resource_name=cls._sub_resource_name
         )
-        return APIClient.submit('GET', path, **params)
+        api_version = getattr(cls, '_api_version', _api_version)
+
+        return APIClient.submit('GET', path, api_version, **params)
 
 
 class AddableAPISubResource(object):
     """
     Addable API Sub-Resource
     """
+
     @classmethod
     def add_items(cls, id, params=None, **body):
         """
@@ -222,13 +241,16 @@ class AddableAPISubResource(object):
             resource_id=id,
             sub_resource_name=cls._sub_resource_name
         )
-        return APIClient.submit('POST', path, body, **params)
+        api_version = getattr(cls, '_api_version', _api_version)
+
+        return APIClient.submit('POST', path, api_version, body, **params)
 
 
 class UpdatableAPISubResource(object):
     """
     Updatable API Sub-Resource
     """
+
     @classmethod
     def update_items(cls, id, params=None, **body):
         """
@@ -253,13 +275,16 @@ class UpdatableAPISubResource(object):
             resource_id=id,
             sub_resource_name=cls._sub_resource_name
         )
-        return APIClient.submit('PUT', path, body, **params)
+        api_version = getattr(cls, '_api_version', _api_version)
+
+        return APIClient.submit('PUT', path, api_version, body, **params)
 
 
 class DeletableAPISubResource(object):
     """
     Deletable API Sub-Resource
     """
+
     @classmethod
     def delete_items(cls, id, params=None, **body):
         """
@@ -284,7 +309,9 @@ class DeletableAPISubResource(object):
             resource_id=id,
             sub_resource_name=cls._sub_resource_name
         )
-        return APIClient.submit('DELETE', path, body, **params)
+        api_version = getattr(cls, '_api_version', _api_version)
+
+        return APIClient.submit('DELETE', path, api_version, body, **params)
 
 
 class SearchableAPIResource(object):
@@ -301,7 +328,9 @@ class SearchableAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        return APIClient.submit('GET', cls._resource_name, **params)
+        api_version = getattr(cls, '_api_version', _api_version)
+
+        return APIClient.submit('GET', cls._resource_name, api_version, **params)
 
 
 class ActionAPIResource(object):
@@ -333,19 +362,21 @@ class ActionAPIResource(object):
         if params is None:
             params = {}
 
+        api_version = getattr(cls, '_api_version', _api_version)
+
         if id is None:
             path = '{resource_name}/{action_name}'.format(
                 resource_name=cls._resource_name,
                 action_name=name
             )
-            return APIClient.submit(method, path, body, **params)
+        else:
+            path = '{resource_name}/{resource_id}/{action_name}'.format(
+                resource_name=cls._resource_name,
+                resource_id=id,
+                action_name=name
+            )
 
-        path = '{resource_name}/{resource_id}/{action_name}'.format(
-            resource_name=cls._resource_name,
-            resource_id=id,
-            action_name=name
-        )
-        return APIClient.submit(method, path, body, **params)
+        return APIClient.submit(method, path, api_version, body, **params)
 
     @classmethod
     def _trigger_action(cls, method, name, id=None, **body):
@@ -366,11 +397,12 @@ class ActionAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
+        api_version = getattr(cls, '_api_version', _api_version)
         if id is None:
-            return APIClient.submit(method, name, body)
+            return APIClient.submit(method, name, api_version, body)
 
         path = '{action_name}/{resource_id}'.format(
             action_name=name,
             resource_id=id
         )
-        return APIClient.submit(method, path, body)
+        return APIClient.submit(method, path, api_version, body)
