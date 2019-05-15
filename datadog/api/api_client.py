@@ -43,7 +43,7 @@ class APIClient(object):
         return cls._http_client
 
     @classmethod
-    def submit(cls, method, path, api_version=_api_version, body=None, attach_host_name=False,
+    def submit(cls, method, path, api_version=None, body=None, attach_host_name=False,
                response_formatter=None, error_formatter=None, **params):
         """
         Make an HTTP API request
@@ -53,6 +53,8 @@ class APIClient(object):
 
         :param path: API endpoint url
         :type path: url
+
+        :param api_version: The API version used
 
         :param body: dictionary to be sent in the body of the request
         :type body: dictionary
@@ -105,6 +107,10 @@ class APIClient(object):
             # If defined, make sure tags are defined as a comma-separated string
             if 'tags' in params and isinstance(params['tags'], list):
                 params['tags'] = ','.join(params['tags'])
+
+            # Check if the api_version is provided
+            if not api_version:
+                api_version = _api_version
 
             # Process the body, if necessary
             headers = {}

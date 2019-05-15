@@ -3,8 +3,6 @@ Datadog API resources.
 """
 # datadog
 
-from datadog.api import _api_version
-
 from datadog.api.api_client import APIClient
 
 
@@ -38,7 +36,7 @@ class CreateableAPIResource(object):
             params = {}
 
         path = cls._resource_name
-        api_version = getattr(cls, '_api_version', _api_version)
+        api_version = getattr(cls, '_api_version', None)
 
         if method == 'GET':
             return APIClient.submit('GET', path, api_version, **body)
@@ -73,7 +71,7 @@ class SendableAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        api_version = getattr(cls, '_api_version', _api_version)
+        api_version = getattr(cls, '_api_version', None)
 
         if id is None:
             return APIClient.submit('POST', cls._resource_name, api_version, body,
@@ -110,7 +108,7 @@ class UpdatableAPIResource(object):
             resource_name=cls._resource_name,
             resource_id=id
         )
-        api_version = getattr(cls, '_api_version', _api_version)
+        api_version = getattr(cls, '_api_version', None)
 
         return APIClient.submit('PUT', path, api_version, body, **params)
 
@@ -133,7 +131,7 @@ class DeletableAPIResource(object):
             resource_name=cls._resource_name,
             resource_id=id
         )
-        api_version = getattr(cls, '_api_version', _api_version)
+        api_version = getattr(cls, '_api_version', None)
 
         return APIClient.submit('DELETE', path, api_version, **params)
 
@@ -159,7 +157,7 @@ class GetableAPIResource(object):
             resource_name=cls._resource_name,
             resource_id=id
         )
-        api_version = getattr(cls, '_api_version', _api_version)
+        api_version = getattr(cls, '_api_version', None)
 
         return APIClient.submit('GET', path, api_version, **params)
 
@@ -178,7 +176,7 @@ class ListableAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        api_version = getattr(cls, '_api_version', _api_version)
+        api_version = getattr(cls, '_api_version', None)
 
         return APIClient.submit('GET', cls._resource_name, api_version, **params)
 
@@ -207,7 +205,7 @@ class ListableAPISubResource(object):
             resource_id=id,
             sub_resource_name=cls._sub_resource_name
         )
-        api_version = getattr(cls, '_api_version', _api_version)
+        api_version = getattr(cls, '_api_version', None)
 
         return APIClient.submit('GET', path, api_version, **params)
 
@@ -241,7 +239,7 @@ class AddableAPISubResource(object):
             resource_id=id,
             sub_resource_name=cls._sub_resource_name
         )
-        api_version = getattr(cls, '_api_version', _api_version)
+        api_version = getattr(cls, '_api_version', None)
 
         return APIClient.submit('POST', path, api_version, body, **params)
 
@@ -275,7 +273,7 @@ class UpdatableAPISubResource(object):
             resource_id=id,
             sub_resource_name=cls._sub_resource_name
         )
-        api_version = getattr(cls, '_api_version', _api_version)
+        api_version = getattr(cls, '_api_version', None)
 
         return APIClient.submit('PUT', path, api_version, body, **params)
 
@@ -309,7 +307,7 @@ class DeletableAPISubResource(object):
             resource_id=id,
             sub_resource_name=cls._sub_resource_name
         )
-        api_version = getattr(cls, '_api_version', _api_version)
+        api_version = getattr(cls, '_api_version', None)
 
         return APIClient.submit('DELETE', path, api_version, body, **params)
 
@@ -328,7 +326,7 @@ class SearchableAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        api_version = getattr(cls, '_api_version', _api_version)
+        api_version = getattr(cls, '_api_version', None)
 
         return APIClient.submit('GET', cls._resource_name, api_version, **params)
 
@@ -362,7 +360,7 @@ class ActionAPIResource(object):
         if params is None:
             params = {}
 
-        api_version = getattr(cls, '_api_version', _api_version)
+        api_version = getattr(cls, '_api_version', None)
 
         if id is None:
             path = '{resource_name}/{action_name}'.format(
@@ -397,7 +395,7 @@ class ActionAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        api_version = getattr(cls, '_api_version', _api_version)
+        api_version = getattr(cls, '_api_version', None)
         if id is None:
             return APIClient.submit(method, name, api_version, body)
 

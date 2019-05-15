@@ -93,8 +93,8 @@ class DashboardListClient(object):
         add_dashboards_v2_parser.add_argument(
             'dashboards',
             help='A JSON list of dashboard dicts, e.g. ' +
-            '[{"type": "custom_timeboard", "id": 1234}, ' +
-            '{"type": "custom_screenboard", "id": 123}]'
+            '[{"type": "custom_timeboard", "id": "ewc-a4f-8ps"}, ' +
+            '{"type": "custom_screenboard", "id": "kwj-3t3-d3m"}]'
         )
         add_dashboards_v2_parser.set_defaults(func=cls._add_dashboards_v2)
 
@@ -123,8 +123,8 @@ class DashboardListClient(object):
         update_dashboards_v2_parser.add_argument(
             'dashboards',
             help='A JSON list of dashboard dicts, e.g. ' +
-            '[{"type": "custom_timeboard", "id": 1234}, ' +
-            '{"type": "custom_screenboard", "id": 123}]'
+            '[{"type": "custom_timeboard", "id": "ewc-a4f-8ps"}, ' +
+            '{"type": "custom_screenboard", "id": "kwj-3t3-d3m"}]'
         )
         update_dashboards_v2_parser.set_defaults(func=cls._update_dashboards_v2)
 
@@ -153,8 +153,8 @@ class DashboardListClient(object):
         delete_dashboards_v2_parser.add_argument(
             'dashboards',
             help='A JSON list of dashboard dicts, e.g. ' +
-            '[{"type": "custom_timeboard", "id": 1234}, ' +
-            '{"type": "custom_screenboard", "id": 123}]'
+            '[{"type": "custom_timeboard", "id": "ewc-a4f-8ps"}, ' +
+            '{"type": "custom_screenboard", "id": "kwj-3t3-d3m"}]'
         )
         delete_dashboards_v2_parser.set_defaults(func=cls._delete_dashboards_v2)
 
