@@ -27,7 +27,7 @@ API_HOST = os.environ.get('DATADOG_HOST')
 FAKE_PROXY = {
     "https": "http://user:pass@10.10.1.10:3128/",
 }
-RATE_LIMIT_HEADERS = ['X-RateLimit-Limit': '1500', 'X-RateLimit-Period': '3600', 'X-RateLimit-Reset', 'X-RateLimit-Remaining']
+RATE_LIMIT_HEADERS = ['X-RateLimit-Limit', 'X-RateLimit-Period', 'X-RateLimit-Reset', 'X-RateLimit-Remaining']
 
 
 class TestDatadog(unittest.TestCase):
