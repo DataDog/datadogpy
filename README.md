@@ -70,3 +70,18 @@ stats.increment('home.page.hits')
 Thread Safety
 -------------
 `DogStatsD` and `ThreadStats` are thread-safe.
+
+Origin detection over UDP
+-------------
+Origin detection is a method to detect which pod `DogStatsD` packets are coming from in order to add the pod's tags to the tag list.
+The `DogStatsD` client attaches an internal tag, `entity_id`. The value of this tag is the content of the `DD_ENTITY_ID` environment variable if found, which is the pod’s UID.
+This tag will be used by the Datadog Agent to insert container tags to the metrics. You should only `append` to the `constant_tags` list to avoid overwriting this global tag.
+
+To enable origin detection over UDP, add the following lines to your application manifest
+```yaml
+env:
+  - name: DD_ENTITY_ID
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.uid
+```
