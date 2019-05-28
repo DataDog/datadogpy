@@ -54,7 +54,7 @@ class OutputReader(threading.Thread):
         '''
         threading.Thread.__init__(self)
         self.daemon = True
-        self._out_content = u""
+        self._out_content = ""
         self._out = proc_out
         self._fwd_out = fwd_out
 
@@ -66,7 +66,6 @@ class OutputReader(threading.Thread):
         for line in iter(self._out.readline, b''):
             if self._fwd_out is not None:
                 self._fwd_out.write(line)
-            line = line.decode('utf-8')
             self._out_content += line
         self._out.close()
 
@@ -188,17 +187,17 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
 
     if stdout:
         fmt_stdout = u"**>>>> STDOUT <<<<**\n```\n{stdout} \n```\n".format(
-            stdout=trim_text(stdout, max_length)
+            stdout=trim_text(stdout.decode("utf-8", "replace"), max_length)
         )
 
     if stderr:
         fmt_stderr = u"**>>>> STDERR <<<<**\n```\n{stderr} \n```\n".format(
-            stderr=trim_text(stderr, max_length)
+            stderr=trim_text(stderr.decode("utf-8", "replace"), max_length)
         )
 
     if notifications:
         fmt_notifications = u"**>>>> NOTIFICATIONS <<<<**\n\n {notifications}\n".format(
-            notifications=notifications
+            notifications=notifications.decode("utf-8", "replace")
         )
 
     return \
