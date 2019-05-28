@@ -104,7 +104,7 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout,
     stdout = ''
     stderr = ''
     try:
-        proc = subprocess.Popen(u' '.join(cmd), stdout=subprocess.PIPE,
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, shell=True)
     except Exception:
         print >> sys.stderr, u"Failed to execute %s" % (repr(cmd))
@@ -210,7 +210,7 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
         u"{stderr}" \
         u"{notifications}" \
         u"%%%\n".format(
-            command=u" ".join(cmd),
+            command=cmd,
             returncode=returncode,
             stdout=fmt_stdout,
             stderr=fmt_stderr,
@@ -263,9 +263,7 @@ returned (the command outputs remains buffered in dogwrap meanwhile)")
 
     options, args = parser.parse_args()
 
-    cmd = []
-    for part in args:
-        cmd.extend(part.split(' '))
+    cmd = " ".join(args).decode("utf-8")
     # If silent is checked we force the outputs to be buffered (and therefore
     # not forwarded to the Terminal streams) and we just avoid printing the
     # buffers at the end
