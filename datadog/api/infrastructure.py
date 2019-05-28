@@ -12,7 +12,7 @@ class Infrastructure(SearchableAPIResource):
         """
         Search for entities in Datadog.
 
-        :param q: a query to serch for host and metrics
+        :param q: a query to search for host and metrics
         :type q: string query
 
         :returns: Dictionary representing the API's JSON response
