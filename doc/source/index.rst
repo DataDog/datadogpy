@@ -44,6 +44,10 @@ Datadog.api client requires to run :mod:`datadog` `initialize` method first.
     :members:
     :inherited-members:
 
+.. autoclass:: datadog.api.Hosts
+    :members:
+    :inherited-members:
+
 .. autoclass:: datadog.api.Infrastructure
     :members:
     :inherited-members:
