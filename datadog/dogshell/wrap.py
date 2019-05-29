@@ -100,11 +100,10 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout,
     '''
     start_time = time.time()
     returncode = -1
-    stdout = ''
-    stderr = ''
+    stdout = b''
+    stderr = b''
     try:
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE, shell=True)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     except Exception:
         print(u"Failed to execute %s" % (repr(cmd)), file=sys.stderr)
         raise
