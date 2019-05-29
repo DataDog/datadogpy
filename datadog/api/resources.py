@@ -373,7 +373,9 @@ class ActionAPIResource(object):
                 resource_id=id,
                 action_name=name
             )
-
+        if method == "GET":
+            # Do not add body to GET requests, it causes 400 Bad request responses on EU site
+            body = None
         return APIClient.submit(method, path, api_version, body, **params)
 
     @classmethod
@@ -403,4 +405,7 @@ class ActionAPIResource(object):
             action_name=name,
             resource_id=id
         )
+        if method == "GET":
+            # Do not add body to GET requests, it causes 400 Bad request responses on EU site
+            body = None
         return APIClient.submit(method, path, api_version, body)
