@@ -173,7 +173,7 @@ class TestInitialization(DatadogAPINoInitialization):
             self.assertEquals(getattr(api, attr_name), expected_value)
 
         @preserve_environ_datadog
-        def test_api_params_from_params(env_name, parameter, attr_name, value ):
+        def test_api_params_from_params(env_name, parameter, attr_name, value):
             """
             Unset env_name environment variable
             Initialize API with parameter=value
@@ -221,6 +221,8 @@ class TestResources(DatadogAPIWithInitialization):
         MyGetable.get(getable_object_id, otherparam="val")
         self.request_called_with('GET', "host/api/v1/getables/" + str(getable_object_id),
                                  params={'otherparam': "val"})
+        _, kwargs = self.request_mock.call_args()
+        self.assertIsNone(kwargs["data"])
 
     def test_listable(self):
         """
@@ -228,6 +230,8 @@ class TestResources(DatadogAPIWithInitialization):
         """
         MyListable.get_all(otherparam="val")
         self.request_called_with('GET', "host/api/v1/listables", params={'otherparam': "val"})
+        _, kwargs = self.request_mock.call_args()
+        self.assertIsNone(kwargs["data"])
 
     def test_updatable(self):
         """
@@ -258,6 +262,8 @@ class TestResources(DatadogAPIWithInitialization):
             'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
             params={'otherparam': "val"}
         )
+        _, kwargs = self.request_mock.call_args()
+        self.assertIsNone(kwargs["data"])
 
     def test_addable_sub_resources(self):
         """
@@ -341,9 +347,10 @@ class TestResources(DatadogAPIWithInitialization):
         self.request_called_with(
             'GET',
             'host/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
-            params={'param1': 'val1', 'param2': 'val2'},
-            data={}
+            params={'param1': 'val1', 'param2': 'val2'}
         )
+        _, kwargs = self.request_mock.call_args()
+        self.assertIsNone(kwargs["data"])
 
         MyActionable.trigger_action(
             'POST',
@@ -356,6 +363,18 @@ class TestResources(DatadogAPIWithInitialization):
             'host/api/v1/actionname/{0}'.format(actionable_object_id),
             data={'mydata': "val"}
         )
+
+        MyActionable.trigger_action(
+            'GET',
+            'actionname',
+            id=actionable_object_id,
+        )
+        self.request_called_with(
+            'GET',
+            'host/api/v1/actionname/{0}'.format(actionable_object_id)
+        )
+        _, kwargs = self.request_mock.call_args()
+        self.assertIsNone(kwargs["data"])
 
 
 class TestMetricResource(DatadogAPIWithInitialization):
@@ -475,6 +494,7 @@ class TestMetricResource(DatadogAPIWithInitialization):
         for point in supported_data_types:
             serie = dict(metric='metric.numerical', points=point)
             self.submit_and_assess_metric_payload(serie)
+
 
 class TestServiceCheckResource(DatadogAPIWithInitialization):
 

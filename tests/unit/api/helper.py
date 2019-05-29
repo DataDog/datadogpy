@@ -143,8 +143,8 @@ class DatadogAPITestCase(unittest.TestCase):
 
     def request_called_with(self, method, url, data=None, params=None):
         (req_method, req_url), others = self.request_mock.call_args()
-        self.assertEquals(method, req_method, req_method)
-        self.assertEquals(url, req_url, req_url)
+        self.assertEqual(method, req_method, req_method)
+        self.assertEqual(url, req_url, req_url)
 
         if data:
             self.assertIn('data', others)
@@ -155,7 +155,7 @@ class DatadogAPITestCase(unittest.TestCase):
             self.assertIn('params', others)
             for (k, v) in iteritems(params):
                 self.assertIn(k, others['params'], others['params'])
-                self.assertEquals(v, others['params'][k])
+                self.assertEqual(v, others['params'][k])
 
     def assertIn(self, first, second, msg=None):
         msg = msg or "{0} not in {1}".format(first, second)
