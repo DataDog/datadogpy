@@ -27,9 +27,9 @@ class TestDogwrap(unittest.TestCase):
         # Only cmd is already unicode, the rest is decoded in the function
         cmd = u"yö dudes"
         returncode = 0
-        stdout = "sùp\xaa"
-        stderr = "dàwg\xaa"
-        notifications = "@mé\xaa"
+        stdout = b"s\xc3\xb9p\xaa"
+        stderr = b"d\xc3\xa0wg\xaa"
+        notifications = b"@m\xc3\xa9\xaa"
         expected_body = u"%%%\n" \
             u"**>>>> CMD <<<<**\n```\nyö dudes \n```\n" \
             u"**>>>> EXIT CODE <<<<**\n\n 0\n\n\n" \
