@@ -3,7 +3,7 @@ import unittest
 import json
 
 # 3p
-from mock import patch, Mock
+from mock import Mock
 import requests
 
 # datadog
@@ -85,21 +85,26 @@ class MyListable(ListableAPIResource):
 class MyDeletable(DeletableAPIResource):
     _resource_name = 'deletables'
 
+
 class MyListableSubResource(ListableAPISubResource):
     _resource_name = 'resource_name'
     _sub_resource_name = 'sub_resource_name'
+
 
 class MyAddableSubResource(AddableAPISubResource):
     _resource_name = 'resource_name'
     _sub_resource_name = 'sub_resource_name'
 
+
 class MyUpdatableSubResource(UpdatableAPISubResource):
     _resource_name = 'resource_name'
     _sub_resource_name = 'sub_resource_name'
 
+
 class MyDeletableSubResource(DeletableAPISubResource):
     _resource_name = 'resource_name'
     _sub_resource_name = 'sub_resource_name'
+
 
 class MyActionable(ActionAPIResource):
     _resource_name = 'actionables'

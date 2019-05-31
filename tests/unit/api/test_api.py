@@ -73,7 +73,7 @@ class TestInitialization(DatadogAPINoInitialization):
         # Finally, initialize with an API key
         initialize(api_key=API_KEY, api_host=API_HOST)
         MyCreatable.create()
-        self.assertEquals(self.request_mock.call_count(), 1)
+        self.assertEqual(self.request_mock.call_count(), 1)
 
     @mock.patch('datadog.util.config.get_config_path')
     def test_get_hostname(self, mock_config_path):
@@ -93,7 +93,7 @@ class TestInitialization(DatadogAPINoInitialization):
         mock_config_path.return_value = tmpfilepath
 
         initialize()
-        self.assertEquals(api._host_name, HOST_NAME, api._host_name)
+        self.assertEqual(api._host_name, HOST_NAME, api._host_name)
 
     def test_request_parameters(self):
         """
@@ -111,12 +111,12 @@ class TestInitialization(DatadogAPINoInitialization):
         self.assertIn('params', options)
 
         self.assertIn('api_key', options['params'])
-        self.assertEquals(options['params']['api_key'], API_KEY)
+        self.assertEqual(options['params']['api_key'], API_KEY)
         self.assertIn('application_key', options['params'])
-        self.assertEquals(options['params']['application_key'], APP_KEY)
+        self.assertEqual(options['params']['application_key'], APP_KEY)
 
         self.assertIn('headers', options)
-        self.assertEquals(options['headers'], {'Content-Type': 'application/json'})
+        self.assertEqual(options['headers'], {'Content-Type': 'application/json'})
 
     def test_initialize_options(self):
         """
@@ -132,10 +132,10 @@ class TestInitialization(DatadogAPINoInitialization):
 
         # Assert `requests` parameters
         self.assertIn('proxies', options)
-        self.assertEquals(options['proxies'], FAKE_PROXY)
+        self.assertEqual(options['proxies'], FAKE_PROXY)
 
         self.assertIn('verify', options)
-        self.assertEquals(options['verify'], False)
+        self.assertEqual(options['verify'], False)
 
         # Arm the `requests` to raise
         self.arm_requests_to_raise()
@@ -159,7 +159,7 @@ class TestInitialization(DatadogAPINoInitialization):
             """
             os.environ[env_name] = env_value
             initialize()
-            self.assertEquals(getattr(api, attr_name), env_value)
+            self.assertEqual(getattr(api, attr_name), env_value)
 
         @preserve_environ_datadog
         def test_api_params_default(env_name, attr_name, expected_value):
@@ -170,7 +170,7 @@ class TestInitialization(DatadogAPINoInitialization):
             if os.environ.get(env_name):
                 del os.environ[env_name]
             initialize()
-            self.assertEquals(getattr(api, attr_name), expected_value)
+            self.assertEqual(getattr(api, attr_name), expected_value)
 
         @preserve_environ_datadog
         def test_api_params_from_params(env_name, parameter, attr_name, value):
@@ -182,7 +182,7 @@ class TestInitialization(DatadogAPINoInitialization):
             if os.environ.get(env_name):
                 del os.environ[env_name]
             initialize(api_host='http://localhost')
-            self.assertEquals(api._api_host, 'http://localhost')
+            self.assertEqual(api._api_host, 'http://localhost')
 
         # Default values
         test_api_params_default("DATADOG_API_KEY", "_api_key", None)
@@ -379,63 +379,69 @@ class TestResources(DatadogAPIWithInitialization):
 
 class TestMetricResource(DatadogAPIWithInitialization):
 
-    def submit_and_assess_metric_payload(self, serie):
+    def submit_and_assess_metric_payload(self, serie, attach_host_name=True):
         """
         Helper to assess the metric payload format.
         """
         now = time()
 
         if isinstance(serie, dict):
-            Metric.send(**deepcopy(serie))
+            Metric.send(attach_host_name=attach_host_name, **deepcopy(serie))
             serie = [serie]
         else:
-            Metric.send(deepcopy(serie))
+            Metric.send(deepcopy(serie), attach_host_name=attach_host_name)
 
         payload = self.get_request_data()
 
         for i, metric in enumerate(payload['series']):
-            self.assertEquals(set(metric.keys()), set(['metric', 'points', 'host']))
+            if attach_host_name:
+                self.assertEqual(set(metric.keys()), set(['metric', 'points', 'host']))
+                self.assertEqual(metric['host'], api._host_name)
+            else:
+                self.assertEqual(set(metric.keys()), set(['metric', 'points']))
 
-            self.assertEquals(metric['metric'], serie[i]['metric'])
-            self.assertEquals(metric['host'], api._host_name)
+            self.assertEqual(metric['metric'], serie[i]['metric'])
 
             # points is a list of 1 point
             self.assertTrue(isinstance(metric['points'], list))
-            self.assertEquals(len(metric['points']), 1)
+            self.assertEqual(len(metric['points']), 1)
             # it consists of a [time, value] pair
-            self.assertEquals(len(metric['points'][0]), 2)
+            self.assertEqual(len(metric['points'][0]), 2)
             # its value == value we sent
-            self.assertEquals(metric['points'][0][1], float(serie[i]['points']))
+            self.assertEqual(metric['points'][0][1], float(serie[i]['points']))
             # it's time not so far from current time
             assert now - 1 < metric['points'][0][0] < now + 1
 
-    def submit_and_assess_dist_payload(self, serie):
+    def submit_and_assess_dist_payload(self, serie, attach_host_name=True):
         """
         Helper to assess the metric payload format.
         """
         now = time()
 
         if isinstance(serie, dict):
-            Distribution.send(**deepcopy(serie))
+            Distribution.send(attach_host_name=attach_host_name, **deepcopy(serie))
             serie = [serie]
         else:
-            Distribution.send(deepcopy(serie))
+            Distribution.send(deepcopy(serie), attach_host_name=attach_host_name)
 
         payload = self.get_request_data()
 
         for i, metric in enumerate(payload['series']):
-            self.assertEquals(set(metric.keys()), set(['metric', 'points', 'host']))
+            if attach_host_name:
+                self.assertEqual(set(metric.keys()), set(['metric', 'points', 'host']))
+                self.assertEqual(metric['host'], api._host_name)
+            else:
+                self.assertEqual(set(metric.keys()), set(['metric', 'points']))
 
-            self.assertEquals(metric['metric'], serie[i]['metric'])
-            self.assertEquals(metric['host'], api._host_name)
+            self.assertEqual(metric['metric'], serie[i]['metric'])
 
             # points is a list of 1 point
             self.assertTrue(isinstance(metric['points'], list))
-            self.assertEquals(len(metric['points']), 1)
+            self.assertEqual(len(metric['points']), 1)
             # it consists of a [time, value] pair
-            self.assertEquals(len(metric['points'][0]), 2)
+            self.assertEqual(len(metric['points'][0]), 2)
             # its value == value we sent
-            self.assertEquals(metric['points'][0][1], serie[i]['points'][0][1])
+            self.assertEqual(metric['points'][0][1], serie[i]['points'][0][1])
             # it's time not so far from current time
             assert now - 1 < metric['points'][0][0] < now + 1
 
@@ -464,6 +470,15 @@ class TestMetricResource(DatadogAPIWithInitialization):
                  dict(metric='metric.2', points=19)]
         self.submit_and_assess_metric_payload(serie)
 
+        # Single point no hostname
+        serie = dict(metric='metric.1', points=13)
+        self.submit_and_assess_metric_payload(serie, attach_host_name=False)
+
+        # Multiple point no hostname
+        serie = [dict(metric='metric.1', points=13),
+                 dict(metric='metric.2', points=19)]
+        self.submit_and_assess_metric_payload(serie, attach_host_name=False)
+
     def test_dist_points_submission(self):
         """
         Assess the distribution data payload format, when submitting a single or multiple points.
@@ -476,6 +491,15 @@ class TestMetricResource(DatadogAPIWithInitialization):
         serie = [dict(metric='metric.1', points=[[time(), [13]]]),
                  dict(metric='metric.2', points=[[time(), [19]]])]
         self.submit_and_assess_dist_payload(serie)
+
+        # Single point no hostname
+        serie = dict(metric='metric.1', points=[[time(), [13]]])
+        self.submit_and_assess_dist_payload(serie, attach_host_name=False)
+
+        # Multiple point no hostname
+        serie = [dict(metric='metric.1', points=[[time(), [13]]]),
+                 dict(metric='metric.2', points=[[time(), [19]]])]
+        self.submit_and_assess_dist_payload(serie, attach_host_name=False)
 
     def test_data_type_support(self):
         """
