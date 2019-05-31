@@ -406,7 +406,6 @@ class TestMetricResource(DatadogAPIWithInitialization):
             Distribution.send(deepcopy(serie), attach_host_name=attach_host_name)
 
         payload = self.get_request_data()
-        print payload
 
         for i, metric in enumerate(payload['series']):
             if attach_host_name:
