@@ -8,7 +8,7 @@ class Distribution(SendableAPIResource):
     _resource_name = 'distribution_points'
 
     @classmethod
-    def send(cls, distributions=None, **distribution):
+    def send(cls, distributions=None, attach_host_name=True, **distribution):
         """
         Submit a distribution metric or a list of distribution metrics to the distribution metric
         API
@@ -33,4 +33,4 @@ class Distribution(SendableAPIResource):
             # One distribution is sent
             distribution['points'] = format_points(distribution['points'])
             series_dict = {"series": [distribution]}
-        return super(Distribution, cls).send(attach_host_name=True, **series_dict)
+        return super(Distribution, cls).send(attach_host_name=attach_host_name, **series_dict)

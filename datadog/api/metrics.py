@@ -47,7 +47,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
             metric['type'] = metric.pop('metric_type')
 
     @classmethod
-    def send(cls, metrics=None, **single_metric):
+    def send(cls, metrics=None, attach_host_name=True, **single_metric):
         """
         Submit a metric or a list of metrics to the metric API
 
@@ -88,7 +88,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
         except KeyError:
             raise KeyError("'points' parameter is required")
 
-        return super(Metric, cls).send(attach_host_name=True, **metrics_dict)
+        return super(Metric, cls).send(attach_host_name=attach_host_name, **metrics_dict)
 
     @classmethod
     def query(cls, **params):

@@ -11,7 +11,7 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, De
     _timestamp_keys = set(['start', 'end'])
 
     @classmethod
-    def create(cls, **params):
+    def create(cls, attach_host_name=True, **params):
         """
         Post an event.
 
@@ -58,7 +58,7 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, De
 
         >>> api.Event.create(title=title, text=text, tags=tags)
         """
-        return super(Event, cls).create(attach_host_name=True, **params)
+        return super(Event, cls).create(attach_host_name=attach_host_name, **params)
 
     @classmethod
     def query(cls, **params):
