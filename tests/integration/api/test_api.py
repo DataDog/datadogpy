@@ -89,8 +89,8 @@ class TestDatadog(unittest.TestCase):
         now_event = dog.Event.get(now_event_id)
         before_event = dog.Event.get(before_event_id)
 
-        self.assertEquals(now_event['event']['text'], now_message)
-        self.assertEquals(before_event['event']['text'], before_message)
+        self.assertEqual(now_event['event']['text'], now_message)
+        self.assertEqual(before_event['event']['text'], before_message)
 
         event_id = dog.Event.create(title='test host and device',
                                     text='test host and device',
@@ -98,7 +98,7 @@ class TestDatadog(unittest.TestCase):
         time.sleep(self.wait_time)
         event = dog.Event.get(event_id)
 
-        self.assertEquals(event['event']['host'], self.host_name)
+        self.assertEqual(event['event']['host'], self.host_name)
 
         event_id = dog.Event.create(title='test event tags',
                                     text='test event tags',
@@ -106,8 +106,18 @@ class TestDatadog(unittest.TestCase):
         time.sleep(self.wait_time)
         event = dog.Event.get(event_id)
 
-        assert 'test-tag-1' in event['event']['tags']
-        assert 'test-tag-2' in event['event']['tags']
+        self.assertIn('test-tag-1', event['event']['tags'])
+        self.assertIn('test-tag-2', event['event']['tags'])
+
+        event_id = dog.Event.create(
+            title='test no hostname',
+            text='test no hostname',
+            attach_host_name=False
+        )['event']['id']
+        time.sleep(self.wait_time)
+        event = dog.Event.get(event_id)
+
+        self.assertNotIn("host", event["event"]["host"])
 
     def test_aggregate_events(self):
         now_ts = int(time.time())
@@ -125,8 +135,8 @@ class TestDatadog(unittest.TestCase):
         event1 = dog.Event.get(event1_id)
         event2 = dog.Event.get(event2_id)
 
-        self.assertEquals(msg_1, event1['event']['text'])
-        self.assertEquals(msg_2, event2['event']['text'])
+        self.assertEqual(msg_1, event1['event']['text'])
+        self.assertEqual(msg_2, event2['event']['text'])
 
         # TODO FIXME: Need the aggregation_id to check if they are attached to the
         # same aggregate
@@ -136,7 +146,7 @@ class TestDatadog(unittest.TestCase):
         event_id = dog.Event.create(title="Testing git commits", text="""$$$
             eac54655 *   Merge pull request #2 from DataDog/alq-add-arg-validation (alq@datadoghq.com)
             |\
-            760735ef | * origin/alq-add-arg-validation Simple typechecking between metric and metrics (matt@datadoghq.com)
+            760735ef | * origin/alq-add-arg-validation Simple typecheck between metric and metrics (matt@datadoghq.com)
             |/
             f7a5a23d * missed version number in docs (matt@datadoghq.com)
             $$$""", event_type="commit", source_type_name="git", event_object="0xdeadbeef")['event']['id']
@@ -144,7 +154,7 @@ class TestDatadog(unittest.TestCase):
         time.sleep(self.wait_time)
         event = dog.Event.get(event_id)
 
-        self.assertEquals(event['event']['title'], "Testing git commits")
+        self.assertEqual(event['event']['title'], "Testing git commits")
 
     def test_comments(self):
         now = datetime.datetime.now()
@@ -176,7 +186,7 @@ class TestDatadog(unittest.TestCase):
         time.sleep(self.wait_time)
         try:
             dog.Event.get(comment_id)
-        except:
+        except Exception:
             pass
         else:
             assert False
@@ -301,7 +311,7 @@ class TestDatadog(unittest.TestCase):
 
         try:
             dog.get(timeboard_id)
-        except:
+        except Exception:
             pass
         else:
             # the previous get *should* throw an exception
@@ -365,7 +375,7 @@ class TestDatadog(unittest.TestCase):
         monitor = dog.Monitor.get(monitor_id)
         time.sleep(self.wait_time)
         assert monitor['query'] == query, monitor['query']
-        assert monitor['options']['notify_no_data'] == False, monitor['options']['notify_no_data']
+        assert monitor['options']['notify_no_data'] is False, monitor['options']['notify_no_data']
 
         options = {
             "notify_no_data": True,
@@ -375,14 +385,14 @@ class TestDatadog(unittest.TestCase):
         dog.Monitor.update(monitor_id, query=query, options=options, timeout_h=1)
         monitor = dog.Monitor.get(monitor_id)
         assert monitor['query'] == query, monitor['query']
-        assert monitor['options']['notify_no_data'] == True, monitor['options']['notify_no_data']
+        assert monitor['options']['notify_no_data'] is True, monitor['options']['notify_no_data']
         assert monitor['options']['no_data_timeframe'] == 20, monitor['options']['no_data_timeframe']
         assert monitor['options']['silenced'] == {"*": None}, monitor['options']['silenced']
 
         dog.Monitor.delete(monitor_id)
         try:
             dog.Monitor.delete(monitor_id)
-        except:
+        except Exception:
             pass
         else:
             assert False, 'monitor not deleted'
@@ -546,7 +556,7 @@ class TestDatadog(unittest.TestCase):
 
         get_all_res = dog.Screenboard.get_all()['screenboards']
         created = [s for s in get_all_res if s['id'] == create_res['id']]
-        self.assertEquals(len(created), 1)
+        self.assertEqual(len(created), 1)
 
         update_res = dog.Screenboard.update(get_res['id'], **updated_board)
         _compare_screenboard(update_res, updated_board)
@@ -559,7 +569,7 @@ class TestDatadog(unittest.TestCase):
         response = requests.get(public_url)
         assert response.status_code == 200
 
-        revoke_res = dog.Screenboard.revoke(get_res['id'])
+        dog.Screenboard.revoke(get_res['id'])
         response = requests.get(public_url)
         assert response.status_code == 404
 
@@ -907,14 +917,14 @@ class TestDatadog(unittest.TestCase):
         # the user might already exist
         try:
             u = dog.User.create(handle=handle, name=name)
-        except ApiError as e:
+        except ApiError:
             pass
 
         # reset user to original status
         u = dog.User.update(handle, email=handle, name=name, disabled=False)
         assert u['user']['handle'] == handle
         assert u['user']['name'] == name
-        assert u['user']['disabled'] == False
+        assert u['user']['disabled'] is False
 
         # test get
         u = dog.User.get(handle)
@@ -930,11 +940,12 @@ class TestDatadog(unittest.TestCase):
         # test disable user
         dog.User.delete(handle)
         u = dog.User.get(handle)
-        assert u['user']['disabled'] == True
+        assert u['user']['disabled'] is True
 
         # test get all users
         u = dog.User.get_all()
         assert len(u['users']) >= 1
+
 
 if __name__ == '__main__':
     unittest.main()
