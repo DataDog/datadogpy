@@ -18,6 +18,7 @@ dogwrap -n test-job -k $API_KEY --timeout=1 "sleep 3"
 
 '''
 # stdlib
+from __future__ import print_function
 import optparse
 import subprocess
 import sys
@@ -54,7 +55,7 @@ class OutputReader(threading.Thread):
         '''
         threading.Thread.__init__(self)
         self.daemon = True
-        self._out_content = u""
+        self._out_content = b""
         self._out = proc_out
         self._fwd_out = fwd_out
 
@@ -65,9 +66,7 @@ class OutputReader(threading.Thread):
         '''
         for line in iter(self._out.readline, b''):
             if self._fwd_out is not None:
-                fwd_out_encoding = self._fwd_out.encoding or 'UTF-8'
-                self._fwd_out.write(line.decode(fwd_out_encoding, 'ignore'))
-            line = line.decode('utf-8')
+                self._fwd_out.write(line)
             self._out_content += line
         self._out.close()
 
@@ -101,13 +100,12 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout,
     '''
     start_time = time.time()
     returncode = -1
-    stdout = ''
-    stderr = ''
+    stdout = b''
+    stderr = b''
     try:
-        proc = subprocess.Popen(u' '.join(cmd), stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE, shell=True)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     except Exception:
-        print >> sys.stderr, u"Failed to execute %s" % (repr(cmd))
+        print(u"Failed to execute %s" % (repr(cmd)), file=sys.stderr)
         raise
     try:
         # Let's that the threads collecting the output from the command in the
@@ -135,12 +133,12 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout,
             proc.terminate()
             sigterm_start = time.time()
             try:
-                print >> sys.stderr, "Command timed out after %.2fs, killing with SIGTERM" \
+                print("Command timed out after %.2fs, killing with SIGTERM", file=sys.stderr) \
                     % (time.time() - start_time)
                 poll_proc(proc, proc_poll_interval, sigterm_timeout)
                 returncode = Timeout
             except Timeout:
-                print >> sys.stderr, "SIGTERM timeout failed after %.2fs, killing with SIGKILL" \
+                print("SIGTERM timeout failed after %.2fs, killing with SIGKILL", file=sys.stderr) \
                     % (time.time() - sigterm_start)
                 proc.kill()
                 poll_proc(proc, proc_poll_interval, sigkill_timeout)
@@ -189,17 +187,17 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
 
     if stdout:
         fmt_stdout = u"**>>>> STDOUT <<<<**\n```\n{stdout} \n```\n".format(
-            stdout=trim_text(stdout, max_length)
+            stdout=trim_text(stdout.decode("utf-8", "replace"), max_length)
         )
 
     if stderr:
         fmt_stderr = u"**>>>> STDERR <<<<**\n```\n{stderr} \n```\n".format(
-            stderr=trim_text(stderr, max_length)
+            stderr=trim_text(stderr.decode("utf-8", "replace"), max_length)
         )
 
     if notifications:
         fmt_notifications = u"**>>>> NOTIFICATIONS <<<<**\n\n {notifications}\n".format(
-            notifications=notifications
+            notifications=notifications.decode("utf-8", "replace")
         )
 
     return \
@@ -210,7 +208,7 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
         u"{stderr}" \
         u"{notifications}" \
         u"%%%\n".format(
-            command=u" ".join(cmd),
+            command=cmd,
             returncode=returncode,
             stdout=fmt_stdout,
             stderr=fmt_stderr,
@@ -263,9 +261,7 @@ returned (the command outputs remains buffered in dogwrap meanwhile)")
 
     options, args = parser.parse_args()
 
-    cmd = []
-    for part in args:
-        cmd.extend(part.split(' '))
+    cmd = b" ".join(args).decode("utf-8")
     # If silent is checked we force the outputs to be buffered (and therefore
     # not forwarded to the Terminal streams) and we just avoid printing the
     # buffers at the end
@@ -314,8 +310,8 @@ returned (the command outputs remains buffered in dogwrap meanwhile)")
     }
 
     if options.buffer_outs:
-        print >> sys.stderr, stderr.strip().encode('utf8')
-        print >> sys.stdout, stdout.strip().encode('utf8')
+        print(stderr.strip(), file=sys.stderr)
+        print(stdout.strip(), file=sys.stdout)
 
     if options.submit_mode == 'all' or returncode != 0:
         api.Event.create(title=event_title, text=event_body, **event)

@@ -1,0 +1,5 @@
+Starting Unicode Test
+From ruby: Michélle
+From ruby: helløøééé
+ Ið pri qūāeqūe periculīs sælutǽtus
+Completed DD Unicode Test
