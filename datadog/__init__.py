@@ -79,7 +79,6 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
     api._host_name = host_name or api._host_name or get_hostname()
     api._api_host = api_host or api._api_host or os.environ.get('DATADOG_HOST', 'https://api.datadoghq.com')
 
-
     # Statsd configuration
     # ...overrides the default `statsd` instance attributes
     if statsd_socket_path:
