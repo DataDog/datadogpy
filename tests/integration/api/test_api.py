@@ -27,6 +27,7 @@ API_HOST = os.environ.get('DATADOG_HOST')
 FAKE_PROXY = {
     "https": "http://user:pass@10.10.1.10:3128/",
 }
+RATE_LIMIT_HEADERS = ['X-RateLimit-Limit', 'X-RateLimit-Period', 'X-RateLimit-Reset', 'X-RateLimit-Remaining']
 
 
 class TestDatadog(unittest.TestCase):
@@ -361,6 +362,26 @@ class TestDatadog(unittest.TestCase):
         ]
 
         dog.Metric.send(metric='matt.metric', points=matt_series, host="matt.metric.host")
+
+    @attr("metric")
+    def test_rate_limit_headers(self):
+        now = datetime.datetime.now()
+        now_ts = int(time.mktime(now.timetuple()))
+        metric_name = "test.metric." + str(now_ts)
+        host_name = "test.host." + str(now_ts)
+
+        dog.Metric.send(metric=metric_name, points=1, host=host_name)
+        time.sleep(self.wait_time)
+
+        metric_query = dog.Metric.query(start=now_ts - 3600, end=now_ts + 3600,
+                                        query="avg:%s{host:%s}" % (metric_name, host_name))
+        assert len(metric_query['series']) == 1, metric_query
+
+        headers = metric_query.get('response_headers')
+        assert headers
+
+        for header in RATE_LIMIT_HEADERS:
+            assert header in headers
 
     def test_type_check(self):
         dog.Metric.send(metric="test.metric", points=[(time.time() - 3600, 1.0)])
