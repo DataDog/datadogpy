@@ -28,6 +28,7 @@ class MonitorClient(object):
         post_parser.add_argument('--name', help="name of the alert", default=None)
         post_parser.add_argument('--message', help="message to include with notifications"
                                  " for this monitor", default=None)
+        post_parser.add_argument('--tags', help="comma-separated list of tags", default=None)
         post_parser.add_argument('--options', help="json options for the monitor", default=None)
         post_parser.set_defaults(func=cls._post)
 
@@ -113,8 +114,14 @@ class MonitorClient(object):
                 options = json.loads(args.options)
             except:
                 raise Exception('bad json parameter')
+
+        if args.tags:
+            tags = sorted(set([t.strip() for t in args.tags.split(',') if t.strip()]))
+        else:
+            tags = None
+
         res = api.Monitor.create(type=args.type, query=args.query, name=args.name,
-                                 message=args.message, options=options)
+                                 message=args.message, tags=tags, options=options)
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
