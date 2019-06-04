@@ -320,7 +320,7 @@ class TimeboardClient(object):
 
     @classmethod
     def _escape(cls, s):
-        return s.replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t")
+        return s.replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t") if s else ""
 
 
 def _template_variables(tpl_var_input):
