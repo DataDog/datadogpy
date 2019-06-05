@@ -1,6 +1,6 @@
 The Datadog Python library
 ===========================
-[![Build Status](https://travis-ci.org/DataDog/datadogpy.svg?branch=master)](https://travis-ci.org/DataDog/datadogpy)
+[![Build Status](https://travis-ci.com/DataDog/datadogpy.svg?branch=master)](https://travis-ci.com/DataDog/datadogpy)
 [![Documentation Status](https://readthedocs.org/projects/datadogpy/badge/?version=latest)](https://readthedocs.org/projects/datadogpy/?badge=latest)
 [![PyPI - Version](https://img.shields.io/pypi/v/datadog.svg)](https://pypi.org/project/datadog)
 [![PyPI - Downloads](https://pepy.tech/badge/datadog)](https://pepy.tech/project/datadog)
