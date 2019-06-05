@@ -70,8 +70,12 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
     :type mute: boolean
     """
     # API configuration
-    api._api_key = api_key or api._api_key or os.environ.get('DATADOG_API_KEY')
-    api._application_key = app_key or api._application_key or os.environ.get('DATADOG_APP_KEY')
+    api._api_key = api_key or api._api_key or os.environ.get('DATADOG_API_KEY', os.environ.get('DD_API_KEY'))
+    api._application_key = (
+        app_key or
+        api._application_key or
+        os.environ.get('DATADOG_APP_KEY', os.environ.get('DD_APP_KEY'))
+    )
     api._host_name = host_name or api._host_name or get_hostname()
     api._api_host = api_host or api._api_host or os.environ.get('DATADOG_HOST', 'https://api.datadoghq.com')
 

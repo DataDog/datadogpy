@@ -29,13 +29,13 @@ def main():
     parser.add_argument('--config', help="location of your dogrc file (default ~/.dogrc)",
                         default=os.path.expanduser('~/.dogrc'))
     parser.add_argument('--api-key', help="your API key, from "
-                        "https://app.datadoghq.com/account/settings#api "
-                        "You can also set the environment variable DATADOG_API_KEY",
-                        dest='api_key', default=os.environ.get('DATADOG_API_KEY'))
+                        "https://app.datadoghq.com/account/settings#api. "
+                        "You can also set the environment variables DATADOG_API_KEY or DD_API_KEY",
+                        dest='api_key', default=os.environ.get('DATADOG_API_KEY', os.environ.get('DD_API_KEY')))
     parser.add_argument('--application-key', help="your Application key, from "
-                        "https://app.datadoghq.com/account/settings#api "
-                        "You can also set the environment variable DATADOG_APP_KEY",
-                        dest='app_key', default=os.environ.get('DATADOG_APP_KEY'))
+                        "https://app.datadoghq.com/account/settings#api. "
+                        "You can also set the environment variables DATADOG_APP_KEY or DD_APP_KEY",
+                        dest='app_key', default=os.environ.get('DATADOG_APP_KEY', os.environ.get('DD_APP_KEY')))
     parser.add_argument('--pretty', help="pretty-print output (suitable for human consumption, "
                         "less useful for scripting)", dest='format',
                         action='store_const', const='pretty')

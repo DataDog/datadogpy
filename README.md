@@ -67,6 +67,27 @@ stats.increment('home.page.hits')
 
 ```
 
+Environment Variables
+---------------------
+
+As an alternate method to using the `initialize` function with the `options` parameters, set the environment variables `DATADOG_API_KEY` and `DATADOG_APP_KEY` within the context of your application.
+
+If `DATADOG_API_KEY` or `DATADOG_APP_KEY` are not set, the library will attempt to fall back to Datadog's APM environmnent variable prefixes: `DD_API_KEY` and `DD_APP_KEY`.
+
+```python
+from datadog import initialize, api
+
+# Assuming you've set `DD_API_KEY` and `DD_APP_KEY` in your env,
+# initialize() will pick it up automatically
+initialize()
+
+title = "Something big happened!"
+text = 'And let me tell you all about it here!'
+tags = ['version:1', 'application:web']
+
+api.Event.create(title=title, text=text, tags=tags)
+```
+
 Thread Safety
 -------------
 `DogStatsD` and `ThreadStats` are thread-safe.

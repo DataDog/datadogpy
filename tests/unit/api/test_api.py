@@ -152,6 +152,16 @@ class TestInitialization(DatadogAPINoInitialization):
         del os.environ["DATADOG_APP_KEY"]
         del os.environ["DATADOG_HOST"]
 
+        os.environ["DD_API_KEY"] = "API_KEY_ENV_DD"
+        os.environ["DD_APP_KEY"] = "APP_KEY_ENV_DD"
+        api._api_key = None
+        api._application_key = None
+
+        initialize()
+
+        self.assertEqual(api._api_key, "API_KEY_ENV_DD")
+        self.assertEqual(api._application_key, "APP_KEY_ENV_DD")
+
     def test_function_param_value(self):
         initialize(api_key="API_KEY", app_key="APP_KEY", api_host="HOST", host_name="HOSTNAME")
 
