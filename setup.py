@@ -16,7 +16,7 @@ if [sys.version_info[0], sys.version_info[1]] < [2, 7]:
 
 setup(
     name="datadog",
-    version="0.28.0",
+    version="0.29.0",
     install_requires=install_reqs,
     tests_require=["nose", "mock"],
     packages=["datadog", "datadog.api", "datadog.dogstatsd", "datadog.threadstats", "datadog.util", "datadog.dogshell"],
