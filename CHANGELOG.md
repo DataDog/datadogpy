@@ -1,6 +1,28 @@
 CHANGELOG
 =========
 
+# 0.29.0 / 2019-06-05
+
+* [BUGFIX] Lambda wrapper: Always flush, even on exceptions, [#359][] (thanks @jmehnle)
+* [BUGFIX] API: Do not send JSON body in GET requests, [#382][]
+* [BUGFIX] API: Allow listing timeboards with empty descriptions, [#385][] (thanks @Tenzer)
+* [BUGFIX] Dogwrap: Better string handling and python3 support, [#379][]
+* [BUGFIX] Threadstats: ensure MetricsAggregator is threadsafe, [#370][] (thanks @TheKevJames)
+* [BUGFIX] Dogshell: Fixes the `--tags` argument for service_checks, [#387][] (thanks @gordlea)
+* [FEATURE] API: Add support for dashboard list API v2, [#374][]
+* [IMPROVEMENT] API: Handle http code 429 rate limiting in external python library, [#376][]
+* [IMPROVEMENT] API: Add ability to not attach_host_name to metrics, events and distributions, [#383][]
+* [IMPROVEMENT] API: Return Rate Limit Headers, [#378][] (thanks @fdhoff)
+* [IMPROVEMENT] API: Do not override API parameters with default when calling initialize if they are already set, [#386][]
+* [IMPROVEMENT] Dogshell: Add `--tags` support to monitors, [#356][]
+* [IMPROVEMENT] Dogshell: Add documentation for environment variables, [#388][] (thanks @sc68cal)
+* [IMPROVEMENT] Dogstatsd: Added a new parameter `statsd_default_namespace` to the `initialize` method, [#353][] (thanks @lceS2)
+* [IMPROVEMENT] Import Iterable from collections.abc on python3 to avoid deprecation warning, [#381][]
+* [IMPROVEMENT] Do not capture `/bin/hostname` stderr, [#368][] (thanks @brendanlong)
+* [IMPROVEMENT] Add support for environment variables `DD_API_KEY` and `DD_APP_KEY` for setting API and APP keys respectively, [#373][]
+
+=========
+
 # 0.28.0 / 2019-03-27
 
 * [BUGFIX] Dogshell: Properly require `handle` as an argument to the `comment` subcommand, [#364][]
