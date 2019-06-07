@@ -219,6 +219,7 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
             notifications=fmt_notifications,
         )
 
+
 def parse_options(raw_args=None):
     '''
     Parse the raw command line options into an options object and the remaining command string
@@ -273,6 +274,7 @@ returned (the command outputs remains buffered in dogwrap meanwhile)")
         cmd = ' '.join(args)
 
     return options, cmd
+
 
 def main():
     options, cmd = parse_options()
