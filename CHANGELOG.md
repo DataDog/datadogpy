@@ -1,9 +1,9 @@
 CHANGELOG
 =========
 
-# 0.29.2 / Unreleased
+# 0.29.2 / 2019-06-10
 
-* [BUGFIX] Revert return [Return Rate Limit Headers][#378], [#401][]
+* [BUGFIX] Revert [Return Rate Limit Headers][#378], [#401][]
 
 # 0.29.1 / 2019-06-10
 
@@ -406,6 +406,7 @@ See [#8][], thanks [@benweatherman][]
 [#387]: https://github.com/Datadog/datadogpy/issues/387
 [#388]: https://github.com/Datadog/datadogpy/issues/388
 [#397]: https://github.com/Datadog/datadogpy/issues/397
+[#401]: https://github.com/Datadog/datadogpy/issues/401
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@Hefeweizen]: https://github.com/Hefeweizen
 [@Tenzer]: https://github.com/Tenzer
