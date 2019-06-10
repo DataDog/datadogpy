@@ -141,7 +141,6 @@ class APIClient(object):
 
             # Format response content
             content = result.content
-            response_headers = result.headers
 
             if content:
                 try:
@@ -156,11 +155,6 @@ class APIClient(object):
                     raise ApiError(response_obj)
             else:
                 response_obj = None
-
-            if response_obj:
-                for response in response_obj:
-                    response['response_headers'] = response_headers
-
             if response_formatter is None:
                 return response_obj
             else:
