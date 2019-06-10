@@ -3,7 +3,7 @@ CHANGELOG
 
 # 0.29.1 / 2019-06-10
 
-* [BUGFIX] Properly extend response headers to response object. [#397][]
+* [BUGFIX] Properly extend response headers to response object, [#397][]
 
 # 0.29.0 / 2019-06-05
 
