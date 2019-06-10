@@ -158,7 +158,8 @@ class APIClient(object):
                 response_obj = None
 
             if response_obj:
-                response_obj.append({'response_headers': response_headers})
+                for response in response_obj:
+                    response['response_headers'] = response_headers
 
             if response_formatter is None:
                 return response_obj
