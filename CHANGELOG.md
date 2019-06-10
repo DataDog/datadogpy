@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.29.1 / Unreleased
+# 0.29.1 / 2019-06-10
 
 * [BUGFIX] Properly extend response headers to response object to fix [Return Rate Limit Headers][#378], [#397][]
 
