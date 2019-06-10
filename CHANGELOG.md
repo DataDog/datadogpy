@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# 0.29.2 / Unreleased
+
+* [BUGFIX] Revert return response headers feature [#401][]
+
 # 0.29.1 / 2019-06-10
 
 * [BUGFIX] Properly extend response headers to response object to fix [Return Rate Limit Headers][#378], [#397][]
