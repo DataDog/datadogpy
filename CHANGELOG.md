@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# 0.29.1 / 2019-06-10
+
+* [BUGFIX] Properly extend response headers to response object. [#397][]
+
 # 0.29.0 / 2019-06-05
 
 * [BUGFIX] Lambda wrapper: Always flush, even on exceptions, [#359][] (thanks [@jmehnle][])
@@ -397,6 +401,7 @@ See [#8][], thanks [@benweatherman][]
 [#386]: https://github.com/Datadog/datadogpy/issues/386
 [#387]: https://github.com/Datadog/datadogpy/issues/387
 [#388]: https://github.com/Datadog/datadogpy/issues/388
+[#397]: https://github.com/Datadog/datadogpy/issues/397
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@Hefeweizen]: https://github.com/Hefeweizen
 [@Tenzer]: https://github.com/Tenzer
