@@ -6,6 +6,8 @@ import sys
 import tempfile
 
 from datadog.dogshell.wrap import OutputReader, build_event_body, parse_options
+from datadog.util.compat import is_p3k
+
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -47,10 +49,10 @@ class TestDogwrap(unittest.TestCase):
         self.assertEqual(cmd, '')
 
         # The output of parse_args is already unicode in python 3, so don't encode the input
-        if sys.version_info < (3,):
-            arg = u'helløøééé'.encode('utf-8')
-        else:
+        if is_p3k():
             arg = u'helløøééé'
+        else:
+            arg = u'helløøééé'.encode('utf-8')
 
         options, cmd = parse_options(['-n', 'name', '-k', 'key', '-m', 'all', '-p', 'low', '-t', '123',
                                       '--sigterm_timeout', '456', '--sigkill_timeout', '789',

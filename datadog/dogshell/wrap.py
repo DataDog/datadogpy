@@ -28,14 +28,13 @@ import time
 # datadog
 from datadog import initialize, api
 from datadog.util.config import get_version
+from datadog.util.compat import is_p3k
 
 
 SUCCESS = 'success'
 ERROR = 'error'
 
 MAX_EVENT_BODY_LENGTH = 3000
-
-PYTHON2 = sys.version_info < (3,)
 
 
 class Timeout(Exception):
@@ -112,8 +111,8 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout,
     try:
         # Let's that the threads collecting the output from the command in the
         # background
-        stdout = sys.stdout if PYTHON2 else sys.stdout.buffer
-        stderr = sys.stderr if PYTHON2 else sys.stderr.buffer
+        stdout = sys.stdout.buffer if is_p3k() else sys.stdout
+        stderr = sys.stderr.buffer if is_p3k() else sys.stderr
         out_reader = OutputReader(proc.stdout, stdout if not buffer_outs else None)
         err_reader = OutputReader(proc.stderr, stderr if not buffer_outs else None)
         out_reader.start()
@@ -268,10 +267,10 @@ returned (the command outputs remains buffered in dogwrap meanwhile)")
 
     options, args = parser.parse_args(args=raw_args)
 
-    if PYTHON2:
-        cmd = b' '.join(args).decode('utf-8')
-    else:
+    if is_p3k():
         cmd = ' '.join(args)
+    else:
+        cmd = b' '.join(args).decode('utf-8')
 
     return options, cmd
 
@@ -327,7 +326,7 @@ def main():
     }
 
     if options.buffer_outs:
-        if not PYTHON2:
+        if is_p3k():
             stderr = stderr.decode('utf-8')
             stdout = stdout.decode('utf-8')
 
