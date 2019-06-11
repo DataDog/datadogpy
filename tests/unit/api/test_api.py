@@ -36,6 +36,7 @@ from tests.unit.api.helper import (
     HOST_NAME,
     FAKE_PROXY
 )
+from tests.util.contextmanagers import EnvVars
 
 
 class TestInitialization(DatadogAPINoInitialization):
@@ -129,38 +130,49 @@ class TestInitialization(DatadogAPINoInitialization):
         self.assertRaises(ApiError, MyCreatable.create)
 
     def test_default_values(self):
-        initialize()
+        with EnvVars(ignore=[
+            "DATADOG_API_KEY",
+            "DATADOG_APP_KEY",
+            "DD_API_KEY",
+            "DD_APP_KEY"
+        ]):
+            initialize()
 
-        self.assertIsNone(api._api_key)
-        self.assertIsNone(api._application_key)
-        self.assertEqual(api._api_host, "https://api.datadoghq.com")
-        self.assertEqual(api._host_name, util.hostname.get_hostname())
+            self.assertIsNone(api._api_key)
+            self.assertIsNone(api._application_key)
+            self.assertEqual(api._api_host, "https://api.datadoghq.com")
+            self.assertEqual(api._host_name, util.hostname.get_hostname())
 
     def test_env_var_values(self):
-        os.environ["DATADOG_API_KEY"] = "API_KEY_ENV"
-        os.environ["DATADOG_APP_KEY"] = "APP_KEY_ENV"
-        os.environ["DATADOG_HOST"] = "HOST_ENV"
+        with EnvVars(
+            env_vars={
+                "DATADOG_API_KEY": "API_KEY_ENV",
+                "DATADOG_APP_KEY": "APP_KEY_ENV",
+                "DATADOG_HOST": "HOST_ENV",
+            }
+        ):
+            initialize()
 
-        initialize()
+            self.assertEqual(api._api_key, "API_KEY_ENV")
+            self.assertEqual(api._application_key, "APP_KEY_ENV")
+            self.assertEqual(api._api_host, "HOST_ENV")
+            self.assertEqual(api._host_name, util.hostname.get_hostname())
 
-        self.assertEqual(api._api_key, "API_KEY_ENV")
-        self.assertEqual(api._application_key, "APP_KEY_ENV")
-        self.assertEqual(api._api_host, "HOST_ENV")
-        self.assertEqual(api._host_name, util.hostname.get_hostname())
+            del os.environ["DATADOG_API_KEY"]
+            del os.environ["DATADOG_APP_KEY"]
+            del os.environ["DATADOG_HOST"]
 
-        del os.environ["DATADOG_API_KEY"]
-        del os.environ["DATADOG_APP_KEY"]
-        del os.environ["DATADOG_HOST"]
+            with EnvVars(env_vars={
+                "DD_API_KEY": "API_KEY_ENV_DD",
+                "DD_APP_KEY": "APP_KEY_ENV_DD",
+            }):
+                api._api_key = None
+                api._application_key = None
 
-        os.environ["DD_API_KEY"] = "API_KEY_ENV_DD"
-        os.environ["DD_APP_KEY"] = "APP_KEY_ENV_DD"
-        api._api_key = None
-        api._application_key = None
+                initialize()
 
-        initialize()
-
-        self.assertEqual(api._api_key, "API_KEY_ENV_DD")
-        self.assertEqual(api._application_key, "APP_KEY_ENV_DD")
+                self.assertEqual(api._api_key, "API_KEY_ENV_DD")
+                self.assertEqual(api._application_key, "APP_KEY_ENV_DD")
 
     def test_function_param_value(self):
         initialize(api_key="API_KEY", app_key="APP_KEY", api_host="HOST", host_name="HOSTNAME")
@@ -172,36 +184,40 @@ class TestInitialization(DatadogAPINoInitialization):
 
     def test_precedence(self):
         # Initialize first with env vars
-        os.environ["DATADOG_API_KEY"] = "API_KEY_ENV"
-        os.environ["DATADOG_APP_KEY"] = "APP_KEY_ENV"
-        os.environ["DATADOG_HOST"] = "HOST_ENV"
+        with EnvVars(env_vars={
+            "DD_API_KEY": "API_KEY_ENV_DD",
+            "DD_APP_KEY": "APP_KEY_ENV_DD",
+        }):
+            os.environ["DATADOG_API_KEY"] = "API_KEY_ENV"
+            os.environ["DATADOG_APP_KEY"] = "APP_KEY_ENV"
+            os.environ["DATADOG_HOST"] = "HOST_ENV"
 
-        initialize()
+            initialize()
 
-        self.assertEqual(api._api_key, "API_KEY_ENV")
-        self.assertEqual(api._application_key, "APP_KEY_ENV")
-        self.assertEqual(api._api_host, "HOST_ENV")
-        self.assertEqual(api._host_name, util.hostname.get_hostname())
+            self.assertEqual(api._api_key, "API_KEY_ENV")
+            self.assertEqual(api._application_key, "APP_KEY_ENV")
+            self.assertEqual(api._api_host, "HOST_ENV")
+            self.assertEqual(api._host_name, util.hostname.get_hostname())
 
-        # Initialize again to check given parameters take precedence over already set value and env vars
-        initialize(api_key="API_KEY", app_key="APP_KEY", api_host="HOST", host_name="HOSTNAME")
+            # Initialize again to check given parameters take precedence over already set value and env vars
+            initialize(api_key="API_KEY", app_key="APP_KEY", api_host="HOST", host_name="HOSTNAME")
 
-        self.assertEqual(api._api_key, "API_KEY")
-        self.assertEqual(api._application_key, "APP_KEY")
-        self.assertEqual(api._api_host, "HOST")
-        self.assertEqual(api._host_name, "HOSTNAME")
+            self.assertEqual(api._api_key, "API_KEY")
+            self.assertEqual(api._application_key, "APP_KEY")
+            self.assertEqual(api._api_host, "HOST")
+            self.assertEqual(api._host_name, "HOSTNAME")
 
-        # Initialize again without specifying attributes to check that already initialized value takes precedence
-        initialize()
+            # Initialize again without specifying attributes to check that already initialized value takes precedence
+            initialize()
 
-        self.assertEqual(api._api_key, "API_KEY")
-        self.assertEqual(api._application_key, "APP_KEY")
-        self.assertEqual(api._api_host, "HOST")
-        self.assertEqual(api._host_name, "HOSTNAME")
+            self.assertEqual(api._api_key, "API_KEY")
+            self.assertEqual(api._application_key, "APP_KEY")
+            self.assertEqual(api._api_host, "HOST")
+            self.assertEqual(api._host_name, "HOSTNAME")
 
-        del os.environ["DATADOG_API_KEY"]
-        del os.environ["DATADOG_APP_KEY"]
-        del os.environ["DATADOG_HOST"]
+            del os.environ["DATADOG_API_KEY"]
+            del os.environ["DATADOG_APP_KEY"]
+            del os.environ["DATADOG_HOST"]
 
 
 class TestResources(DatadogAPIWithInitialization):

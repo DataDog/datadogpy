@@ -15,7 +15,6 @@ import requests
 from nose.plugins.attrib import attr
 
 # datadog
-from datadog.dogshell.common import find_localhost
 from datadog.util.compat import is_p3k, ConfigParser
 
 
@@ -48,12 +47,6 @@ class TestDogshell(unittest.TestCase):
     # Tests
     def test_config_args(self):
         out, err, return_code = self.dogshell(["--help"], use_cl_args=True)
-
-    def test_find_localhost(self):
-        # Once run
-        assert socket.getfqdn() == find_localhost()
-        # Once memoized
-        assert socket.getfqdn() == find_localhost()
 
     def test_comment(self):
         # Post a new comment

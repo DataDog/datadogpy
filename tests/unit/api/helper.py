@@ -23,6 +23,7 @@ from datadog.api.resources import (
     ActionAPIResource
 )
 from datadog.util.compat import iteritems
+from tests.util.contextmanagers import EnvVars
 
 
 API_KEY = "apikey"
@@ -131,7 +132,7 @@ class DatadogAPITestCase(unittest.TestCase):
         # self.request_mock.request = Mock(return_value=MockResponse())
 
     def tearDown(self):
-        del RequestClient._session
+        RequestClient._session = None
 
     def arm_requests_to_raise(self):
         """
@@ -175,9 +176,23 @@ class DatadogAPINoInitialization(DatadogAPITestCase):
         api._application_key = None
         api._api_host = None
         api._host_name = None
+        api._proxies = None
+
+    def setUp(self):
+        super(DatadogAPINoInitialization, self).setUp()
+        api._api_key = api._application_key = api._host_name = api._api_host = None
 
 
 class DatadogAPIWithInitialization(DatadogAPITestCase):
     def setUp(self):
         super(DatadogAPIWithInitialization, self).setUp()
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
+
+    def tearDown(self):
+        super(DatadogAPIWithInitialization, self).tearDown()
+        # Restore default values
+        api._api_key = None
+        api._application_key = None
+        api._api_host = None
+        api._host_name = None
+        api._proxies = None

@@ -20,7 +20,7 @@ setup(
     name="datadog",
     version="0.29.2",
     install_requires=install_reqs,
-    tests_require=["nose", "mock"],
+    tests_require=["nose", "mock", "pillow"],
     packages=["datadog", "datadog.api", "datadog.dogstatsd", "datadog.threadstats", "datadog.util", "datadog.dogshell"],
     author="Datadog, Inc.",
     long_description=get_readme_md_contents(),
