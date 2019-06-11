@@ -1,10 +1,12 @@
 from setuptools import setup
+
+from io import open
 import sys
 
 
 def get_readme_md_contents():
     """read the contents of your README file"""
-    with open("README.md") as f:
+    with open("README.md", encoding='utf-8') as f:
         long_description = f.read()
         return long_description
 
