@@ -28,6 +28,7 @@ import time
 # datadog
 from datadog import initialize, api
 from datadog.util.config import get_version
+from datadog.util.compat import is_p3k
 
 
 SUCCESS = 'success'
@@ -110,8 +111,10 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout,
     try:
         # Let's that the threads collecting the output from the command in the
         # background
-        out_reader = OutputReader(proc.stdout, sys.stdout if not buffer_outs else None)
-        err_reader = OutputReader(proc.stderr, sys.stderr if not buffer_outs else None)
+        stdout = sys.stdout.buffer if is_p3k() else sys.stdout
+        stderr = sys.stderr.buffer if is_p3k() else sys.stderr
+        out_reader = OutputReader(proc.stdout, stdout if not buffer_outs else None)
+        err_reader = OutputReader(proc.stderr, stderr if not buffer_outs else None)
         out_reader.start()
         err_reader.start()
 
@@ -216,7 +219,10 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
         )
 
 
-def main():
+def parse_options(raw_args=None):
+    '''
+    Parse the raw command line options into an options object and the remaining command string
+    '''
     parser = optparse.OptionParser(usage="%prog -n [event_name] -k [api_key] --submit_mode \
 [ all | errors ] [options] \"command\". \n\nNote that you need to enclose your command in \
 quotes to prevent python executing as soon as there is a space in your command. \n \nNOTICE: In \
@@ -259,9 +265,19 @@ returned (the command outputs remains buffered in dogwrap meanwhile)")
     parser.add_option('--tags', action='store', type='string', dest='tags', default='',
                       help="comma separated list of tags")
 
-    options, args = parser.parse_args()
+    options, args = parser.parse_args(args=raw_args)
 
-    cmd = b" ".join(args).decode("utf-8")
+    if is_p3k():
+        cmd = ' '.join(args)
+    else:
+        cmd = b' '.join(args).decode('utf-8')
+
+    return options, cmd
+
+
+def main():
+    options, cmd = parse_options()
+
     # If silent is checked we force the outputs to be buffered (and therefore
     # not forwarded to the Terminal streams) and we just avoid printing the
     # buffers at the end
@@ -310,6 +326,10 @@ returned (the command outputs remains buffered in dogwrap meanwhile)")
     }
 
     if options.buffer_outs:
+        if is_p3k():
+            stderr = stderr.decode('utf-8')
+            stdout = stdout.decode('utf-8')
+
         print(stderr.strip(), file=sys.stderr)
         print(stdout.strip(), file=sys.stdout)
 
