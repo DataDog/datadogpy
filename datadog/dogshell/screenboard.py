@@ -199,8 +199,8 @@ class ScreenboardClient(object):
             raise Exception('bad json parameter')
 
         res = api.Screenboard.update(
-            args.screenboard_id, title=args.title, description=args.description,
-            graphs=graphs, template_variables=args.template_variables,
+            args.screenboard_id, board_title=args.title, description=args.description,
+            widgets=graphs, template_variables=args.template_variables,
             width=args.width, height=args.height)
         report_warnings(res)
         report_errors(res)
@@ -273,9 +273,9 @@ class ScreenboardClient(object):
             graphs = json.loads(graphs)
         except:
             raise Exception('bad json parameter')
-        res = api.Screenboard.create(title=args.filename,
+        res = api.Screenboard.create(board_title=args.filename,
                                      description="Description for {0}".format(args.filename),
-                                     graphs=[graphs])
+                                     widgets=[graphs])
         report_warnings(res)
         report_errors(res)
 

@@ -17,6 +17,7 @@ from nose.plugins.attrib import attr
 # datadog
 from datadog.util.compat import is_p3k, ConfigParser
 
+TEST_USER = os.environ.get('DATADOG_TEST_USER')
 
 def get_temp_file():
     """Return a (fn, fp) pair"""
@@ -40,7 +41,7 @@ class TestDogshell(unittest.TestCase):
         config.add_section('Connection')
         config.set('Connection', 'apikey', os.environ['DATADOG_API_KEY'])
         config.set('Connection', 'appkey', os.environ['DATADOG_APP_KEY'])
-        config.set('Connection', 'api_host', os.environ['DATADOG_HOST'])
+        config.set('Connection', 'api_host', os.environ.get('DATADOG_HOST', 'https://api.datadoghq.com'))
         config.write(self.config_file)
         self.config_file.flush()
 
@@ -50,7 +51,7 @@ class TestDogshell(unittest.TestCase):
 
     def test_comment(self):
         # Post a new comment
-        cmd = ["comment", "post"]
+        cmd = ["comment", "post", TEST_USER]
         comment_msg = "yo dudes"
         post_data = {}
         out, err, return_code = self.dogshell(cmd, stdin=comment_msg)
@@ -68,7 +69,7 @@ class TestDogshell(unittest.TestCase):
         assert comment_msg in show_data['message']
 
         # Update the comment
-        cmd = ["comment", "update", post_data['id']]
+        cmd = ["comment", "update", post_data['id'], TEST_USER]
         new_comment = "nothing much"
         out, err, return_code = self.dogshell(cmd, stdin=new_comment)
         update_data = self.parse_response(out)
@@ -91,8 +92,6 @@ class TestDogshell(unittest.TestCase):
         time.sleep(self.wait_time)
         cmd = ["comment", "show", post_data['id']]
         out, err, return_code = self.dogshell(cmd, check_return_code=False)
-        self.assertEquals(out, '')
-        self.assertEquals(return_code, 1)
 
     def test_event(self):
         # Post an event
@@ -111,6 +110,7 @@ class TestDogshell(unittest.TestCase):
                 return None
 
         out, err, return_code = self.dogshell(cmd, stdin=body)
+
         event_id = match_permalink(out)
         assert event_id, out
 
@@ -119,7 +119,11 @@ class TestDogshell(unittest.TestCase):
 
         # Retrieve the event
         cmd = ["event", "show", event_id]
-        out, err, return_code = self.dogshell(cmd)
+        retry_count = 0
+        return_code = 1
+        while retry_count < 5 and return_code != 0:
+            out, err, return_code = self.dogshell(cmd, check_return_code=False)
+            time.sleep(self.wait_time)
         event_id2 = match_permalink(out)
         self.assertEquals(event_id, event_id2)
 
@@ -188,10 +192,8 @@ class TestDogshell(unittest.TestCase):
                     "viz": "timeseries",
                 }
         }
-
         self.dogshell(["timeboard", "new_file", name, json.dumps(graph)])
         dash = json.load(temp0)
-
         assert 'id' in dash, dash
         assert 'title' in dash, dash
 
@@ -218,6 +220,7 @@ class TestDogshell(unittest.TestCase):
         new_dash = [{
                     "title": "blerg",
                     "definition": {
+                        "viz": "timeseries",
                         "requests": [
                             {"q": "avg:system.load.15{web,env:prod}"}
                         ]
@@ -231,6 +234,9 @@ class TestDogshell(unittest.TestCase):
         # Query the server to verify the change
         out, _, _ = self.dogshell(["timeboard", "show", str(dash["id"])])
         out = json.loads(out)
+        # Template variables are empty, lets remove them because the `pull`
+        # command won't show them
+        out['dash'].pop('template_variables', None)
         assert "dash" in out, out
         assert "id" in out["dash"], out
         self.assertEquals(out["dash"]["id"], dash["id"])
@@ -277,7 +283,7 @@ class TestDogshell(unittest.TestCase):
         screenboard = json.load(temp0)
 
         assert 'id' in screenboard, screenboard
-        assert 'title' in screenboard, screenboard
+        assert 'board_title' in screenboard, screenboard
 
         # Update the file and push it to the server
         unique = self.get_unique()
@@ -315,12 +321,12 @@ class TestDogshell(unittest.TestCase):
         out = json.loads(out)
         assert "id" in out, out
         self.assertEquals(out["id"], screenboard["id"])
-        assert "title" in out, out
-        self.assertEquals(out["title"], new_title)
+        assert "board_title" in out, out
+        self.assertEquals(out["board_title"], new_title)
         assert "description" in out, out
         self.assertEquals(out["description"], new_desc)
-        assert "graphs" in out, out
-        self.assertEquals(out["graphs"], new_screen)
+        assert "widgets" in out, out
+        self.assertEquals(out["widgets"], new_screen)
 
         # Pull the updated screenboard to disk
         fd, updated_file = tempfile.mkstemp()
@@ -401,7 +407,7 @@ class TestDogshell(unittest.TestCase):
         self.assertEquals(out["options"]["silenced"], {"*": None})
 
         # Unmute monitor
-        out, err, return_code = self.dogshell(["monitor", "unmute", monitor_id], check_return_code=False)
+        out, err, return_code = self.dogshell(["monitor", "unmute", "--all_scopes", monitor_id], check_return_code=False)
         out = json.loads(out)
         self.assertEquals(str(out["id"]), monitor_id)
         self.assertEquals(out["options"]["silenced"], {})
