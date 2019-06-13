@@ -147,6 +147,7 @@ class TimeboardClient(object):
             title=args.filename,
             description="Description for {0}".format(args.filename),
             graphs=[graphs])
+
         report_warnings(res)
         report_errors(res)
 
@@ -173,6 +174,9 @@ class TimeboardClient(object):
 
             if string_ids:
                 dash_obj["id"] = str(dash_obj["id"])
+
+            if not dash_obj.get('template_variables'):
+                dash_obj.pop('template_variables', None)
 
             json.dump(dash_obj, f, indent=2)
 
