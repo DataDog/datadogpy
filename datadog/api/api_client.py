@@ -149,7 +149,6 @@ class APIClient(object):
             # Format response content
             content = result.content
             _set_http_response(result)
-            response_headers = result.headers
 
             if content:
                 try:
