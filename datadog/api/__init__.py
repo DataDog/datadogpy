@@ -34,3 +34,4 @@ from datadog.api.hosts import Host, Hosts
 from datadog.api.service_checks import ServiceCheck
 from datadog.api.tags import Tag
 from datadog.api.users import User
+from datadog.api.api_client import get_http_response

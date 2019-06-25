@@ -16,6 +16,19 @@ from datadog.api.http_client import resolve_http_client
 from datadog.util.compat import is_p3k
 
 log = logging.getLogger('datadog.api')
+_http_response = None
+
+
+def get_http_response():
+    """
+    Getter for the most recent http request response object
+    """
+    return _http_response
+
+
+def _set_http_response(response):
+    global _http_response
+    _http_response = response
 
 
 class APIClient(object):
@@ -141,6 +154,7 @@ class APIClient(object):
 
             # Format response content
             content = result.content
+            _set_http_response(result)
 
             if content:
                 try:
@@ -155,6 +169,7 @@ class APIClient(object):
                     raise ApiError(response_obj)
             else:
                 response_obj = None
+
             if response_formatter is None:
                 return response_obj
             else:
