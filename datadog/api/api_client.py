@@ -21,7 +21,7 @@ _http_response = None
 
 def get_http_response():
     """
-    Getter for the most recent http request
+    Getter for the most recent http request response object
     """
     return _http_response
 
