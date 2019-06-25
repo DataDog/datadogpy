@@ -16,7 +16,14 @@ from datadog.api.http_client import resolve_http_client
 from datadog.util.compat import is_p3k
 
 log = logging.getLogger('datadog.api')
+_http_response = None
 
+def get_http_response():
+    return _http_response
+
+def _set_http_response(response):
+    global _http_response
+    _http_response = response
 
 class APIClient(object):
     """
@@ -31,20 +38,6 @@ class APIClient(object):
 
     # Plugged HTTP client
     _http_client = None
-
-    @staticmethod
-    def add_response_field(response_obj, key, field):
-        """
-        Adds the response field to the response object.
-        Response_obj may either be a list or a dictionary, or some unknown type
-        """
-        if isinstance(response_obj, dict):
-            response_obj[key] = field
-        elif isinstance(response_obj, list):
-            for resp in response_obj:
-                APIClient.add_response_field(resp, key, field)
-        else:
-            pass
 
     @classmethod
     def _get_http_client(cls):
@@ -155,8 +148,8 @@ class APIClient(object):
 
             # Format response content
             content = result.content
+            _set_http_response(result)
             response_headers = result.headers
-            status_code = result.status_code
 
             if content:
                 try:
@@ -171,10 +164,6 @@ class APIClient(object):
                     raise ApiError(response_obj)
             else:
                 response_obj = None
-
-            if response_obj:
-                APIClient.add_response_field(response_obj, "response_headers", response_headers)
-                APIClient.add_response_field(response_obj, "status_code", status_code)
 
             if response_formatter is None:
                 return response_obj
