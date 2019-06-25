@@ -18,12 +18,18 @@ from datadog.util.compat import is_p3k
 log = logging.getLogger('datadog.api')
 _http_response = None
 
+
 def get_http_response():
+    """
+    Getter for the most recent http request
+    """
     return _http_response
+
 
 def _set_http_response(response):
     global _http_response
     _http_response = response
+
 
 class APIClient(object):
     """
