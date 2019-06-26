@@ -34,6 +34,11 @@ setup(
     license="BSD",
     keywords="datadog",
     url="https://www.datadoghq.com",
+    project_urls={
+        "Bug Tracker": "https://github.com/DataDog/datadogpy/issues",
+        "Documentation": "https://datadogpy.readthedocs.io/en/latest/",
+        "Source Code": "https://github.com/DataDog/datadogpy",
+    },
     entry_points={"console_scripts": ["dog = datadog.dogshell:main", "dogwrap = datadog.dogshell.wrap:main"]},
     test_suite="tests",
     classifiers=[
