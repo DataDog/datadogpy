@@ -138,6 +138,7 @@ class TestInitialization(DatadogAPINoInitialization):
         initialize(return_raw_response=True)
         assert api._return_raw_response
         # Assert we get multiple fields back when set to True
+        initialize(api_key="aaaaaaaaaa", app_key="123456", return_raw_response=True)
         data, raw = api.Monitor.get_all()
 
 
