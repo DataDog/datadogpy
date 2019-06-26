@@ -160,7 +160,7 @@ class APIClient(object):
                 response_obj = response_formatter(response_obj)
 
             if _return_raw_response:
-                return (response_obj, result,)
+                return response_obj, result
             else:
                 return response_obj
 
