@@ -31,7 +31,7 @@ logging.getLogger('datadog.threadstats').addHandler(NullHandler())
 
 def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
                statsd_host=None, statsd_port=None, statsd_use_default_route=False,
-               statsd_socket_path=None, statsd_namespace=None, **kwargs):
+               statsd_socket_path=None, statsd_namespace=None, return_raw_response=False, **kwargs):
     """
     Initialize and configure Datadog.api and Datadog.statsd modules
 
@@ -68,6 +68,10 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
     :param mute: Mute any ApiError or ClientError before they escape \
         from datadog.api.HTTPClient (default: True).
     :type mute: boolean
+
+    :param return_raw_response: Whether or not to return the raw response object in addition \
+        to the decoded response content (default: False)
+    :type return_raw_response: boolean
     """
     # API configuration
     api._api_key = api_key or api._api_key or os.environ.get('DATADOG_API_KEY', os.environ.get('DD_API_KEY'))
@@ -92,6 +96,8 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
             statsd.port = int(statsd_port)
     if statsd_namespace:
         statsd.namespace = text(statsd_namespace)
+
+    api._return_raw_response = return_raw_response
 
     # HTTP client and API options
     for key, value in iteritems(kwargs):

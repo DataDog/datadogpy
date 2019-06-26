@@ -82,7 +82,7 @@ class APIClient(object):
             # Import API, User and HTTP settings
             from datadog.api import _api_key, _application_key, _api_host, \
                 _mute, _host_name, _proxies, _max_retries, _timeout, \
-                _cacert
+                _cacert, _return_raw_response
 
             # Check keys and add then to params
             if _api_key is None:
@@ -155,10 +155,14 @@ class APIClient(object):
                     raise ApiError(response_obj)
             else:
                 response_obj = None
-            if response_formatter is None:
-                return response_obj
+
+            if response_formatter is not None:
+                response_obj = response_formatter(response_obj)
+
+            if _return_raw_response:
+                return (response_obj, result,)
             else:
-                return response_formatter(response_obj)
+                return response_obj
 
         except HttpTimeout:
             cls._timeout_counter += 1
