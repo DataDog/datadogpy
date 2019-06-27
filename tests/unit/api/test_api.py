@@ -129,6 +129,19 @@ class TestInitialization(DatadogAPINoInitialization):
         initialize(api_key=API_KEY, mute=False)
         self.assertRaises(ApiError, MyCreatable.create)
 
+
+    def test_return_raw_response(self):
+        # Test default initialization sets return_raw_response to False
+        initialize()
+        assert not api._return_raw_response
+        # Assert that we can set this to True
+        initialize(return_raw_response=True)
+        assert api._return_raw_response
+        # Assert we get multiple fields back when set to True
+        initialize(api_key="aaaaaaaaaa", app_key="123456", return_raw_response=True)
+        data, raw = api.Monitor.get_all()
+
+
     def test_default_values(self):
         with EnvVars(ignore=[
             "DATADOG_API_KEY",

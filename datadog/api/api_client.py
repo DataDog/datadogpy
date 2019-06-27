@@ -16,19 +16,6 @@ from datadog.api.http_client import resolve_http_client
 from datadog.util.compat import is_p3k
 
 log = logging.getLogger('datadog.api')
-_http_response = None
-
-
-def get_http_response():
-    """
-    Getter for the most recent http request response object
-    """
-    return _http_response
-
-
-def _set_http_response(response):
-    global _http_response
-    _http_response = response
 
 
 class APIClient(object):
@@ -95,7 +82,7 @@ class APIClient(object):
             # Import API, User and HTTP settings
             from datadog.api import _api_key, _application_key, _api_host, \
                 _mute, _host_name, _proxies, _max_retries, _timeout, \
-                _cacert
+                _cacert, _return_raw_response
 
             # Check keys and add then to params
             if _api_key is None:
@@ -154,7 +141,6 @@ class APIClient(object):
 
             # Format response content
             content = result.content
-            _set_http_response(result)
 
             if content:
                 try:
@@ -170,10 +156,13 @@ class APIClient(object):
             else:
                 response_obj = None
 
-            if response_formatter is None:
-                return response_obj
+            if response_formatter is not None:
+                response_obj = response_formatter(response_obj)
+
+            if _return_raw_response:
+                return response_obj, result
             else:
-                return response_formatter(response_obj)
+                return response_obj
 
         except HttpTimeout:
             cls._timeout_counter += 1
