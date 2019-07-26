@@ -63,9 +63,7 @@ class _LambdaDecorator(object):
                     _lambda_stats.flush(float("inf"))
 
     def __call__(self, *args, **kw):
-        warnings.warn(
-            "datadog_lambda_wrapper() is deprecated; use datadog-lambda package instead https://git.io/fjy8o",
-            DeprecationWarning)
+        warnings.warn("datadog_lambda_wrapper() is relocated to https://git.io/fjy8o", DeprecationWarning)
         _LambdaDecorator._enter()
         try:
             return self.func(*args, **kw)
