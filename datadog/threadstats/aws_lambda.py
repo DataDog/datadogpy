@@ -5,7 +5,7 @@ import os
 import warnings
 
 """
-DEPRECATED use datadog-lambda package instead https://github.com/DataDog/datadog-lambda-layer-python
+DEPRECATED use datadog-lambda package instead https://git.io/fjy8o
 Usage:
 
 from datadog import datadog_lambda_wrapper, lambda_metric
