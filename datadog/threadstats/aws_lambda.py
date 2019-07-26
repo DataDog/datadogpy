@@ -5,7 +5,7 @@ import os
 import warnings
 
 """
-DEPRECATED use datadog-lambda package instead https://github.com/DataDog/datadog-lambda-layer-python 
+DEPRECATED use datadog-lambda package instead https://github.com/DataDog/datadog-lambda-layer-python
 Usage:
 
 from datadog import datadog_lambda_wrapper, lambda_metric
@@ -64,7 +64,8 @@ class _LambdaDecorator(object):
 
     def __call__(self, *args, **kw):
         warnings.warn(
-            "datadog_lambda_wrapper() is deprecated; use datadog-lambda package instead https://github.com/DataDog/datadog-lambda-layer-python", DeprecationWarning)
+            "datadog_lambda_wrapper() is deprecated; use datadog-lambda package instead https://git.io/fjy8o",
+            DeprecationWarning)
         _LambdaDecorator._enter()
         try:
             return self.func(*args, **kw)
