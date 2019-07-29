@@ -92,6 +92,10 @@ class APIClient(object):
             if _application_key:
                 params['application_key'] = _application_key
 
+            # Remove trailing backslashes from the _api_host
+            if _api_host[-1] == "/":
+                _api_host = _api_host[:-1]
+
             # Attach host name to body
             if attach_host_name and body:
                 # Is it a 'series' list of objects ?
