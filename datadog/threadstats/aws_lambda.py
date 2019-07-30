@@ -2,9 +2,10 @@ from datadog.threadstats import ThreadStats
 from threading import Lock, Thread
 from datadog import api
 import os
-
+import warnings
 
 """
+DEPRECATED use datadog-lambda package instead https://git.io/fjy8o
 Usage:
 
 from datadog import datadog_lambda_wrapper, lambda_metric
@@ -16,7 +17,7 @@ def my_lambda_handle(event, context):
 
 
 class _LambdaDecorator(object):
-    """ Decorator to automatically init & flush metrics, created for Lambda functions"""
+    """ DEPRECATED Decorator to automatically init & flush metrics, created for Lambda functions"""
 
     # Number of opened wrappers, flush when 0
     _counter = 0
@@ -29,6 +30,7 @@ class _LambdaDecorator(object):
 
     @classmethod
     def _enter(cls):
+
         with cls._counter_lock:
             if not cls._was_initialized:
                 cls._was_initialized = True
@@ -61,6 +63,7 @@ class _LambdaDecorator(object):
                     _lambda_stats.flush(float("inf"))
 
     def __call__(self, *args, **kw):
+        warnings.warn("datadog_lambda_wrapper() is relocated to https://git.io/fjy8o", DeprecationWarning)
         _LambdaDecorator._enter()
         try:
             return self.func(*args, **kw)
