@@ -90,7 +90,7 @@ class RequestClient(HTTPClient):
         except requests.exceptions.Timeout:
             raise _remove_context(HttpTimeout(method, url, timeout))
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code in (400, 403, 404, 409, 429):
+            if e.response.status_code in (400, 401, 403, 404, 409, 429):
                 # This gets caught afterwards and raises an ApiError exception
                 pass
             else:
@@ -156,7 +156,7 @@ class URLFetchClient(HTTPClient):
         status_code = result.status_code
 
         if (status_code / 100) != 2:
-            if status_code in (400, 403, 404, 409, 429):
+            if status_code in (400, 401, 403, 404, 409, 429):
                 pass
             else:
                 raise HTTPError(status_code)

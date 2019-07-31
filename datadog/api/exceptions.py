@@ -59,7 +59,7 @@ class ApiError(Exception):
     """
     Datadog returned an API error (known HTTPError).
 
-    Matches the following status codes: 400, 403, 404, 409, 429.
+    Matches the following status codes: 400, 401, 403, 404, 409, 429.
     """
 
 
