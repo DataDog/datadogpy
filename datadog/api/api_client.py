@@ -14,6 +14,11 @@ from datadog.api.exceptions import (
 )
 from datadog.api.http_client import resolve_http_client
 from datadog.util.compat import is_p3k
+try:
+    from urllib.parse import urljoin
+except ImportError:
+    from urlparse import urljoin
+
 
 log = logging.getLogger('datadog.api')
 
@@ -92,10 +97,6 @@ class APIClient(object):
             if _application_key:
                 params['application_key'] = _application_key
 
-            # Remove trailing backslashes from the _api_host
-            if _api_host[-1] == "/":
-                _api_host = _api_host[:-1]
-
             # Attach host name to body
             if attach_host_name and body:
                 # Is it a 'series' list of objects ?
@@ -121,12 +122,10 @@ class APIClient(object):
             if isinstance(body, dict):
                 body = json.dumps(body)
                 headers['Content-Type'] = 'application/json'
+
             # Construct the URL
-            url = "{api_host}/api/{api_version}/{path}".format(
-                  api_host=_api_host,
-                  api_version=api_version,
-                  path=path.lstrip("/"),
-            )
+            start_url = urljoin(_api_host, 'api/{}'.format(api_version))
+            url = urljoin(start_url, path.lstrip("/"))
 
             # Process requesting
             start_time = time.time()
