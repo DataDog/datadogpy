@@ -13,11 +13,7 @@ from datadog.api.exceptions import (
     ApiNotInitialized
 )
 from datadog.api.http_client import resolve_http_client
-from datadog.util.compat import is_p3k
-try:
-    from urllib.parse import urljoin
-except ImportError:
-    from urlparse import urljoin
+from datadog.util.compat import is_p3k, urljoin
 
 
 log = logging.getLogger('datadog.api')
@@ -125,7 +121,7 @@ class APIClient(object):
 
             # Construct the URL
             start_url = urljoin(_api_host, 'api/{}'.format(api_version))
-            url = urljoin(start_url, path.lstrip("/"))
+            url = urljoin(start_url, path)
 
             # Process requesting
             start_time = time.time()

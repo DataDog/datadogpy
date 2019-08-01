@@ -7,6 +7,11 @@ import logging
 import socket
 import sys
 
+try:
+    from urllib.parse import urljoin
+except ImportError:
+    from urlparse import urljoin
+
 
 def _is_py_version_higher_than(major, minor=0):
     """
