@@ -404,7 +404,7 @@ class TestResources(DatadogAPIWithInitialization):
         )
         self.request_called_with(
             'GET',
-            API_HOST + 'api/v1/actionname/{0}'.format(actionable_object_id)
+            API_HOST + '/api/v1/actionname/{0}'.format(actionable_object_id)
         )
         _, kwargs = self.request_mock.call_args()
         self.assertIsNone(kwargs["data"])

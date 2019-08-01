@@ -120,7 +120,7 @@ class APIClient(object):
                 headers['Content-Type'] = 'application/json'
 
             # Construct the URL
-            start_url = urljoin(_api_host, 'api/{}'.format(api_version))
+            start_url = urljoin(_api_host, 'api/{}/'.format(api_version))
             url = urljoin(start_url, path)
 
             # Process requesting
