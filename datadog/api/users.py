@@ -7,7 +7,7 @@ class User(ActionAPIResource, GetableAPIResource, CreateableAPIResource,
            UpdatableAPIResource, ListableAPIResource,
            DeletableAPIResource):
 
-    _resource_name = 'user'
+    _resource_name = 'users'
 
     """
     A wrapper around User HTTP API.
