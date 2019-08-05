@@ -1,5 +1,4 @@
-from datadog.api.resources import CreateableAPIResource, UpdatableAPIResource, \
-    DeletableAPIResource
+from datadog.api.resources import CreateableAPIResource, UpdatableAPIResource
 
 
 class Comment(CreateableAPIResource, UpdatableAPIResource):

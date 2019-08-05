@@ -1,5 +1,5 @@
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
-    SearchableAPIResource, DeletableAPIResource
+    SearchableAPIResource
 from datadog.util.compat import iteritems
 
 
