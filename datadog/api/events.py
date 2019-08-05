@@ -3,7 +3,7 @@ from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
 from datadog.util.compat import iteritems
 
 
-class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, DeletableAPIResource):
+class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
     """
     A wrapper around Event HTTP API.
     """
