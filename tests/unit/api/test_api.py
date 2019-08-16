@@ -240,10 +240,10 @@ class TestResources(DatadogAPIWithInitialization):
         Creatable resource logic.
         """
         MyCreatable.create(mydata="val")
-        self.request_called_with('POST', "host/api/v1/creatables", data={'mydata': "val"})
+        self.request_called_with('POST', API_HOST + "/api/v1/creatables", data={'mydata': "val"})
 
         MyCreatable.create(mydata="val", attach_host_name=True)
-        self.request_called_with('POST', "host/api/v1/creatables",
+        self.request_called_with('POST', API_HOST + "/api/v1/creatables",
                                  data={'mydata': "val", 'host': api._host_name})
 
     def test_getable(self):
@@ -252,7 +252,7 @@ class TestResources(DatadogAPIWithInitialization):
         """
         getable_object_id = 123
         MyGetable.get(getable_object_id, otherparam="val")
-        self.request_called_with('GET', "host/api/v1/getables/" + str(getable_object_id),
+        self.request_called_with('GET', API_HOST + "/api/v1/getables/" + str(getable_object_id),
                                  params={'otherparam': "val"})
         _, kwargs = self.request_mock.call_args()
         self.assertIsNone(kwargs["data"])
@@ -262,7 +262,7 @@ class TestResources(DatadogAPIWithInitialization):
         Listable resource logic.
         """
         MyListable.get_all(otherparam="val")
-        self.request_called_with('GET', "host/api/v1/listables", params={'otherparam': "val"})
+        self.request_called_with('GET', API_HOST + "/api/v1/listables", params={'otherparam': "val"})
         _, kwargs = self.request_mock.call_args()
         self.assertIsNone(kwargs["data"])
 
@@ -272,7 +272,7 @@ class TestResources(DatadogAPIWithInitialization):
         """
         updatable_object_id = 123
         MyUpdatable.update(updatable_object_id, params={'myparam': "val1"}, mydata="val2")
-        self.request_called_with('PUT', "host/api/v1/updatables/" + str(updatable_object_id),
+        self.request_called_with('PUT', API_HOST + "/api/v1/updatables/" + str(updatable_object_id),
                                  params={'myparam': "val1"}, data={'mydata': "val2"})
 
     def test_detalable(self):
@@ -281,7 +281,7 @@ class TestResources(DatadogAPIWithInitialization):
         """
         deletable_object_id = 123
         MyDeletable.delete(deletable_object_id, otherparam="val")
-        self.request_called_with('DELETE', "host/api/v1/deletables/" + str(deletable_object_id),
+        self.request_called_with('DELETE', API_HOST + "/api/v1/deletables/" + str(deletable_object_id),
                                  params={'otherparam': "val"})
 
     def test_listable_sub_resources(self):
@@ -292,7 +292,7 @@ class TestResources(DatadogAPIWithInitialization):
         MyListableSubResource.get_items(resource_id, otherparam="val")
         self.request_called_with(
             'GET',
-            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            API_HOST + '/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
             params={'otherparam': "val"}
         )
         _, kwargs = self.request_mock.call_args()
@@ -306,7 +306,7 @@ class TestResources(DatadogAPIWithInitialization):
         MyAddableSubResource.add_items(resource_id, params={'myparam': 'val1'}, mydata='val2')
         self.request_called_with(
             'POST',
-            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            API_HOST + '/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
             params={'myparam': 'val1'},
             data={'mydata': 'val2'}
         )
@@ -319,7 +319,7 @@ class TestResources(DatadogAPIWithInitialization):
         MyUpdatableSubResource.update_items(resource_id, params={'myparam': 'val1'}, mydata='val2')
         self.request_called_with(
             'PUT',
-            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            API_HOST + '/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
             params={'myparam': 'val1'},
             data={'mydata': 'val2'}
         )
@@ -332,7 +332,7 @@ class TestResources(DatadogAPIWithInitialization):
         MyDeletableSubResource.delete_items(resource_id, params={'myparam': 'val1'}, mydata='val2')
         self.request_called_with(
             'DELETE',
-            'host/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            API_HOST + '/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
             params={'myparam': 'val1'},
             data={'mydata': 'val2'}
         )
@@ -352,7 +352,7 @@ class TestResources(DatadogAPIWithInitialization):
         )
         self.request_called_with(
             'POST',
-            'host/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            API_HOST + '/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
             params={'myparam': 'val1'},
             data={'mydata': 'val', 'mydata2': 'val2'}
         )
@@ -366,7 +366,7 @@ class TestResources(DatadogAPIWithInitialization):
         )
         self.request_called_with(
             'POST',
-            'host/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            API_HOST +'/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
             params={},
             data={'mydata': 'val', 'mydata2': 'val2'}
         )
@@ -379,7 +379,7 @@ class TestResources(DatadogAPIWithInitialization):
         )
         self.request_called_with(
             'GET',
-            'host/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            API_HOST + '/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
             params={'param1': 'val1', 'param2': 'val2'}
         )
         _, kwargs = self.request_mock.call_args()
@@ -393,7 +393,7 @@ class TestResources(DatadogAPIWithInitialization):
         )
         self.request_called_with(
             'POST',
-            'host/api/v1/actionname/{0}'.format(actionable_object_id),
+            API_HOST + '/api/v1/actionname/{0}'.format(actionable_object_id),
             data={'mydata': "val"}
         )
 
@@ -404,7 +404,7 @@ class TestResources(DatadogAPIWithInitialization):
         )
         self.request_called_with(
             'GET',
-            'host/api/v1/actionname/{0}'.format(actionable_object_id)
+            API_HOST + '/api/v1/actionname/{0}'.format(actionable_object_id)
         )
         _, kwargs = self.request_mock.call_args()
         self.assertIsNone(kwargs["data"])
@@ -483,11 +483,11 @@ class TestMetricResource(DatadogAPIWithInitialization):
         Endpoints are different for submission and queries.
         """
         Metric.send(points=(123, 456))
-        self.request_called_with('POST', "host/api/v1/series",
+        self.request_called_with('POST', API_HOST + "/api/v1/series",
                                  data={'series': [{'points': [[123, 456.0]], 'host': api._host_name}]})
 
         Metric.query(start="val1", end="val2")
-        self.request_called_with('GET', "host/api/v1/query",
+        self.request_called_with('GET', API_HOST + "/api/v1/query",
                                  params={'from': "val1", 'to': "val2"})
 
     def test_points_submission(self):

@@ -28,7 +28,7 @@ from tests.util.contextmanagers import EnvVars
 
 API_KEY = "apikey"
 APP_KEY = "applicationkey"
-API_HOST = "host"
+API_HOST = "https://example.com"
 HOST_NAME = "agent.hostname"
 FAKE_PROXY = {
     "https": "http://user:pass@10.10.1.10:3128/",
