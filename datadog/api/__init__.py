@@ -16,6 +16,9 @@ _max_retries = 3
 _backoff_period = 300
 _mute = True
 
+# Agent config settings
+config_lookup = False
+
 # Resources
 from datadog.api.comments import Comment
 from datadog.api.dashboard_lists import DashboardList
