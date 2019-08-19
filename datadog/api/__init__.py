@@ -17,7 +17,7 @@ _backoff_period = 300
 _mute = True
 
 # Agent config settings
-config_lookup = False
+config_lookup = True
 
 # Resources
 from datadog.api.comments import Comment
