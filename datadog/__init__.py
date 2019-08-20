@@ -47,9 +47,6 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
     :param api_host: Datadog API endpoint
     :type api_host: url
 
-    :param config_lookup: Hostname resolution using the Datadog agent configuration file
-    :type config_lookup: boolean
-
     :param statsd_host: Host of DogStatsd server or statsd daemon
     :type statsd_host: address
 

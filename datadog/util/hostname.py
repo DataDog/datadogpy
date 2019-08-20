@@ -36,7 +36,7 @@ def is_valid_hostname(hostname):
     return True
 
 
-def get_hostname():
+def get_hostname(from_config=True):
     """
     Get the canonical host name this agent should identify as. This is
     the authoritative source of the host name for the agent.
@@ -53,7 +53,7 @@ def get_hostname():
 
     # first, try the config
     try:
-        if config_lookup:
+        if from_config:
             config = get_config()
             config_hostname = config.get('hostname')
             if config_hostname and is_valid_hostname(config_hostname):
