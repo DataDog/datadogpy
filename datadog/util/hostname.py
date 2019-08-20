@@ -7,7 +7,6 @@ import subprocess
 import types
 
 # datadog
-from datadog.api import config_lookup
 from datadog.util.compat import url_lib, is_p3k, iteritems
 from datadog.util.config import get_config, get_os, CfgNotFound
 
