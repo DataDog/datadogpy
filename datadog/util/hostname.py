@@ -45,6 +45,9 @@ def get_hostname(from_config=True):
       * agent config (datadog.conf, "hostname:")
       * 'hostname -f' (on unix)
       * socket.gethostname()
+
+    :param from_config: hostname lookup from the Datadog agent configuration file
+    :type from_config: bool
     """
 
     hostname = None
@@ -56,6 +59,8 @@ def get_hostname(from_config=True):
             config = get_config()
             config_hostname = config.get('hostname')
             if config_hostname and is_valid_hostname(config_hostname):
+                log.debug("Hostname lookup from agent configuration"
+                          " will be deprecated in an upcoming version of datadogpy")
                 return config_hostname
     except CfgNotFound:
         log.debug("No agent or invalid configuration file found")
