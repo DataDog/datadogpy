@@ -34,3 +34,5 @@ from datadog.api.hosts import Host, Hosts
 from datadog.api.service_checks import ServiceCheck
 from datadog.api.tags import Tag
 from datadog.api.users import User
+from datadog.api.aws_integration import Aws
+from datadog.api.aws_log_integration import AwsLogs
