@@ -1,10 +1,11 @@
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
-    SearchableAPIResource, DeletableAPISubResource, UpdatableAPIResource, \
+    SearchableAPIResource, DeletableAPISubResource, \
     UpdatableAPISubResource, ListableAPISubResource, AddableAPISubResource
-from datadog.util.compat import iteritems
 
 
-class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, DeletableAPISubResource, ListableAPISubResource, UpdatableAPISubResource, AddableAPISubResource):
+class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
+              DeletableAPISubResource, ListableAPISubResource, UpdatableAPISubResource,
+              AddableAPISubResource):
     """
     A wrapper around Event HTTP API.
     """
@@ -24,8 +25,8 @@ class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, 
     @classmethod
     def add_log_lambda_arn(cls, id=_resource_id, **params):
         """
-        Attach the Lambda ARN of the Lambda created for the Datadog-AWS log collection to your AWS  \
-        account ID to enable log collection.
+        Attach the Lambda ARN of the Lambda created for the Datadog-AWS \
+        log collection to your AWS account ID to enable log collection.
 
         >>> account_id = "601427279990"
         >>> lambda_arn = "arn:aws:lambda:us-east-1:601427279990:function:RickyLogsCollectionAPITest"
@@ -34,7 +35,7 @@ class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, 
         """
         cls._sub_resource_name = 'logs'
         return super(AwsLogs, cls).add_items(id=id, **params)
-    
+
     @classmethod
     def save_services(cls, id=_resource_id, **params):
         """

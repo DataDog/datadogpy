@@ -1,16 +1,16 @@
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
-    SearchableAPIResource, DeletableAPIResource, UpdatableAPIResource, \
+    SearchableAPIResource, DeletableAPIResource, \
     UpdatableAPISubResource, ListableAPISubResource, AddableAPISubResource
-from datadog.util.compat import iteritems
 
 
-class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, DeletableAPIResource, ListableAPISubResource, UpdatableAPISubResource, AddableAPISubResource):
+class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
+          DeletableAPIResource, ListableAPISubResource, UpdatableAPISubResource,
+          AddableAPISubResource):
     """
     A wrapper around Event HTTP API.
     """
     _resource_name = 'integration'
     _resource_id = 'aws'
-
 
     @classmethod
     def list(cls, id=_resource_id, **params):
@@ -88,7 +88,6 @@ class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, Dele
         """
         return super(Aws, cls).delete(id=id, body=body)
 
-
     @classmethod
     def list_namespace_rules(cls, id=_resource_id, **params):
         """
@@ -98,7 +97,6 @@ class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, Dele
         """
         cls._sub_resource_name = 'available_namespace_rules'
         return super(Aws, cls).get_items(id=id, **params)
-
 
     @classmethod
     def generate_new_external_id(cls, id=_resource_id, **params):
@@ -132,4 +130,3 @@ class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource, Dele
         """
         cls._sub_resource_name = 'logs'
         return super(Aws, cls).add_items(id=id, **params)
-        # need to look at this a bit more to see if we can make it better
