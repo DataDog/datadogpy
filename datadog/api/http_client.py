@@ -23,7 +23,7 @@ except ImportError:
     urlfetch, urlfetch_errors = None, None
 
 # datadog
-from datadog.api.exceptions import ClientError, HTTPError, HttpTimeout
+from datadog.api.exceptions import ProxyError, ClientError, HTTPError, HttpTimeout
 
 
 log = logging.getLogger('datadog.api')
@@ -85,6 +85,8 @@ class RequestClient(HTTPClient):
 
             result.raise_for_status()
 
+        except requests.exceptions.ProxyError as e:
+            raise _remove_context(ProxyError(method, url, e))
         except requests.ConnectionError as e:
             raise _remove_context(ClientError(method, url, e))
         except requests.exceptions.Timeout:

@@ -3,6 +3,18 @@ API & HTTP Clients exceptions.
 """
 
 
+class ProxyError(Exception):
+    """
+    HTTP connection to the configured proxy server failed.
+    """
+    def __init__(self, method, url, exception):
+        message = u"Could not request {method} {url}: Unable to connect to proxy. "\
+                  u"Please check the proxy configuration and try again.".format(
+                      method=method, url=url
+                  )
+        super(ProxyError, self).__init__(message)
+
+
 class ClientError(Exception):
     """
     HTTP connection to Datadog endpoint is not possible.

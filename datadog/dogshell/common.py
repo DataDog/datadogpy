@@ -77,6 +77,8 @@ class DogshellConfig(IterableUserDict):
 
             self['api_key'] = config.get('Connection', 'apikey')
             self['app_key'] = config.get('Connection', 'appkey')
+            if config.has_section('Proxy'):
+                self['proxies'] = dict(config.items('Proxy'))
             if config.has_option('Connection', 'host_name'):
                 self['host_name'] = config.get('Connection', 'host_name')
             if config.has_option('Connection', 'api_host'):
