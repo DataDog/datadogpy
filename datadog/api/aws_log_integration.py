@@ -28,8 +28,8 @@ class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         Attach the Lambda ARN of the Lambda created for the Datadog-AWS \
         log collection to your AWS account ID to enable log collection.
 
-        >>> account_id = "601427279990"
-        >>> lambda_arn = "arn:aws:lambda:us-east-1:601427279990:function:RickyLogsCollectionAPITest"
+        >>> account_id = "<AWS_ACCOUNT_ID>"
+        >>> lambda_arn = "<AWS_LAMBDA_ARN>"
 
         >>> api.AwsLogs.add_log_lambda_arn(account_id=account_id, lambda_arn=lambda_arn)
         """
@@ -41,7 +41,7 @@ class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         """
         Enable Automatic Log collection for your AWS services.
 
-        >>> account_id = "601427279990"
+        >>> account_id = "<AWS_ACCOUNT_ID>"
         >>> services = ["s3", "elb", "elbv2", "cloudfront", "redshift", "lambda"]
 
         >>> api.AwsLogs.save_services()
@@ -55,8 +55,8 @@ class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         Delete a Datadog-AWS log collection configuration by removing the specific Lambda ARN \
         associated with a given AWS account.
 
-        >>> account_id = "601427279990"
-        >>> lambda_arn = "arn:aws:lambda:us-east-1:601427279990:function:RickyLogsCollectionAPITest"
+        >>> account_id = "<AWS_ACCOUNT_ID>"
+        >>> lambda_arn = "<AWS_LAMBDA_ARN>"
 
         >>> api.AwsLogs.delete_config(account_id=account_id, lambda_arn=lambda_arn)
         """
