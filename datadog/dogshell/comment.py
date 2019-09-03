@@ -155,12 +155,3 @@ class CommentClient(object):
             print('url\t\t' + res['event']['url'])
             print('resource\t' + res['event']['resource'])
             print('message\t\t' + res['event']['text'].__repr__())
-
-    @classmethod
-    def _delete(cls, args):
-        api._timeout = args.timeout
-        id = args.comment_id
-        res = api.Comment.delete(id)
-        if res is not None:
-            report_warnings(res)
-            report_errors(res)
