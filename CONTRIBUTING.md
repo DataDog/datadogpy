@@ -28,9 +28,9 @@ improvements or alternatives.
 # Adding new API endpoints
 This section outlines the process for adding a new endpoint to this API client.
 
-Lets use the example of creating an endpoint for `Hosts`. For this example endpoint, we will accept a GET and DELETE request at the `/hosts` endpoint as well as a GET request at the `hosts/totals` endpoint.  **NOTE:** This endpoint is just an exmaple and doesn't describe the existing `hosts` resource.
+Let's use the example of creating an endpoint for `Hosts`. This example endpoint accepts either a GET or DELETE request at the `/hosts` endpoint as well as a GET request at the `hosts/totals` endpoint. **NOTE:** This endpoint is just an example and doesn't describe the existing `hosts` resource.
 
-First, start by adding a new file to the `datadog -> api` folder for our new endpoint `hosts.py`. We'll use the following simple class structure:
+Start by adding a new file `hosts.py` to the `datadog/api` folder for the new endpoint. Use the following simple class structure:
 
 ```
 from datadog.api.resources import (
