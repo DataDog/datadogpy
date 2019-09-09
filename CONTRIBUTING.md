@@ -28,9 +28,9 @@ improvements or alternatives.
 # Adding new API endpoints
 This section outlines the process for adding a new endpoint to this API client.
 
-Lets use the example of creating an endpoint for `Hosts`. For this example endpoint, we will accept a GET and DELETE request at the `/hosts` endpoint as well as a GET resquest at the `hosts/totals` endpoint. **NOTE:** This endpoint is just an exmaple and doesn't describe the existing `hosts` resource.
+Lets use the example of creating an endpoint for `Hosts`. For this example endpoint, we will accept a GET and DELETE request at the `/hosts` endpoint as well as a GET request at the `hosts/totals` endpoint.  **NOTE:** This endpoint is just an exmaple and doesn't describe the existing `hosts` resource.
 
-First start by adding a new file to the `datadog -> api` folder for our new endpoint `hosts.py`. We'll use the following simple class structure:
+First, start by adding a new file to the `datadog -> api` folder for our new endpoint `hosts.py`. We'll use the following simple class structure:
 
 ```
 from datadog.api.resources import (
@@ -57,6 +57,8 @@ Each class has the above simple structure, most importantly the following two pi
   * ListableAPIResource - Wrapper class for providing a `GET` request for your class, implementing an `get_all` method.
   * SearchableAPIResource - Fork of ListableAPIResource class with a `_search` method.
   * ActionAPIResource - Generic wrapper to trigger any type of HTTP request.
+
+More information about the available classes to inherit from can be found in the [`resources.py`](https://github.com/DataDog/datadogpy/blob/master/datadog/api/resources.py) file.
 
 Looking back at our simple class, we defined the URI this class will access, `hosts`, and that we can call the `delete` and `get` functions since we are inheriting `GetableAPIResource` and `DeletableAPIResource`.
 
