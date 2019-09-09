@@ -52,17 +52,17 @@ Each class has the above simple structure, most importantly the following two pi
   * CreateableAPIResource - Wrapper class for providing a `POST` request for your class, implementing a `create` method.
   * SendableAPIResource - Fork of CreateableAPIResource class with a `send` method.
   * UpdatableAPIResource - Wrapper class for providing a `PUT` request for your class, implementing an `update` method.
-  * DeletableAPIResource - Wrapper class for providing a `DELETE` request for your class, implementing an `delete` method.
-  * GetableAPIResource - Wrapper class for providing a `GET` request for your class, implementing an `get` method.
-  * ListableAPIResource - Wrapper class for providing a `GET` request for your class, implementing an `get_all` method.
+  * DeletableAPIResource - Wrapper class for providing a `DELETE` request for your class, implementing a `delete` method.
+  * GetableAPIResource - Wrapper class for providing a `GET` request for your class, implementing a `get` method.
+  * ListableAPIResource - Wrapper class for providing a `GET` request for your class, implementing a `get_all` method.
   * SearchableAPIResource - Fork of ListableAPIResource class with a `_search` method.
   * ActionAPIResource - Generic wrapper to trigger any type of HTTP request.
 
 More information about the available classes to inherit from can be found in the [`resources.py`](https://github.com/DataDog/datadogpy/blob/master/datadog/api/resources.py) file.
 
-Looking back at our simple class, we defined the URI this class will access, `hosts`, and that we can call the `delete` and `get` functions since we are inheriting `GetableAPIResource` and `DeletableAPIResource`.
+Looking back at our simple class, we defined the URI this class accesses, `hosts`, and specified that we can call the `delete` and `get` functions by inheriting `GetableAPIResource` and `DeletableAPIResource`.
 
-The remaining piece is to add support for our `GET` request to the `hosts/totals` URI. To do this, we can update our code to include:
+The remaining piece is to add support for the `GET` request to the `hosts/totals` URI. To do this, update your code to include:
 
 ```
 from datadog.api.resources import (
@@ -86,9 +86,9 @@ class Hosts(GetableAPIResource, DeletableAPIResource, ActionAPIResource):
         return super(Hosts, cls)._trigger_class_action('GET', 'totals')
 ```
 
-Notice the addition of the new class we're inheriting `ActionAPIResource` in addition to the new function `totals`. This new `totals` function utilizes the `_trigger_class_action` method from that class and appends `totals` to our URI.
+Notice the addition of the new inherited class `ActionAPIResource`, and the new function `totals`. This new `totals` function calls the `_trigger_class_action` method from that class and appends `totals` to our URI.
 
-Now we can use our new SDK and call the following methods with varioud params and request bodies:
+Now you can use your new SDK and call the following methods with various params and request bodies:
 * Hosts.totals()
 * Hosts.get()
 * Hosts.delete()
