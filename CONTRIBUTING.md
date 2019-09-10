@@ -49,22 +49,25 @@ class Hosts(GetableAPIResource, DeletableAPIResource):
 
 Each class has the above simple structure, most importantly the following two pieces:
 
-* A `_resource_name` - Indicates the uri of the api.
+* A `_resource_name` - Indicates the URI of the api.
 * A set of classes to inherit from. This is where the get/post/put/delete request code is defined for you. Available options are:
-  * CreateableAPIResource - Wrapper class for providing a `POST` request for your class, implementing a `create` method.
-  * SendableAPIResource - Fork of CreateableAPIResource class with a `send` method.
-  * UpdatableAPIResource - Wrapper class for providing a `PUT` request for your class, implementing an `update` method.
-  * DeletableAPIResource - Wrapper class for providing a `DELETE` request for your class, implementing a `delete` method.
-  * GetableAPIResource - Wrapper class for providing a `GET` request for your class, implementing a `get` method.
-  * ListableAPIResource - Wrapper class for providing a `GET` request for your class, implementing a `get_all` method.
-  * SearchableAPIResource - Fork of ListableAPIResource class with a `_search` method.
-  * ActionAPIResource - Generic wrapper to trigger any type of HTTP request.
+
+| Class Name         | Description                                                                                     |
+| --------------------- | ----------------------------------------------------------------------------------------------- |
+| CreateableAPIResource | Wrapper class for providing a `POST` request for your class, implementing a `create` method.    |
+| SendableAPIResource   | Fork of CreateableAPIResource class with a `send` method.                                       |
+| UpdatableAPIResource  | Wrapper class for providing a `PUT` request for your class, implementing an `update` method.    |
+| DeletableAPIResource  | Wrapper class for providing a `DELETE` request for your class, implementing an `delete` method. |
+| GetableAPIResource    | Wrapper class for providing a `GET` request for your class, implementing an `get` method.       |
+| ListableAPIResource   | Wrapper class for providing a `GET` request for your class, implementing an `get_all` method.   |
+| SearchableAPIResource | Fork of ListableAPIResource class with a `_search` method.                                      |
+| ActionAPIResource     | Generic wrapper to trigger any type of HTTP request.                                            |
 
 More information about the available classes to inherit from can be found in the [`resources.py`](https://github.com/DataDog/datadogpy/blob/master/datadog/api/resources.py) file.
 
 Looking back at the class above:
 
-* The URI this class can access is defined: `hosts`. 
+* The URI this class can access is defined: `hosts`.
 * The `delete` and `get` methods can be called by inheriting `GetableAPIResource` and `DeletableAPIResource`.
 
 The remaining piece is to add support for the `GET` request to the `hosts/totals` URI. To do this, update your code to include:
@@ -91,7 +94,7 @@ class Hosts(GetableAPIResource, DeletableAPIResource, ActionAPIResource):
         return super(Hosts, cls)._trigger_class_action('GET', 'totals')
 ```
 
-Notice the addition of the new inherited class `ActionAPIResource`, and the new function `totals`. This new `totals` function calls the `_trigger_class_action` method from that class and appends `totals` to our URI.
+Notice the addition of the new inherited class `ActionAPIResource`, and the new function `totals`. This new `totals` function calls the `_trigger_class_action` method from that class and appends `totals` to our URI, making the full path: `baseAPI/hosts/totals`.
 
 Now you can use your new SDK and call the following methods with various params and request bodies:
 * `Hosts.totals()`
