@@ -62,7 +62,10 @@ Each class has the above simple structure, most importantly the following two pi
 
 More information about the available classes to inherit from can be found in the [`resources.py`](https://github.com/DataDog/datadogpy/blob/master/datadog/api/resources.py) file.
 
-Looking back at our simple class, we defined the URI this class accesses, `hosts`, and specified that we can call the `delete` and `get` functions by inheriting `GetableAPIResource` and `DeletableAPIResource`.
+Looking back at the class above:
+
+* The URI this class can access is defined: `hosts`. 
+* The `delete` and `get` methods can be called by inheriting `GetableAPIResource` and `DeletableAPIResource`.
 
 The remaining piece is to add support for the `GET` request to the `hosts/totals` URI. To do this, update your code to include:
 
@@ -91,6 +94,6 @@ class Hosts(GetableAPIResource, DeletableAPIResource, ActionAPIResource):
 Notice the addition of the new inherited class `ActionAPIResource`, and the new function `totals`. This new `totals` function calls the `_trigger_class_action` method from that class and appends `totals` to our URI.
 
 Now you can use your new SDK and call the following methods with various params and request bodies:
-* Hosts.totals()
-* Hosts.get()
-* Hosts.delete()
+* `Hosts.totals()`
+* `Hosts.get()`
+* `Hosts.delete()`
