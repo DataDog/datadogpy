@@ -1,6 +1,17 @@
 CHANGELOG
 =========
 
+# 0.30.0 / Unreleased
+
+* [BUGFIX] Treat `API_HOST` as URL, not as string [#411][]
+* [FEATURE] Add `return_raw_response` option to `initialize` to enable adding raw responses to return values [#414][]
+* [IMPROVEMENT] Add project URLs to package metadata [#413][] (thanks [@Tenzer][])
+* [IMPROVEMENT] Add support for handling a 401 status as an API error [#418][]
+* [IMPROVEMENT] Allow configuring proxy in `~/.dogrc` for usage with dogshell [#415][]
+* [IMPROVEMENT] Update `user` resource name to `users` to match new plural endpoints [#421][]
+* [OTHER] Add deprecation warning to old aws lambda threadstats integration [#417][]
+* [OTHER] Removed functionality to delete events and comments, as it's no longer supported by API [#420][]
+
 # 0.29.3 / 2019-06-12
 
 * [BUGFIX] Fix encoding issue on install [#391][] and [#392][] (thanks [@Alphadash][] and [@ningirsu][])
@@ -415,6 +426,14 @@ See [#8][], thanks [@benweatherman][]
 [#395]: https://github.com/DataDog/datadogpy/issues/395
 [#397]: https://github.com/DataDog/datadogpy/issues/397
 [#401]: https://github.com/DataDog/datadogpy/issues/401
+[#411]: https://github.com/DataDog/datadogpy/issues/411
+[#413]: https://github.com/DataDog/datadogpy/issues/413
+[#414]: https://github.com/DataDog/datadogpy/issues/414
+[#415]: https://github.com/DataDog/datadogpy/issues/415
+[#417]: https://github.com/DataDog/datadogpy/issues/417
+[#418]: https://github.com/DataDog/datadogpy/issues/418
+[#420]: https://github.com/DataDog/datadogpy/issues/420
+[#421]: https://github.com/DataDog/datadogpy/issues/421
 [@Alphadash]: https://github.com/Alphadash
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@Hefeweizen]: https://github.com/Hefeweizen
