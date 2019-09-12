@@ -713,11 +713,7 @@ class TestDatadog(unittest.TestCase):
         # the override param.
         end2 = end + 60 * 15
         resp = dog.Host.mute(hostname, end=end2)
-        eq(
-            resp['errors'][0],
-            # yeah, there's really this many spaces in the error string
-            "host:my.test.host is already muted. To mute this host with a different end timestamp,                             add ?override=true to your request."
-        )
+        assert resp['errors'][0].startswith('host:my.test.host is already muted.')
 
         mute = dog.Host.mute(hostname, end=end2, override=True)
         eq(mute['hostname'], hostname)
