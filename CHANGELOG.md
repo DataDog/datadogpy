@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# 0.30.0 / Unreleased
+# 0.30.0 / 2019-09-12
 
 * [BUGFIX] Treat `API_HOST` as URL, not as string [#411][]
 * [FEATURE] Add `return_raw_response` option to `initialize` to enable adding raw responses to return values [#414][]
