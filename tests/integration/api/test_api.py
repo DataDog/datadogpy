@@ -153,6 +153,11 @@ class TestDatadog(unittest.TestCase):
         self.assertEqual(event['event']['title'], "Testing git commits")
 
     def test_comments(self):
+        self.assertIsNotNone(
+            TEST_USER,
+            "You must set DATADOG_TEST_USER environment to run comment tests"
+        )
+
         now = datetime.datetime.now()
         now_ts = int(time.mktime(now.timetuple()))
         before_ts = int(time.mktime((now - datetime.timedelta(minutes=15)).timetuple()))
@@ -175,11 +180,6 @@ class TestDatadog(unittest.TestCase):
         comment_ids = [x['id'] for x in stream[0]['comments']]
         ok(reply_id in comment_ids,
            msg="Should find {0} in {1}".format(reply_id, comment_ids))
-        # Delete the reply
-        dog.Comment.delete(reply_id)
-        # Then the post itself
-        dog.Comment.delete(comment_id)
-
 
     @attr('timeboards', 'validation')
     def test_timeboard_validation(self):
@@ -361,12 +361,8 @@ class TestDatadog(unittest.TestCase):
         assert monitor['options']['silenced'] == {"*": None}, monitor['options']['silenced']
 
         dog.Monitor.delete(monitor_id)
-        try:
-            dog.Monitor.delete(monitor_id)
-        except Exception:
-            pass
-        else:
-            assert False, 'monitor not deleted'
+        resp = dog.Monitor.delete(monitor_id)
+        eq(resp["errors"][0], "Monitor not found")
 
         query1 = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
         query2 = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200"
@@ -716,7 +712,13 @@ class TestDatadog(unittest.TestCase):
         # We shouldn't be able to mute a host that's already muted, unless we include
         # the override param.
         end2 = end + 60 * 15
-        assert_raises(ApiError, dog.Host.mute, hostname, end=end2)
+        resp = dog.Host.mute(hostname, end=end2)
+        eq(
+            resp['errors'][0],
+            # yeah, there's really this many spaces in the error string
+            "host:my.test.host is already muted. To mute this host with a different end timestamp,                             add ?override=true to your request."
+        )
+
         mute = dog.Host.mute(hostname, end=end2, override=True)
         eq(mute['hostname'], hostname)
         eq(mute['action'], "Muted")
@@ -865,8 +867,11 @@ class TestDatadog(unittest.TestCase):
         result = dog.Embed.revoke(embed_id)
         # Check embed is revoked and that we can't get it again
         assert "success" in result
-        with self.assertRaises(ApiError):
-            dog.Embed.get(embed_id)
+        resp = dog.Embed.get(embed_id)
+        eq(
+            resp["errors"][0],
+            "Embed {} does not exist.".format(embed_id)
+        )
 
     def test_user_crud(self):
         handle = 'user@test.com'
