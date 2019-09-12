@@ -50,6 +50,11 @@ class TestDogshell(unittest.TestCase):
         out, err, return_code = self.dogshell(["--help"], use_cl_args=True)
 
     def test_comment(self):
+        self.assertIsNotNone(
+            TEST_USER,
+            "You must set DATADOG_TEST_USER environment variable to run comment tests"
+        )
+
         # Post a new comment
         cmd = ["comment", "post", TEST_USER]
         comment_msg = "yo dudes"
@@ -83,15 +88,7 @@ class TestDogshell(unittest.TestCase):
         show_data2 = self.parse_response(out)
         assert new_comment in show_data2['message']
 
-        # Delete the comment
-        cmd = ["comment", "delete", post_data['id']]
-        out, err, return_code = self.dogshell(cmd)
-        # self.assertEquals(out, '')
-
-        # Shouldn't get anything
-        time.sleep(self.wait_time)
-        cmd = ["comment", "show", post_data['id']]
-        out, err, return_code = self.dogshell(cmd, check_return_code=False)
+        # Deleting comments is no longer supported
 
     def test_event(self):
         # Post an event
