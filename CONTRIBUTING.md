@@ -8,6 +8,11 @@ Fork, then clone the repo:
 
 Make sure the tests pass:
 
+    # !!!WARNING!!! The integration tests will use these keys to do destructive changes.
+    # Never use keys for an organization that contains anything important.
+    export DATADOG_API_KEY=<api_key_for_a_testing_org>
+    export DATADOG_APP_KEY=<app_key_for_a_testing_org>
+    export DATADOG_TEST_USER=<user_handle_for_testing_comments_api>
     python setup.py test
 
 Make your change. Add tests for your change. Make the tests pass again.
