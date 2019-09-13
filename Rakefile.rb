@@ -18,5 +18,5 @@ end
 
 
 task :release do
-  sh "python setup.py sdist upload"
+  sh "python setup.py sdist bdist_wheel --universal upload"
 end
