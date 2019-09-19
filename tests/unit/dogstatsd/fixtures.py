@@ -12,4 +12,5 @@ def load_fixtures(name):
     Args:
         name (string): name of the fixture
     """
-    return open(os.path.join(os.path.dirname(__file__), 'fixtures', '{}'.format(name))).read()
+    with open(os.path.join(os.path.dirname(__file__), 'fixtures', '{}'.format(name))) as fixture:
+        return fixture.read()
