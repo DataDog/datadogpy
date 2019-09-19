@@ -113,7 +113,8 @@ def get_config(cfg_path=None, options=None):
 
         config_path = get_config_path(cfg_path, os_name=get_os())
         config = configparser.ConfigParser()
-        config.readfp(skip_leading_wsp(open(config_path)))
+        with open(config_path) as config_file:
+            config.readfp(skip_leading_wsp(config_file))
 
         # bulk import
         for option in config.options('Main'):
