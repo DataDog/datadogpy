@@ -21,7 +21,7 @@ setup(
     version="0.30.0",
     install_requires=install_reqs,
     tests_require=[
-        "nose", "mock",
+        "pytest", "mock",
         'pillow==5.4.1; python_version == "3.4"',
         'pillow; python_version != "3.4"',
     ],

@@ -12,7 +12,7 @@ import unittest
 import requests
 
 # 3rd
-from nose.plugins.attrib import attr
+import pytest
 
 # datadog
 from datadog.util.compat import is_p3k, ConfigParser
@@ -264,7 +264,7 @@ class TestDogshell(unittest.TestCase):
                                               check_return_code=False)
         self.assertNotEquals(return_code, 0)
 
-    @attr('screenboard')
+    @pytest.mark.screenboard
     def test_screenboards(self):
         # Create a screenboard and write it to a file
         name, temp0 = get_temp_file()
@@ -450,7 +450,7 @@ class TestDogshell(unittest.TestCase):
         out, err, return_code = self.dogshell(["monitor", "unmute_all"], check_return_code=False)
         self.assertNotEquals(return_code, 0)
 
-    @attr('host')
+    @pytest.mark.host
     def test_host_muting(self):
         hostname = "my.test.host"
         message = "Muting this host for a test."

@@ -7,10 +7,7 @@ import requests
 import json
 
 # 3p
-from nose.plugins.attrib import attr
-from nose.tools import assert_raises
-from nose.tools import assert_equal as eq
-from nose.tools import assert_true as ok
+import pytest
 
 # datadog
 from datadog import initialize
@@ -29,6 +26,14 @@ FAKE_PROXY = {
 }
 
 
+def eq(a, b):
+    assert a == b
+
+
+def ok(assertion, message):
+    assert assertion, message
+
+
 class TestDatadog(unittest.TestCase):
     host_name = 'test.host.unit'
     wait_time = 10
@@ -37,7 +42,7 @@ class TestDatadog(unittest.TestCase):
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
         dog._swallow = False
 
-    @attr("tags")
+    @pytest.mark.tags
     def test_tags(self):
         # post a metric to make sure the test host context exists
         hostname = self.host_name
@@ -181,7 +186,8 @@ class TestDatadog(unittest.TestCase):
         ok(reply_id in comment_ids,
            msg="Should find {0} in {1}".format(reply_id, comment_ids))
 
-    @attr('timeboards', 'validation')
+    @pytest.mark.timeboards
+    @pytest.mark.validation
     def test_timeboard_validation(self):
         graph = {
             "title": "test metric graph",
@@ -224,7 +230,7 @@ class TestDatadog(unittest.TestCase):
         exception_msg = resp['errors'][0]
         eq(exception_msg, "No dashboard matches that dash_id.")
 
-    @attr('dashboards')
+    @pytest.mark.dashboards
     def test_timeboard(self):
         graph = {
             "title": "test metric graph",
@@ -286,7 +292,7 @@ class TestDatadog(unittest.TestCase):
         assert len(results['results']['hosts']) > 0
         assert len(results['results']['metrics']) > 0
 
-    @attr("metric")
+    @pytest.mark.metric
     def test_metrics(self):
         now = datetime.datetime.now()
         now_ts = int(time.mktime(now.timetuple()))
@@ -338,7 +344,7 @@ class TestDatadog(unittest.TestCase):
         dog.Metric.send(metric="test.metric", points=1.0)
         dog.Metric.send(metric="test.metric", points=(time.time(), 1.0))
 
-    @attr('monitor')
+    @pytest.mark.monitor
     def test_monitors(self):
         query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
 
@@ -392,7 +398,7 @@ class TestDatadog(unittest.TestCase):
         result = dog.Monitor.update(monitor_id, query='aaa', silenced=True)
         assert result['errors'][0] == "The value provided for parameter 'query' is invalid"
 
-    @attr('snapshot')
+    @pytest.mark.snapshot
     def test_graph_snapshot(self):
         metric_query = "system.load.1{*}"
         event_query = "*"
@@ -461,7 +467,7 @@ class TestDatadog(unittest.TestCase):
             snapshot_url = 'http://%s%s' % (dog.api_host, snapshot_url)
         assert_snap_not_blank(snapshot_url)
 
-    @attr('screenboard')
+    @pytest.mark.screenboard
     def test_screenboard(self):
         def _compare_screenboard(apiBoard, expectedBoard):
             compare_keys = ['board_title', 'height', 'width', 'widgets']
@@ -540,7 +546,7 @@ class TestDatadog(unittest.TestCase):
         delete_res = dog.Screenboard.delete(update_res['id'])
         assert delete_res['id'] == update_res['id']
 
-    @attr('monitor')
+    @pytest.mark.monitor
     def test_monitor_crud(self):
         # Metric alerts
         query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
@@ -613,7 +619,7 @@ class TestDatadog(unittest.TestCase):
         resp = dog.Monitor.get(monitor_id)
         assert resp.get('errors')[0] == 'Monitor not found'
 
-    # @attr('monitor')
+    # @pytest.mark.monitor
     # def test_monitor_muting(self):
     #     query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
     #     monitor_id = dog.Monitor.create(type='metric alert', query=query)['id']
@@ -656,7 +662,7 @@ class TestDatadog(unittest.TestCase):
 
         # dog.Monitor.delete(monitor_id)
 
-    @attr('monitor')
+    @pytest.mark.monitor
     def test_downtime(self):
         start = int(time.time())
         end = start + 1000
@@ -684,13 +690,13 @@ class TestDatadog(unittest.TestCase):
         dt = dog.Downtime.get(downtime_id)
         eq(dt['disabled'], True)
 
-    @attr('monitor')
+    @pytest.mark.monitor
     def test_service_check(self):
         dog.ServiceCheck.check(
             check='check_pg', host_name='host0', status=1,
             message='PG is WARNING', tags=['db:prod_data'])
 
-    @attr('host')
+    @pytest.mark.host
     def test_host_muting(self):
         hostname = "my.test.host"
         message = "Muting this host for a test."
@@ -722,13 +728,13 @@ class TestDatadog(unittest.TestCase):
 
         dog.Host.unmute(hostname)
 
-    @attr('embed')
+    @pytest.mark.embed
     def test_get_all_embeds(self):
         all_embeds = dog.Embed.get_all()
         # Check all embeds is a valid response
         assert "embedded_graphs" in all_embeds
 
-    @attr('embed')
+    @pytest.mark.embed
     def test_create_embed(self):
         # Initialize a graph definition
         graph_def = {
@@ -764,7 +770,7 @@ class TestDatadog(unittest.TestCase):
         assert "html" in result
         assert result["graph_title"] == title
 
-    @attr('embed')
+    @pytest.mark.embed
     def test_get_embed(self):
         # Create a graph that we can try getting
         graph_def = {
@@ -800,7 +806,7 @@ class TestDatadog(unittest.TestCase):
         assert response_graph["embed_id"] == embed_id
         assert len(response_graph["html"]) > len(html)
 
-    @attr('embed')
+    @pytest.mark.embed
     def test_enable_embed(self):
         # Create a graph that we can try getting
         graph_def = {
@@ -832,7 +838,7 @@ class TestDatadog(unittest.TestCase):
         # Check that the graph is enabled again
         assert "success" in result
 
-    @attr('embed')
+    @pytest.mark.embed
     def test_revoke_embed(self):
         # Create a graph that we can try getting
         graph_def = {

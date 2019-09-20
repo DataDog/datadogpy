@@ -1,7 +1,6 @@
 import re
 import time
 import threading
-from nose import tools as t
 
 from datadog import ThreadStats
 
@@ -56,7 +55,7 @@ class TestThreadStatsThreadSafety(object):
         events = reporter.events
 
         # Overview
-        t.assert_equal(len(metrics), 10009, len(metrics))
+        assert len(metrics) == 10009
 
         # Sort metrics
         counter_metrics = []
@@ -72,19 +71,19 @@ class TestThreadStatsThreadSafety(object):
                 counter_metrics.append(m)
 
         # Counter
-        t.assert_equal(len(counter_metrics), 1, len(counter_metrics))
+        assert len(counter_metrics) == 1
         counter = counter_metrics[0]
-        t.assert_equal(counter['points'][0][1], 10000, counter['points'][0][1])
+        assert counter['points'][0][1] == 10000
 
         # Gauge
-        t.assert_equal(len(gauge_metrics), 10000, len(gauge_metrics))
+        assert len(gauge_metrics) == 10000
 
         # Histogram
-        t.assert_equal(len(histogram_metrics), 8, len(histogram_metrics))
+        assert len(histogram_metrics) == 8
         count_histogram = filter(lambda x: x['metric'] == "histogram.count", histogram_metrics)[0]
-        t.assert_equal(count_histogram['points'][0][1], 10000, count_histogram['points'][0][1])
+        assert count_histogram['points'][0][1] == 10000
         sum_histogram = filter(lambda x: x['metric'] == "histogram.avg", histogram_metrics)[0]
-        t.assert_equal(sum_histogram['points'][0][1], 4999.5, sum_histogram['points'][0][1])
+        assert sum_histogram['points'][0][1] == 4999.5
 
         # Events
-        t.assert_equal(10000, len(events), len(events))
+        assert 10000 == len(events)
