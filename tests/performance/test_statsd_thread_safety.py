@@ -60,7 +60,7 @@ class TestDogStatsdThreadSafety(unittest.TestCase):
         packets = list(filter(lambda x: x, packets))
 
         # Count
-        self.assertEquals(
+        self.assertEqual(
             len(packets), count,
             u"Metric size assertion failed: expected={expected}, received={received}".format(
                 expected=count, received=len(packets)

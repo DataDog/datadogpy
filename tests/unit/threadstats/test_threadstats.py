@@ -85,7 +85,7 @@ class TestUnitThreadStats(unittest.TestCase):
             matching_metrics.append(metric)
 
         if count:
-            self.assertEquals(
+            self.assertEqual(
                 len(matching_metrics), count,
                 u"Candidate size assertion failure: expected {expected}, found {count}. "
                 u"Metric name={name}, value={value}, tags={tags}.".format(

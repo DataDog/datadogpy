@@ -78,7 +78,7 @@ class TestDogshell(unittest.TestCase):
         new_comment = "nothing much"
         out, err, return_code = self.dogshell(cmd, stdin=new_comment)
         update_data = self.parse_response(out)
-        self.assertEquals(update_data['id'], post_data['id'])
+        self.assertEqual(update_data['id'], post_data['id'])
         assert new_comment in update_data['message']
 
         # Read the updated comment
@@ -122,7 +122,7 @@ class TestDogshell(unittest.TestCase):
             out, err, return_code = self.dogshell(cmd, check_return_code=False)
             time.sleep(self.wait_time)
         event_id2 = match_permalink(out)
-        self.assertEquals(event_id, event_id2)
+        self.assertEqual(event_id, event_id2)
 
         # Get a stream of events
         cmd = ["event", "stream", "30m", "--tags", tags]
@@ -176,7 +176,7 @@ class TestDogshell(unittest.TestCase):
         # Remove all the tags
         self.dogshell(["tag", "detach", host])
         out, err, return_code = self.dogshell(["tag", "show", host])
-        self.assertEquals(out, "")
+        self.assertEqual(out, "")
 
     def test_timeboards(self):
         # Create a timeboard and write it to a file
@@ -208,9 +208,9 @@ class TestDogshell(unittest.TestCase):
         out = json.loads(out)
         assert "dash" in out, out
         assert "id" in out["dash"], out
-        self.assertEquals(out["dash"]["id"], dash["id"])
+        self.assertEqual(out["dash"]["id"], dash["id"])
         assert "title" in out["dash"]
-        self.assertEquals(out["dash"]["title"], dash["title"])
+        self.assertEqual(out["dash"]["title"], dash["title"])
 
         new_title = "new_title"
         new_desc = "new_desc"
@@ -236,13 +236,13 @@ class TestDogshell(unittest.TestCase):
         out['dash'].pop('template_variables', None)
         assert "dash" in out, out
         assert "id" in out["dash"], out
-        self.assertEquals(out["dash"]["id"], dash["id"])
+        self.assertEqual(out["dash"]["id"], dash["id"])
         assert "title" in out["dash"], out
-        self.assertEquals(out["dash"]["title"], new_title)
+        self.assertEqual(out["dash"]["title"], new_title)
         assert "description" in out["dash"], out
-        self.assertEquals(out["dash"]["description"], new_desc)
+        self.assertEqual(out["dash"]["description"], new_desc)
         assert "graphs" in out["dash"], out
-        self.assertEquals(out["dash"]["graphs"], new_dash)
+        self.assertEqual(out["dash"]["graphs"], new_dash)
 
         # Pull the updated dash to disk
         fd, updated_file = tempfile.mkstemp()
@@ -252,7 +252,7 @@ class TestDogshell(unittest.TestCase):
             with open(updated_file) as f:
                 updated_dash = json.load(f)
             assert "dash" in out
-            self.assertEquals(out["dash"], updated_dash)
+            self.assertEqual(out["dash"], updated_dash)
         finally:
             os.unlink(updated_file)
 
@@ -295,9 +295,9 @@ class TestDogshell(unittest.TestCase):
 
         out = json.loads(out)
         assert "id" in out, out
-        self.assertEquals(out["id"], screenboard["id"])
+        self.assertEqual(out["id"], screenboard["id"])
         assert "title" in out, out
-        self.assertEquals(out["title"], screenboard["title"])
+        self.assertEqual(out["title"], screenboard["title"])
 
         new_title = "new_title"
         new_desc = "new_desc"
@@ -317,13 +317,13 @@ class TestDogshell(unittest.TestCase):
         out, _, _ = self.dogshell(["screenboard", "show", str(screenboard["id"])])
         out = json.loads(out)
         assert "id" in out, out
-        self.assertEquals(out["id"], screenboard["id"])
+        self.assertEqual(out["id"], screenboard["id"])
         assert "board_title" in out, out
-        self.assertEquals(out["board_title"], new_title)
+        self.assertEqual(out["board_title"], new_title)
         assert "description" in out, out
-        self.assertEquals(out["description"], new_desc)
+        self.assertEqual(out["description"], new_desc)
         assert "widgets" in out, out
-        self.assertEquals(out["widgets"], new_screen)
+        self.assertEqual(out["widgets"], new_screen)
 
         # Pull the updated screenboard to disk
         fd, updated_file = tempfile.mkstemp()
@@ -332,7 +332,7 @@ class TestDogshell(unittest.TestCase):
             updated_screenboard = {}
             with open(updated_file) as f:
                 updated_screenboard = json.load(f)
-            self.assertEquals(out, updated_screenboard)
+            self.assertEqual(out, updated_screenboard)
         finally:
             os.unlink(updated_file)
 
@@ -370,14 +370,14 @@ class TestDogshell(unittest.TestCase):
         assert "query" in out, out
         assert "type" in out, out
         out = json.loads(out)
-        self.assertEquals(out["query"], query)
-        self.assertEquals(out["type"], type_alert)
+        self.assertEqual(out["query"], query)
+        self.assertEqual(out["type"], type_alert)
         monitor_id = str(out["id"])
 
         out, err, return_code = self.dogshell(["monitor", "show", monitor_id])
         out = json.loads(out)
-        self.assertEquals(out["query"], query)
-        self.assertEquals(out['options']['notify_no_data'], False)
+        self.assertEqual(out["query"], query)
+        self.assertEqual(out['options']['notify_no_data'], False)
 
         # Update options
         options = {
@@ -392,22 +392,22 @@ class TestDogshell(unittest.TestCase):
         assert "id" in out, out
         assert "options" in out, out
         out = json.loads(out)
-        self.assertEquals(out["query"], query)
-        self.assertEquals(out['options']['notify_no_data'], options["notify_no_data"])
-        self.assertEquals(out['options']['no_data_timeframe'], options["no_data_timeframe"])
+        self.assertEqual(out["query"], query)
+        self.assertEqual(out['options']['notify_no_data'], options["notify_no_data"])
+        self.assertEqual(out['options']['no_data_timeframe'], options["no_data_timeframe"])
 
         # Mute monitor
         out, err, return_code = self.dogshell(["monitor", "mute", str(out["id"])])
         assert "id" in out, out
         out = json.loads(out)
-        self.assertEquals(str(out["id"]), monitor_id)
-        self.assertEquals(out["options"]["silenced"], {"*": None})
+        self.assertEqual(str(out["id"]), monitor_id)
+        self.assertEqual(out["options"]["silenced"], {"*": None})
 
         # Unmute monitor
         out, err, return_code = self.dogshell(["monitor", "unmute", "--all_scopes", monitor_id], check_return_code=False)
         out = json.loads(out)
-        self.assertEquals(str(out["id"]), monitor_id)
-        self.assertEquals(out["options"]["silenced"], {})
+        self.assertEqual(str(out["id"]), monitor_id)
+        self.assertEqual(out["options"]["silenced"], {})
 
         # Unmute all scopes of a monitor
         options = {
@@ -421,15 +421,15 @@ class TestDogshell(unittest.TestCase):
         assert "id" in out, out
         assert "options" in out, out
         out = json.loads(out)
-        self.assertEquals(out["query"], query)
-        self.assertEquals(out["options"]["silenced"], {"host:abcd1234": None, "host:abcd1235": None})
+        self.assertEqual(out["query"], query)
+        self.assertEqual(out["options"]["silenced"], {"host:abcd1234": None, "host:abcd1235": None})
 
         out, err, return_code = self.dogshell(["monitor", "unmute", str(out["id"]),
                                                 "--all_scopes"])
         assert "id" in out, out
         out = json.loads(out)
-        self.assertEquals(str(out["id"]), monitor_id)
-        self.assertEquals(out["options"]["silenced"], {})
+        self.assertEqual(str(out["id"]), monitor_id)
+        self.assertEqual(out["options"]["silenced"], {})
 
         # Delete a monitor
         self.dogshell(["monitor", "delete", monitor_id])
@@ -442,7 +442,7 @@ class TestDogshell(unittest.TestCase):
         assert "id" in out, out
         assert "active" in out, out
         out = json.loads(out)
-        self.assertEquals(out["active"], True)
+        self.assertEqual(out["active"], True)
 
         # Unmute all
         self.dogshell(["monitor", "unmute_all"])
@@ -467,10 +467,10 @@ class TestDogshell(unittest.TestCase):
         assert "hostname" in out, out
         assert "message" in out, out
         assert "end" in out, out
-        self.assertEquals(out['action'], "Muted")
-        self.assertEquals(out['hostname'], hostname)
-        self.assertEquals(out['message'], message)
-        self.assertEquals(out['end'], end)
+        self.assertEqual(out['action'], "Muted")
+        self.assertEqual(out['hostname'], hostname)
+        self.assertEqual(out['message'], message)
+        self.assertEqual(out['end'], end)
 
         # We shouldn't be able to mute a host that's already muted, unless we include
         # the override param.
@@ -486,17 +486,17 @@ class TestDogshell(unittest.TestCase):
         assert "action" in out, out
         assert "hostname" in out, out
         assert "end" in out, out
-        self.assertEquals(out['action'], "Muted")
-        self.assertEquals(out['hostname'], hostname)
-        self.assertEquals(out['end'], end2)
+        self.assertEqual(out['action'], "Muted")
+        self.assertEqual(out['hostname'], hostname)
+        self.assertEqual(out['end'], end2)
 
         # Unmute a host
         out, err, return_code = self.dogshell(["host", "unmute", hostname])
         out = json.loads(out)
         assert "action" in out, out
         assert "hostname" in out, out
-        self.assertEquals(out['action'], "Unmuted")
-        self.assertEquals(out['hostname'], hostname)
+        self.assertEqual(out['action'], "Unmuted")
+        self.assertEqual(out['hostname'], hostname)
 
     def test_downtime_schedule(self):
         # Schedule a downtime
@@ -507,8 +507,8 @@ class TestDogshell(unittest.TestCase):
         assert "scope" in out, out
         assert "disabled" in out, out
         out = json.loads(out)
-        self.assertEquals(out["scope"][0], scope)
-        self.assertEquals(out["disabled"], False)
+        self.assertEqual(out["scope"][0], scope)
+        self.assertEqual(out["disabled"], False)
         downtime_id = str(out["id"])
 
         # Get downtime
@@ -517,8 +517,8 @@ class TestDogshell(unittest.TestCase):
         assert "id" in out, out
         assert "scope" in out, out
         out = json.loads(out)
-        self.assertEquals(out["scope"][0], scope)
-        self.assertEquals(out["disabled"], False)
+        self.assertEqual(out["scope"][0], scope)
+        self.assertEqual(out["disabled"], False)
 
         # Update downtime
         message = "Doing some testing on staging."
@@ -531,9 +531,9 @@ class TestDogshell(unittest.TestCase):
         assert "message" in out, out
         assert "disabled" in out, out
         out = json.loads(out)
-        self.assertEquals(out["end"], end)
-        self.assertEquals(out["message"], message)
-        self.assertEquals(out["disabled"], False)
+        self.assertEqual(out["end"], end)
+        self.assertEqual(out["message"], message)
+        self.assertEqual(out["disabled"], False)
 
         # Cancel downtime
         self.dogshell(["downtime", "delete", downtime_id])
@@ -543,15 +543,15 @@ class TestDogshell(unittest.TestCase):
         assert "id" in out, out
         assert "scope" in out, out
         out = json.loads(out)
-        self.assertEquals(out["scope"][0], scope)
-        self.assertEquals(out["disabled"], True)
+        self.assertEqual(out["scope"][0], scope)
+        self.assertEqual(out["disabled"], True)
 
     def test_service_check(self):
         out, err, return_code = self.dogshell(["service_check", "check", "check_pg",
                                               'host0', "1"])
         assert "status" in out, out
         out = json.loads(out)
-        self.assertEquals(out["status"], 'ok')
+        self.assertEqual(out["status"], 'ok')
 
     # Test helpers
     def dogshell(self, args, stdin=None, check_return_code=True, use_cl_args=False):
@@ -571,8 +571,8 @@ class TestDogshell(unittest.TestCase):
         proc.wait()
         return_code = proc.returncode
         if check_return_code:
-            self.assertEquals(return_code, 0, err)
-            self.assertEquals(err, b'')
+            self.assertEqual(return_code, 0, err)
+            self.assertEqual(err, b'')
         return out.decode('utf-8'), err.decode('utf-8'), return_code
 
     def get_unique(self):
