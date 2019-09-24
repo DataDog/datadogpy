@@ -262,7 +262,7 @@ class TestDogshell(unittest.TestCase):
         # Verify that it's not on the server anymore
         out, err, return_code = self.dogshell(["dashboard", "show", str(dash['id'])],
                                               check_return_code=False)
-        self.assertNotEquals(return_code, 0)
+        self.assertNotEqual(return_code, 0)
 
     @pytest.mark.screenboard
     def test_screenboards(self):
@@ -356,7 +356,7 @@ class TestDogshell(unittest.TestCase):
         # Verify that it's not on the server anymore
         out, err, return_code = self.dogshell(["screenboard", "show", str(screenboard['id'])],
                                               check_return_code=False)
-        self.assertNotEquals(return_code, 0)
+        self.assertNotEqual(return_code, 0)
 
     # Test monitors
 
@@ -435,7 +435,7 @@ class TestDogshell(unittest.TestCase):
         self.dogshell(["monitor", "delete", monitor_id])
         # Verify that it's not on the server anymore
         out, err, return_code = self.dogshell(["monitor", "show", monitor_id], check_return_code=False)
-        self.assertNotEquals(return_code, 0)
+        self.assertNotEqual(return_code, 0)
 
         # Mute all
         out, err, return_code = self.dogshell(["monitor", "mute_all"])
@@ -448,7 +448,7 @@ class TestDogshell(unittest.TestCase):
         self.dogshell(["monitor", "unmute_all"])
         # Retry unmuting all -> should raise an error this time
         out, err, return_code = self.dogshell(["monitor", "unmute_all"], check_return_code=False)
-        self.assertNotEquals(return_code, 0)
+        self.assertNotEqual(return_code, 0)
 
     @pytest.mark.host
     def test_host_muting(self):
