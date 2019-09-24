@@ -40,7 +40,7 @@ class TestDogshell(unittest.TestCase):
         config = ConfigParser()
         config.add_section('Connection')
         config.set('Connection', 'apikey', os.environ['DD_TEST_CLIENT_API_KEY'])
-        config.set('Connection', 'appkey', os.environ['DD_TEST_CLIENT_API_KEY'])
+        config.set('Connection', 'appkey', os.environ['DD_TEST_CLIENT_APP_KEY'])
         config.set('Connection', 'api_host', os.environ.get('DATADOG_HOST', 'https://api.datadoghq.com'))
         config.write(self.config_file)
         self.config_file.flush()
