@@ -5,6 +5,7 @@ trigger:
     include:
     - master
 
+jobs:
 - job: IntegrationTests
   pool:
     vmImage: "Ubuntu-16.04"
