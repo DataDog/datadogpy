@@ -17,7 +17,7 @@ import pytest
 # datadog
 from datadog.util.compat import is_p3k, ConfigParser
 
-TEST_USER = os.environ.get('DATADOG_TEST_USER')
+TEST_USER = os.environ.get('DD_TEST_CLIENT_USER')
 
 def get_temp_file():
     """Return a (fn, fp) pair"""
@@ -39,8 +39,8 @@ class TestDogshell(unittest.TestCase):
         self.config_fn, self.config_file = get_temp_file()
         config = ConfigParser()
         config.add_section('Connection')
-        config.set('Connection', 'apikey', os.environ['DATADOG_API_KEY'])
-        config.set('Connection', 'appkey', os.environ['DATADOG_APP_KEY'])
+        config.set('Connection', 'apikey', os.environ['DD_TEST_CLIENT_API_KEY'])
+        config.set('Connection', 'appkey', os.environ['DD_TEST_CLIENT_APP_KEY'])
         config.set('Connection', 'api_host', os.environ.get('DATADOG_HOST', 'https://api.datadoghq.com'))
         config.write(self.config_file)
         self.config_file.flush()
@@ -52,7 +52,7 @@ class TestDogshell(unittest.TestCase):
     def test_comment(self):
         self.assertIsNotNone(
             TEST_USER,
-            "You must set DATADOG_TEST_USER environment variable to run comment tests"
+            "You must set DD_TEST_CLIENT_USER environment variable to run comment tests"
         )
 
         # Post a new comment
@@ -560,8 +560,8 @@ class TestDogshell(unittest.TestCase):
         cmd = ["dog", "--config", self.config_file.name] + args
         if use_cl_args:
             cmd = ["dog",
-                   "--api-key={0}".format(os.environ["DATADOG_API_KEY"]),
-                   "--application-key={0}".format(os.environ["DATADOG_APP_KEY"])] + args
+                   "--api-key={0}".format(os.environ["DD_TEST_CLIENT_API_KEY"]),
+                   "--application-key={0}".format(os.environ["DD_TEST_CLIENT_APP_KEY"])] + args
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, stdin=subprocess.PIPE)
         if stdin:
