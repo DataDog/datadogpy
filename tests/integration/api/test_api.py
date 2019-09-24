@@ -18,8 +18,8 @@ from tests.integration.util.snapshot_test_utils import (
 )
 
 TEST_USER = os.environ.get('DATADOG_TEST_USER')
-API_KEY = os.environ.get('DATADOG_API_KEY')
-APP_KEY = os.environ.get('DATADOG_APP_KEY')
+API_KEY = os.environ.get('DATADOG_TEST_API_KEY')
+APP_KEY = os.environ.get('DATADOG_TEST_APP_KEY')
 API_HOST = os.environ.get('DATADOG_HOST')
 FAKE_PROXY = {
     "https": "http://user:pass@10.10.1.10:3128/",

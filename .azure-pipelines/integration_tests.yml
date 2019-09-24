@@ -20,6 +20,6 @@ jobs:
     displayName: Run integration tests
     env:
       TOXENV: integration
-      DATADOG_API_KEY: $(datadogAPIKey)
-      DATADOG_APP_KEY: $(datadogAPPKey)
+      DATADOG_TEST_API_KEY: $(datadogAPIKey)
+      DATADOG_TEST_APP_KEY: $(datadogAPPKey)
       DATADOG_TEST_USER: $(datadogTestUser)
