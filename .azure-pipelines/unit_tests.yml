@@ -17,25 +17,25 @@ jobs:
     matrix:
       Py27:
         PYTHON_VERSION: "2.7"
-        TOXENV: "py27-unit"
+        TOXENV: "py27"
       Py34:
         PYTHON_VERSION: "3.4"
-        TOXENV: "py34-unit"
+        TOXENV: "py34"
       Py35:
         PYTHON_VERSION: "3.5"
-        TOXENV: "py35-unit,flake8"
+        TOXENV: "py35,flake8"
       Py36:
         PYTHON_VERSION: "3.6"
-        TOXENV: "py36-unit"
+        TOXENV: "py36"
       Py37:
         PYTHON_VERSION: "3.7"
-        TOXENV: "py37-unit"
+        TOXENV: "py37"
       Pypy2:
         PYTHON_VERSION: "pypy2"
-        TOXENV: "pypy2-unit"
+        TOXENV: "pypy2"
       Pypy3:
         PYTHON_VERSION: "pypy3"
-        TOXENV: "pypy3-unit"
+        TOXENV: "pypy3"
   steps:
   - task: UsePythonVersion@0
     displayName: Use python $(PYTHON_VERSION)

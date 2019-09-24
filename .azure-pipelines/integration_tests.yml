@@ -9,39 +9,17 @@ jobs:
 - job: IntegrationTests
   pool:
     vmImage: "Ubuntu-16.04"
-  strategy:
-    matrix:
-      Py27:
-        PYTHON_VERSION: "2.7"
-        TOXENV: "py27-integration"
-      Py34:
-        PYTHON_VERSION: "3.4"
-        TOXENV: "py34-integration"
-      Py35:
-        PYTHON_VERSION: "3.5"
-        TOXENV: "py35-integration"
-      Py36:
-        PYTHON_VERSION: "3.6"
-        TOXENV: "py36-integration"
-      Py37:
-        PYTHON_VERSION: "3.7"
-        TOXENV: "py37-integration"
-      Pypy2:
-        PYTHON_VERSION: "pypy2"
-        TOXENV: "pypy2-integration"
-      Pypy3:
-        PYTHON_VERSION: "pypy3"
-        TOXENV: "pypy3-integration"
   steps:
   - task: UsePythonVersion@0
-    displayName: Use python $(PYTHON_VERSION)
+    displayName: Use python 3.7
     inputs:
-      versionSpec: $(PYTHON_VERSION)
+      versionSpec: "3.7"
   - script: pip install tox
     displayName: Install tox
   - script: tox
     displayName: Run integration tests
     env:
+      TOXENV: integration
       DATADOG_API_KEY: $(datadogAPIKey)
       DATADOG_APP_KEY: $(datadogAPPKey)
       DATADOG_TEST_USER: $(datadogTestUser)
