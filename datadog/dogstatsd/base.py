@@ -81,7 +81,7 @@ class DogStatsd(object):
         self.lock = Lock()
 
         # Check host and port env vars
-        agent_host = os.environ.get('DD_AGENT_HOST')
+        agent_host = os.environ.get('DD_AGENT_HOST') or os.environ.get('DOGSTATSD_HOST_IP')
         if agent_host and host == DEFAULT_HOST:
             host = agent_host
 
