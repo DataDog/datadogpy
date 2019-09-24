@@ -1,0 +1,25 @@
+name: IntegrationTests
+trigger:
+  batch: false
+  branches:
+    include:
+    - master
+
+jobs:
+- job: IntegrationTests
+  pool:
+    vmImage: "Ubuntu-16.04"
+  steps:
+  - task: UsePythonVersion@0
+    displayName: Use python 3.7
+    inputs:
+      versionSpec: "3.7"
+  - script: pip install tox
+    displayName: Install tox
+  - script: tox
+    displayName: Run integration tests
+    env:
+      TOXENV: integration
+      DATADOG_API_KEY: $(datadogAPIKey)
+      DATADOG_APP_KEY: $(datadogAPPKey)
+      DATADOG_TEST_USER: $(datadogTestUser)
