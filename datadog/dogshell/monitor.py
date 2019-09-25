@@ -39,10 +39,10 @@ class MonitorClient(object):
 
         update_parser = verb_parsers.add_parser('update', help="Update existing monitor")
         update_parser.add_argument('monitor_id', help="monitor to replace with the new definition")
-        update_parser.add_argument('type', help="type of the monitor, e.g. "
-                                   "'metric alert' 'service check'")
-        update_parser.add_argument('query', help="query to notify on with syntax varying"
-                                   " depending on what type of monitor you are creating")
+        update_parser.add_argument('--type', help="type of the monitor, e.g. "
+                                   "'metric alert' 'service check'", default=None)
+        update_parser.add_argument('--query', help="query to notify on with syntax varying"
+                                   " depending on what type of monitor you are creating", default=None)
         update_parser.add_argument('--name', help="name of the alert", default=None)
         update_parser.add_argument('--message', help="message to include with "
                                    "notifications for this monitor", default=None)
