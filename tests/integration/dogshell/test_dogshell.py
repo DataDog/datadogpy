@@ -322,7 +322,7 @@ class TestDogshell:
         assert "id" in out, out
         assert "message" in out, out
         out = json.loads(out)
-        self.assertEquals(out["message"], 'updated_message')
+        self.assertEquals(out["message"], updated_message)
         #confirming no other changes but message
         self.assertEquals(out['query'], query)
         self.assertEquals(out['type_alert'], type_alert)
