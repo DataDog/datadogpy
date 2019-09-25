@@ -89,9 +89,11 @@ class APIClient(object):
             if _api_key is None:
                 raise ApiNotInitialized("API key is not set."
                                         " Please run 'initialize' method first.")
-            params['api_key'] = _api_key
+
+            headers = {}
+            headers['DD-API-KEY'] = _api_key
             if _application_key:
-                params['application_key'] = _application_key
+                headers['DD-APPLICATION-KEY'] = _application_key
 
             # Attach host name to body
             if attach_host_name and body:
@@ -114,7 +116,6 @@ class APIClient(object):
                 api_version = _api_version
 
             # Process the body, if necessary
-            headers = {}
             if isinstance(body, dict):
                 body = json.dumps(body)
                 headers['Content-Type'] = 'application/json'

@@ -92,13 +92,12 @@ class TestInitialization(DatadogAPINoInitialization):
         # Assert `requests` parameters
         self.assertIn('params', options)
 
-        self.assertIn('api_key', options['params'])
-        self.assertEqual(options['params']['api_key'], API_KEY)
-        self.assertIn('application_key', options['params'])
-        self.assertEqual(options['params']['application_key'], APP_KEY)
-
         self.assertIn('headers', options)
-        self.assertEqual(options['headers'], {'Content-Type': 'application/json'})
+        self.assertEqual(options['headers']['Content-Type'], 'application/json')
+        self.assertEqual(options['headers']['DD-API-KEY'], API_KEY)
+        self.assertEqual(options['headers']['DD-APPLICATION-KEY'], APP_KEY)
+        
+        
 
     def test_initialize_options(self):
         """
