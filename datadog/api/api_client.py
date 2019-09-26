@@ -13,7 +13,8 @@ from datadog.api.exceptions import (
     ApiNotInitialized
 )
 from datadog.api.http_client import resolve_http_client
-from datadog.util.compat import is_p3k, urljoin
+from datadog.util.compat import is_p3k
+from datadog.util.format import construct_url
 
 
 log = logging.getLogger('datadog.api')
@@ -120,8 +121,7 @@ class APIClient(object):
                 headers['Content-Type'] = 'application/json'
 
             # Construct the URL
-            start_url = urljoin(_api_host, 'api/{}/'.format(api_version))
-            url = urljoin(start_url, path)
+            url = construct_url(_api_host, api_version, path)
 
             # Process requesting
             start_time = time.time()
