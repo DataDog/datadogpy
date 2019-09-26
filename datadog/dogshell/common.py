@@ -17,16 +17,14 @@ def print_err(msg):
 
 def report_errors(res):
     if 'errors' in res:
-        for e in res['errors']:
-            print_err('ERROR: ' + e)
+        print_err('ERROR: ' + res['errors'])
         sys.exit(1)
     return False
 
 
 def report_warnings(res):
     if 'warnings' in res:
-        for e in res['warnings']:
-            print_err('WARNING: ' + e)
+        print_err('WARNING: ' + res['warnings'])
         return True
     return False
 
