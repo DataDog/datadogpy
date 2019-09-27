@@ -22,7 +22,7 @@ def get_with_retry(
     resource_type,
     resource_id=None,
     operation="get",
-    retry_count=10,
+    retry_limit=10,
     retry_condition=lambda r: r.get("errors"),
     **kwargs
 ):
@@ -31,7 +31,7 @@ def get_with_retry(
     else:
         resource = getattr(getattr(dog, resource_type), operation)(resource_id, **kwargs)
     retry_counter = 0
-    while retry_condition(resource) and retry_counter < 10:
+    while retry_condition(resource) and retry_counter < retry_limit:
         if resource_id is None:
             resource = getattr(getattr(dog, resource_type), operation)(**kwargs)
         else:
@@ -200,7 +200,7 @@ class TestDatadog():
             "Metric",
             operation="query",
             retry_condition=retry_condition,
-            retry_count=20,
+            retry_limit=20,
             start=now_ts - 600,
             end=now_ts + 600,
             query="{}{{host:{}}}".format(metric_name_single, host_name),
@@ -209,7 +209,7 @@ class TestDatadog():
             "Metric",
             operation="query",
             retry_condition=retry_condition,
-            retry_count=20,
+            retry_limit=20,
             start=now_ts - 600,
             end=now_ts + 600,
             query="{}{{host:{}}}".format(metric_name_list, host_name),
@@ -218,7 +218,7 @@ class TestDatadog():
             "Metric",
             operation="query",
             retry_condition=retry_condition,
-            retry_count=20,
+            retry_limit=20,
             start=now_ts - 600,
             end=now_ts + 600,
             query="{}{{host:{}}}".format(metric_name_tuple, host_name),
@@ -284,7 +284,7 @@ class TestDatadog():
 
         # Test snapshot status endpoint
         get_with_retry(
-            "Graph", snapshot_url, operation="status", retry_condition=lambda r: r["status_code"] != 200, retry_count=20
+            "Graph", snapshot_url, operation="status", retry_condition=lambda r: r["status_code"] != 200, retry_limit=20
         )
 
     def test_screenboard(self):
