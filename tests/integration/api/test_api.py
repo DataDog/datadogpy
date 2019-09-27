@@ -457,7 +457,8 @@ class TestDatadog(unittest.TestCase):
         # We shouldn"t be able to mute a host that"s already muted, unless we include
         # the override param.
         end2 = end + 60 * 15
-        assert "errors" in dog.Host.mute(hostname, end=end2)
+        muted_host = get_with_retry("Host", hostname, operation="mute", retry_condition=lambda r: "errors" in r)
+        assert "errors" in muted_host
         mute = dog.Host.mute(hostname, end=end2, override=True)
         assert mute["hostname"] == hostname
         assert mute["action"] == "Muted"
