@@ -170,7 +170,6 @@ class TestDatadog(unittest.TestCase):
         assert dog.Timeboard.get(timeboard["dash"]["id"])["dash"]["id"] == timeboard["dash"]["id"]
         dog.Timeboard.delete(timeboard["dash"]["id"])
         assert "errors" in dog.Timeboard.get(timeboard["dash"]["id"])
-        assert False
 
     def test_search(self):
         results = dog.Infrastructure.search(q="")
