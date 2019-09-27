@@ -3,7 +3,6 @@ import datetime
 import json
 import os
 import time
-import unittest
 
 import requests
 
@@ -46,10 +45,11 @@ def get_with_retry(
     return resource
 
 
-class TestDatadog(unittest.TestCase):
+class TestDatadog():
     host_name = "test.host.integration"
 
-    def setUp(self):
+    @classmethod
+    def setup_class(cls):
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
 
     def test_tags(self):
@@ -120,7 +120,7 @@ class TestDatadog(unittest.TestCase):
         assert event_id in [event["id"] for event in events["events"]]
 
     def test_comments(self):
-        self.assertIsNotNone(TEST_USER, "You must set DD_TEST_CLIENT_USER environment to run comment tests")
+        assert TEST_USER is not None, "You must set DD_TEST_CLIENT_USER environment to run comment tests"
 
         now = datetime.datetime.now()
         now_ts = int(time.mktime(now.timetuple()))
