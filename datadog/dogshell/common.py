@@ -10,7 +10,7 @@ from datadog.util.compat import is_p3k, configparser, IterableUserDict,\
 
 def print_err(msg):
     if is_p3k():
-        print('ERROR: ' + msg + '\n', file=sys.stderr)
+        print(msg + '\n', file=sys.stderr)
     else:
         sys.stderr.write(msg + '\n')
 
@@ -19,8 +19,9 @@ def report_errors(res):
     if 'errors' in res:
         errors = res['errors']
         if isinstance(errors, str):
-            print_err(errors)
+            print_err('ERROR: ' + errors)
         elif isinstance(errors, list):
+            print('ERROR:')
             for error in errors:
                 print_err(error)
         sys.exit(1)
@@ -31,8 +32,9 @@ def report_warnings(res):
     if 'warnings' in res:
         warnings = res['warnings']
         if isinstance(warnings, str):
-            print_err(warnings)
+            print_err('WARNING' + warnings)
         elif isinstance(warnings, list):
+            print('WARNING:')
             for warning in warnings:
                 print_err(warning)
         return True
