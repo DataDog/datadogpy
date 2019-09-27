@@ -18,12 +18,11 @@ def print_err(msg):
 def report_errors(res):
     if 'errors' in res:
         errors = res['errors']
-        if isinstance(errors, str):
-            print_err('ERROR: ' + errors)
-        elif isinstance(errors, list):
-            print('ERROR:')
+        if isinstance(errors, list):
             for error in errors:
-                print_err(error)
+                print_err("ERROR: " + error)
+        else:
+            print_err("ERROR: " + errors)
         sys.exit(1)
     return False
 
@@ -31,12 +30,11 @@ def report_errors(res):
 def report_warnings(res):
     if 'warnings' in res:
         warnings = res['warnings']
-        if isinstance(warnings, str):
-            print_err('WARNING' + warnings)
-        elif isinstance(warnings, list):
-            print('WARNING:')
+        if isinstance(warnings, list):
             for warning in warnings:
-                print_err(warning)
+                print_err("WARNING: " + warning)
+        else:
+            print_err("WARNING: " + warnings)
         return True
     return False
 
