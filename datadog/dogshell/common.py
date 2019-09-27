@@ -17,14 +17,24 @@ def print_err(msg):
 
 def report_errors(res):
     if 'errors' in res:
-        print_err('ERROR: ' + res['errors'])
+        errors = res['errors']
+        if isinstance(errors, str):
+            print_err(errors)
+        elif isinstance(errors, list):
+            for error in errors:
+                print_err(error)
         sys.exit(1)
     return False
 
 
 def report_warnings(res):
     if 'warnings' in res:
-        print_err('WARNING: ' + res['warnings'])
+        warnings = res['warnings']
+        if isinstance(warnings, str):
+            print_err(warnings)
+        elif isinstance(warnings, list):
+            for warning in warnings:
+                print_err(warning)
         return True
     return False
 
