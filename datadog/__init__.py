@@ -29,7 +29,7 @@ logging.getLogger('datadog.dogstatsd').addHandler(NullHandler())
 logging.getLogger('datadog.threadstats').addHandler(NullHandler())
 
 
-def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
+def initialize(api_key=None, app_key=None, host_name=None, hostname_from_config=True, api_host=None,
                statsd_host=None, statsd_port=None, statsd_use_default_route=False,
                statsd_socket_path=None, statsd_namespace=None, return_raw_response=False, **kwargs):
     """
@@ -41,9 +41,16 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
     :param app_key: Datadog application key
     :type app_key: string
 
+    :param host_name: Set a specific hostname
+    :type host_name: string
+
+    :param hostname_from_config: Set the hostname from the Datadog agent config (agent 5). Will be deprecated
+    :type hostname_from_config: boolean
+
     :param proxies: Proxy to use to connect to Datadog API;
                     for example, 'proxies': {'http': "http:<user>:<pass>@<ip>:<port>/"}
     :type proxies: dictionary mapping protocol to the URL of the proxy.
+
     :param api_host: Datadog API endpoint
     :type api_host: url
 
@@ -80,7 +87,11 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
         api._application_key or
         os.environ.get('DATADOG_APP_KEY', os.environ.get('DD_APP_KEY'))
     )
-    api._host_name = host_name or api._host_name or get_hostname()
+    api._hostname_from_config = hostname_from_config
+    if api._hostname_from_config:
+        api._host_name = host_name or api._host_name or get_hostname()
+    else:
+        api._host_name = host_name or api._host_name
     api._api_host = api_host or api._api_host or os.environ.get('DATADOG_HOST', 'https://api.datadoghq.com')
 
     # Statsd configuration
