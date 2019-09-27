@@ -20,9 +20,9 @@ def report_errors(res):
         errors = res['errors']
         if isinstance(errors, list):
             for error in errors:
-                print_err("ERROR: " + error)
+                print_err("ERROR: {}".format(error))
         else:
-            print_err("ERROR: " + errors)
+            print_err("ERROR: {}".format(errors))
         sys.exit(1)
     return False
 
@@ -32,9 +32,9 @@ def report_warnings(res):
         warnings = res['warnings']
         if isinstance(warnings, list):
             for warning in warnings:
-                print_err("WARNING: " + warning)
+                print_err("WARNING: {}".format(warning))
         else:
-            print_err("WARNING: " + warnings)
+            print_err("WARNING: {}".format(warnings))
         return True
     return False
 
