@@ -41,7 +41,9 @@ def get_with_retry(
         retry_counter += 1
         time.sleep(WAIT_TIME)
     if retry_condition(resource):
-        raise Exception("Retry limit reached")
+        raise Exception(
+            "Retry limit reached performing `{}` on resource {}, ID {}".format(operation, resource_type, resource_id)
+        )
     return resource
 
 
