@@ -1,404 +1,248 @@
 # python
 import datetime
+import json
 import os
 import time
-import unittest
-import requests
-import json
 
-# 3p
-import pytest
+import requests
 
 # datadog
-from datadog import initialize
 from datadog import api as dog
-from datadog.api.exceptions import ApiError
-from tests.integration.util.snapshot_test_utils import (
-    assert_snap_not_blank, assert_snap_has_no_events
-)
+from datadog import initialize
 
-TEST_USER = os.environ.get('DD_TEST_CLIENT_USER')
-API_KEY = os.environ.get('DD_TEST_CLIENT_API_KEY', "a"*32)
-APP_KEY = os.environ.get('DD_TEST_CLIENT_APP_KEY', "a"*40)
-API_HOST = os.environ.get('DATADOG_HOST')
-FAKE_PROXY = {
-    "https": "http://user:pass@10.10.1.10:3128/",
-}
+TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
+API_KEY = os.environ.get("DD_TEST_CLIENT_API_KEY", "a" * 32)
+APP_KEY = os.environ.get("DD_TEST_CLIENT_APP_KEY", "a" * 40)
+API_HOST = os.environ.get("DATADOG_HOST")
+FAKE_PROXY = {"https": "http://user:pass@10.10.1.10:3128/"}
+WAIT_TIME = 10
 
 
-def eq(a, b):
-    assert a == b
+def get_with_retry(
+    resource_type,
+    resource_id=None,
+    operation="get",
+    retry_limit=10,
+    retry_condition=lambda r: r.get("errors"),
+    **kwargs
+):
+    if resource_id is None:
+        resource = getattr(getattr(dog, resource_type), operation)(**kwargs)
+    else:
+        resource = getattr(getattr(dog, resource_type), operation)(resource_id, **kwargs)
+    retry_counter = 0
+    while retry_condition(resource) and retry_counter < retry_limit:
+        if resource_id is None:
+            resource = getattr(getattr(dog, resource_type), operation)(**kwargs)
+        else:
+            resource = getattr(getattr(dog, resource_type), operation)(resource_id, **kwargs)
+        retry_counter += 1
+        time.sleep(WAIT_TIME)
+    if retry_condition(resource):
+        raise Exception(
+            "Retry limit reached performing `{}` on resource {}, ID {}".format(operation, resource_type, resource_id)
+        )
+    return resource
 
 
-def ok(assertion, message):
-    assert assertion, message
+class TestDatadog():
+    host_name = "test.host.integration"
 
-
-class TestDatadog(unittest.TestCase):
-    host_name = 'test.host.unit'
-    wait_time = 10
-
-    def setUp(self):
+    @classmethod
+    def setup_class(cls):
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
-        dog._swallow = False
 
-    @pytest.mark.tags
     def test_tags(self):
+        hostname = "test.tags.host" + str(time.time())
         # post a metric to make sure the test host context exists
-        hostname = self.host_name
-        dog.Metric.send(metric='test.tag.metric', points=1, host=hostname)
+        dog.Metric.send(metric="test.tag.metric", points=1, host=hostname)
+        # Wait for host to appear
+        get_with_retry("Tag", hostname)
 
-        dog.Tag.get_all()
+        # Ready to test
+        tags = dog.Tag.create(hostname, tags=["test_tag:1", "test_tag:2"], source="datadog")
+        assert "test_tag:1" in tags["tags"]
+        assert "test_tag:2" in tags["tags"]
 
-        dog.Tag.delete(hostname)
-        assert len(dog.Tag.get(hostname)['tags']) == 0
+        tags = dog.Tag.update(hostname, tags=["test_tag:3"], source="datadog")
+        assert tags["tags"] == ["test_tag:3"]
 
-        dog.Tag.create(hostname, tags=['test.tag.1', 'test.tag.2'], source='datadog')
-        new_tags = dog.Tag.get(hostname)['tags']
-        assert len(new_tags) == 2
-        assert 'test.tag.1' in new_tags
-        assert 'test.tag.2' in new_tags
+        tags = dog.Tag.get(hostname, source="datadog")
+        assert tags["tags"] == ["test_tag:3"]
 
-        dog.Tag.create(hostname, tags=['test.tag.3'], source='datadog')
-        new_tags = dog.Tag.get(hostname)['tags']
-        assert len(new_tags) == 3
-        assert 'test.tag.1' in new_tags
-        assert 'test.tag.2' in new_tags
-        assert 'test.tag.3' in new_tags
+        get_with_retry("Tag", operation="get_all", retry_condition=lambda r: hostname in r["tags"]["test_tag:3"])
 
-        dog.Tag.update(hostname, tags=['test.tag.4'], source='datadog')
-        new_tags = dog.Tag.get(hostname)['tags']
-        assert len(new_tags) == 1
-        assert 'test.tag.4' in new_tags
-
-        dog.Tag.delete(hostname, source='datadog')
-        assert len(dog.Tag.get(hostname)['tags']) == 0
+        assert dog.Tag.delete(hostname, source="datadog") is None  # Expect no response body on success
 
     def test_events(self):
         now = datetime.datetime.now()
 
         now_ts = int(time.mktime(now.timetuple()))
-        now_title = 'end test title ' + str(now_ts)
-        now_message = 'test message ' + str(now_ts)
+        now_title = "end test title " + str(now_ts)
+        now_message = "test message " + str(now_ts)
 
         before_ts = int(time.mktime((now - datetime.timedelta(minutes=5)).timetuple()))
-        before_title = 'start test title ' + str(before_ts)
-        before_message = 'test message ' + str(before_ts)
+        before_title = "start test title " + str(before_ts)
+        before_message = "test message " + str(before_ts)
+        now_event = dog.Event.create(title=now_title, text=now_message, date_happened=now_ts)
+        before_event = dog.Event.create(title=before_title, text=before_message, date_happened=before_ts)
 
-        now_event_id = dog.Event.create(title=now_title, text=now_message,
-                                        date_happened=now_ts)['event']['id']
-        before_event_id = dog.Event.create(title=before_title, text=before_message,
-                                           date_happened=before_ts)['event']['id']
-        time.sleep(self.wait_time)
+        assert now_event["event"]["title"] == now_title
+        assert now_event["event"]["text"] == now_message
+        assert now_event["event"]["date_happened"] == now_ts
+        assert before_event["event"]["title"] == before_title
+        assert before_event["event"]["text"] == before_message
+        assert before_event["event"]["date_happened"] == before_ts
 
-        now_event = self.get_event_with_retry(now_event_id)
-        before_event = self.get_event_with_retry(before_event_id)
-
-        self.assertEqual(now_event['event']['text'], now_message)
-        self.assertEqual(before_event['event']['text'], before_message)
-
-        event_id = dog.Event.create(title='test host and device',
-                                    text='test host and device',
-                                    host=self.host_name,)['event']['id']
-        time.sleep(self.wait_time)
-        event = self.get_event_with_retry(event_id)
-
-        self.assertEqual(event['event']['host'], self.host_name)
-
-        event_id = dog.Event.create(title='test event tags',
-                                    text='test event tags',
-                                    tags=['test-tag-1', 'test-tag-2'])['event']['id']
-        time.sleep(self.wait_time)
-        event = self.get_event_with_retry(event_id)
-
-        self.assertIn('test-tag-1', event['event']['tags'])
-        self.assertIn('test-tag-2', event['event']['tags'])
+        # The returned event doesn"t contain host information, we need to get it separately
+        event_id = dog.Event.create(title="test host", text="test host", host=self.host_name)["event"]["id"]
+        event = get_with_retry("Event", event_id)
+        assert event["event"]["host"] == self.host_name
 
         event_id = dog.Event.create(
-            title='test no hostname',
-            text='test no hostname',
-            attach_host_name=False
-        )['event']['id']
-        time.sleep(self.wait_time)
-        event = self.get_event_with_retry(event_id)
-        assert not event['event']['host']
+            title="test no hostname", text="test no hostname", attach_host_name=False, alert_type="success"
+        )["event"]["id"]
+        event = get_with_retry("Event", event_id)
+        assert not event["event"]["host"]
+        assert event["event"]["alert_type"] == "success"
 
-    def test_aggregate_events(self):
-        now_ts = int(time.time())
-        agg_key = 'aggregate_me ' + str(now_ts)
-        msg_1 = 'aggregate 1'
-        msg_2 = 'aggregate 2'
+        event = dog.Event.create(title="test tags", text="test tags", tags=["test_tag:1", "test_tag:2"])
+        assert "test_tag:1" in event["event"]["tags"]
+        assert "test_tag:2" in event["event"]["tags"]
 
-        # send two events that should aggregate
-        event1_id = dog.Event.create(title=msg_1, text=msg_1,
-                                     aggregation_key=agg_key)['event']['id']
-        event2_id = dog.Event.create(title=msg_2, text=msg_2,
-                                     aggregation_key=agg_key)['event']['id']
-        time.sleep(self.wait_time)
-
-        event1 = self.get_event_with_retry(event1_id)
-        event2 = self.get_event_with_retry(event2_id)
-
-        self.assertEqual(msg_1, event1['event']['text'])
-        self.assertEqual(msg_2, event2['event']['text'])
-
-        # TODO FIXME: Need the aggregation_id to check if they are attached to the
-        # same aggregate
-
-    def test_git_commits(self):
-        """Pretend to send git commits"""
-        event_id = dog.Event.create(title="Testing git commits", text="""$$$
-            eac54655 *   Merge pull request #2 from DataDog/alq-add-arg-validation (alq@datadoghq.com)
-            |\
-            760735ef | * origin/alq-add-arg-validation Simple typecheck between metric and metrics (matt@datadoghq.com)
-            |/
-            f7a5a23d * missed version number in docs (matt@datadoghq.com)
-            $$$""", event_type="commit", source_type_name="git", event_object="0xdeadbeef")['event']['id']
-        event = self.get_event_with_retry(event_id)
-        self.assertEqual(event['event']['title'], "Testing git commits")
+        now_ts = int(time.mktime(datetime.datetime.now().timetuple()))
+        event_id = dog.Event.create(
+            title="test source", text="test source", source_type_name="vsphere", priority="low"
+        )["event"]["id"]
+        get_with_retry("Event", event_id)
+        events = dog.Event.query(start=now_ts - 100, end=now_ts + 100, priority="low", sources="vsphere")
+        assert events["events"], "No events found in stream"
+        assert event_id in [event["id"] for event in events["events"]]
 
     def test_comments(self):
-        self.assertIsNotNone(
-            TEST_USER,
-            "You must set DD_TEST_CLIENT_USER environment to run comment tests"
-        )
+        assert TEST_USER is not None, "You must set DD_TEST_CLIENT_USER environment to run comment tests"
 
         now = datetime.datetime.now()
         now_ts = int(time.mktime(now.timetuple()))
-        before_ts = int(time.mktime((now - datetime.timedelta(minutes=15)).timetuple()))
-        message = 'test message ' + str(now_ts)
-        comment_id = dog.Comment.create(handle=TEST_USER, message=message)['comment']['id']
-        time.sleep(self.wait_time)
-        event = dog.Event.get(comment_id)
-        eq(event['event']['text'], message)
-        dog.Comment.update(comment_id, handle=TEST_USER, message=message + ' updated')
-        time.sleep(self.wait_time)
-        event = dog.Event.get(comment_id)
-        eq(event['event']['text'], message + ' updated')
-        reply_id = dog.Comment.create(handle=TEST_USER, message=message + ' reply',
-                                      related_event_id=comment_id)['comment']['id']
-        time.sleep(30)
-        stream = dog.Event.query(start=before_ts, end=now_ts + 100)['events']
-        ok(stream is not None, msg="No events found in stream")
-        ok(isinstance(stream, list), msg="Event stream is not a list")
-        ok(len(stream) > 0, msg="No events found in stream")
-        comment_ids = [x['id'] for x in stream[0]['comments']]
-        ok(reply_id in comment_ids,
-           msg="Should find {0} in {1}".format(reply_id, comment_ids))
+        message = "test message " + str(now_ts)
 
-    @pytest.mark.timeboards
-    @pytest.mark.validation
-    def test_timeboard_validation(self):
-        graph = {
-            "title": "test metric graph",
-            "definition":
-                {
-                    "requests": [{"q": "testing.metric.1{host:blah.host.1}"}],
-                    "viz": "timeseries",
-                }
-        }
+        comment = dog.Comment.create(handle=TEST_USER, message=message)
+        comment_id = comment["comment"]["id"]
+        assert comment["comment"]["message"] == message
 
-        # No title
-        resp = dog.Timeboard.create(title=None, description='my api timeboard', graphs=[graph])
-        exception_msg = resp['errors'][0]
-        eq(exception_msg, "The parameter 'title' is required")
+        get_with_retry("Event", comment_id)
+        comment = dog.Comment.update(comment_id, handle=TEST_USER, message=message + " updated")
+        assert comment["comment"]["message"] == message + " updated"
+        reply = dog.Comment.create(handle=TEST_USER, message=message + " reply", related_event_id=comment_id)
+        assert reply["comment"]["message"] == message + " reply"
 
-        # No graph
-        resp = dog.Timeboard.create(title='api timeboard', description='my api timeboard', graphs=None)
-        exception_msg = resp['errors'][0]
-        eq(exception_msg, "The parameter 'graphs' is required")
-
-        # Graphs not list
-        dog.Timeboard.create(title='api timeboard', description='my api timeboard',
-                                graphs=graph)
-        exception_msg = resp['errors'][0]
-        eq(exception_msg, "The parameter 'graphs' is required")
-
-        # Empty list of graphs
-        resp = dog.Timeboard.create(title='api timeboard', description='my api timeboard', graphs=[])
-        exception_msg = resp['errors'][0]
-        eq(exception_msg, "The 'graphs' parameter is required")
-
-        # None in the graph list
-        resp = dog.Timeboard.create(title='api timeboard', description='my api timeboard',
-                                graphs=[graph, None])
-        exception_msg = resp['errors'][0]
-        eq(exception_msg, "The 'graphs' parameter contains None graphs")
-
-        # Dashboard not found
-        resp = dog.Timeboard.get(999999)
-        exception_msg = resp['errors'][0]
-        eq(exception_msg, "No dashboard matches that dash_id.")
-
-    @pytest.mark.dashboards
     def test_timeboard(self):
         graph = {
             "title": "test metric graph",
-            "definition":
-                {
-                    "requests": [{"q": "testing.metric.1{host:blah.host.1}"}],
-                    "viz": "timeseries",
-                }
+            "definition": {"requests": [{"q": "testing.metric.1{host:blah.host.1}"}], "viz": "timeseries"},
         }
 
-        timeboard_id = dog.Timeboard.create(title='api timeboard', description='my api timeboard',
-                                            graphs=[graph])['dash']['id']
-        remote_timeboard = dog.Timeboard.get(timeboard_id)
+        timeboard = dog.Timeboard.create(title="api timeboard", description="my api timeboard", graphs=[graph])
 
-        eq('api timeboard', remote_timeboard['dash']['title'])
-        eq('my api timeboard', remote_timeboard['dash']['description'])
-        eq(graph['definition']['requests'],
-           remote_timeboard['dash']['graphs'][0]['definition']['requests'])
+        assert "api timeboard" == timeboard["dash"]["title"]
+        assert "my api timeboard" == timeboard["dash"]["description"]
+        assert timeboard["dash"]["graphs"][0] == graph
 
         graph = {
             "title": "updated test metric graph",
-            "definition": {
-                "requests": [{"q": "testing.metric.1{host:blah.host.1}"}],
-                "viz": "timeseries",
-            }
+            "definition": {"requests": [{"q": "testing.metric.1{host:blah.host.1}"}], "viz": "timeseries"},
         }
 
-        timeboard_id = dog.Timeboard.update(timeboard_id, title='updated api timeboard',
-                                            description='my updated api timeboard',
-                                            graphs=[graph])['dash']['id']
+        timeboard = dog.Timeboard.update(
+            timeboard["dash"]["id"],
+            title="updated api timeboard",
+            description="my updated api timeboard",
+            graphs=[graph],
+        )
 
-        # Query and ensure all is well.
-        remote_timeboard = dog.Timeboard.get(timeboard_id)
+        assert "updated api timeboard" == timeboard["dash"]["title"]
+        assert "my updated api timeboard" == timeboard["dash"]["description"]
+        assert timeboard["dash"]["graphs"][0] == graph
 
-        eq('updated api timeboard', remote_timeboard['dash']['title'])
-        eq('my updated api timeboard', remote_timeboard['dash']['description'])
+        # Query all dashboards and make sure it"s in there.
+        timeboards = dog.Timeboard.get_all()["dashes"]
+        ids = [str(timeboard["id"]) for timeboard in timeboards]
+        assert str(timeboard["dash"]["id"]) in ids
 
-        p = graph['definition']['requests']
-        eq(p, remote_timeboard['dash']['graphs'][0]['definition']['requests'])
-
-        # Query all dashboards and make sure it's in there.
-
-        timeboards = dog.Timeboard.get_all()['dashes']
-        ids = [timeboard["id"] for timeboard in timeboards]
-        assert timeboard_id in ids or str(timeboard_id) in ids
-
-        dog.Timeboard.delete(timeboard_id)
-
-        try:
-            dog.get(timeboard_id)
-        except Exception:
-            pass
-        else:
-            # the previous get *should* throw an exception
-            assert False
+        assert dog.Timeboard.get(timeboard["dash"]["id"])["dash"]["id"] == timeboard["dash"]["id"]
+        dog.Timeboard.delete(timeboard["dash"]["id"])
+        assert "errors" in dog.Timeboard.get(timeboard["dash"]["id"])
 
     def test_search(self):
-        results = dog.Infrastructure.search(q='e')
-        assert len(results['results']['hosts']) > 0
-        assert len(results['results']['metrics']) > 0
+        results = dog.Infrastructure.search(q="")
+        assert len(results["results"]["hosts"]) > 0
+        assert len(results["results"]["metrics"]) > 0
 
-    @pytest.mark.metric
     def test_metrics(self):
         now = datetime.datetime.now()
         now_ts = int(time.mktime(now.timetuple()))
-        metric_name = "test.metric." + str(now_ts)
+        metric_name_single = "test.metric_single." + str(now_ts)
+        metric_name_list = "test.metric_list." + str(now_ts)
+        metric_name_tuple = "test.metric_tuple." + str(now_ts)
         host_name = "test.host." + str(now_ts)
 
-        dog.Metric.send(metric=metric_name, points=1, host=host_name)
-        time.sleep(self.wait_time)
+        def retry_condition(r):
+            return not r["series"]
 
-        metric_query = dog.Metric.query(start=now_ts - 3600, end=now_ts + 3600,
-                                        query="%s{host:%s}" % (metric_name, host_name))
-        # There can be a slight delay before the metric is ready to be queried
-        retry_time = 0
-        while not metric_query['series'] and retry_time < 10:
-            metric_query = dog.Metric.query(start=now_ts - 3600, end=now_ts + 3600,
-                query="%s{host:%s}" % (metric_name, host_name))
-            time.sleep(self.wait_time)
-            retry_time += 1
-        assert len(metric_query['series']) == 1, metric_query
+        # Send metrics with single and multi points
+        assert dog.Metric.send(metric=metric_name_single, points=1, host=host_name)["status"] == "ok"
+        points = [(now_ts - 60, 1), (now_ts, 2)]
+        assert dog.Metric.send(metric=metric_name_list, points=points, host=host_name)["status"] == "ok"
+        points = (now_ts - 60, 1)
+        assert dog.Metric.send(metric=metric_name_tuple, points=points, host=host_name)["status"] == "ok"
 
-        # results = dog.Infrastructure.search(q='metrics:test.metric.' + str(now_ts))
-        # TODO mattp: cache issue. move this test to server side.
-        # assert len(results['results']['metrics']) == 1, results
+        metric_query_single = get_with_retry(
+            "Metric",
+            operation="query",
+            retry_condition=retry_condition,
+            retry_limit=20,
+            start=now_ts - 600,
+            end=now_ts + 600,
+            query="{}{{host:{}}}".format(metric_name_single, host_name),
+        )
+        metric_query_list = get_with_retry(
+            "Metric",
+            operation="query",
+            retry_condition=retry_condition,
+            retry_limit=20,
+            start=now_ts - 600,
+            end=now_ts + 600,
+            query="{}{{host:{}}}".format(metric_name_list, host_name),
+        )
+        metric_query_tuple = get_with_retry(
+            "Metric",
+            operation="query",
+            retry_condition=retry_condition,
+            retry_limit=20,
+            start=now_ts - 600,
+            end=now_ts + 600,
+            query="{}{{host:{}}}".format(metric_name_tuple, host_name),
+        )
 
-        matt_series = [
-            (int(time.mktime((now - datetime.timedelta(minutes=25)).timetuple())), 5),
-            (int(time.mktime((now - datetime.timedelta(minutes=25)).timetuple())) + 1, 15),
-            (int(time.mktime((now - datetime.timedelta(minutes=24)).timetuple())), 10),
-            (int(time.mktime((now - datetime.timedelta(minutes=23)).timetuple())), 15),
-            (int(time.mktime((now - datetime.timedelta(minutes=23)).timetuple())) + 1, 5),
-            (int(time.mktime((now - datetime.timedelta(minutes=22)).timetuple())), 5),
-            (int(time.mktime((now - datetime.timedelta(minutes=20)).timetuple())), 15),
-            (int(time.mktime((now - datetime.timedelta(minutes=18)).timetuple())), 5),
-            (int(time.mktime((now - datetime.timedelta(minutes=17)).timetuple())), 5),
-            (int(time.mktime((now - datetime.timedelta(minutes=17)).timetuple())) + 1, 15),
-            (int(time.mktime((now - datetime.timedelta(minutes=15)).timetuple())), 15),
-            (int(time.mktime((now - datetime.timedelta(minutes=15)).timetuple())) + 1, 5),
-            (int(time.mktime((now - datetime.timedelta(minutes=14)).timetuple())), 5),
-            (int(time.mktime((now - datetime.timedelta(minutes=14)).timetuple())) + 1, 15),
-            (int(time.mktime((now - datetime.timedelta(minutes=12)).timetuple())), 15),
-            (int(time.mktime((now - datetime.timedelta(minutes=12)).timetuple())) + 1, 5),
-            (int(time.mktime((now - datetime.timedelta(minutes=11)).timetuple())), 5),
-        ]
+        assert len(metric_query_single["series"]) == 1
+        assert metric_query_single["series"][0]["metric"] == metric_name_single
+        assert metric_query_single["series"][0]["scope"] == "host:{}".format(host_name)
+        assert len(metric_query_single["series"][0]["pointlist"]) == 1
+        assert metric_query_single["series"][0]["pointlist"][0][1] == 1
 
-        dog.Metric.send(metric='matt.metric', points=matt_series, host="matt.metric.host")
+        assert len(metric_query_list["series"]) == 1
+        assert metric_query_list["series"][0]["metric"] == metric_name_list
+        assert metric_query_list["series"][0]["scope"] == "host:{}".format(host_name)
+        assert len(metric_query_list["series"][0]["pointlist"]) == 2
+        assert metric_query_list["series"][0]["pointlist"][0][1] == 1
+        assert metric_query_list["series"][0]["pointlist"][1][1] == 2
 
-    def test_type_check(self):
-        dog.Metric.send(metric="test.metric", points=[(time.time() - 3600, 1.0)])
-        dog.Metric.send(metric="test.metric", points=1.0)
-        dog.Metric.send(metric="test.metric", points=(time.time(), 1.0))
+        assert len(metric_query_tuple["series"]) == 1
+        assert metric_query_tuple["series"][0]["metric"] == metric_name_tuple
+        assert metric_query_tuple["series"][0]["scope"] == "host:{}".format(host_name)
+        assert len(metric_query_tuple["series"][0]["pointlist"]) == 1
+        assert metric_query_tuple["series"][0]["pointlist"][0][1] == 1
 
-    @pytest.mark.monitor
-    def test_monitors(self):
-        query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
-
-        monitor_id = dog.Monitor.create(query=query, type="metric alert")['id']
-        monitor = dog.Monitor.get(monitor_id)
-        time.sleep(self.wait_time)
-        assert monitor['query'] == query, monitor['query']
-        assert monitor['options']['notify_no_data'] is False, monitor['options']['notify_no_data']
-
-        options = {
-            "notify_no_data": True,
-            "no_data_timeframe": 20,
-            "silenced": {"*": None}
-        }
-        dog.Monitor.update(monitor_id, query=query, options=options, timeout_h=1)
-        monitor = dog.Monitor.get(monitor_id)
-        assert monitor['query'] == query, monitor['query']
-        assert monitor['options']['notify_no_data'] is True, monitor['options']['notify_no_data']
-        assert monitor['options']['no_data_timeframe'] == 20, monitor['options']['no_data_timeframe']
-        assert monitor['options']['silenced'] == {"*": None}, monitor['options']['silenced']
-
-        dog.Monitor.delete(monitor_id)
-        resp = dog.Monitor.delete(monitor_id)
-        eq(resp["errors"][0], "Monitor not found")
-
-        query1 = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
-        query2 = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200"
-
-        monitor_id1 = dog.Monitor.create(query=query1, type="metric alert")['id']
-        monitor_id2 = dog.Monitor.create(query=query2, type="metric alert")['id']
-        monitors = dog.Monitor.get_all()
-        monitor1 = [a for a in monitors if a['id'] == monitor_id1][0]
-        monitor2 = [a for a in monitors if a['id'] == monitor_id2][0]
-        assert monitor1['query'] == query1, monitor1
-        assert monitor2['query'] == query2, monitor2
-
-    def test_user_error(self):
-        query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
-
-        dog._swallow = True
-
-        monitor = dog.Monitor.create(query=query, type="metric alert")
-        assert 'id' in monitor, monitor
-        result = dog.Monitor.update(monitor['id'], query='aaa', silenced=True)
-        assert 'errors' in result, result
-
-        dog._swallow = False
-
-        monitor_id = dog.Monitor.create(query=query, type="metric alert")['id']
-        assert monitor_id == int(monitor_id), monitor_id
-        result = dog.Monitor.update(monitor_id, query='aaa', silenced=True)
-        assert result['errors'][0] == "The value provided for parameter 'query' is invalid"
-
-    @pytest.mark.snapshot
     def test_graph_snapshot(self):
         metric_query = "system.load.1{*}"
         event_query = "*"
@@ -407,72 +251,47 @@ class TestDatadog(unittest.TestCase):
 
         # Test without an event query
         snap = dog.Graph.create(metric_query=metric_query, start=start, end=end)
-        ok('snapshot_url' in snap, msg=snap)
-        ok('metric_query' in snap, msg=snap)
-        ok('event_query' not in snap, msg=snap)
-        eq(snap['metric_query'], metric_query)
-        snapshot_url = snap['snapshot_url']
-        while dog.Graph.status(snapshot_url)['status_code'] != 200:
-            time.sleep(self.wait_time)
-        if 'localhost' in dog._api_host:
-            snapshot_url = 'http://%s%s' % (dog.api_host, snapshot_url)
-        assert_snap_not_blank(snapshot_url)
-        assert_snap_has_no_events(snapshot_url)
+        assert "event_query" not in snap
+        assert snap["metric_query"] == metric_query
+        snapshot_url = snap["snapshot_url"]
 
         # Test with an event query
-        snap = dog.Graph.create(metric_query=metric_query, start=start, end=end,
-                                event_query=event_query)
-        ok('snapshot_url' in snap, msg=snap)
-        ok('metric_query' in snap, msg=snap)
-        ok('event_query' in snap, msg=snap)
-        eq(snap['metric_query'], metric_query)
-        eq(snap['event_query'], event_query)
-        snapshot_url = snap['snapshot_url']
-        while dog.Graph.status(snapshot_url)['status_code'] != 200:
-            time.sleep(self.wait_time)
-        if 'localhost' in dog._api_host:
-            snapshot_url = 'http://%s%s' % (dog.api_host, snapshot_url)
-        assert_snap_not_blank(snapshot_url)
+        snap = dog.Graph.create(metric_query=metric_query, start=start, end=end, event_query=event_query)
+        assert snap["metric_query"] == metric_query
+        assert snap["event_query"] == event_query
+        snapshot_url = snap["snapshot_url"]
 
         # Test with a graph def
         graph_def = {
             "viz": "toplist",
-            "requests": [{
-                "q": "top(system.disk.free{*} by {device}, 10, 'mean', 'desc')",
-                "style": {
-                    "palette": "dog_classic"
-                },
-                "conditional_formats": [{
-                    "palette": "red",
-                    "comparator": ">",
-                    "value": 50000000000
-                }, {
-                    "palette": "green",
-                    "comparator": ">",
-                    "value": 30000000000
-                }]
-            }]
+            "requests": [
+                {
+                    "q": "top(system.disk.free{*} by {device}, 10, 'mean', 'desc')",
+                    "style": {"palette": "dog_classic"},
+                    "conditional_formats": [
+                        {"palette": "red", "comparator": ">", "value": 50000000000},
+                        {"palette": "green", "comparator": ">", "value": 30000000000},
+                    ],
+                }
+            ],
         }
         graph_def = json.dumps(graph_def)
         snap = dog.Graph.create(graph_def=graph_def, start=start, end=end)
-        ok('snapshot_url' in snap, msg=snap)
-        ok('graph_def' in snap, msg=snap)
-        ok('metric_query' not in snap, msg=snap)
-        ok('event_query' not in snap, msg=snap)
-        eq(snap['graph_def'], graph_def)
-        snapshot_url = snap['snapshot_url']
-        while dog.Graph.status(snapshot_url)['status_code'] != 200:
-            time.sleep(self.wait_time)
-        if 'localhost' in dog._api_host:
-            snapshot_url = 'http://%s%s' % (dog.api_host, snapshot_url)
-        assert_snap_not_blank(snapshot_url)
+        assert "metric_query" not in snap
+        assert "event_query" not in snap
+        assert snap["graph_def"] == graph_def
+        snapshot_url = snap["snapshot_url"]
 
-    @pytest.mark.screenboard
+        # Test snapshot status endpoint
+        get_with_retry(
+            "Graph", snapshot_url, operation="status", retry_condition=lambda r: r["status_code"] != 200, retry_limit=20
+        )
+
     def test_screenboard(self):
         def _compare_screenboard(apiBoard, expectedBoard):
-            compare_keys = ['board_title', 'height', 'width', 'widgets']
+            compare_keys = ["board_title", "height", "width", "widgets"]
             for key in compare_keys:
-                assert apiBoard[key] == expectedBoard[key], key
+                assert apiBoard[key] == expectedBoard[key]
 
         board = {
             "width": 1024,
@@ -487,19 +306,10 @@ class TestDatadog(unittest.TestCase):
                     "y": 18,
                     "x": 84,
                     "query": "tags:release",
-                    "time": {
-                        "live_span": "1w"
-                    }
+                    "time": {"live_span": "1w"},
                 },
-                {
-                    "type": "image",
-                    "height": 20,
-                    "width": 32,
-                    "y": 7,
-                    "x": 32,
-                    "url": "http://path/to/image.jpg"
-                }
-            ]
+                {"type": "image", "height": 20, "width": 32, "y": 7, "x": 32, "url": "http://path/to/image.jpg"},
+            ],
         }
 
         updated_board = {
@@ -507,253 +317,171 @@ class TestDatadog(unittest.TestCase):
             "height": 768,
             "board_title": "datadog test",
             "widgets": [
-                {
-                    "type": "image",
-                    "height": 20,
-                    "width": 32,
-                    "y": 7,
-                    "x": 32,
-                    "url": "http://path/to/image.jpg"
-                }
-            ]
+                {"type": "image", "height": 20, "width": 32, "y": 7, "x": 32, "url": "http://path/to/image.jpg"}
+            ],
         }
 
         create_res = dog.Screenboard.create(**board)
         _compare_screenboard(board, create_res)
 
-        get_res = dog.Screenboard.get(create_res['id'])
+        get_res = dog.Screenboard.get(create_res["id"])
         _compare_screenboard(get_res, create_res)
-        assert get_res['id'] == create_res['id']
+        assert get_res["id"] == create_res["id"]
 
-        get_all_res = dog.Screenboard.get_all()['screenboards']
-        created = [s for s in get_all_res if s['id'] == create_res['id']]
-        self.assertEqual(len(created), 1)
-        update_res = dog.Screenboard.update(get_res['id'], **updated_board)
+        get_all_res = dog.Screenboard.get_all()["screenboards"]
+        created = [s for s in get_all_res if s["id"] == create_res["id"]]
+        assert len(created) == 1
+
+        update_res = dog.Screenboard.update(get_res["id"], **updated_board)
         _compare_screenboard(update_res, updated_board)
-        assert get_res['id'] == update_res['id']
+        assert get_res["id"] == update_res["id"]
 
-        share_res = dog.Screenboard.share(get_res['id'])
-        assert share_res['board_id'] == get_res['id']
-        public_url = share_res['public_url']
+        share_res = dog.Screenboard.share(get_res["id"])
+        assert share_res["board_id"] == get_res["id"]
+        public_url = share_res["public_url"]
 
         response = requests.get(public_url)
         assert response.status_code == 200
 
-        dog.Screenboard.revoke(get_res['id'])
+        dog.Screenboard.revoke(get_res["id"])
         response = requests.get(public_url)
         assert response.status_code == 404
 
-        delete_res = dog.Screenboard.delete(update_res['id'])
-        assert delete_res['id'] == update_res['id']
+        delete_res = dog.Screenboard.delete(update_res["id"])
+        assert delete_res["id"] == update_res["id"]
 
-    @pytest.mark.monitor
     def test_monitor_crud(self):
         # Metric alerts
         query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
 
-        options = {
-            'silenced': {'*': int(time.time()) + 60 * 60},
-            'notify_no_data': False
-        }
-        monitor_id = dog.Monitor.create(type='metric alert', query=query, options=options)['id']
-        monitor = dog.Monitor.get(monitor_id)
+        options = {"silenced": {"*": int(time.time()) + 60 * 60}, "notify_no_data": False}
+        monitor = dog.Monitor.create(type="metric alert", query=query, options=options)
 
-        eq(monitor['query'], query)
-        eq(monitor['options']['notify_no_data'],
-            options['notify_no_data'])
-        eq(monitor['options']['silenced'], options['silenced'])
+        assert monitor["query"] == query
+        assert monitor["options"]["notify_no_data"] == options["notify_no_data"]
+        assert monitor["options"]["silenced"] == options["silenced"]
 
         query2 = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200"
-        updated_monitor_id = dog.Monitor.update(monitor_id, query=query2, options=options)['id']
-        monitor = dog.Monitor.get(updated_monitor_id)
-        eq(monitor['query'], query2)
+        monitor = dog.Monitor.update(monitor["id"], query=query2, options=options)
+        assert monitor["query"] == query2
+        assert monitor["options"]["notify_no_data"] == options["notify_no_data"]
+        assert monitor["options"]["silenced"] == options["silenced"]
 
-        name = 'test_monitors'
-        monitor_id = dog.Monitor.update(monitor_id, query=query2, name=name,
-                                        options={'notify_no_data': True})['id']
-        monitor = dog.Monitor.get(monitor_id)
-        eq(monitor['name'], name)
-        eq(monitor['options']['notify_no_data'], True)
+        name = "test_monitors"
+        monitor = dog.Monitor.update(monitor["id"], query=query2, name=name, options={"notify_no_data": True})
+        assert monitor["name"] == name
+        assert monitor["query"] == query2
+        assert monitor["options"]["notify_no_data"] is True
 
-        dog.Monitor.delete(monitor_id)
-        resp = dog.Monitor.get(monitor_id)
-        assert 'Monitor not found' in resp.get('errors'), resp
+        monitors = [m for m in dog.Monitor.get_all() if m["id"] == monitor["id"]]
+        assert len(monitors) == 1
 
+        assert dog.Monitor.get(monitor["id"])["id"] == monitor["id"]
+        assert dog.Monitor.delete(monitor["id"]) == {"deleted_monitor_id": monitor["id"]}
+
+    def test_monitor_muting(self):
         query1 = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
-        query2 = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200"
+        query2 = "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100"
+        monitor1 = dog.Monitor.create(type="metric alert", query=query1)
+        monitor2 = dog.Monitor.create(type="metric alert", query=query2)
 
-        monitor_id1 = dog.Monitor.create(type='metric alert', query=query1)['id']
-        monitor_id2 = dog.Monitor.create(type='metric alert', query=query2)['id']
-        monitors = dog.Monitor.get_all(group_states=['alert', 'warn'])
-        monitor1 = [m for m in monitors if m['id'] == monitor_id1][0]
-        monitor2 = [m for m in monitors if m['id'] == monitor_id2][0]
-        assert monitor1['query'] == query1, monitor1
-        assert monitor2['query'] == query2, monitor2
+        dt = dog.Monitor.mute_all()
+        assert dt["active"] is True
+        assert dt["scope"] == ["*"]
 
-        # Service checks
-        query = '"ntp.in_sync".over("role:herc").last(3).count_by_status()'
-        options = {
-            'notify_no_data': True,
-            'no_data_timeframe': 3,
-            'thresholds': {
-                'ok': 3,
-                'warning': 2,
-                'critical': 1,
-            }
-        }
-        monitor_id = dog.Monitor.create(type='service check', query=query, options=options)['id']
-        monitor = dog.Monitor.get(monitor_id, group_states=['all'])
+        assert dog.Monitor.unmute_all() is None  # No response expected
 
-        eq(monitor['query'], query)
-        eq(monitor['options']['notify_no_data'],
-            options['notify_no_data'])
-        eq(monitor['options']['no_data_timeframe'], options['no_data_timeframe'])
-        eq(monitor['options']['thresholds'], options['thresholds'])
+        monitor1 = dog.Monitor.mute(monitor1["id"])
+        assert monitor1["options"]["silenced"] == {'*': None}
 
-        query2 = '"ntp.in_sync".over("role:sobotka").last(3).count_by_status()'
-        monitor_id = dog.Monitor.update(monitor_id, query=query2)['id']
-        monitor = dog.Monitor.get(monitor_id)
-        eq(monitor['query'], query2)
+        monitor2 = dog.Monitor.mute(monitor2["id"], scope="host:foo")
+        assert monitor2["options"]["silenced"] == {"host:foo": None}
 
-        dog.Monitor.delete(monitor_id)
-        resp = dog.Monitor.get(monitor_id)
-        assert resp.get('errors')[0] == 'Monitor not found'
+        monitor2 = dog.Monitor.unmute(monitor2["id"], scope="host:foo")
+        assert monitor2["options"]["silenced"] == {}
 
-    # @pytest.mark.monitor
-    # def test_monitor_muting(self):
-    #     query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
-    #     monitor_id = dog.Monitor.create(type='metric alert', query=query)['id']
-    #     monitor = dog.Monitor.get(monitor_id)
-    #     eq(monitor['query'], query)
+        dog.Monitor.delete(monitor1["id"])
+        dog.Monitor.delete(monitor2["id"])
 
-        # dt = dog.Monitor.mute_all()
-        # eq(dt['active'], True)
-        # eq(dt['scope'], ['*'])
-
-        # dt = dog.Monitor.unmute_all()
-        # eq(dt, None)  # No response is expected.
-
-        # # We shouldn't be able to mute a simple alert on a scope.
-        # assert_raises(ApiError, dog.Monitor.mute, monitor_id, scope='env:staging')
-
-        # query2 = "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100"
-        # monitor_id = dog.Monitor.create(type='metric alert', query=query2)['id']
-        # monitor = dog.Monitor.get(monitor_id)
-        # eq(monitor['query'], query2)
-
-        # dog.Monitor.mute(monitor_id, scope='host:foo')
-        # monitor = dog.Monitor.get(monitor_id)
-        # eq(monitor['options']['silenced'], {'host:foo': None})
-
-        # dog.Monitor.unmute(monitor_id, scope='host:foo')
-        # monitor = dog.Monitor.get(monitor_id)
-        # eq(monitor['options']['silenced'], {})
-
-        # options = {
-        #     "silenced": {"host:abcd1234": None, "host:abcd1235": None}
-        # }
-        # dog.Monitor.update(monitor_id, query=query, options=options)
-        # monitor = dog.Monitor.get(monitor_id)
-        # eq(monitor['options']['silenced'], options['silenced'])
-
-        # dog.Monitor.unmute(monitor_id, all_scopes=True)
-        # monitor = dog.Monitor.get(monitor_id)
-        # eq(monitor['options']['silenced'], {})
-
-        # dog.Monitor.delete(monitor_id)
-
-    @pytest.mark.monitor
     def test_downtime(self):
         start = int(time.time())
         end = start + 1000
 
         # Create downtime
-        downtime_id = dog.Downtime.create(scope='env:staging', start=start, end=end)['id']
-        dt = dog.Downtime.get(downtime_id)
-        eq(dt['start'], start)
-        eq(dt['end'], end)
-        eq(dt['scope'], ['env:staging'])
-        eq(dt['disabled'], False)
+        downtime = dog.Downtime.create(scope="env:staging", start=start, end=end)
+        assert downtime["start"] == start
+        assert downtime["end"] == end
+        assert downtime["scope"] == ["env:staging"]
+        assert downtime["disabled"] is False
 
         # Update downtime
         message = "Doing some testing on staging."
         end = int(time.time()) + 60000
-        dog.Downtime.update(downtime_id, scope='env:staging',
-                            end=end, message=message)
-        dt = dog.Downtime.get(downtime_id)
-        eq(dt['end'], end)
-        eq(dt['message'], message)
-        eq(dt['disabled'], False)
+        downtime = dog.Downtime.update(downtime["id"], scope="env:test", end=end, message=message)
+        assert downtime["end"] == end
+        assert downtime["message"] == message
+        assert downtime["scope"] == ["env:test"]
+        assert downtime["disabled"] is False
 
         # Delete downtime
-        dog.Downtime.delete(downtime_id)
-        dt = dog.Downtime.get(downtime_id)
-        eq(dt['disabled'], True)
+        assert dog.Downtime.delete(downtime["id"]) is None
+        downtime = dog.Downtime.get(downtime["id"])
+        assert downtime["disabled"] is True
 
-    @pytest.mark.monitor
     def test_service_check(self):
-        dog.ServiceCheck.check(
-            check='check_pg', host_name='host0', status=1,
-            message='PG is WARNING', tags=['db:prod_data'])
+        assert dog.ServiceCheck.check(
+            check="check_pg", host_name="host0", status=1, message="PG is WARNING", tags=["db:prod_data"]
+        ) == {"status": "ok"}
 
-    @pytest.mark.host
     def test_host_muting(self):
-        hostname = "my.test.host"
-        message = "Muting this host for a test."
         end = int(time.time()) + 60 * 60
+        hostname = "my.test.host" + str(end)
+        message = "Muting this host for a test."
 
-        try:
-            # reset test
-            dog.Host.unmute(hostname)
-        except ApiError:
-            pass
+        # post a metric to make sure the test host context exists
+        dog.Metric.send(metric="test.muting.host", points=1, host=hostname)
+        # Wait for host to appear
+        get_with_retry("Tag", hostname)
 
         # Mute a host
         mute = dog.Host.mute(hostname, end=end, message=message)
-        eq(mute['hostname'], hostname)
-        eq(mute['action'], "Muted")
-        eq(mute['message'], message)
-        eq(mute['end'], end)
+        assert mute["hostname"] == hostname
+        assert mute["action"] == "Muted"
+        assert mute["message"] == message
+        assert mute["end"] == end
 
-        # We shouldn't be able to mute a host that's already muted, unless we include
+        # We shouldn"t be able to mute a host that"s already muted, unless we include
         # the override param.
         end2 = end + 60 * 15
-        resp = dog.Host.mute(hostname, end=end2)
-        assert resp['errors'][0].startswith('host:my.test.host is already muted.')
-
+        get_with_retry("Host", hostname, operation="mute", retry_condition=lambda r: "errors" not in r, end=end2)
         mute = dog.Host.mute(hostname, end=end2, override=True)
-        eq(mute['hostname'], hostname)
-        eq(mute['action'], "Muted")
-        eq(mute['end'], end2)
+        assert mute["hostname"] == hostname
+        assert mute["action"] == "Muted"
+        assert mute["end"] == end2
 
-        dog.Host.unmute(hostname)
+        unmute = dog.Host.unmute(hostname)
+        assert unmute["hostname"] == hostname
+        assert unmute["action"] == "Unmuted"
 
-    @pytest.mark.embed
     def test_get_all_embeds(self):
         all_embeds = dog.Embed.get_all()
         # Check all embeds is a valid response
         assert "embedded_graphs" in all_embeds
 
-    @pytest.mark.embed
-    def test_create_embed(self):
+    def test_embed_crud(self):
         # Initialize a graph definition
         graph_def = {
             "viz": "toplist",
-            "requests": [{
-                "q": "top(system.disk.free{$var} by {device}, 10, 'mean', 'desc')",
-                "style": {
-                    "palette": "dog_classic"
-                },
-                "conditional_formats": [{
-                    "palette": "red",
-                    "comparator": ">",
-                    "value": 50000000000
-                }, {
-                    "palette": "green",
-                    "comparator": ">",
-                    "value": 30000000000
-                }]
-            }]
+            "requests": [
+                {
+                    "q": "top(system.disk.free{$var} by {device}, 10, 'mean', 'desc')",
+                    "style": {"palette": "dog_classic"},
+                    "conditional_formats": [
+                        {"palette": "red", "comparator": ">", "value": 50000000000},
+                        {"palette": "green", "comparator": ">", "value": 30000000000},
+                    ],
+                }
+            ],
         }
         timeframe = "1_hour"
         size = "medium"
@@ -761,170 +489,58 @@ class TestDatadog(unittest.TestCase):
         title = "Custom titles!"
         # Dump the dictionary to a JSON string and make an API call
         graph_json = json.dumps(graph_def)
-        result = dog.Embed.create(graph_json=graph_json, timeframe=timeframe, size=size, legend=legend, title=title)
-        # Check various result attributes
-        assert "embed_id" in result
-        assert result["revoked"] is False
-        assert len(result["template_variables"]) == 1
-        assert result["template_variables"][0] == "var"
-        assert "html" in result
-        assert result["graph_title"] == title
+        embed = dog.Embed.create(graph_json=graph_json, timeframe=timeframe, size=size, legend=legend, title=title)
+        # Check various embed attributes
+        assert "embed_id" in embed
+        assert embed["revoked"] is False
+        assert len(embed["template_variables"]) == 1
+        assert embed["template_variables"][0] == "var"
+        assert "html" in embed
+        assert embed["graph_title"] == title
 
-    @pytest.mark.embed
-    def test_get_embed(self):
-        # Create a graph that we can try getting
-        graph_def = {
-            "viz": "toplist",
-            "requests": [{
-                "q": "top(system.disk.free{$var} by {device}, 10, 'mean', 'desc')",
-                "style": {
-                    "palette": "dog_classic"
-                },
-                "conditional_formats": [{
-                    "palette": "red",
-                    "comparator": ">",
-                    "value": 50000000000
-                }, {
-                    "palette": "green",
-                    "comparator": ">",
-                    "value": 30000000000
-                }]
-            }]
-        }
-        timeframe = "1_hour"
-        size = "medium"
-        legend = "no"
-        graph_json = json.dumps(graph_def)
-        created_graph = dog.Embed.create(graph_json=graph_json, timeframe=timeframe, size=size, legend=legend)
-        # Save the html to check against replaced var get
-        html = created_graph["html"]
-        # Save the embed_id into a variable and get it again
-        embed_id = created_graph["embed_id"]
-        response_graph = dog.Embed.get(embed_id, var="asdfasdfasdf")
+        var = "asdfasdfasdf"
+        response_graph = dog.Embed.get(embed["embed_id"], var=var)
         # Check the graph has the same embed_id and the template_var is added to the url
         assert "embed_id" in response_graph
-        assert response_graph["embed_id"] == embed_id
-        assert len(response_graph["html"]) > len(html)
+        assert response_graph["embed_id"] == embed["embed_id"]
+        assert len(response_graph["html"]) > len(embed["html"])
+        assert var in response_graph["html"]
 
-    @pytest.mark.embed
-    def test_enable_embed(self):
-        # Create a graph that we can try getting
-        graph_def = {
-            "viz": "toplist",
-            "requests": [{
-                "q": "top(system.disk.free{$var} by {device}, 10, 'mean', 'desc')",
-                "style": {
-                    "palette": "dog_classic"
-                },
-                "conditional_formats": [{
-                    "palette": "red",
-                    "comparator": ">",
-                    "value": 50000000000
-                }, {
-                    "palette": "green",
-                    "comparator": ">",
-                    "value": 30000000000
-                }]
-            }]
-        }
-        timeframe = "1_hour"
-        size = "medium"
-        legend = "no"
-        graph_json = json.dumps(graph_def)
-        created_graph = dog.Embed.create(graph_json=graph_json, timeframe=timeframe, size=size, legend=legend)
-        # Save the embed_id into a variable and enable it again
-        embed_id = created_graph["embed_id"]
-        result = dog.Embed.enable(embed_id)
-        # Check that the graph is enabled again
-        assert "success" in result
+        assert "success" in dog.Embed.enable(embed["embed_id"])
 
-    @pytest.mark.embed
-    def test_revoke_embed(self):
-        # Create a graph that we can try getting
-        graph_def = {
-            "viz": "toplist",
-            "requests": [{
-                "q": "top(system.disk.free{$var} by {device}, 10, 'mean', 'desc')",
-                "style": {
-                    "palette": "dog_classic"
-                },
-                "conditional_formats": [{
-                    "palette": "red",
-                    "comparator": ">",
-                    "value": 50000000000
-                }, {
-                    "palette": "green",
-                    "comparator": ">",
-                    "value": 30000000000
-                }]
-            }]
-        }
-        timeframe = "1_hour"
-        size = "medium"
-        legend = "no"
-        graph_json = json.dumps(graph_def)
-        created_graph = dog.Embed.create(graph_json=graph_json, timeframe=timeframe, size=size, legend=legend)
-        # Save the embed_id into a variable and enable it again
-        embed_id = created_graph["embed_id"]
-        result = dog.Embed.revoke(embed_id)
-        # Check embed is revoked and that we can't get it again
-        assert "success" in result
-        resp = dog.Embed.get(embed_id)
-        eq(
-            resp["errors"][0],
-            "Embed {} does not exist.".format(embed_id)
-        )
+        assert "success" in dog.Embed.revoke(embed["embed_id"])
+        assert "errors" in dog.Embed.get(embed["embed_id"])
 
     def test_user_crud(self):
-        handle = 'user@test.com'
-        name = 'Test User'
-        alternate_name = 'Test User Alt'
-        alternate_email = 'user_alternate@test.com'
+        now = int(time.time())
+        handle = "user{}@test.com".format(now)
+        name = "Test User"
+        alternate_name = "Test User Alt"
 
         # test create user
-        # the user might already exist
-        try:
-            u = dog.User.create(handle=handle, name=name)
-        except ApiError:
-            pass
+        user = dog.User.create(handle=handle, name=name, access_role="ro")
+        assert user["user"]["handle"] == handle
+        assert user["user"]["name"] == name
+        assert user["user"]["disabled"] is False
+        assert user["user"]["access_role"] == "ro"
 
-        # reset user to original status
-        u = dog.User.update(handle, email=handle, name=name, disabled=False)
-        assert u['user']['handle'] == handle
-        assert u['user']['name'] == name
-        assert u['user']['disabled'] is False
+        # test update user
+        user = dog.User.update(handle, name=alternate_name, access_role="st")
+        assert user["user"]["handle"] == handle
+        assert user["user"]["name"] == alternate_name
+        assert user["user"]["disabled"] is False
+        assert user["user"]["access_role"] == "st"
 
-        # test get
-        u = dog.User.get(handle)
-        assert u['user']['handle'] == handle
-        assert u['user']['name'] == name
-
-
-        # [TODO] You can't update another user's email
-        # This is based on who owns the APP key that is making the changes
-        # # test update user
-        # u = dog.User.update(handle, email=alternate_email, name=alternate_name)
-        # assert u['user']['handle'] == handle
-        # assert u['user']['name'] == alternate_name
-        # assert u['user']['email'] == alternate_email
+        # test get user
+        user = dog.User.get(handle)
+        assert user["user"]["handle"] == handle
+        assert user["user"]["name"] == alternate_name
 
         # test disable user
         dog.User.delete(handle)
         u = dog.User.get(handle)
-        assert u['user']['disabled'] is True
+        assert u["user"]["disabled"] is True
 
         # test get all users
         u = dog.User.get_all()
-        assert len(u['users']) >= 1
-
-    def get_event_with_retry(self, event_id):
-        event = dog.Event.get(event_id)
-        retry_counter = 0
-        while not event.get('event') and retry_counter < 10:
-            event = dog.Event.get(event_id)
-            retry_counter += 1
-            time.sleep(self.wait_time)
-        return event
-
-if __name__ == '__main__':
-    unittest.main()
+        assert len(u["users"]) >= 1
