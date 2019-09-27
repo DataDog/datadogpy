@@ -40,6 +40,8 @@ def get_with_retry(
             resource = getattr(getattr(dog, resource_type), operation)(resource_id, **kwargs)
         retry_counter += 1
         time.sleep(WAIT_TIME)
+    if retry_condition(resource):
+        raise Exception("Retry limit reached")
     return resource
 
 
@@ -173,7 +175,6 @@ class TestDatadog(unittest.TestCase):
 
     def test_search(self):
         results = dog.Infrastructure.search(q="")
-        print(results)
         assert len(results["results"]["hosts"]) > 0
         assert len(results["results"]["metrics"]) > 0
 
@@ -457,8 +458,7 @@ class TestDatadog(unittest.TestCase):
         # We shouldn"t be able to mute a host that"s already muted, unless we include
         # the override param.
         end2 = end + 60 * 15
-        muted_host = get_with_retry("Host", hostname, operation="mute", retry_condition=lambda r: "errors" in r)
-        assert "errors" in muted_host
+        get_with_retry("Host", hostname, operation="mute", retry_condition=lambda r: "errors" in r)
         mute = dog.Host.mute(hostname, end=end2, override=True)
         assert mute["hostname"] == hostname
         assert mute["action"] == "Muted"
