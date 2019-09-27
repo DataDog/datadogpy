@@ -21,7 +21,12 @@ WAIT_TIME = 10
 
 
 def get_with_retry(
-    resource_type, resource_id=None, operation="get", retry_count=10, retry_condition=lambda r: r.get("errors"), **kwargs
+    resource_type,
+    resource_id=None,
+    operation="get",
+    retry_count=10,
+    retry_condition=lambda r: r.get("errors"),
+    **kwargs
 ):
     if resource_id is None:
         resource = getattr(getattr(dog, resource_type), operation)(**kwargs)
@@ -45,27 +50,27 @@ class TestDatadog(unittest.TestCase):
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
 
     def test_tags(self):
+        hostname = "test.tags.host" + str(time.time())
         # post a metric to make sure the test host context exists
-        dog.Metric.send(metric="test.tag.metric", points=1, host=self.host_name)
+        dog.Metric.send(metric="test.tag.metric", points=1, host=hostname)
         # Wait for host to appear
-        get_with_retry("Tag", self.host_name)
+        get_with_retry("Tag", hostname)
 
         # Ready to test
-        tags = dog.Tag.create(self.host_name, tags=["test_tag:1", "test_tag:2"], source="datadog")
+        tags = dog.Tag.create(hostname, tags=["test_tag:1", "test_tag:2"], source="datadog")
         assert "test_tag:1" in tags["tags"]
         assert "test_tag:2" in tags["tags"]
 
-        tags = dog.Tag.update(self.host_name, tags=["test_tag:3"], source="datadog")
+        tags = dog.Tag.update(hostname, tags=["test_tag:3"], source="datadog")
         assert tags["tags"] == ["test_tag:3"]
 
-        tags = dog.Tag.get(self.host_name, source="datadog")
+        tags = dog.Tag.get(hostname, source="datadog")
         assert tags["tags"] == ["test_tag:3"]
 
         all_tags = dog.Tag.get_all()
-        assert self.host_name in all_tags["tags"]["test_tag:3"]
+        assert hostname in all_tags["tags"]["test_tag:3"]
 
-        dog.Tag.delete(self.host_name, source="datadog")
-        assert len(dog.Tag.get(self.host_name)["tags"]) == 0
+        assert dog.Tag.delete(hostname, source="datadog") is None  # Expect no response body on success
 
     def test_events(self):
         now = datetime.datetime.now()
