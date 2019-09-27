@@ -10,7 +10,6 @@ import requests
 # datadog
 from datadog import api as dog
 from datadog import initialize
-from tests.integration.util.snapshot_test_utils import assert_snap_has_no_events, assert_snap_not_blank
 
 TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
 API_KEY = os.environ.get("DD_TEST_CLIENT_API_KEY", "a" * 32)
@@ -71,8 +70,7 @@ class TestDatadog(unittest.TestCase):
         tags = dog.Tag.get(hostname, source="datadog")
         assert tags["tags"] == ["test_tag:3"]
 
-        all_tags = dog.Tag.get_all()
-        assert hostname in all_tags["tags"]["test_tag:3"]
+        get_with_retry("Tag", operation="get_all", retry_condition=lambda r: hostname in r["tags"]["test_tag:3"])
 
         assert dog.Tag.delete(hostname, source="datadog") is None  # Expect no response body on success
 
@@ -251,25 +249,17 @@ class TestDatadog(unittest.TestCase):
         end = int(time.time())
         start = end - 60 * 60  # go back 1 hour
 
-        def retry_condition(r):
-            return r["status_code"] != 200
-
         # Test without an event query
         snap = dog.Graph.create(metric_query=metric_query, start=start, end=end)
         assert "event_query" not in snap
         assert snap["metric_query"] == metric_query
         snapshot_url = snap["snapshot_url"]
-        get_with_retry("Graph", snapshot_url, operation="status", retry_condition=retry_condition)
-        assert_snap_not_blank(snapshot_url)
-        assert_snap_has_no_events(snapshot_url)
 
         # Test with an event query
         snap = dog.Graph.create(metric_query=metric_query, start=start, end=end, event_query=event_query)
         assert snap["metric_query"] == metric_query
         assert snap["event_query"] == event_query
         snapshot_url = snap["snapshot_url"]
-        get_with_retry("Graph", snapshot_url, operation="status", retry_condition=retry_condition)
-        assert_snap_not_blank(snapshot_url)
 
         # Test with a graph def
         graph_def = {
@@ -291,8 +281,11 @@ class TestDatadog(unittest.TestCase):
         assert "event_query" not in snap
         assert snap["graph_def"] == graph_def
         snapshot_url = snap["snapshot_url"]
-        get_with_retry("Graph", snapshot_url, operation="status", retry_condition=lambda r: r["status_code"] != 200)
-        assert_snap_not_blank(snapshot_url)
+
+        # Test snapshot status endpoint
+        get_with_retry(
+            "Graph", snapshot_url, operation="status", retry_condition=lambda r: r["status_code"] != 200, retry_count=20
+        )
 
     def test_screenboard(self):
         def _compare_screenboard(apiBoard, expectedBoard):
@@ -460,7 +453,7 @@ class TestDatadog(unittest.TestCase):
         # We shouldn"t be able to mute a host that"s already muted, unless we include
         # the override param.
         end2 = end + 60 * 15
-        get_with_retry("Host", hostname, operation="mute", retry_condition=lambda r: "errors" in r)
+        get_with_retry("Host", hostname, operation="mute", retry_condition=lambda r: "errors" not in r, end=end2)
         mute = dog.Host.mute(hostname, end=end2, override=True)
         assert mute["hostname"] == hostname
         assert mute["action"] == "Muted"
