@@ -45,7 +45,7 @@ def get_with_retry(
     return resource
 
 
-class TestDatadog():
+class TestDatadog:
     host_name = "test.host.integration"
 
     @classmethod
@@ -70,7 +70,9 @@ class TestDatadog():
         tags = dog.Tag.get(hostname, source="datadog")
         assert tags["tags"] == ["test_tag:3"]
 
-        get_with_retry("Tag", operation="get_all", retry_condition=lambda r: hostname in r["tags"]["test_tag:3"])
+        get_with_retry(
+            "Tag", operation="get_all", retry_condition=lambda r: hostname in r["tags"].get("test_tag:3", [])
+        )
 
         assert dog.Tag.delete(hostname, source="datadog") is None  # Expect no response body on success
 
@@ -392,7 +394,7 @@ class TestDatadog():
         assert dog.Monitor.unmute_all() is None  # No response expected
 
         monitor1 = dog.Monitor.mute(monitor1["id"])
-        assert monitor1["options"]["silenced"] == {'*': None}
+        assert monitor1["options"]["silenced"] == {"*": None}
 
         monitor2 = dog.Monitor.mute(monitor2["id"], scope="host:foo")
         assert monitor2["options"]["silenced"] == {"host:foo": None}

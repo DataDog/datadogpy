@@ -1,6 +1,7 @@
 The Datadog Python library
 ===========================
-[![Build Status](https://dev.azure.com/datadoghq/datadogpy/_apis/build/status/DataDog.datadogpy?branchName=master)](https://dev.azure.com/datadoghq/datadogpy/_build/latest?definitionId=10&branchName=master)
+[![Unit Tests](https://dev.azure.com/datadoghq/datadogpy/_apis/build/status/DataDog.datadogpy.unit?branchName=master)](https://dev.azure.com/datadoghq/datadogpy/_build/latest?definitionId=10&branchName=master)
+[![Integration Tests](https://dev.azure.com/datadoghq/datadogpy/_apis/build/status/DataDog.datadogpy.integration?branchName=master)](https://dev.azure.com/datadoghq/datadogpy/_build/latest?definitionId=13&branchName=master)
 [![Documentation Status](https://readthedocs.org/projects/datadogpy/badge/?version=latest)](https://readthedocs.org/projects/datadogpy/?badge=latest)
 [![PyPI - Version](https://img.shields.io/pypi/v/datadog.svg)](https://pypi.org/project/datadog)
 [![PyPI - Downloads](https://pepy.tech/badge/datadog)](https://pepy.tech/project/datadog)
