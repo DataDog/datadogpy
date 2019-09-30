@@ -1,4 +1,3 @@
-# stdlib
 from hashlib import md5
 import json
 import os
@@ -7,12 +6,9 @@ import re
 import subprocess
 import time
 import tempfile
+
 import requests
 
-# 3rd
-import pytest
-
-# datadog
 from datadog.util.compat import is_p3k, ConfigParser
 
 
@@ -410,14 +406,14 @@ class TestDogshell:
         out, _, _ = self.dogshell(["downtime", "post", scope, str(int(time.time()))])
         out = json.loads(out)
         assert out["scope"][0] == scope
-        assert out["disabled"] == False
+        assert out["disabled"] is False
         downtime_id = str(out["id"])
 
         # Get downtime
         out, _, _ = self.dogshell(["downtime", "show", downtime_id])
         out = json.loads(out)
         assert out["scope"][0] == scope
-        assert out["disabled"] == False
+        assert out["disabled"] is False
 
         # Update downtime
         message = "Doing some testing on staging."
