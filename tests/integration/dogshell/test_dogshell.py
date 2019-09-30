@@ -53,24 +53,22 @@ class TestDogshell:
         cmd = ["comment", "post", TEST_USER]
         comment_msg = "yo dudes"
         post_data = {}
-        out, err, return_code = self.dogshell(cmd, stdin=comment_msg)
+        out, _, _ = self.dogshell(cmd, stdin=comment_msg)
         post_data = self.parse_response(out)
         assert "id" in post_data
         assert "url" in post_data
-        assert "message" in post_data
         assert comment_msg in post_data["message"]
 
         # Read that comment from its id
-        time.sleep(WAIT_TIME)
         cmd = ["comment", "show", post_data["id"]]
-        out, err, return_code = self.dogshell(cmd)
+        out, _, _ = self.dogshell_with_retry(cmd)
         show_data = self.parse_response(out)
         assert comment_msg in show_data["message"]
 
         # Update the comment
         cmd = ["comment", "update", post_data["id"], TEST_USER]
         new_comment = "nothing much"
-        out, err, return_code = self.dogshell(cmd, stdin=new_comment)
+        out, _, _ = self.dogshell(cmd, stdin=new_comment)
         update_data = self.parse_response(out)
         assert update_data["id"] == post_data["id"]
         assert new_comment in update_data["message"]
