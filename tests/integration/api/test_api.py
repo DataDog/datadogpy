@@ -64,11 +64,9 @@ class TestDatadog:
         assert "test_tag:1" in tags["tags"]
         assert "test_tag:2" in tags["tags"]
 
-        tags = dog.Tag.update(hostname, tags=["test_tag:3"], source="datadog")
-        assert tags["tags"] == ["test_tag:3"]
-
-        tags = dog.Tag.get(hostname, source="datadog")
-        assert tags["tags"] == ["test_tag:3"]
+        # The response from `update` can be flaky, so let's test that it work by getting the tags
+        dog.Tag.update(hostname, tags=["test_tag:3"], source="datadog")
+        get_with_retry("Tag", hostname, retry_condition=lambda r: r["tags"] != ["test_tag:3"], source="datadog")
 
         get_with_retry(
             "Tag", operation="get_all", retry_condition=lambda r: hostname in r["tags"].get("test_tag:3", [])
