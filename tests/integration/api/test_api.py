@@ -69,7 +69,10 @@ class TestDatadog:
         get_with_retry("Tag", hostname, retry_condition=lambda r: r["tags"] != ["test_tag:3"], source="datadog")
 
         get_with_retry(
-            "Tag", operation="get_all", retry_condition=lambda r: hostname in r["tags"].get("test_tag:3", [])
+            "Tag",
+            operation="get_all",
+            retry_condition=lambda r: hostname in r["tags"].get("test_tag:3", []),
+            retry_limit=30
         )
 
         assert dog.Tag.delete(hostname, source="datadog") is None  # Expect no response body on success
