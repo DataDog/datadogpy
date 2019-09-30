@@ -154,7 +154,7 @@ class TestInitialization(DatadogAPINoInitialization):
             self.assertIsNone(api._api_key)
             self.assertIsNone(api._application_key)
             self.assertEqual(api._api_host, "https://api.datadoghq.com")
-            self.assertEqual(api._host_name, util.hostname.get_hostname())
+            self.assertEqual(api._host_name, util.hostname.get_hostname(api._hostname_from_config))
 
     def test_env_var_values(self):
         with EnvVars(
@@ -169,7 +169,7 @@ class TestInitialization(DatadogAPINoInitialization):
             self.assertEqual(api._api_key, "API_KEY_ENV")
             self.assertEqual(api._application_key, "APP_KEY_ENV")
             self.assertEqual(api._api_host, "HOST_ENV")
-            self.assertEqual(api._host_name, util.hostname.get_hostname())
+            self.assertEqual(api._host_name, util.hostname.get_hostname(api._hostname_from_config))
 
             del os.environ["DATADOG_API_KEY"]
             del os.environ["DATADOG_APP_KEY"]
@@ -210,7 +210,7 @@ class TestInitialization(DatadogAPINoInitialization):
             self.assertEqual(api._api_key, "API_KEY_ENV")
             self.assertEqual(api._application_key, "APP_KEY_ENV")
             self.assertEqual(api._api_host, "HOST_ENV")
-            self.assertEqual(api._host_name, util.hostname.get_hostname())
+            self.assertEqual(api._host_name, util.hostname.get_hostname(api._hostname_from_config))
 
             # Initialize again to check given parameters take precedence over already set value and env vars
             initialize(api_key="API_KEY", app_key="APP_KEY", api_host="HOST", host_name="HOSTNAME")
