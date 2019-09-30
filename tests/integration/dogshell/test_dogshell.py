@@ -122,7 +122,9 @@ class TestDogshell:
         self.dogshell(["metric", "post", "--host", host, metric, "1"])
 
         # Query for the host and metric
-        self.dogshell_with_retry(["search", "query", unique], retry_condition=lambda o, r: host in o and metric in o)
+        self.dogshell_with_retry(
+            ["search", "query", unique], retry_condition=lambda o, r: host not in o or metric not in o
+        )
 
         # Give the host some tags
         tags0 = ["t0", "t1"]
@@ -131,7 +133,7 @@ class TestDogshell:
             assert t in out
 
         # Verify that that host got those tags
-        self.dogshell_with_retry(["tag", "show", host], retry_condition=lambda o, r: "t0" in o and "t1" in o)
+        self.dogshell_with_retry(["tag", "show", host], retry_condition=lambda o, r: "t0" not in o or "t1" not in o)
 
         # Replace the tags with a different set
         tags1 = ["t2", "t3"]
