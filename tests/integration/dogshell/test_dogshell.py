@@ -471,6 +471,7 @@ class TestDogshell:
         while retry_count < retry_limit and retry_condition(out, return_code):
             out, err, return_code = self.dogshell(cmd, check_return_code=False)
             time.sleep(WAIT_TIME)
+            retry_count += 1
         if retry_condition(out, return_code):
             raise Exception(
                 "Retry limit reached for command {}:\nSTDOUT: {}\nSTDERR: {}\nSTATUS_CODE: {}".format(
