@@ -168,23 +168,3 @@ class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         """
         cls._sub_resource_name = 'generate_new_external_id'
         return super(Aws, cls).update_items(id=id, **params)
-
-    @classmethod
-    def list_log_services(cls, id=_resource_id, **params):
-        """
-        List all namespace rules available as options.
-
-        >>> api.Aws.list_log_services()
-        """
-        cls._sub_resource_name = 'logs/services'
-        return super(Aws, cls).get_items(id=id, **params)
-
-    @classmethod
-    def add_log_lambda_arn(cls, id=_resource_id, **params):
-        """
-        List all namespace rules available as options.
-
-        >>> api.Aws.add_log_lambda_arn()
-        """
-        cls._sub_resource_name = 'logs'
-        return super(Aws, cls).add_items(id=id, **params)
