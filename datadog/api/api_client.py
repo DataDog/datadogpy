@@ -244,7 +244,8 @@ class APIClient(object):
     @classmethod
     def _set_api_and_app_keys_in_params(cls, path):
         """
-        Some endpoints need api and app keys to be set in params only.
+        Some endpoints need api and app keys to be set in params only
+        For these endpoints, api and app keys in headers are ignored
         :return: True if this endpoint needs api and app keys params set
         """
         return path.rsplit('/', 1)[-1] == 'series'

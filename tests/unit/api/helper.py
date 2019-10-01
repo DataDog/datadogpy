@@ -70,6 +70,8 @@ class MockResponse(requests.Response):
 class MyCreatable(CreateableAPIResource):
     _resource_name = 'creatables'
 
+class MyParamsApiKeyCreatable(CreateableAPIResource):
+    _resource_name = 'series'
 
 class MyUpdatable(UpdatableAPIResource):
     _resource_name = 'updatables'
