@@ -45,7 +45,7 @@ def get_with_retry(
     return resource
 
 
-class TestDatadog():
+class TestDatadog:
     host_name = "test.host.integration"
 
     @classmethod
@@ -64,13 +64,16 @@ class TestDatadog():
         assert "test_tag:1" in tags["tags"]
         assert "test_tag:2" in tags["tags"]
 
-        tags = dog.Tag.update(hostname, tags=["test_tag:3"], source="datadog")
-        assert tags["tags"] == ["test_tag:3"]
+        # The response from `update` can be flaky, so let's test that it work by getting the tags
+        dog.Tag.update(hostname, tags=["test_tag:3"], source="datadog")
+        get_with_retry("Tag", hostname, retry_condition=lambda r: r["tags"] != ["test_tag:3"], source="datadog")
 
-        tags = dog.Tag.get(hostname, source="datadog")
-        assert tags["tags"] == ["test_tag:3"]
-
-        get_with_retry("Tag", operation="get_all", retry_condition=lambda r: hostname in r["tags"]["test_tag:3"])
+        get_with_retry(
+            "Tag",
+            operation="get_all",
+            retry_condition=lambda r: hostname in r["tags"].get("test_tag:3", []),
+            retry_limit=30
+        )
 
         assert dog.Tag.delete(hostname, source="datadog") is None  # Expect no response body on success
 
@@ -392,7 +395,7 @@ class TestDatadog():
         assert dog.Monitor.unmute_all() is None  # No response expected
 
         monitor1 = dog.Monitor.mute(monitor1["id"])
-        assert monitor1["options"]["silenced"] == {'*': None}
+        assert monitor1["options"]["silenced"] == {"*": None}
 
         monitor2 = dog.Monitor.mute(monitor2["id"], scope="host:foo")
         assert monitor2["options"]["silenced"] == {"host:foo": None}
