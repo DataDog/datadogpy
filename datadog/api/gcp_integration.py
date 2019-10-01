@@ -4,8 +4,8 @@ from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
 
 
 class Gcp(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
-            DeletableAPIResource, ListableAPISubResource, UpdatableAPIResource,
-            AddableAPISubResource):
+          DeletableAPIResource, ListableAPISubResource, UpdatableAPIResource,
+          AddableAPISubResource):
     """
     A wrapper around Event HTTP API.
     """
@@ -73,8 +73,7 @@ class Gcp(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         by supplying a new value for the field(s) to be updated.
 
         `project_id` and `client_email` are required, in order to identify the \
-        right service account to update.
-            
+        right service account to update. \
         The unspecified fields will keep their original values.
 
         The only use case for updating this integration is to change \

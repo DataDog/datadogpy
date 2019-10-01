@@ -51,8 +51,8 @@ class Azure(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
     @classmethod
     def update_host_filters(cls, id=_resource_id, **params):
         """
-        Update the defined list of host filters for a given Datadog-Azure integration.
-        
+        Update the defined list of host filters for a given Datadog-Azure integration. \
+
         >>> tenant_name = "<AZURE_TENANT_NAME>"
         >>> client_id = "<AZURE_CLIENT_ID>"
         >>> host_filters = "<KEY>:<VALUE>"
