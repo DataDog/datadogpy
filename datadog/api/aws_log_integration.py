@@ -71,12 +71,10 @@ class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         the status of that job. Subsequent requests will always repeat the above, so this endpoint \
         can be polled intermittently instead of blocking.
 
-        Returns a status of 'created' if the Lambda exists within the AWS account in question.
-        Returns a status of 'checked and ok' if the Lambda exists and the permissions are ok.
-        Returns a status of 'error' if the Lambda fails the validation.
-
-        NEED TO CLARIFY the functionality here. I tried this with a 
-        different Lambda function expecting a failure. But didn't get one.
+        Returns a status of 'created' when it's checking if the Lambda exists in the account.
+        Returns a status of 'waiting' while checking.
+        Returns a status of 'checked and ok' if the Lambda exists.
+        Returns a status of 'error' if the Lambda does not exist.
 
         >>> account_id = "<AWS_ACCOUNT_ID>"
         >>> lambda_arn = "<AWS_LAMBDA_ARN>"
