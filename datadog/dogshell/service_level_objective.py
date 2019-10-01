@@ -162,12 +162,11 @@ class MonitorClient(object):
         api._timeout = args.timeout
         format = args.format
 
+        params = {"type": args.type, "name": args.name}
+
         if args.tags:
             tags = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
-        else:
-            tags = None
-
-        params = {"type": args.type, "name": args.name}
+            params["tags"] = tags
 
         thresholds = []
         for threshold_str in args.thresholds.split(","):
@@ -232,9 +231,7 @@ class MonitorClient(object):
             params["monitor_ids"] = slo["monitor_ids"]
 
         if slo.get("tags"):
-            tags = slo["tags"]
-            if isinstance(tags, str):
-                tags = tags.split(",")
+            tags = sorted(set([t.strip() for t in slo["tags"].split(",") if t.strip()]))
             params["tags"] = tags
 
         res = api.ServiceLevelObjective.create(**params)
@@ -281,9 +278,7 @@ class MonitorClient(object):
             params["monitor_ids"] = args.monitor_ids
 
         if args.tags:
-            tags = args.tags
-            if isinstance(tags, str):
-                tags = tags.split(",")
+            tags = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
             params["tags"] = tags
         res = api.ServiceLevelObjective.update(args.slo_id, **params)
         report_warnings(res)
@@ -329,9 +324,7 @@ class MonitorClient(object):
             params["monitor_ids"] = slo["monitor_ids"]
 
         if slo.get("tags"):
-            tags = slo["tags"]
-            if isinstance(tags, str):
-                tags = tags.split(",")
+            tags = sorted(set([t.strip() for t in slo["tags"].split(",") if t.strip()]))
             params["tags"] = tags
 
         res = api.ServiceLevelObjective.update(slo["id"], **params)
