@@ -60,20 +60,27 @@ class TestDatadog:
         get_with_retry("Tag", hostname)
 
         # Ready to test
-        tags = dog.Tag.create(hostname, tags=["test_tag:1", "test_tag:2"], source="datadog")
-        assert "test_tag:1" in tags["tags"]
-        assert "test_tag:2" in tags["tags"]
+        dog.Tag.create(hostname, tags=["test_tag:1", "test_tag:2"], source="datadog")
+        get_with_retry(
+            "Tag",
+            hostname,
+            retry_condition=lambda r: "test_tag:1" not in r["tags"] or "test_tag:2" not in r["tags"],
+            retry_limit=30,
+            source="datadog"
+        )
 
         # The response from `update` can be flaky, so let's test that it work by getting the tags
         dog.Tag.update(hostname, tags=["test_tag:3"], source="datadog")
-        get_with_retry("Tag", hostname, retry_condition=lambda r: r["tags"] != ["test_tag:3"], source="datadog")
-
         get_with_retry(
             "Tag",
-            operation="get_all",
-            retry_condition=lambda r: hostname in r["tags"].get("test_tag:3", []),
-            retry_limit=30
+            hostname,
+            retry_condition=lambda r: r["tags"] != ["test_tag:3"],
+            retry_limit=30,
+            source="datadog"
         )
+
+        all_tags = dog.Tag.get_all()
+        assert "tags" in all_tags
 
         assert dog.Tag.delete(hostname, source="datadog") is None  # Expect no response body on success
 
