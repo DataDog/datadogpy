@@ -1,14 +1,26 @@
-from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
-    UpdatableAPIResource, ListableAPIResource, DeletableAPIResource, \
-    ActionAPIResource
+from datadog.api.resources import (
+    GetableAPIResource,
+    CreateableAPIResource,
+    UpdatableAPIResource,
+    ListableAPIResource,
+    DeletableAPIResource,
+    ActionAPIResource,
+)
 
 
-class ServiceLevelObjective(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
-              ListableAPIResource, DeletableAPIResource, ActionAPIResource):
+class ServiceLevelObjective(
+    GetableAPIResource,
+    CreateableAPIResource,
+    UpdatableAPIResource,
+    ListableAPIResource,
+    DeletableAPIResource,
+    ActionAPIResource,
+):
     """
     A wrapper around Service Level Objective HTTP API.
     """
-    _resource_name = 'slo'
+
+    _resource_name = "slo"
 
     @classmethod
     def get_all(cls, query=None, ids=None, offset=0, limit=100, **params):
@@ -39,7 +51,6 @@ class ServiceLevelObjective(GetableAPIResource, CreateableAPIResource, Updatable
 
         return super(ServiceLevelObjective, cls).get_all(**search_terms)
 
-
     @classmethod
     def bulk_delete(cls, ops):
         """
@@ -50,7 +61,9 @@ class ServiceLevelObjective(GetableAPIResource, CreateableAPIResource, Updatable
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(ServiceLevelObjective, cls)._trigger_class_action('POST', 'bulk_delete', body=ops)
+        return super(ServiceLevelObjective, cls)._trigger_class_action(
+            "POST", "bulk_delete", body=ops
+        )
 
     @classmethod
     def delete_many(cls, ids, **params):
@@ -62,4 +75,6 @@ class ServiceLevelObjective(GetableAPIResource, CreateableAPIResource, Updatable
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(ServiceLevelObjective, cls)._trigger_class_action('DELETE', '', body={"ids": ids})
+        return super(ServiceLevelObjective, cls)._trigger_class_action(
+            "DELETE", "", body={"ids": ids}
+        )
