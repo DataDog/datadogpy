@@ -31,7 +31,8 @@ logging.getLogger('datadog.threadstats').addHandler(NullHandler())
 
 def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
                statsd_host=None, statsd_port=None, statsd_use_default_route=False,
-               statsd_socket_path=None, statsd_namespace=None, return_raw_response=False, **kwargs):
+               statsd_socket_path=None, statsd_namespace=None, return_raw_response=False,
+               hostname_from_config=True, **kwargs):
     """
     Initialize and configure Datadog.api and Datadog.statsd modules
 
@@ -41,9 +42,13 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
     :param app_key: Datadog application key
     :type app_key: string
 
+    :param host_name: Set a specific hostname
+    :type host_name: string
+
     :param proxies: Proxy to use to connect to Datadog API;
                     for example, 'proxies': {'http': "http:<user>:<pass>@<ip>:<port>/"}
     :type proxies: dictionary mapping protocol to the URL of the proxy.
+
     :param api_host: Datadog API endpoint
     :type api_host: url
 
@@ -72,6 +77,9 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
     :param return_raw_response: Whether or not to return the raw response object in addition \
         to the decoded response content (default: False)
     :type return_raw_response: boolean
+
+    :param hostname_from_config: Set the hostname from the Datadog agent config (agent 5). Will be deprecated
+    :type hostname_from_config: boolean
     """
     # API configuration
     api._api_key = api_key or api._api_key or os.environ.get('DATADOG_API_KEY', os.environ.get('DD_API_KEY'))
@@ -80,7 +88,8 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
         api._application_key or
         os.environ.get('DATADOG_APP_KEY', os.environ.get('DD_APP_KEY'))
     )
-    api._host_name = host_name or api._host_name or get_hostname()
+    api._hostname_from_config = hostname_from_config
+    api._host_name = host_name or api._host_name or get_hostname(hostname_from_config)
     api._api_host = api_host or api._api_host or os.environ.get('DATADOG_HOST', 'https://api.datadoghq.com')
 
     # Statsd configuration

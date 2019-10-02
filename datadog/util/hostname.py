@@ -35,7 +35,7 @@ def is_valid_hostname(hostname):
     return True
 
 
-def get_hostname():
+def get_hostname(hostname_from_config):
     """
     Get the canonical host name this agent should identify as. This is
     the authoritative source of the host name for the agent.
@@ -52,12 +52,16 @@ def get_hostname():
 
     # first, try the config
     try:
-        config = get_config()
-        config_hostname = config.get('hostname')
-        if config_hostname and is_valid_hostname(config_hostname):
-            return config_hostname
+        if hostname_from_config:
+            config = get_config()
+            config_hostname = config.get('hostname')
+            if config_hostname and is_valid_hostname(config_hostname):
+                log.warning("Hostname lookup from agent configuration will be deprecated "
+                            "in an upcoming version of datadogpy. Set hostname_from_config to False "
+                            "to get rid of this warning")
+                return config_hostname
     except CfgNotFound:
-        log.info("No agent or invalid configuration file found")
+        log.warning("No agent or invalid configuration file found")
 
     # Try to get GCE instance name
     if hostname is None:
