@@ -543,7 +543,7 @@ class TestDatadog:
         user = dog.User.get(handle)
         assert "user" in user
         assert user["user"]["handle"] == handle
-        assert user["user"]["name"] == alternate_name
+        assert user["user"]["name"] == name
 
         # test disable user
         dog.User.delete(handle)
