@@ -537,11 +537,7 @@ class TestDatadog:
         assert user["user"]["disabled"] is False
         assert user["user"]["access_role"] == "ro"
 
-        # test update own user, without changing anything. Just checking endpoint.
-        user = dog.User.update(TEST_USER)
-        assert "user" in user
-        assert user["user"]["handle"] == TEST_USER
-        assert user["user"]["disabled"] is False
+        # update endpoint will refuse anything if the app_key making the call is not admin
 
         # test get user
         user = dog.User.get(handle)
