@@ -101,7 +101,6 @@ class APIClient(object):
                 if _application_key:
                     params['application_key'] = _application_key
                     
-                    
             # Attach host name to body
             if attach_host_name and body:
                 # Is it a 'series' list of objects ?
@@ -240,7 +239,6 @@ class APIClient(object):
         backed_off_time = now - cls._backoff_timestamp
         backoff_time_left = cls._backoff_period - backed_off_time
         return round(backed_off_time, 2), round(backoff_time_left, 2)
-    
     
     @classmethod
     def _set_api_and_app_keys_in_params(cls, path):
