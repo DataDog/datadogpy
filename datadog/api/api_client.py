@@ -33,7 +33,7 @@ class APIClient(object):
 
     # Plugged HTTP client
     _http_client = None
-    
+
     @classmethod
     def _get_http_client(cls):
         """
@@ -41,9 +41,9 @@ class APIClient(object):
         """
         if not cls._http_client:
             cls._http_client = resolve_http_client()
-        
+
         return cls._http_client
-    
+
     @classmethod
     def submit(cls, method, path, api_version=None, body=None, attach_host_name=False,
                response_formatter=None, error_formatter=None, **params):
@@ -80,33 +80,33 @@ class APIClient(object):
             if not cls._should_submit():
                 _, backoff_time_left = cls._backoff_status()
                 raise HttpBackoff(backoff_time_left)
-            
+
             # Import API, User and HTTP settings
             from datadog.api import _api_key, _application_key, _api_host, \
                 _mute, _host_name, _proxies, _max_retries, _timeout, \
                 _cacert, _return_raw_response
-            
+
             # Check keys and add then to params
             if _api_key is None:
                 raise ApiNotInitialized("API key is not set."
                                         " Please run 'initialize' method first.")
-            
+
             # Set api and app keys in headers
             headers = {}
             headers['DD-API-KEY'] = _api_key
             if _application_key:
                 headers['DD-APPLICATION-KEY'] = _application_key
-            
+
             # Check if the api_version is provided
             if not api_version:
                 api_version = _api_version
-            
+
             # set api and app keys in params only for some endpoints
             if cls._set_api_and_app_keys_in_params(api_version, path):
                 params['api_key'] = _api_key
                 if _application_key:
                     params['application_key'] = _application_key
-            
+
             # Attach host name to body
             if attach_host_name and body:
                 # Is it a 'series' list of objects ?
@@ -118,37 +118,37 @@ class APIClient(object):
                 else:
                     if body.get('host', "") == "":
                         body['host'] = _host_name
-            
+
             # If defined, make sure tags are defined as a comma-separated string
             if 'tags' in params and isinstance(params['tags'], list):
                 params['tags'] = ','.join(params['tags'])
-            
+
             # Process the body, if necessary
             if isinstance(body, dict):
                 body = json.dumps(body)
                 headers['Content-Type'] = 'application/json'
-            
+
             # Construct the URL
             url = construct_url(_api_host, api_version, path)
-            
+
             # Process requesting
             start_time = time.time()
-            
+
             result = cls._get_http_client().request(
                 method=method, url=url,
                 headers=headers, params=params, data=body,
                 timeout=_timeout, max_retries=_max_retries,
                 proxies=_proxies, verify=_cacert
             )
-            
+
             # Request succeeded: log it and reset the timeout counter
             duration = round((time.time() - start_time) * 1000., 4)
             log.info("%s %s %s (%sms)" % (result.status_code, method, url, duration))
             cls._timeout_counter = 0
-            
+
             # Format response content
             content = result.content
-            
+
             if content:
                 try:
                     if is_p3k():
@@ -157,20 +157,20 @@ class APIClient(object):
                         response_obj = json.loads(content)
                 except ValueError:
                     raise ValueError('Invalid JSON response: {0}'.format(content))
-                
+
                 if response_obj and 'errors' in response_obj:
                     raise ApiError(response_obj)
             else:
                 response_obj = None
-            
+
             if response_formatter is not None:
                 response_obj = response_formatter(response_obj)
-            
+
             if _return_raw_response:
                 return response_obj, result
             else:
                 return response_obj
-        
+
         except HttpTimeout:
             cls._timeout_counter += 1
             raise
@@ -193,7 +193,7 @@ class APIClient(object):
                     return error_formatter(e.args[0])
             else:
                 raise
-    
+
     @classmethod
     def _should_submit(cls):
         """
@@ -202,7 +202,7 @@ class APIClient(object):
         """
         now = time.time()
         should_submit = False
-        
+
         # If we're not backing off, but the timeout counter exceeds the max
         # number of timeouts, then enter the backoff state, recording the time
         # we started backing off
@@ -211,7 +211,7 @@ class APIClient(object):
                      .format(cls._backoff_period))
             cls._backoff_timestamp = now
             should_submit = False
-        
+
         # If we are backing off but the we've waiting sufficiently long enough
         # (backoff_retry_age), exit the backoff state and reset the timeout
         # counter so that we try submitting metrics again
@@ -229,9 +229,9 @@ class APIClient(object):
                 should_submit = False
         else:
             should_submit = True
-        
+
         return should_submit
-    
+
     @classmethod
     def _backoff_status(cls):
         """
@@ -241,7 +241,7 @@ class APIClient(object):
         backed_off_time = now - cls._backoff_timestamp
         backoff_time_left = cls._backoff_period - backed_off_time
         return round(backed_off_time, 2), round(backoff_time_left, 2)
-    
+
     @classmethod
     def _set_api_and_app_keys_in_params(cls, api_version, path):
         """
@@ -250,7 +250,7 @@ class APIClient(object):
         :return: True if this endpoint needs api and app keys params set
         """
         constructed_path = construct_path(api_version, path)
-        
+
         set_of_paths = {
             "v1/series",
             "v1/check_run",
@@ -259,5 +259,5 @@ class APIClient(object):
         }
         if constructed_path in set_of_paths:
             return True
-        
+
         return False
