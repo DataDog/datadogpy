@@ -39,10 +39,14 @@ class MonitorClient(object):
 
         update_parser = verb_parsers.add_parser('update', help="Update existing monitor")
         update_parser.add_argument('monitor_id', help="monitor to replace with the new definition")
+        update_parser.add_argument('type', nargs='?', help="[Deprecated] optional argument preferred"
+                                    "type of the monitor, e.g. 'metric alert' 'service check'", default=None)
+        update_parser.add_argument('query', nargs='?', help="[Deprecated] optional argument preferred"
+                                    "query to notify on with syntax varying depending on monitor type", default=None)
         update_parser.add_argument('--type', help="type of the monitor, e.g. "
                                    "'metric alert' 'service check'", default=None)
         update_parser.add_argument('--query', help="query to notify on with syntax varying"
-                                   " depending on what type of monitor you are creating", default=None)
+                                   " depending on monitor type", default=None)
         update_parser.add_argument('--name', help="name of the alert", default=None)
         update_parser.add_argument('--message', help="message to include with "
                                    "notifications for this monitor", default=None)
@@ -154,8 +158,23 @@ class MonitorClient(object):
                 options = json.loads(args.options)
             except:
                 raise Exception('bad json parameter')
-        res = api.Monitor.update(args.monitor_id, type=args.type, query=args.query,
-                                 name=args.name, message=args.message, options=options)
+
+        to_update = {}
+        if args.type:
+            to_update['type'] = args.type
+            print("[DEPRECATION] `type` is no longer a required arg for `monitor update` and may be omitted")
+        if args.query:
+            to_update['query'] = args.query
+            print("[DEPRECATION] `query` is no longer a required arg for `monitor update` and may be omitted")
+        if args.name:
+            to_update['name'] = args.name
+        if args.message:
+            to_update['message'] = args.message
+        if args.options:
+            to_update['options'] = args.options
+
+        res = api.Monitor.update(args.monitor_id, **to_update)
+
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
