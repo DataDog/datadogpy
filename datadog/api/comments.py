@@ -1,8 +1,7 @@
-from datadog.api.resources import CreateableAPIResource, UpdatableAPIResource, \
-    DeletableAPIResource
+from datadog.api.resources import CreateableAPIResource, UpdatableAPIResource
 
 
-class Comment(CreateableAPIResource, UpdatableAPIResource, DeletableAPIResource):
+class Comment(CreateableAPIResource, UpdatableAPIResource):
     """
     A wrapper around Comment HTTP API.
     """

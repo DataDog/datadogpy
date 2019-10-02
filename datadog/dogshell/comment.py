@@ -40,10 +40,6 @@ class CommentClient(object):
         show_parser.add_argument('comment_id', help="comment to show")
         show_parser.set_defaults(func=cls._show)
 
-        delete_parser = verb_parsers.add_parser('delete', help="Delete comments.")
-        delete_parser.add_argument('comment_id', help="comment to delete (by id)")
-        delete_parser.set_defaults(func=cls._delete)
-
     @classmethod
     def _post(cls, args):
         api._timeout = args.timeout
@@ -155,12 +151,3 @@ class CommentClient(object):
             print('url\t\t' + res['event']['url'])
             print('resource\t' + res['event']['resource'])
             print('message\t\t' + res['event']['text'].__repr__())
-
-    @classmethod
-    def _delete(cls, args):
-        api._timeout = args.timeout
-        id = args.comment_id
-        res = api.Comment.delete(id)
-        if res is not None:
-            report_warnings(res)
-            report_errors(res)

@@ -6,6 +6,7 @@ _application_key = None
 _api_version = 'v1'
 _api_host = None
 _host_name = None
+_hostname_from_config = True
 _cacert = True
 
 # HTTP(S) settings

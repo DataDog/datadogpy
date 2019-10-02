@@ -18,13 +18,9 @@ if [sys.version_info[0], sys.version_info[1]] < [2, 7]:
 
 setup(
     name="datadog",
-    version="0.29.3",
+    version="0.30.0",
     install_requires=install_reqs,
-    tests_require=[
-        "nose", "mock",
-        'pillow==5.4.1; python_version == "3.4"',
-        'pillow; python_version != "3.4"',
-    ],
+    tests_require=["pytest", "mock"],
     packages=["datadog", "datadog.api", "datadog.dogstatsd", "datadog.threadstats", "datadog.util", "datadog.dogshell"],
     author="Datadog, Inc.",
     long_description=get_readme_md_contents(),
