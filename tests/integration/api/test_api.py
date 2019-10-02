@@ -529,28 +529,32 @@ class TestDatadog:
 
         # test create user
         user = dog.User.create(handle=handle, name=name, access_role="ro")
+        assert "user" in user
         assert user["user"]["handle"] == handle
         assert user["user"]["name"] == name
         assert user["user"]["disabled"] is False
         assert user["user"]["access_role"] == "ro"
 
         # test update user
-        user = dog.User.update(handle, name=alternate_name, access_role="st")
+        user = dog.User.update(handle, name=alternate_name)
+        assert "user" in user
         assert user["user"]["handle"] == handle
         assert user["user"]["name"] == alternate_name
         assert user["user"]["disabled"] is False
-        assert user["user"]["access_role"] == "st"
 
         # test get user
         user = dog.User.get(handle)
+        assert "user" in user
         assert user["user"]["handle"] == handle
         assert user["user"]["name"] == alternate_name
 
         # test disable user
         dog.User.delete(handle)
         u = dog.User.get(handle)
+        assert "user" in u
         assert u["user"]["disabled"] is True
 
         # test get all users
         u = dog.User.get_all()
+        assert "users" in u
         assert len(u["users"]) >= 1
