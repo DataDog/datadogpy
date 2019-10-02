@@ -350,10 +350,12 @@ class TestDatadog:
         assert share_res["board_id"] == get_res["id"]
         public_url = share_res["public_url"]
 
+        time.sleep(WAIT_TIME)
         response = requests.get(public_url)
         assert response.status_code == 200
 
         dog.Screenboard.revoke(get_res["id"])
+        time.sleep(WAIT_TIME)
         response = requests.get(public_url)
         assert response.status_code == 404
 
@@ -535,11 +537,10 @@ class TestDatadog:
         assert user["user"]["disabled"] is False
         assert user["user"]["access_role"] == "ro"
 
-        # test update user
-        user = dog.User.update(handle, name=alternate_name)
+        # test update own user, without changing anything. Just checking endpoint.
+        user = dog.User.update(TEST_USER)
         assert "user" in user
-        assert user["user"]["handle"] == handle
-        assert user["user"]["name"] == alternate_name
+        assert user["user"]["handle"] == TEST_USER
         assert user["user"]["disabled"] is False
 
         # test get user
