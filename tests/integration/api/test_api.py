@@ -5,6 +5,7 @@ import os
 import time
 
 import requests
+import pytest
 
 # datadog
 from datadog import api as dog
@@ -522,3 +523,42 @@ class TestDatadog:
 
         assert "success" in dog.Embed.revoke(embed["embed_id"])
         assert "errors" in dog.Embed.get(embed["embed_id"])
+
+    @pytest.mark.user
+    def test_user_crud(self):
+        now = int(time.time())
+        handle = "user{}@test.com".format(now)
+        name = "Test User"
+        alternate_name = "Test User Alt"
+
+        # test create user
+        user = dog.User.create(handle=handle, name=name, access_role="ro")
+        assert "user" in user
+        assert user["user"]["handle"] == handle
+        assert user["user"]["name"] == name
+        assert user["user"]["disabled"] is False
+        assert user["user"]["access_role"] == "ro"
+
+        # test update user
+        user = dog.User.update(handle, name=alternate_name, access_role="st")
+        assert user["user"]["handle"] == handle
+        assert user["user"]["name"] == alternate_name
+        assert user["user"]["disabled"] is False
+        assert user["user"]["access_role"] == "st"
+
+        # test get user
+        user = dog.User.get(handle)
+        assert "user" in user
+        assert user["user"]["handle"] == handle
+        assert user["user"]["name"] == alternate_name
+
+        # test disable user
+        dog.User.delete(handle)
+        u = dog.User.get(handle)
+        assert "user" in u
+        assert u["user"]["disabled"] is True
+
+        # test get all users
+        u = dog.User.get_all()
+        assert "users" in u
+        assert len(u["users"]) >= 1

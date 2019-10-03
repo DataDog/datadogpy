@@ -13,7 +13,8 @@ from datadog import initialize, api, util
 from datadog.api import (
     Distribution,
     Metric,
-    ServiceCheck
+    ServiceCheck,
+    User
 )
 from datadog.api.exceptions import ApiError, ApiNotInitialized
 from datadog.util.compat import is_p3k
@@ -568,3 +569,32 @@ class TestServiceCheckResource(DatadogAPIWithInitialization):
         ServiceCheck.check(
             check='check_pg', host_name='host0', status=1, message=None,
             timestamp=None, tags=None)
+
+
+class TestUserResource(DatadogAPIWithInitialization):
+
+    def test_create_user(self):
+        User.create(handle="handle", name="name", access_role="ro")
+        self.request_called_with(
+            "POST", "https://example.com/api/v1/user", data={"handle": "handle", "name": "name", "access_role":"ro"}
+        )
+
+    def test_get_user(self):
+        User.get("handle")
+        self.request_called_with("GET", "https://example.com/api/v1/user/handle")
+
+    def test_update_user(self):
+        User.update("handle", name="name", access_role="ro", email="email", disabled="disabled")
+        self.request_called_with(
+            "PUT",
+            "https://example.com/api/v1/user/handle",
+            data={"name": "name", "access_role":"ro", "email": "email", "disabled": "disabled"}
+        )
+
+    def test_delete_user(self):
+        User.delete("handle")
+        self.request_called_with("DELETE", "https://example.com/api/v1/user/handle")
+
+    def test_get_all_users(self):
+        User.get_all()
+        self.request_called_with("GET", "https://example.com/api/v1/user")
