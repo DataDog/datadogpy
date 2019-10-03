@@ -522,36 +522,3 @@ class TestDatadog:
 
         assert "success" in dog.Embed.revoke(embed["embed_id"])
         assert "errors" in dog.Embed.get(embed["embed_id"])
-
-    def test_user_crud(self):
-        now = int(time.time())
-        handle = "user{}@test.com".format(now)
-        name = "Test User"
-        alternate_name = "Test User Alt"
-
-        # test create user
-        user = dog.User.create(handle=handle, name=name, access_role="ro")
-        assert "user" in user
-        assert user["user"]["handle"] == handle
-        assert user["user"]["name"] == name
-        assert user["user"]["disabled"] is False
-        assert user["user"]["access_role"] == "ro"
-
-        # update endpoint will refuse anything if the app_key making the call is not admin
-
-        # test get user
-        user = dog.User.get(handle)
-        assert "user" in user
-        assert user["user"]["handle"] == handle
-        assert user["user"]["name"] == name
-
-        # test disable user
-        dog.User.delete(handle)
-        u = dog.User.get(handle)
-        assert "user" in u
-        assert u["user"]["disabled"] is True
-
-        # test get all users
-        u = dog.User.get_all()
-        assert "users" in u
-        assert len(u["users"]) >= 1
