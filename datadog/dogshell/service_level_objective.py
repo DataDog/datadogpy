@@ -23,6 +23,8 @@ class MonitorClient(object):
         create_parser.add_argument('--name', help="name of the SLO", default=None)
         create_parser.add_argument('--description', help="description of the SLO", default=None)
         create_parser.add_argument('--tags', help="comma-separated list of tags", default=None)
+        create_parser.add_argument('--thresholds', help="comma separated list of <timeframe>:<target>[:<warning>]",
+                                   required=True)
         create_parser.add_argument('--numerator', help='numerator metric query (sum of good events)', default=None)
         create_parser.add_argument('--denominator', help='denominator metric query (sum of total events)', default=None)
         create_parser.add_argument('--monitor_ids', help='explicit monitor_ids to use (CSV)', default=None)
@@ -40,6 +42,8 @@ class MonitorClient(object):
         update_parser.add_argument('--name', help="name of the SLO", default=None)
         update_parser.add_argument('--description', help="description of the SLO",
                                    default=None)
+        create_parser.add_argument('--thresholds', help="comma separated list of <timeframe>:<target>[:<warning>]",
+                                   required=True)
         update_parser.add_argument('--tags', help="comma-separated list of tags", default=None)
         update_parser.add_argument('--numerator', help='numerator metric query (sum of good events)', default=None)
         update_parser.add_argument('--denominator', help='denominator metric query (sum of total events)', default=None)
@@ -90,6 +94,18 @@ class MonitorClient(object):
             "type": args.type,
             "name": args.name,
         }
+
+        thresholds = []
+        for threshold_str in args.thresholds.split(","):
+            parts = threshold_str.split(":")
+            timeframe = parts[0]
+            target = parts[1]
+            warning = None
+            if len(parts) > 2:
+                warning = parts[2]
+            thresholds.append({"timeframe": timeframe, "target": target, "warning": warning})
+        params["thresholds"] = thresholds
+
         if args.description:
             params["description"] = args.description
 
@@ -123,7 +139,9 @@ class MonitorClient(object):
         params = {
             "type": slo["type"],
             "name": slo["name"],
+            "thresholds": slo["thresholds"]
         }
+
         if slo.get("description"):
             params["description"] = slo["description"]
 
@@ -159,6 +177,19 @@ class MonitorClient(object):
         params = {
             "type": args.type
         }
+
+        if args.thresholds:
+            thresholds = []
+            for threshold_str in args.thresholds.split(","):
+                parts = threshold_str.split(":")
+                timeframe = parts[0]
+                target = parts[1]
+                warning = None
+                if len(parts) > 2:
+                    warning = parts[2]
+                thresholds.append({"timeframe": timeframe, "target": target, "warning": warning})
+            params["thresholds"] = thresholds
+
         if args.description:
             params["description"] = args.description
 
@@ -196,6 +227,19 @@ class MonitorClient(object):
             "type": slo["type"],
             "name": slo["name"],
         }
+
+        if slo.get("thresholds"):
+            thresholds = []
+            for threshold_str in args.thresholds.split(","):
+                parts = threshold_str.split(":")
+                timeframe = parts[0]
+                target = parts[1]
+                warning = None
+                if len(parts) > 2:
+                    warning = parts[2]
+                thresholds.append({"timeframe": timeframe, "target": target, "warning": warning})
+            params["thresholds"] = thresholds
+
         if slo.get("description"):
             params["description"] = slo["description"]
 
