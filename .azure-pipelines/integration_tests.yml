@@ -23,7 +23,7 @@ jobs:
       DD_TEST_CLIENT_APP_KEY: $(datadogAPPKey)
       DD_TEST_CLIENT_USER: $(datadogTestUser)
   - script: tox -e integration-admin
-    displayName: Run integration tests
+    displayName: Run admin integration tests
     env:
       DD_TEST_CLIENT_API_KEY: $(datadogAPIKey)
       DD_TEST_CLIENT_APP_KEY: $(datadogAPPKey)
