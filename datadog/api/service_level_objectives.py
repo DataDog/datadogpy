@@ -23,13 +23,17 @@ class ServiceLevelObjective(
     _resource_name = "slo"
 
     @classmethod
-    def create(cls, attach_host_name=False, method='POST', id=None, params=None, **body):
+    def create(
+        cls, attach_host_name=False, method="POST", id=None, params=None, **body
+    ):
         """
         Create a SLO
 
         :returns: created SLO details
         """
-        results = super(ServiceLevelObjective, cls).create(attach_host_name=False, method='POST', id=None, params=None, **body)
+        results = super(ServiceLevelObjective, cls).create(
+            attach_host_name=False, method="POST", id=None, params=None, **body
+        )
         if results["error"]:
             raise Exception(results["error"])
         else:
@@ -131,7 +135,6 @@ class ServiceLevelObjective(
         return super(ServiceLevelObjective, cls)._trigger_class_action(
             "POST", "bulk_delete", body=ops
         )
-
 
     @classmethod
     def delete_many(cls, ids, **params):
