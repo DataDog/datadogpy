@@ -154,7 +154,11 @@ class TestDatadog:
         }
 
         timeboard = dog.Timeboard.create(title="api timeboard", description="my api timeboard", graphs=[graph])
+        assert "api timeboard" == timeboard["dash"]["title"]
+        assert "my api timeboard" == timeboard["dash"]["description"]
+        assert timeboard["dash"]["graphs"][0] == graph
 
+        timeboard = get_with_retry("Timeboard", timeboard["dash"]["id"])
         assert "api timeboard" == timeboard["dash"]["title"]
         assert "my api timeboard" == timeboard["dash"]["description"]
         assert timeboard["dash"]["graphs"][0] == graph
@@ -180,9 +184,7 @@ class TestDatadog:
         ids = [str(timeboard["id"]) for timeboard in timeboards]
         assert str(timeboard["dash"]["id"]) in ids
 
-        assert dog.Timeboard.get(timeboard["dash"]["id"])["dash"]["id"] == timeboard["dash"]["id"]
-        dog.Timeboard.delete(timeboard["dash"]["id"])
-        assert "errors" in dog.Timeboard.get(timeboard["dash"]["id"])
+        assert dog.Timeboard.delete(timeboard["dash"]["id"]) is None
 
     def test_search(self):
         results = dog.Infrastructure.search(q="")
@@ -335,7 +337,7 @@ class TestDatadog:
         create_res = dog.Screenboard.create(**board)
         _compare_screenboard(board, create_res)
 
-        get_res = dog.Screenboard.get(create_res["id"])
+        get_res = get_with_retry("Screenboard", create_res["id"])
         _compare_screenboard(get_res, create_res)
         assert get_res["id"] == create_res["id"]
 
@@ -369,7 +371,11 @@ class TestDatadog:
 
         options = {"silenced": {"*": int(time.time()) + 60 * 60}, "notify_no_data": False}
         monitor = dog.Monitor.create(type="metric alert", query=query, options=options)
+        assert monitor["query"] == query
+        assert monitor["options"]["notify_no_data"] == options["notify_no_data"]
+        assert monitor["options"]["silenced"] == options["silenced"]
 
+        monitor = get_with_retry("Monitor", monitor["id"])
         assert monitor["query"] == query
         assert monitor["options"]["notify_no_data"] == options["notify_no_data"]
         assert monitor["options"]["silenced"] == options["silenced"]
@@ -389,7 +395,6 @@ class TestDatadog:
         monitors = [m for m in dog.Monitor.get_all() if m["id"] == monitor["id"]]
         assert len(monitors) == 1
 
-        assert dog.Monitor.get(monitor["id"])["id"] == monitor["id"]
         assert dog.Monitor.delete(monitor["id"]) == {"deleted_monitor_id": monitor["id"]}
 
     @pytest.mark.admin_needed
@@ -411,6 +416,9 @@ class TestDatadog:
         monitor2 = dog.Monitor.mute(monitor2["id"], scope="host:foo")
         assert monitor2["options"]["silenced"] == {"host:foo": None}
 
+        get_with_retry(
+            "Monitor", monitor["id"], retry_condition=lambda r: r["options"]["silenced"] != {"host:foo": None}
+        )
         monitor2 = dog.Monitor.unmute(monitor2["id"], scope="host:foo")
         assert monitor2["options"]["silenced"] == {}
 
@@ -514,7 +522,7 @@ class TestDatadog:
         assert embed["graph_title"] == title
 
         var = "asdfasdfasdf"
-        response_graph = dog.Embed.get(embed["embed_id"], var=var)
+        response_graph = get_with_retry("Embed", embed["embed_id"], var=var)
         # Check the graph has the same embed_id and the template_var is added to the url
         assert "embed_id" in response_graph
         assert response_graph["embed_id"] == embed["embed_id"]
@@ -524,7 +532,6 @@ class TestDatadog:
         assert "success" in dog.Embed.enable(embed["embed_id"])
 
         assert "success" in dog.Embed.revoke(embed["embed_id"])
-        assert "errors" in dog.Embed.get(embed["embed_id"])
 
     @pytest.mark.admin_needed
     def test_user_crud(self):
@@ -541,18 +548,18 @@ class TestDatadog:
         assert user["user"]["disabled"] is False
         assert user["user"]["access_role"] == "ro"
 
+        # test get user
+        user = get_with_retry("User", handle)
+        assert "user" in user
+        assert user["user"]["handle"] == handle
+        assert user["user"]["name"] == name
+
         # test update user
         user = dog.User.update(handle, name=alternate_name, access_role="st")
         assert user["user"]["handle"] == handle
         assert user["user"]["name"] == alternate_name
         assert user["user"]["disabled"] is False
         assert user["user"]["access_role"] == "st"
-
-        # test get user
-        user = dog.User.get(handle)
-        assert "user" in user
-        assert user["user"]["handle"] == handle
-        assert user["user"]["name"] == alternate_name
 
         # test disable user
         dog.User.delete(handle)
