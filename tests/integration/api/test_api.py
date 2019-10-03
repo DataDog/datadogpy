@@ -392,6 +392,7 @@ class TestDatadog:
         assert dog.Monitor.get(monitor["id"])["id"] == monitor["id"]
         assert dog.Monitor.delete(monitor["id"]) == {"deleted_monitor_id": monitor["id"]}
 
+    @pytest.mark.admin_needed
     def test_monitor_muting(self):
         query1 = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
         query2 = "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100"
@@ -421,10 +422,10 @@ class TestDatadog:
         end = start + 1000
 
         # Create downtime
-        downtime = dog.Downtime.create(scope="env:staging", start=start, end=end)
+        downtime = dog.Downtime.create(scope="test_tag:1", start=start, end=end)
         assert downtime["start"] == start
         assert downtime["end"] == end
-        assert downtime["scope"] == ["env:staging"]
+        assert downtime["scope"] == ["test_tag:1"]
         assert downtime["disabled"] is False
 
         get_with_retry("Downtime", downtime["id"])
@@ -432,10 +433,10 @@ class TestDatadog:
         # Update downtime
         message = "Doing some testing on staging."
         end = int(time.time()) + 60000
-        downtime = dog.Downtime.update(downtime["id"], scope="env:test", end=end, message=message)
+        downtime = dog.Downtime.update(downtime["id"], scope="test_tag:2", end=end, message=message)
         assert downtime["end"] == end
         assert downtime["message"] == message
-        assert downtime["scope"] == ["env:test"]
+        assert downtime["scope"] == ["test_tag:2"]
         assert downtime["disabled"] is False
 
         # Delete downtime
@@ -525,7 +526,7 @@ class TestDatadog:
         assert "success" in dog.Embed.revoke(embed["embed_id"])
         assert "errors" in dog.Embed.get(embed["embed_id"])
 
-    @pytest.mark.user
+    @pytest.mark.admin_needed
     def test_user_crud(self):
         now = int(time.time())
         handle = "user{}@test.com".format(now)
