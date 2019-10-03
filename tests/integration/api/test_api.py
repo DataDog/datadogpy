@@ -427,6 +427,8 @@ class TestDatadog:
         assert downtime["scope"] == ["env:staging"]
         assert downtime["disabled"] is False
 
+        get_with_retry("Downtime", downtime["id"])
+
         # Update downtime
         message = "Doing some testing on staging."
         end = int(time.time()) + 60000
@@ -438,8 +440,7 @@ class TestDatadog:
 
         # Delete downtime
         assert dog.Downtime.delete(downtime["id"]) is None
-        downtime = dog.Downtime.get(downtime["id"])
-        assert downtime["disabled"] is True
+        downtime = get_with_retry("Downtime", downtime["id"], retry_condition=lambda r: r["disabled"] is False)
 
     def test_service_check(self):
         assert dog.ServiceCheck.check(
