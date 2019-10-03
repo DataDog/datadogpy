@@ -417,7 +417,7 @@ class TestDatadog:
         assert monitor2["options"]["silenced"] == {"host:foo": None}
 
         get_with_retry(
-            "Monitor", monitor["id"], retry_condition=lambda r: r["options"]["silenced"] != {"host:foo": None}
+            "Monitor", monitor2["id"], retry_condition=lambda r: r["options"]["silenced"] != {"host:foo": None}
         )
         monitor2 = dog.Monitor.unmute(monitor2["id"], scope="host:foo")
         assert monitor2["options"]["silenced"] == {}
