@@ -296,6 +296,7 @@ class TestDogshell:
         assert out["query"] == query
         assert out["type"] == type_alert
         monitor_id = str(out["id"])
+        monitor_name = out["name"]
 
         out, _, _ = self.dogshell(["monitor", "show", monitor_id])
         out = json.loads(out)
@@ -304,7 +305,6 @@ class TestDogshell:
 
         # Update options
         options = {"notify_no_data": True, "no_data_timeframe": 20}
-
         out, _, _ = self.dogshell(
             ["monitor", "update", monitor_id, type_alert, query, "--options", json.dumps(options)]
         )
@@ -316,17 +316,29 @@ class TestDogshell:
 
         # Update message only
         updated_message = "monitor updated"
+        current_options = out['options']
         out, err, return_code = self.dogshell(
-            ["monitor", "update", "--message", updated_message])
+            ["monitor", "update", monitor_id, "--message", updated_message]
+        )
 
-        assert "id" in out
-        assert "message" in out
         out = json.loads(out)
-        assert updated_message in out["message"]
+        assert updated_message == out["message"]
+        assert query == out['query']
+        assert monitor_name == out ['name']
+        assert current_options == out['options']
 
-        #confirming no other changes but message
-        assert query in out['query']
-        assert type_alert in out['type_alert']
+        # Updating query only
+        updated_query = "avg(last_15m):sum:system.net.bytes_rcvd{*} by {env} > 222"
+
+        out, err, return_code = self.dogshell(
+            ["monitor", "update", monitor_id, "--query", updated_query]
+        )
+
+        out = json.loads(out)
+        assert updated_query in out["query"]
+        assert updated_message in out['message'] # updated_message updated in previous step
+        assert monitor_name in out ['name']
+        assert current_options == out['options']
 
         # Mute monitor
         out, _, _ = self.dogshell(["monitor", "mute", str(out["id"])])

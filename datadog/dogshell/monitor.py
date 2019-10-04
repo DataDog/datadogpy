@@ -8,6 +8,7 @@ from datadog.util.format import pretty_json
 # datadog
 from datadog import api
 from datadog.dogshell.common import report_errors, report_warnings
+import warnings
 
 
 class MonitorClient(object):
@@ -39,10 +40,20 @@ class MonitorClient(object):
 
         update_parser = verb_parsers.add_parser('update', help="Update existing monitor")
         update_parser.add_argument('monitor_id', help="monitor to replace with the new definition")
-        update_parser.add_argument('type', nargs='?', help="[Deprecated] optional argument preferred"
-                                    "type of the monitor, e.g. 'metric alert' 'service check'", default=None)
-        update_parser.add_argument('query', nargs='?', help="[Deprecated] optional argument preferred"
-                                    "query to notify on with syntax varying depending on monitor type", default=None)
+        update_parser.add_argument(
+            'type',
+            nargs='?',
+            help="[Deprecated] optional argument preferred"
+                 "type of the monitor, e.g. 'metric alert' 'service check'",
+            default=None
+        )
+        update_parser.add_argument(
+            'query',
+            nargs='?',
+            help="[Deprecated] optional argument preferred"
+                 "query to notify on with syntax varying depending on monitor type",
+            default=None
+        )
         update_parser.add_argument('--type', help="type of the monitor, e.g. "
                                    "'metric alert' 'service check'", default=None)
         update_parser.add_argument('--query', help="query to notify on with syntax varying"
@@ -152,26 +163,26 @@ class MonitorClient(object):
     def _update(cls, args):
         api._timeout = args.timeout
         format = args.format
-        options = None
-        if args.options is not None:
-            try:
-                options = json.loads(args.options)
-            except:
-                raise Exception('bad json parameter')
 
         to_update = {}
         if args.type:
             to_update['type'] = args.type
-            print("[DEPRECATION] `type` is no longer a required arg for `monitor update` and may be omitted")
+            msg = "[DEPRECATION] `type` is no longer required to `update` and may be omitted"
+            warnings.warn(msg, DeprecationWarning)
         if args.query:
             to_update['query'] = args.query
-            print("[DEPRECATION] `query` is no longer a required arg for `monitor update` and may be omitted")
+            msg = "[DEPRECATION] `query` is no longer required to `update` and may be omitted"
+            warnings.warn(msg, DeprecationWarning)
         if args.name:
             to_update['name'] = args.name
         if args.message:
             to_update['message'] = args.message
-        if args.options:
-            to_update['options'] = args.options
+
+        if args.options is not None:
+            try:
+                to_update['options'] = json.loads(args.options)
+            except:
+                raise Exception('bad json parameter')
 
         res = api.Monitor.update(args.monitor_id, **to_update)
 
