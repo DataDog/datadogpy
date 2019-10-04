@@ -310,7 +310,7 @@ class TestDogshell:
         )
 
         out = json.loads(out)
-        assert out["query"] == query
+        assert query in out['query']
         assert out["options"]["notify_no_data"] == options["notify_no_data"]
         assert out["options"]["no_data_timeframe"] == options["no_data_timeframe"]
 
@@ -319,13 +319,14 @@ class TestDogshell:
         out, err, return_code = self.dogshell(
             ["monitor", "update", "--message", updated_message])
 
-        assert "id" in out, out
-        assert "message" in out, out
+        assert "id" in out
+        assert "message" in out
         out = json.loads(out)
-        self.assertEquals(out["message"], updated_message)
+        assert updated_message in out["message"]
+
         #confirming no other changes but message
-        self.assertEquals(out['query'], query)
-        self.assertEquals(out['type_alert'], type_alert)
+        assert query in out['query']
+        assert type_alert in out['type_alert']
 
         # Mute monitor
         out, _, _ = self.dogshell(["monitor", "mute", str(out["id"])])
