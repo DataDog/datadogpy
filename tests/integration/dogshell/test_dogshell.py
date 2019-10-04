@@ -7,6 +7,7 @@ import subprocess
 import time
 import tempfile
 
+import pytest
 import requests
 
 from datadog.util.compat import is_p3k, ConfigParser
@@ -284,7 +285,7 @@ class TestDogshell:
         assert return_code != 0
 
     # Test monitors
-
+    @pytest.mark.admin_needed
     def test_monitors(self):
         # Create a monitor
         query = "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100"
