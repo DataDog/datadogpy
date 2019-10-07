@@ -55,9 +55,9 @@ class MonitorClient(object):
             default=None
         )
         update_parser.add_argument('--type', help="type of the monitor, e.g. "
-                                   "'metric alert' 'service check'", default=None)
+                                   "'metric alert' 'service check'", default=None, dest='type_opt')
         update_parser.add_argument('--query', help="query to notify on with syntax varying"
-                                   " depending on monitor type", default=None)
+                                   " depending on monitor type", default=None, dest='query_opt')
         update_parser.add_argument('--name', help="name of the alert", default=None)
         update_parser.add_argument('--message', help="message to include with "
                                    "notifications for this monitor", default=None)
@@ -166,17 +166,29 @@ class MonitorClient(object):
 
         to_update = {}
         if args.type:
-            to_update['type'] = args.type
+            if args.type_opt:
+                msg = '[WARNING] Duplicate arguments for `type`. Using optional value --type'
+                print(msg)
+            else:
+                to_update['type'] = args.type
             msg = "[DEPRECATION] `type` is no longer required to `update` and may be omitted"
             warnings.warn(msg, DeprecationWarning)
         if args.query:
-            to_update['query'] = args.query
+            if args.query_opt:
+                msg = '[WARNING] Duplicate arguments for `query`. Using optional value --query'
+                print(msg)
+            else:
+                to_update['query'] = args.query
             msg = "[DEPRECATION] `query` is no longer required to `update` and may be omitted"
             warnings.warn(msg, DeprecationWarning)
         if args.name:
             to_update['name'] = args.name
         if args.message:
             to_update['message'] = args.message
+        if args.type_opt:
+            to_update['type'] = args.type_opt
+        if args.query_opt:
+            to_update['query'] = args.query_opt
 
         if args.options is not None:
             try:
