@@ -78,7 +78,7 @@ def _unix_config_path():
 
 
 def _mac_config_path():
-    path = os.path.join('~/.datadog-agent/agent', DATADOG_CONF)
+    path = os.path.join('~/.datadog-agent', DATADOG_CONF)
     path = os.path.expanduser(path)
     if os.path.exists(path):
         return path
