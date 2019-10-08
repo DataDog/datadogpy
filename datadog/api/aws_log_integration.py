@@ -67,7 +67,7 @@ class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
     def check_lambda(cls, id=_resource_id, **params):
         """
         Check function to see if a lambda_arn exists within an account. \
-        This sends a job to delancie if it does not exist, then immediately returns \
+        This sends a job on our side if it does not exist, then immediately returns \
         the status of that job. Subsequent requests will always repeat the above, so this endpoint \
         can be polled intermittently instead of blocking.
 
@@ -103,7 +103,7 @@ class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
     @classmethod
     def list(cls, id=_resource_id, **params):
         """
-        List all Datadog-AWS integrations available in your Datadog organization.
+        List all Datadog-AWS Logs integrations available in your Datadog organization.
 
         >>> api.AwsLogs.list()
         """
