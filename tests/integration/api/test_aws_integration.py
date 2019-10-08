@@ -55,7 +55,7 @@ class TestAwsIntegration:
             'role_name',
             'account_id'
         ]
-        assert all (k in output['accounts'][0].keys() for k in expected_fields)
+        assert all(k in output['accounts'][0].keys() for k in expected_fields)
 
     def test_delete(self):
         output = dog.Aws.delete(account_id="123456789101", role_name="DatadogApiTestRole")

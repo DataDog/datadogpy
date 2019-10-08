@@ -54,7 +54,7 @@ class TestAwsLogs:
             'lambdas',
             'account_id'
         ]
-        assert all (k in output[0].keys() for k in expected_fields)
+        assert all(k in output[0].keys() for k in expected_fields)
 
     def test_delete_aws_log_config(self):
         output = dog.AwsLogs.delete_config(

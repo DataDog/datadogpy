@@ -42,18 +42,18 @@ class TestGcpIntegration:
         )
         tests_pass = False
         for i in dog.Gcp.list():
-            if ( i['project_id'] == self.test_project_id and
-                 i['host_filters'] == 'api:test2' and
-                 i['automute'] is True ):
+            if (i['project_id'] == self.test_project_id and
+                    i['host_filters'] == 'api:test2' and
+                    i['automute'] is True):
                 tests_pass = True
         assert tests_pass
 
     def test_gcp_list(self):
         tests_pass = False
         for i in dog.Gcp.list():
-            if ( i['project_id'] == self.test_project_id and
-                 i['host_filters'] == 'api:test2' and
-                 i['automute'] is True ):
+            if (i['project_id'] == self.test_project_id and
+                    i['host_filters'] == 'api:test2' and
+                    i['automute'] is True):
                 tests_pass = True
         assert tests_pass
 

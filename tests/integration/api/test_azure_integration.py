@@ -33,8 +33,8 @@ class TestAzureIntegration:
     def test_azure_list(self):
         tests_pass = False
         for i in dog.Azure.list():
-            if ( i['tenant_name'] == self.test_tenant_name and
-                 i['host_filters'] == 'api:test' ):
+            if (i['tenant_name'] == self.test_tenant_name and
+                    i['host_filters'] == 'api:test'):
                 tests_pass = True
         assert tests_pass
 
@@ -61,8 +61,8 @@ class TestAzureIntegration:
         )
         tests_pass = False
         for i in dog.Azure.list():
-            if ( i['tenant_name'] == self.test_new_tenant_name and
-                 i['host_filters'] == 'api:test3' ):
+            if (i['tenant_name'] == self.test_new_tenant_name and
+                    i['host_filters'] == 'api:test3'):
                 tests_pass = True
         assert tests_pass
 
