@@ -118,6 +118,14 @@ class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
 
         :returns: Dictionary representing the API's JSON response
 
+        The following will depend on whether role delegation or access keys are being used.
+        If using role delegation, use the fields for role_name and account_id.
+        For access keys, use fields for access_key_id and secret_access_key.
+
+        >>> existing_account_id = "<EXISTING_AWS_ACCOUNT_ID>"
+        >>> existing_role_name = "<EXISTING_AWS_ROLE_NAME>"
+        >>> existing_access_key_id = "<AWS_ACCESS_KEY_ID>"
+        >>> existing_secret_access_key = "<AWS_SECRET_ACCESS_KEY>"
         >>> account_id = "<AWS_ACCOUNT_ID>"
         >>> access_key_id = "<AWS_ACCESS_KEY_ID>"
         >>> role_name = "DatadogAwsRole"
@@ -130,8 +138,10 @@ class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         account_specific_namespace_rules=account_specific_namespace_rules)
         """
         params = {}
-        params['account_id'] = body.get('account_id')
-        params['role_name'] = body.get('role_name')
+        params['account_id'] = body.get('existing_account_id')
+        params['role_name'] = body.get('existing_role_name')
+        params['access_key_id'] = body.get('existing_access_key_id')
+        params['secret_access_key'] = body.get('existing_secret_access_key')
         return super(Aws, cls).update(id=id, params=params, **body)
 
     @classmethod
