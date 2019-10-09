@@ -305,14 +305,17 @@ class TestDogshell:
 
         # Update options
         options = {"notify_no_data": True, "no_data_timeframe": 20}
-        out, _, _ = self.dogshell(
-            ["monitor", "update", monitor_id, type_alert, query, "--options", json.dumps(options)]
+        out, err, return_code = self.dogshell(
+            ["monitor", "update", monitor_id, type_alert, query, "--options", json.dumps(options)],
+            check_return_code=False
         )
 
         out = json.loads(out)
         assert query in out['query']
         assert out["options"]["notify_no_data"] == options["notify_no_data"]
         assert out["options"]["no_data_timeframe"] == options["no_data_timeframe"]
+        assert 'DEPRECATION' in err
+        assert return_code == 0
 
         # Update message only
         updated_message = "monitor updated"
@@ -324,20 +327,21 @@ class TestDogshell:
         out = json.loads(out)
         assert updated_message == out["message"]
         assert query == out['query']
-        assert monitor_name == out ['name']
+        assert monitor_name == out['name']
         assert current_options == out['options']
 
-        # Updating query only
+        # Updating optional type and query
         updated_query = "avg(last_15m):sum:system.net.bytes_rcvd{*} by {env} > 222"
+        updated_type = 'query alert'
 
         out, err, return_code = self.dogshell(
-            ["monitor", "update", monitor_id, "--query", updated_query]
+            ["monitor", "update", monitor_id, "--type", updated_type, "--query", updated_query]
         )
 
         out = json.loads(out)
         assert updated_query in out["query"]
         assert updated_message in out['message'] # updated_message updated in previous step
-        assert monitor_name in out ['name']
+        assert monitor_name in out['name']
         assert current_options == out['options']
 
         # Mute monitor
@@ -355,13 +359,16 @@ class TestDogshell:
         # Unmute all scopes of a monitor
         options = {"silenced": {"host:abcd1234": None, "host:abcd1235": None}}
 
-        out, _, _ = self.dogshell(
-            ["monitor", "update", monitor_id, type_alert, query, "--options", json.dumps(options)]
+        out, err, return_code = self.dogshell(
+            ["monitor", "update", monitor_id, type_alert, query, "--options", json.dumps(options)],
+            check_return_code=False
         )
 
         out = json.loads(out)
         assert out["query"] == query
         assert out["options"]["silenced"] == {"host:abcd1234": None, "host:abcd1235": None}
+        assert 'DEPRECATION' in err
+        assert return_code == 0
 
         out, _, _ = self.dogshell(["monitor", "unmute", str(out["id"]), "--all_scopes"])
         out = json.loads(out)
