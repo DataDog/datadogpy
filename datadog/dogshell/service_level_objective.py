@@ -3,6 +3,7 @@ import argparse
 import json
 
 # 3p
+from datadog.util.cli import set_of_ints, comma_set, comma_list_or_empty
 from datadog.util.format import pretty_json
 
 # datadog
@@ -33,11 +34,14 @@ class MonitorClient(object):
             "--description", help="description of the SLO", default=None
         )
         create_parser.add_argument(
-            "--tags", help="comma-separated list of tags", default=None
+            "--tags",
+            help="comma-separated list of tags",
+            default=None,
+            type=comma_list_or_empty,
         )
         create_parser.add_argument(
             "--thresholds",
-            help="comma separated list of <timeframe>:<target>[:<warning>]",
+            help="comma separated list of <timeframe>:<target>[:<warning>[:<target_display>[:<warning_display>]]",
             required=True,
         )
         create_parser.add_argument(
@@ -51,10 +55,19 @@ class MonitorClient(object):
             default=None,
         )
         create_parser.add_argument(
-            "--monitor_ids", help="explicit monitor_ids to use (CSV)", default=None
+            "--monitor_ids",
+            help="explicit monitor_ids to use (CSV)",
+            default=None,
+            type=set_of_ints,
         )
         create_parser.add_argument(
             "--monitor_search", help="monitor search terms to use", default=None
+        )
+        create_parser.add_argument(
+            "--groups",
+            help="for a single monitor you can specify the specific groups as a pipe (|) delimited string",
+            default=None,
+            type=comma_list_or_empty,
         )
         create_parser.set_defaults(func=cls._create)
 
@@ -82,11 +95,14 @@ class MonitorClient(object):
         )
         create_parser.add_argument(
             "--thresholds",
-            help="comma separated list of <timeframe>:<target>[:<warning>]",
+            help="comma separated list of <timeframe>:<target>[:<warning>[:<target_display>[:<warning_display>]]",
             required=True,
         )
         update_parser.add_argument(
-            "--tags", help="comma-separated list of tags", default=None
+            "--tags",
+            help="comma-separated list of tags",
+            default=None,
+            type=comma_list_or_empty,
         )
         update_parser.add_argument(
             "--numerator",
@@ -99,10 +115,18 @@ class MonitorClient(object):
             default=None,
         )
         update_parser.add_argument(
-            "--monitor_ids", help="explicit monitor_ids to use (CSV)", default=None
+            "--monitor_ids",
+            help="explicit monitor_ids to use (CSV)",
+            default=None,
+            type=set_of_ints,
         )
         update_parser.add_argument(
             "--monitor_search", help="monitor search terms to use", default=None
+        )
+        update_parser.add_argument(
+            "--groups",
+            help="for a single monitor you can specify the specific groups as a pipe (|) delimited string",
+            default=None,
         )
         update_parser.set_defaults(func=cls._update)
 
@@ -127,6 +151,7 @@ class MonitorClient(object):
         show_all_parser.add_argument(
             "--slo_ids",
             help="comma separated list indicating what SLO IDs to get at once",
+            type=comma_set,
         )
         show_all_parser.add_argument(
             "--offset", help="offset of query pagination", default=0
@@ -142,7 +167,7 @@ class MonitorClient(object):
 
         delete_many_parser = verb_parsers.add_parser("delete_many", help="Delete a SLO")
         delete_many_parser.add_argument(
-            "slo_ids", help="comma separated list of SLO IDs to delete"
+            "slo_ids", help="comma separated list of SLO IDs to delete", type=comma_set
         )
         delete_many_parser.set_defaults(func=cls._delete_many)
 
@@ -154,6 +179,7 @@ class MonitorClient(object):
             "timeframes",
             help="CSV of timeframes to delete, e.g. 7d,30d,90d",
             required=True,
+            type=comma_set,
         )
         delete_timeframe_parser.set_defaults(func=cls._delete_timeframe)
 
@@ -172,13 +198,20 @@ class MonitorClient(object):
         for threshold_str in args.thresholds.split(","):
             parts = threshold_str.split(":")
             timeframe = parts[0]
-            target = parts[1]
-            warning = None
+            target = float(parts[1])
+
+            threshold = {"timeframe": timeframe, "target": target}
+
             if len(parts) > 2:
-                warning = parts[2]
-            thresholds.append(
-                {"timeframe": timeframe, "target": target, "warning": warning}
-            )
+                threshold["warning"] = float(parts[2])
+
+            if len(parts) > 3 and parts[3]:
+                threshold["target_display"] = parts[3]
+
+            if len(parts) > 4 and parts[4]:
+                threshold["warning_display"] = parts[4]
+
+            thresholds.append(threshold)
         params["thresholds"] = thresholds
 
         if args.description:
@@ -193,9 +226,12 @@ class MonitorClient(object):
             params["monitor_search"] = args.monitor_search
         else:
             params["monitor_ids"] = args.monitor_ids
+            if args.groups and len(args.monitor_ids) == 1:
+                groups = args.groups.split("|")
+                params["groups"] = groups
 
         if args.tags:
-            params["tags"] = args.tags.split(",")
+            params["tags"] = args.tags
 
         res = api.ServiceLevelObjective.create(**params)
         report_warnings(res)
@@ -210,31 +246,7 @@ class MonitorClient(object):
         api._timeout = args.timeout
         format = args.format
         slo = json.load(args.file)
-
-        params = {
-            "type": slo["type"],
-            "name": slo["name"],
-            "thresholds": slo["thresholds"],
-        }
-
-        if slo.get("description"):
-            params["description"] = slo["description"]
-
-        if slo["type"] == "metric":
-            params["query"] = {
-                "numerator": slo["numerator"],
-                "denominator": slo["denominator"],
-            }
-        elif slo.get("monitor_search"):
-            params["monitor_search"] = slo["monitor_search"]
-        else:
-            params["monitor_ids"] = slo["monitor_ids"]
-
-        if slo.get("tags"):
-            tags = sorted(set([t.strip() for t in slo["tags"].split(",") if t.strip()]))
-            params["tags"] = tags
-
-        res = api.ServiceLevelObjective.create(**params)
+        res = api.ServiceLevelObjective.create(**slo)
         report_warnings(res)
         report_errors(res)
         if format == "pretty":
@@ -255,12 +267,19 @@ class MonitorClient(object):
                 parts = threshold_str.split(":")
                 timeframe = parts[0]
                 target = parts[1]
-                warning = None
+
+                threshold = {"timeframe": timeframe, "target": target}
+
                 if len(parts) > 2:
-                    warning = parts[2]
-                thresholds.append(
-                    {"timeframe": timeframe, "target": target, "warning": warning}
-                )
+                    threshold["warning"] = float(parts[2])
+
+                if len(parts) > 3 and parts[3]:
+                    threshold["target_display"] = parts[3]
+
+                if len(parts) > 4 and parts[4]:
+                    threshold["warning_display"] = parts[4]
+
+                thresholds.append(threshold)
             params["thresholds"] = thresholds
 
         if args.description:
@@ -276,9 +295,12 @@ class MonitorClient(object):
             params["monitor_search"] = args.monitor_search
         else:
             params["monitor_ids"] = args.monitor_ids
+            if args.groups and len(args.monitor_ids) == 1:
+                groups = args.groups.split("|")
+                params["groups"] = groups
 
         if args.tags:
-            tags = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
+            tags = sorted(set([t.strip() for t in args.tags if t.strip()]))
             params["tags"] = tags
         res = api.ServiceLevelObjective.update(args.slo_id, **params)
         report_warnings(res)
@@ -294,40 +316,7 @@ class MonitorClient(object):
         format = args.format
         slo = json.load(args.file)
 
-        params = {"type": slo["type"], "name": slo["name"]}
-
-        if slo.get("thresholds"):
-            thresholds = []
-            for threshold_str in args.thresholds.split(","):
-                parts = threshold_str.split(":")
-                timeframe = parts[0]
-                target = parts[1]
-                warning = None
-                if len(parts) > 2:
-                    warning = parts[2]
-                thresholds.append(
-                    {"timeframe": timeframe, "target": target, "warning": warning}
-                )
-            params["thresholds"] = thresholds
-
-        if slo.get("description"):
-            params["description"] = slo["description"]
-
-        if slo["type"] == "metric":
-            params["query"] = {
-                "numerator": slo["numerator"],
-                "denominator": slo["denominator"],
-            }
-        elif slo.get("monitor_search"):
-            params["monitor_search"] = slo["monitor_search"]
-        else:
-            params["monitor_ids"] = slo["monitor_ids"]
-
-        if slo.get("tags"):
-            tags = sorted(set([t.strip() for t in slo["tags"].split(",") if t.strip()]))
-            params["tags"] = tags
-
-        res = api.ServiceLevelObjective.update(slo["id"], **params)
+        res = api.ServiceLevelObjective.update(slo["id"], **slo)
         report_warnings(res)
         report_errors(res)
         if format == "pretty":
@@ -401,7 +390,7 @@ class MonitorClient(object):
     def _delete_timeframe(cls, args):
         api._timeout = args.timeout
 
-        ops = {args.slo_id: args.timeframes.split(",")}
+        ops = {args.slo_id: args.timeframes}
 
         res = api.ServiceLevelObjective.bulk_delete(ops)
         if res is not None:

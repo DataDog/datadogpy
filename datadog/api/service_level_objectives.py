@@ -7,6 +7,8 @@ from datadog.api.resources import (
     ActionAPIResource,
 )
 
+from datadog.api.exceptions import ApiError
+
 
 class ServiceLevelObjective(
     GetableAPIResource,
@@ -35,7 +37,7 @@ class ServiceLevelObjective(
             attach_host_name=False, method="POST", id=None, params=None, **body
         )
         if results["error"]:
-            raise Exception(results["error"])
+            raise ApiError(results["error"])
         else:
             return results["data"][0]
 
@@ -51,7 +53,7 @@ class ServiceLevelObjective(
         """
         results = super(ServiceLevelObjective, cls).get(id, **params)
         if results["error"]:
-            raise Exception(results["error"])
+            raise ApiError(results["error"])
         else:
             return results["data"]
 
@@ -84,7 +86,7 @@ class ServiceLevelObjective(
 
         results = super(ServiceLevelObjective, cls).get_all(**search_terms)
         if results["error"]:
-            raise Exception(results["error"])
+            raise ApiError(results["error"])
         else:
             return results["data"]
 
@@ -100,7 +102,7 @@ class ServiceLevelObjective(
         """
         results = super(ServiceLevelObjective, cls).update(id, params, **body)
         if results["error"]:
-            raise Exception(results["error"])
+            raise ApiError(results["error"])
         else:
             return results["data"][0]
 
@@ -116,7 +118,7 @@ class ServiceLevelObjective(
         """
         results = super(ServiceLevelObjective, cls).delete(id, **params)
         if results["error"]:
-            raise Exception(results["error"])
+            raise ApiError(results["error"])
         else:
             return results["data"][0]
 
