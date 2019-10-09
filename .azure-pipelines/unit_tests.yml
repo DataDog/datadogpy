@@ -23,7 +23,7 @@ jobs:
         TOXENV: "py34"
       Py35:
         PYTHON_VERSION: "3.5"
-        TOXENV: "py35,flake8"
+        TOXENV: "py35"
       Py36:
         PYTHON_VERSION: "3.6"
         TOXENV: "py36"
