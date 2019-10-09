@@ -260,7 +260,7 @@ class UpdatableAPISubResource(object):
     """
 
     @classmethod
-    def update_items(cls, id, params=None, **body):
+    def update_items(cls, id, synthetics=False, params=None, **body):
         """
         Update API sub-resource objects of a resource
 
@@ -278,11 +278,18 @@ class UpdatableAPISubResource(object):
         if params is None:
             params = {}
 
-        path = '{resource_name}/{resource_id}/{sub_resource_name}'.format(
-            resource_name=cls._resource_name,
-            resource_id=id,
-            sub_resource_name=cls._sub_resource_name
-        )
+        if synthetics:
+            path = '{resource_name}/tests/{resource_id}/{sub_resource_name}'.format(
+                resource_name=cls._resource_name,
+                resource_id=id,
+                sub_resource_name=cls._sub_resource_name
+            )
+        else:
+            path = '{resource_name}/{resource_id}/{sub_resource_name}'.format(
+                resource_name=cls._resource_name,
+                resource_id=id,
+                sub_resource_name=cls._sub_resource_name
+            )
         api_version = getattr(cls, '_api_version', None)
 
         return APIClient.submit('PUT', path, api_version, body, **params)
@@ -346,7 +353,7 @@ class ActionAPIResource(object):
     Actionable API Resource
     """
     @classmethod
-    def _trigger_class_action(cls, method, name, id=None, params=None, **body):
+    def _trigger_class_action(cls, method, name, synthetics=False, id=None, params=None, **body):
         """
         Trigger an action
 
@@ -375,6 +382,12 @@ class ActionAPIResource(object):
         if id is None:
             path = '{resource_name}/{action_name}'.format(
                 resource_name=cls._resource_name,
+                action_name=name
+            )
+        elif synthetics:
+            path = '{resource_name}/{action_name}/{resource_id}'.format(
+                resource_name=cls._resource_name,
+                resource_id=id,
                 action_name=name
             )
         else:
