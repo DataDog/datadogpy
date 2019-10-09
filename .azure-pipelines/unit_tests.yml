@@ -36,9 +36,12 @@ jobs:
       Pypy3:
         PYTHON_VERSION: "pypy3"
         TOXENV: "pypy3"
+      Lint:
+        PYTHON_VERSION: "3.5"
+        TOXENV: "flake8"
   steps:
   - task: UsePythonVersion@0
-    displayName: Running $(TOKENV)
+    displayName: Use python $(PYTHON_VERSION)
     inputs:
       versionSpec: $(PYTHON_VERSION)
   - script: pip install tox
