@@ -38,7 +38,7 @@ jobs:
         TOXENV: "pypy3"
   steps:
   - task: UsePythonVersion@0
-    displayName: Use python $(PYTHON_VERSION)
+    displayName: Running $(TOKENV)
     inputs:
       versionSpec: $(PYTHON_VERSION)
   - script: pip install tox
