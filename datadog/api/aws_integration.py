@@ -7,7 +7,7 @@ class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
           DeletableAPIResource, ListableAPISubResource, UpdatableAPIResource,
           UpdatableAPISubResource, AddableAPISubResource):
     """
-    A wrapper around Event HTTP API.
+    A wrapper around AWS Integration API.
     """
     _resource_name = 'integration'
     _resource_id = 'aws'
@@ -86,13 +86,36 @@ class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         your AWS account ID.
         :type account_id: string
 
+        :param existing_account_id: Your existing AWS Account ID without dashes. \
+        Consult the Datadog AWS integration to learn more about \
+        your AWS account ID. This is the account to be updated.
+        :type account_id: string
+
         :param access_key_id: If your AWS account is a GovCloud \
         or China account, enter the corresponding Access Key ID.
+        :type access_key_id: string
+
+        :param existing_access_key_id: If your AWS account is a GovCloud \
+        or China account, enter the existing Access Key ID to be changed.
+        :type access_key_id: string
+
+        :param secret_access_key: If your AWS account is a GovCloud \
+        or China account, enter the corresponding Secret Access Key.
+        :type access_key_id: string
+
+        :param existing_secret_access_key: If your AWS account is a GovCloud \
+        or China account, enter the existing key to be changed.
         :type access_key_id: string
 
         :param role_name: Your Datadog role delegation name. \
         For more information about you AWS account Role name, \
         see the Datadog AWS integration configuration info.
+        :type role_name: string
+
+        :param existing_role_name: Your existing Datadog role delegation name. \
+        For more information about you AWS account Role name, \
+        see the Datadog AWS integration configuration info. \
+        This is the role_name to be updated.
         :type role_name: string
 
         :param filter_tags: The array of EC2 tags (in the form key:value) \

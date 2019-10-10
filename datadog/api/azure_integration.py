@@ -7,7 +7,7 @@ class Azure(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
             DeletableAPIResource, ListableAPISubResource, UpdatableAPIResource,
             AddableAPISubResource):
     """
-    A wrapper around Event HTTP API.
+    A wrapper around Azure integration API.
     """
     _resource_name = 'integration'
     _resource_id = 'azure'
@@ -39,7 +39,7 @@ class Azure(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
     @classmethod
     def delete(cls, id=_resource_id, **body):
         """
-        Delete a given Datadog-AWS integration.
+        Delete a given Datadog-Azure integration.
 
         >>> tenant_name = "<AZURE_TENANT_NAME>"
         >>> client_id = "<AZURE_CLIENT_ID>"

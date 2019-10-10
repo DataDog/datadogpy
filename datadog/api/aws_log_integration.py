@@ -7,7 +7,7 @@ class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
               DeletableAPISubResource, ListableAPISubResource, UpdatableAPISubResource,
               AddableAPISubResource):
     """
-    A wrapper around Event HTTP API.
+    A wrapper around AWS Logs API.
     """
     _resource_name = 'integration'
     _resource_id = 'aws'

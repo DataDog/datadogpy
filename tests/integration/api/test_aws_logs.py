@@ -2,33 +2,32 @@ import os
 from datadog import api as dog
 from datadog import initialize
 
-TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
 API_KEY = os.environ.get("DD_TEST_CLIENT_API_KEY", "a" * 32)
 APP_KEY = os.environ.get("DD_TEST_CLIENT_APP_KEY", "a" * 40)
 API_HOST = os.environ.get("DATADOG_HOST")
-FAKE_PROXY = {"https": "http://user:pass@10.10.1.10:3128/"}
+TEST_ACCOUNT_ID = "123456789101"
+TEST_ROLE_NAME = "DatadogApiTestRole"
+TEST_LAMBDA_ARN = "arn:aws:lambda:us-east-1:123456789101:function:APITest"
 
 
 class TestAwsLogs:
 
     @classmethod
     def setup_class(cls):
-        initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
-
-    def setup_method(self, method):
-        """ setup any state tied to the execution of the given method in a
-        class.  setup_method is invoked for every test method of a class.
+        """ setup any state specific to the execution of the given class.
         """
+        initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
         dog.Aws.create(
-            account_id="123456789101",
-            role_name="DatadogApiTestRole"
+            account_id=TEST_ACCOUNT_ID,
+            role_name=TEST_ROLE_NAME
         )
 
-    def teardown_method(self, method):
+    @classmethod
+    def teardown_class(cls):
         """ teardown any state that was previously setup with a setup_method
         call.
         """
-        dog.Aws.delete(account_id="123456789101", role_name="DatadogApiTestRole")
+        dog.Aws.delete(account_id=TEST_ACCOUNT_ID, role_name=TEST_ROLE_NAME)
 
     def test_list_log_services(self):
         output = dog.AwsLogs.list_log_services()
@@ -36,14 +35,14 @@ class TestAwsLogs:
 
     def test_add_log_lambda_arn(self):
         output = dog.AwsLogs.add_log_lambda_arn(
-            account_id="123456789101",
-            lambda_arn="arn:aws:lambda:us-east-1:123456789101:function:APITest"
+            account_id=TEST_ACCOUNT_ID,
+            lambda_arn=TEST_LAMBDA_ARN
         )
         assert output == {}
 
     def test_save_services(self):
         output = dog.AwsLogs.save_services(
-            account_id="123456789101",
+            account_id=TEST_ACCOUNT_ID,
             services=["s3", "elb", "elbv2", "cloudfront", "redshift", "lambda"]
         )
         assert output == {}
@@ -59,21 +58,21 @@ class TestAwsLogs:
 
     def test_delete_aws_log_config(self):
         output = dog.AwsLogs.delete_config(
-            account_id="123456789101",
-            lambda_arn="arn:aws:lambda:us-east-1:123456789101:function:APITest"
+            account_id=TEST_ACCOUNT_ID,
+            lambda_arn=TEST_LAMBDA_ARN
         )
         assert output == {}
 
     def test_check_lambda(self):
         output = dog.AwsLogs.check_lambda(
-            account_id="123456789101",
-            lambda_arn="arn:aws:lambda:us-east-1:123456789101:function:APITest"
+            account_id=TEST_ACCOUNT_ID,
+            lambda_arn=TEST_LAMBDA_ARN
         )
         assert 'status' in output.keys()
 
     def test_check_services(self):
         output = dog.AwsLogs.check_services(
-            account_id="123456789101",
+            account_id=TEST_ACCOUNT_ID,
             services=["s3", "elb", "elbv2", "cloudfront", "redshift", "lambda"]
         )
         assert 'status' in output.keys()

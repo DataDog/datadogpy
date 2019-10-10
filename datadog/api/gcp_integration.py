@@ -7,7 +7,7 @@ class Gcp(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
           DeletableAPIResource, ListableAPISubResource, UpdatableAPIResource,
           AddableAPISubResource):
     """
-    A wrapper around Event HTTP API.
+    A wrapper around GCP integration API.
     """
     _resource_name = 'integration'
     _resource_id = 'gcp'
