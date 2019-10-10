@@ -31,7 +31,7 @@ class ServiceLevelObjective(
         method="POST",
         id=None,
         params=None,
-        return_raw=True,
+        return_raw=False,
         **body
     ):
         """
@@ -55,7 +55,7 @@ class ServiceLevelObjective(
             return results["data"][0]
 
     @classmethod
-    def get(cls, id, return_raw=True, **params):
+    def get(cls, id, return_raw=False, **params):
         """
         Get a specific SLO details.
 
@@ -79,7 +79,7 @@ class ServiceLevelObjective(
 
     @classmethod
     def get_all(
-        cls, query=None, ids=None, offset=0, limit=100, return_raw=True, **params
+        cls, query=None, ids=None, offset=0, limit=100, return_raw=False, **params
     ):
         """
         Get all SLO details.
@@ -120,7 +120,7 @@ class ServiceLevelObjective(
             return results["data"]
 
     @classmethod
-    def update(cls, id, params=None, return_raw=True, **body):
+    def update(cls, id, params=None, return_raw=False, **body):
         """
         Update a specific SLO details.
 
