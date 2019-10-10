@@ -42,7 +42,9 @@ class TestAwsIntegration:
         output = dog.Aws.create(
             account_id=TEST_ACCOUNT_ID_3,
             role_name=TEST_ROLE_NAME,
-            host_tags=["api:test"]
+            host_tags=["api:test"],
+            filter_tags=["filter:test"],
+            account_specific_namespace_rules={'auto_scaling': False, 'opsworks': False}
         )
         try:
             assert "external_id" in output
