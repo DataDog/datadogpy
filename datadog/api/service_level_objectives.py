@@ -7,8 +7,6 @@ from datadog.api.resources import (
     ActionAPIResource,
 )
 
-from datadog.api.exceptions import ApiError
-
 
 class ServiceLevelObjective(
     GetableAPIResource,
@@ -26,61 +24,31 @@ class ServiceLevelObjective(
 
     @classmethod
     def create(
-        cls,
-        attach_host_name=False,
-        method="POST",
-        id=None,
-        params=None,
-        return_raw=False,
-        **body
+        cls, attach_host_name=False, method="POST", id=None, params=None, **body
     ):
         """
         Create a SLO
 
-        :param return_raw: return raw results
-        :type return_raw: bool
-
         :returns: created SLO details
         """
-        results = super(ServiceLevelObjective, cls).create(
-            attach_host_name=False, method="POST", id=None, params=None, **body
+        return super(ServiceLevelObjective, cls).create(
+            attach_host_name=False, method="POST", id=None, params=params, **body
         )
 
-        if return_raw:
-            return results
-
-        if results["error"]:
-            raise ApiError(results["error"])
-        else:
-            return results["data"][0]
-
     @classmethod
-    def get(cls, id, return_raw=False, **params):
+    def get(cls, id, **params):
         """
         Get a specific SLO details.
 
         :param id: SLO id to get details for
         :type id: str
 
-        :param return_raw: return raw results
-        :type return_raw: bool
-
         :returns: SLO details
         """
-        results = super(ServiceLevelObjective, cls).get(id, **params)
-
-        if return_raw:
-            return results
-
-        if results["error"]:
-            raise ApiError(results["error"])
-        else:
-            return results["data"]
+        return super(ServiceLevelObjective, cls).get(id, **params)
 
     @classmethod
-    def get_all(
-        cls, query=None, ids=None, offset=0, limit=100, return_raw=False, **params
-    ):
+    def get_all(cls, query=None, ids=None, offset=0, limit=100, **params):
         """
         Get all SLO details.
 
@@ -96,9 +64,6 @@ class ServiceLevelObjective(
         :param limit: limit of results to return (default: 1000)
         :type limit: int
 
-        :param return_raw: return raw results
-        :type return_raw: bool
-
         :returns: SLOs matching the query
         """
         search_terms = {}
@@ -109,61 +74,31 @@ class ServiceLevelObjective(
         search_terms["offset"] = offset
         search_terms["limit"] = limit
 
-        results = super(ServiceLevelObjective, cls).get_all(**search_terms)
-
-        if return_raw:
-            return results
-
-        if results["error"]:
-            raise ApiError(results["error"])
-        else:
-            return results["data"]
+        return super(ServiceLevelObjective, cls).get_all(**search_terms)
 
     @classmethod
-    def update(cls, id, params=None, return_raw=False, **body):
+    def update(cls, id, params=None, **body):
         """
         Update a specific SLO details.
 
         :param id: SLO id to update details for
         :type id: str
 
-        :param return_raw: return raw results
-        :type return_raw: bool
-
         :returns: SLO details
         """
-        results = super(ServiceLevelObjective, cls).update(id, params, **body)
-
-        if return_raw:
-            return results
-
-        if results["error"]:
-            raise ApiError(results["error"])
-        else:
-            return results["data"][0]
+        return super(ServiceLevelObjective, cls).update(id, params, **body)
 
     @classmethod
-    def delete(cls, id, return_raw=False, **params):
+    def delete(cls, id, **params):
         """
         Delete a specific SLO.
 
         :param id: SLO id to delete
         :type id: str
 
-        :param return_raw: return raw results
-        :type return_raw: bool
-
         :returns: SLO ids removed
         """
-        results = super(ServiceLevelObjective, cls).delete(id, **params)
-
-        if return_raw:
-            return results
-
-        if results["error"]:
-            raise ApiError(results["error"])
-        else:
-            return results["data"][0]
+        return super(ServiceLevelObjective, cls).delete(id, **params)
 
     @classmethod
     def bulk_delete(cls, ops, **params):
@@ -178,7 +113,11 @@ class ServiceLevelObjective(
             `data` - updates and deletions
         """
         return super(ServiceLevelObjective, cls)._trigger_class_action(
-            "POST", "bulk_delete", body=ops, params=params
+            "POST",
+            "bulk_delete",
+            body=ops,
+            params=params,
+            suppress_response_errors_on_codes=[200],
         )
 
     @classmethod
@@ -192,5 +131,9 @@ class ServiceLevelObjective(
         :returns: Dictionary representing the API's JSON response see `data` list(slo ids) && `errors`
         """
         return super(ServiceLevelObjective, cls)._trigger_class_action(
-            "DELETE", "", params=params, body={"ids": ids}
+            "DELETE",
+            "",
+            params=params,
+            body={"ids": ids},
+            suppress_response_errors_on_codes=[200],
         )
