@@ -1,6 +1,7 @@
 # stdlib
 import unittest
 import json
+from StringIO import StringIO
 
 # 3p
 from mock import Mock
@@ -133,6 +134,16 @@ class DatadogAPITestCase(unittest.TestCase):
 
     def tearDown(self):
         RequestClient._session = None
+
+    def load_request_response(self, status_code=200, response_body='{}', raise_for_status=False):
+        """
+        Load the repsonse body from the given payload
+        """
+        mock_response = MockResponse(raise_for_status=raise_for_status)
+        mock_response.raw = StringIO(response_body)
+        mock_response.status_code = status_code
+
+        self.request_mock.request = Mock(return_value=mock_response)
 
     def arm_requests_to_raise(self):
         """
