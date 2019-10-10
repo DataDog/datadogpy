@@ -1,7 +1,6 @@
 # stdlib
 import unittest
 import json
-from StringIO import StringIO
 
 # 3p
 from mock import Mock
@@ -23,7 +22,7 @@ from datadog.api.resources import (
     DeletableAPISubResource,
     ActionAPIResource
 )
-from datadog.util.compat import iteritems
+from datadog.util.compat import iteritems, StringIO
 from tests.util.contextmanagers import EnvVars
 
 
