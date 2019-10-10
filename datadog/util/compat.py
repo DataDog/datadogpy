@@ -42,7 +42,6 @@ if is_p3k():
     import builtins
     import configparser
     import urllib.request as url_lib, urllib.error, urllib.parse
-    from io import StringIO
 
     imap = map
     text = str
