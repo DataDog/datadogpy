@@ -26,39 +26,61 @@ class ServiceLevelObjective(
 
     @classmethod
     def create(
-        cls, attach_host_name=False, method="POST", id=None, params=None, **body
+        cls,
+        attach_host_name=False,
+        method="POST",
+        id=None,
+        params=None,
+        return_raw=True,
+        **body
     ):
         """
         Create a SLO
+
+        :param return_raw: return raw results
+        :type return_raw: bool
 
         :returns: created SLO details
         """
         results = super(ServiceLevelObjective, cls).create(
             attach_host_name=False, method="POST", id=None, params=None, **body
         )
+
+        if return_raw:
+            return results
+
         if results["error"]:
             raise ApiError(results["error"])
         else:
             return results["data"][0]
 
     @classmethod
-    def get(cls, id, **params):
+    def get(cls, id, return_raw=True, **params):
         """
         Get a specific SLO details.
 
         :param id: SLO id to get details for
         :type id: str
 
+        :param return_raw: return raw results
+        :type return_raw: bool
+
         :returns: SLO details
         """
         results = super(ServiceLevelObjective, cls).get(id, **params)
+
+        if return_raw:
+            return results
+
         if results["error"]:
             raise ApiError(results["error"])
         else:
             return results["data"]
 
     @classmethod
-    def get_all(cls, query=None, ids=None, offset=0, limit=100, **params):
+    def get_all(
+        cls, query=None, ids=None, offset=0, limit=100, return_raw=True, **params
+    ):
         """
         Get all SLO details.
 
@@ -74,6 +96,9 @@ class ServiceLevelObjective(
         :param limit: limit of results to return (default: 1000)
         :type limit: int
 
+        :param return_raw: return raw results
+        :type return_raw: bool
+
         :returns: SLOs matching the query
         """
         search_terms = {}
@@ -85,45 +110,63 @@ class ServiceLevelObjective(
         search_terms["limit"] = limit
 
         results = super(ServiceLevelObjective, cls).get_all(**search_terms)
+
+        if return_raw:
+            return results
+
         if results["error"]:
             raise ApiError(results["error"])
         else:
             return results["data"]
 
     @classmethod
-    def update(cls, id, params=None, **body):
+    def update(cls, id, params=None, return_raw=True, **body):
         """
         Update a specific SLO details.
 
         :param id: SLO id to update details for
         :type id: str
 
+        :param return_raw: return raw results
+        :type return_raw: bool
+
         :returns: SLO details
         """
         results = super(ServiceLevelObjective, cls).update(id, params, **body)
+
+        if return_raw:
+            return results
+
         if results["error"]:
             raise ApiError(results["error"])
         else:
             return results["data"][0]
 
     @classmethod
-    def delete(cls, id, **params):
+    def delete(cls, id, return_raw=False, **params):
         """
         Delete a specific SLO.
 
         :param id: SLO id to delete
         :type id: str
 
+        :param return_raw: return raw results
+        :type return_raw: bool
+
         :returns: SLO ids removed
         """
         results = super(ServiceLevelObjective, cls).delete(id, **params)
+
+        if return_raw:
+            return results
+
         if results["error"]:
             raise ApiError(results["error"])
         else:
             return results["data"][0]
 
     @classmethod
-    def bulk_delete(cls, ops):
+    def bulk_delete(cls, ops, **params):
         """
         Bulk Delete Timeframes from multiple SLOs.
 
@@ -135,7 +178,7 @@ class ServiceLevelObjective(
             `data` - updates and deletions
         """
         return super(ServiceLevelObjective, cls)._trigger_class_action(
-            "POST", "bulk_delete", body=ops
+            "POST", "bulk_delete", body=ops, params=params
         )
 
     @classmethod

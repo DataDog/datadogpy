@@ -233,7 +233,7 @@ class MonitorClient(object):
         if args.tags:
             params["tags"] = args.tags
 
-        res = api.ServiceLevelObjective.create(**params)
+        res = api.ServiceLevelObjective.create(return_raw=True, **params)
         report_warnings(res)
         report_errors(res)
         if format == "pretty":
@@ -246,7 +246,7 @@ class MonitorClient(object):
         api._timeout = args.timeout
         format = args.format
         slo = json.load(args.file)
-        res = api.ServiceLevelObjective.create(**slo)
+        res = api.ServiceLevelObjective.create(return_raw=True, **slo)
         report_warnings(res)
         report_errors(res)
         if format == "pretty":
@@ -302,7 +302,7 @@ class MonitorClient(object):
         if args.tags:
             tags = sorted(set([t.strip() for t in args.tags if t.strip()]))
             params["tags"] = tags
-        res = api.ServiceLevelObjective.update(args.slo_id, **params)
+        res = api.ServiceLevelObjective.update(args.slo_id, return_raw=True, **params)
         report_warnings(res)
         report_errors(res)
         if format == "pretty":
@@ -316,7 +316,7 @@ class MonitorClient(object):
         format = args.format
         slo = json.load(args.file)
 
-        res = api.ServiceLevelObjective.update(slo["id"], **slo)
+        res = api.ServiceLevelObjective.update(slo["id"], return_raw=True, **slo)
         report_warnings(res)
         report_errors(res)
         if format == "pretty":
@@ -328,7 +328,7 @@ class MonitorClient(object):
     def _show(cls, args):
         api._timeout = args.timeout
         format = args.format
-        res = api.ServiceLevelObjective.get(args.slo_id)
+        res = api.ServiceLevelObjective.get(args.slo_id, return_raw=True)
         report_warnings(res)
         report_errors(res)
 
@@ -351,7 +351,7 @@ class MonitorClient(object):
         else:
             params["ids"] = args.slo_ids
 
-        res = api.ServiceLevelObjective.get_all(**params)
+        res = api.ServiceLevelObjective.get_all(return_raw=True, **params)
         report_warnings(res)
         report_errors(res)
 
@@ -363,7 +363,7 @@ class MonitorClient(object):
     @classmethod
     def _delete(cls, args):
         api._timeout = args.timeout
-        res = api.ServiceLevelObjective.delete(args.slo_id)
+        res = api.ServiceLevelObjective.delete(args.slo_id, return_raw=True)
         if res is not None:
             report_warnings(res)
             report_errors(res)
