@@ -7,7 +7,7 @@ from datadog.util.format import pretty_json
 
 # datadog
 from datadog import api
-from datadog.dogshell.common import report_errors, report_warnings
+from datadog.dogshell.common import report_errors, report_warnings, print_err
 
 
 class MonitorClient(object):
@@ -39,10 +39,24 @@ class MonitorClient(object):
 
         update_parser = verb_parsers.add_parser('update', help="Update existing monitor")
         update_parser.add_argument('monitor_id', help="monitor to replace with the new definition")
-        update_parser.add_argument('type', help="type of the monitor, e.g. "
-                                   "'metric alert' 'service check'")
-        update_parser.add_argument('query', help="query to notify on with syntax varying"
-                                   " depending on what type of monitor you are creating")
+        update_parser.add_argument(
+            'type',
+            nargs='?',
+            help="[Deprecated] optional argument preferred"
+                 "type of the monitor, e.g. 'metric alert' 'service check'",
+            default=None
+        )
+        update_parser.add_argument(
+            'query',
+            nargs='?',
+            help="[Deprecated] optional argument preferred"
+                 "query to notify on with syntax varying depending on monitor type",
+            default=None
+        )
+        update_parser.add_argument('--type', help="type of the monitor, e.g. "
+                                   "'metric alert' 'service check'", default=None, dest='type_opt')
+        update_parser.add_argument('--query', help="query to notify on with syntax varying"
+                                   " depending on monitor type", default=None, dest='query_opt')
         update_parser.add_argument('--name', help="name of the alert", default=None)
         update_parser.add_argument('--message', help="message to include with "
                                    "notifications for this monitor", default=None)
@@ -148,14 +162,41 @@ class MonitorClient(object):
     def _update(cls, args):
         api._timeout = args.timeout
         format = args.format
-        options = None
+
+        to_update = {}
+        if args.type:
+            if args.type_opt:
+                msg = 'Duplicate arguments for `type`. Using optional value --type'
+                print_err("WARNING: {}".format(msg))
+            else:
+                to_update['type'] = args.type
+            msg = "[DEPRECATION] `type` is no longer required to `update` and may be omitted"
+            print_err("WARNING: {}".format(msg))
+        if args.query:
+            if args.query_opt:
+                msg = 'Duplicate arguments for `query`. Using optional value --query'
+                print_err("WARNING: {}".format(msg))
+            else:
+                to_update['query'] = args.query
+            msg = "[DEPRECATION] `query` is no longer required to `update` and may be omitted"
+            print_err("WARNING: {}".format(msg))
+        if args.name:
+            to_update['name'] = args.name
+        if args.message:
+            to_update['message'] = args.message
+        if args.type_opt:
+            to_update['type'] = args.type_opt
+        if args.query_opt:
+            to_update['query'] = args.query_opt
+
         if args.options is not None:
             try:
-                options = json.loads(args.options)
+                to_update['options'] = json.loads(args.options)
             except:
                 raise Exception('bad json parameter')
-        res = api.Monitor.update(args.monitor_id, type=args.type, query=args.query,
-                                 name=args.name, message=args.message, options=options)
+
+        res = api.Monitor.update(args.monitor_id, **to_update)
+
         report_warnings(res)
         report_errors(res)
         if format == 'pretty':
