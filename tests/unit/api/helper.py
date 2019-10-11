@@ -1,4 +1,5 @@
 # stdlib
+from io import BytesIO
 import unittest
 import json
 
@@ -22,7 +23,7 @@ from datadog.api.resources import (
     DeletableAPISubResource,
     ActionAPIResource
 )
-from datadog.util.compat import iteritems
+from datadog.util.compat import iteritems, is_p3k
 from tests.util.contextmanagers import EnvVars
 
 
@@ -135,6 +136,19 @@ class DatadogAPITestCase(unittest.TestCase):
 
     def tearDown(self):
         RequestClient._session = None
+
+    def load_request_response(self, status_code=200, response_body='{}', raise_for_status=False):
+        """
+        Load the repsonse body from the given payload
+        """
+        mock_response = MockResponse(raise_for_status=raise_for_status)
+        if is_p3k():
+            mock_response.raw = BytesIO(bytes(response_body, 'utf-8'))
+        else:
+            mock_response.raw = BytesIO(response_body)
+        mock_response.status_code = status_code
+
+        self.request_mock.request = Mock(return_value=mock_response)
 
     def arm_requests_to_raise(self):
         """

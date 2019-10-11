@@ -397,6 +397,28 @@ class TestDatadog:
 
         assert dog.Monitor.delete(monitor["id"]) == {"deleted_monitor_id": monitor["id"]}
 
+    def test_service_level_objective_crud(self):
+        numerator = "sum:my.custom.metric{type:good}.as_count()"
+        denominator = "sum:my.custom.metric{*}.as_count()"
+        query = {"numerator": numerator, "denominator": denominator}
+        thresholds = [{"timeframe": "7d", "target": 90}]
+        name = "test SLO {}".format(time.time())
+        slo = dog.ServiceLevelObjective.create(type="metric", query=query, thresholds=thresholds, name=name,
+                                               tags=["type:test"])["data"][0]
+        assert slo["name"] == name
+
+        numerator2 = "sum:my.custom.metric{type:good,!type:ignored}.as_count()"
+        denominator2 = "sum:my.custom.metric{!type:ignored}.as_count()"
+        query = {"numerator": numerator2, "denominator": denominator2}
+        slo = dog.ServiceLevelObjective.update(id=slo["id"], type="metric", query=query, thresholds=thresholds,
+                                               name=name, tags=["type:test"])["data"][0]
+        assert slo["name"] == name
+        slos = [s for s in dog.ServiceLevelObjective.get_all()["data"] if s["id"] == slo["id"]]
+        assert len(slos) == 1
+
+        assert dog.ServiceLevelObjective.get(slo["id"])["data"]["id"] == slo["id"]
+        dog.ServiceLevelObjective.delete(slo["id"])
+
     @pytest.mark.admin_needed
     def test_monitor_muting(self):
         query1 = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"

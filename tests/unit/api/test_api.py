@@ -79,6 +79,19 @@ class TestInitialization(DatadogAPINoInitialization):
         initialize()
         self.assertEqual(api._host_name, HOST_NAME, api._host_name)
 
+    def test_errors_suppressed(self):
+        """
+        API `errors` field ApiError supppressed when specified
+        """
+        # Test API, application keys, API host, and some HTTP client options
+        initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
+
+        # Make a simple API call
+        self.load_request_response(response_body='{"data": {}, "errors": ["foo error"]}')
+        resp = MyCreatable.create(params={"suppress_response_errors_on_codes": [200]})
+        self.assertNotIsInstance(resp, ApiError)
+        self.assertDictEqual({"data": {}, "errors": ["foo error"]}, resp)
+
     def test_request_parameters(self):
         """
         API parameters are set with `initialize` method.

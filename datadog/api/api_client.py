@@ -46,7 +46,7 @@ class APIClient(object):
 
     @classmethod
     def submit(cls, method, path, api_version=None, body=None, attach_host_name=False,
-               response_formatter=None, error_formatter=None, **params):
+               response_formatter=None, error_formatter=None, suppress_response_errors_on_codes=None, **params):
         """
         Make an HTTP API request
 
@@ -69,6 +69,10 @@ class APIClient(object):
 
         :param attach_host_name: link the new resource object to the host name
         :type attach_host_name: bool
+
+        :param suppress_response_errors_on_codes: suppress ApiError on `errors` key in the response for the given HTTP
+                                                  status codes
+        :type suppress_response_errors_on_codes: None|list(int)
 
         :param params: dictionary to be sent in the query string of the request
         :type params: dictionary
@@ -159,7 +163,10 @@ class APIClient(object):
                     raise ValueError('Invalid JSON response: {0}'.format(content))
 
                 if response_obj and 'errors' in response_obj:
-                    raise ApiError(response_obj)
+                    # suppress ApiError when specified and just return the response
+                    if not (suppress_response_errors_on_codes and
+                            result.status_code in suppress_response_errors_on_codes):
+                        raise ApiError(response_obj)
             else:
                 response_obj = None
 
@@ -185,7 +192,7 @@ class APIClient(object):
                 raise
         except ApiError as e:
             if _mute:
-                for error in e.args[0]['errors']:
+                for error in (e.args[0].get('errors') or []):
                     log.error(error)
                 if error_formatter is None:
                     return e.args[0]
