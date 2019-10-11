@@ -9,6 +9,7 @@ from datadog.util.format import pretty_json
 from datadog import api
 from datadog.dogshell.common import report_errors, report_warnings, print_err
 
+
 class MonitorClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
