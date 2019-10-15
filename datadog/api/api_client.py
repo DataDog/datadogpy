@@ -117,8 +117,9 @@ class APIClient(object):
                 if 'series' in body:
                     # Adding the host name to all objects
                     for obj_params in body['series']:
-                        if obj_params.get('host', "") == "":
-                            obj_params['host'] = _host_name
+                        if type(obj_params) == dict:
+                            if obj_params.get('host', "") == "":
+                                obj_params['host'] = _host_name
                 else:
                     if body.get('host', "") == "":
                         body['host'] = _host_name
