@@ -209,7 +209,7 @@ class Synthetics(
         if not isinstance(body["public_ids"], list):
             raise ApiError("Parameter 'ids' must be a list")
 
-        # API path = "synthetics/tests
+        # API path = "synthetics/tests/delete
 
         path = "delete"
 
