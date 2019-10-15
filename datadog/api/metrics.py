@@ -54,6 +54,12 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
         :param metric: the name of the time series
         :type metric: string
 
+        :param single_metric: a list of metric names
+        :type metric: list
+
+        :param metrics: a list of single_metric
+        :type metric: list
+
         :param points: a (timestamp, value) pair or list of (timestamp, value) pairs
         :type points: list
 
@@ -65,6 +71,14 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
 
         :param type: type of the metric
         :type type: 'gauge' or 'count' or 'rate' string
+
+        >>> api.Metric.send(metric='my.series', points=[(now, 15), (future_10s, 16)])
+
+        >>> api.Metric.send(single_metric=['my.series', 'my.series2'], points=[(now, 15), (future_10s, 16)])
+
+        >>> single_metric = [{'metric': 'my.series', 'type': 'gauge', 'points': [(now, 15), (future_10s, 16)]},
+        >>> {'metric': 'my.series', 'type': 'gauge', 'points': [(now, 15), (future_10s, 16)]}]
+        >>> api.Metric.send(metrics=single_metric)
 
         :returns: Dictionary representing the API's JSON response
         """
