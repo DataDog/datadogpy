@@ -13,16 +13,16 @@ class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
     _resource_id = 'aws'
 
     @classmethod
-    def list(cls, id=_resource_id, **params):
+    def list(cls, **params):
         """
         List all Datadog-AWS integrations available in your Datadog organization.
 
         >>> api.Aws.list()
         """
-        return super(Aws, cls).get(id=id, **params)
+        return super(Aws, cls).get(id=cls._resource_id, **params)
 
     @classmethod
-    def create(cls, id=_resource_id, **params):
+    def create(cls, **params):
         """
         Add a new AWS integration config.
 
@@ -74,49 +74,49 @@ class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         filter_tags=filter_tags,host_tags=host_tags,\
         account_specific_namespace_rules=account_specific_namespace_rules)
         """
-        return super(Aws, cls).create(id=id, **params)
+        return super(Aws, cls).create(id=cls._resource_id, **params)
 
     @classmethod
-    def update(cls, id=_resource_id, **body):
+    def update(cls, **body):
         """
         Update an AWS integration config.
 
-        :param account_id: Your AWS Account ID without dashes. \
+        :param account_id: Your existing AWS Account ID without dashes. \
         Consult the Datadog AWS integration to learn more about \
         your AWS account ID.
         :type account_id: string
 
-        :param existing_account_id: Your existing AWS Account ID without dashes. \
+        :param new_account_id: Your new AWS Account ID without dashes. \
         Consult the Datadog AWS integration to learn more about \
         your AWS account ID. This is the account to be updated.
-        :type account_id: string
+        :type new_account_id: string
 
-        :param access_key_id: If your AWS account is a GovCloud \
-        or China account, enter the corresponding Access Key ID.
-        :type access_key_id: string
-
-        :param existing_access_key_id: If your AWS account is a GovCloud \
-        or China account, enter the existing Access Key ID to be changed.
-        :type access_key_id: string
-
-        :param secret_access_key: If your AWS account is a GovCloud \
-        or China account, enter the corresponding Secret Access Key.
-        :type access_key_id: string
-
-        :param existing_secret_access_key: If your AWS account is a GovCloud \
-        or China account, enter the existing key to be changed.
-        :type access_key_id: string
-
-        :param role_name: Your Datadog role delegation name. \
+        :param role_name: Your existing Datadog role delegation name. \
         For more information about you AWS account Role name, \
         see the Datadog AWS integration configuration info.
         :type role_name: string
 
-        :param existing_role_name: Your existing Datadog role delegation name. \
+        :param new_role_name: Your new Datadog role delegation name. \
         For more information about you AWS account Role name, \
         see the Datadog AWS integration configuration info. \
         This is the role_name to be updated.
-        :type role_name: string
+        :type new_role_name: string
+
+        :param access_key_id: If your AWS account is a GovCloud \
+        or China account, enter the existing Access Key ID.
+        :type access_key_id: string
+
+        :param new_access_key_id: If your AWS account is a GovCloud \
+        or China account, enter the new Access Key ID to be set.
+        :type new_access_key_id: string
+
+        :param secret_access_key: If your AWS account is a GovCloud \
+        or China account, enter the existing Secret Access Key.
+        :type secret_access_key: string
+
+        :param new_secret_access_key: If your AWS account is a GovCloud \
+        or China account, enter the new key to be set.
+        :type new_secret_access_key: string
 
         :param filter_tags: The array of EC2 tags (in the form key:value) \
         defines a filter that Datadog uses when collecting metrics from EC2. \
@@ -145,30 +145,49 @@ class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         If using role delegation, use the fields for role_name and account_id.
         For access keys, use fields for access_key_id and secret_access_key.
 
-        >>> existing_account_id = "<EXISTING_AWS_ACCOUNT_ID>"
-        >>> existing_role_name = "<EXISTING_AWS_ROLE_NAME>"
-        >>> existing_access_key_id = "<AWS_ACCESS_KEY_ID>"
-        >>> existing_secret_access_key = "<AWS_SECRET_ACCESS_KEY>"
-        >>> account_id = "<AWS_ACCOUNT_ID>"
-        >>> access_key_id = "<AWS_ACCESS_KEY_ID>"
-        >>> role_name = "DatadogAwsRole"
+        Both the existing fields and new fields are required no matter what. i.e. If the config is \
+        account_id/role_name based, then `account_id`, `role_name`, `new_account_id`, and \
+        `new_role_name` are all required.
+
+        For access_key based accounts, `access_key_id`, `secret_access_key`, `new_access_key_id`, \
+        and `new_secret_access_key` are all required.
+
+        >>> account_id = "<EXISTING_AWS_ACCOUNT_ID>"
+        >>> role_name = "<EXISTING_AWS_ROLE_NAME>"
+        >>> access_key_id = "<EXISTING_AWS_ACCESS_KEY_ID>"
+        >>> secret_access_key = "<EXISTING_AWS_SECRET_ACCESS_KEY>"
+        >>> new_account_id = "<NEW_AWS_ACCOUNT_ID>"
+        >>> new_role_name = "<NEW_AWS_ROLE_NAME>"
+        >>> new_access_key_id = "<NEW_AWS_ACCESS_KEY_ID>"
+        >>> new_secret_access_key = "<NEW_AWS_SECRET_ACCESS_KEY_ID>"
         >>> filter_tags = ["<KEY>:<VALUE>"]
         >>> host_tags = ["<KEY>:<VALUE>"]
         >>> account_specific_namespace_rules = {"namespace1":true/false, "namespace2":true/false}
 
         >>> api.Aws.update(account_id=account_id, role_name=role_name, \
+        new_account_id=new_account_id, new_role_name=new_role_name, \
         filter_tags=filter_tags,host_tags=host_tags,\
         account_specific_namespace_rules=account_specific_namespace_rules)
         """
         params = {}
-        params['account_id'] = body.get('existing_account_id')
-        params['role_name'] = body.get('existing_role_name')
-        params['access_key_id'] = body.get('existing_access_key_id')
-        params['secret_access_key'] = body.get('existing_secret_access_key')
-        return super(Aws, cls).update(id=id, params=params, **body)
+        if body.get('account_id') and body.get('role_name'):
+            params['account_id'] = body.pop('account_id')
+            params['role_name'] = body.pop('role_name')
+            if body.get('new_account_id'):
+                body['account_id'] = body.pop('new_account_id')
+            if body.get('new_role_name'):
+                body['role_name'] = body.pop('new_role_name')
+        if body.get('access_key_id') and body.get('secret_access_key'):
+            params['access_key_id'] = body.pop('access_key_id')
+            params['secret_access_key'] = body.pop('secret_access_key')
+            if body.get('new_access_key_id'):
+                body['access_key_id'] = body.pop('new_access_key_id')
+            if body.get('new_secret_access_key'):
+                body['secret_access_key'] = body.pop('new_secret_access_key')
+        return super(Aws, cls).update(id=cls._resource_id, params=params, **body)
 
     @classmethod
-    def delete(cls, id=_resource_id, **body):
+    def delete(cls, **body):
         """
         Delete a given Datadog-AWS integration.
 
@@ -177,20 +196,20 @@ class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
 
         >>> api.Aws.delete()
         """
-        return super(Aws, cls).delete(id=id, body=body)
+        return super(Aws, cls).delete(id=cls._resource_id, body=body)
 
     @classmethod
-    def list_namespace_rules(cls, id=_resource_id, **params):
+    def list_namespace_rules(cls, **params):
         """
         List all namespace rules available as options.
 
         >>> api.Aws.list_namespace_rules()
         """
         cls._sub_resource_name = 'available_namespace_rules'
-        return super(Aws, cls).get_items(id=id, **params)
+        return super(Aws, cls).get_items(id=cls._resource_id, **params)
 
     @classmethod
-    def generate_new_external_id(cls, id=_resource_id, **params):
+    def generate_new_external_id(cls, **params):
         """
         Generate a new AWS external id for a given AWS account id and role name pair.
 
@@ -200,4 +219,4 @@ class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         >>> api.Aws.generate_new_external_id()
         """
         cls._sub_resource_name = 'generate_new_external_id'
-        return super(Aws, cls).update_items(id=id, **params)
+        return super(Aws, cls).update_items(id=cls._resource_id, **params)

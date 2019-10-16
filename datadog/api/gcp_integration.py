@@ -13,16 +13,16 @@ class Gcp(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
     _resource_id = 'gcp'
 
     @classmethod
-    def list(cls, id=_resource_id, **params):
+    def list(cls, **params):
         """
         List all Datadog-Gcp integrations available in your Datadog organization.
 
         >>> api.Gcp.list()
         """
-        return super(Gcp, cls).get(id=id, **params)
+        return super(Gcp, cls).get(id=cls._resource_id, **params)
 
     @classmethod
-    def delete(cls, id=_resource_id, **body):
+    def delete(cls, **body):
         """
         Delete a given Datadog-GCP integration.
 
@@ -31,10 +31,10 @@ class Gcp(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
 
         >>> api.Gcp.delete(project_id=project_id, client_email=client_email)
         """
-        return super(Gcp, cls).delete(id=id, body=body)
+        return super(Gcp, cls).delete(id=cls._resource_id, body=body)
 
     @classmethod
-    def create(cls, id=_resource_id, **params):
+    def create(cls, **params):
         """
         Add a new GCP integration config.
 
@@ -64,10 +64,10 @@ class Gcp(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         auth_provider_x509_cert_url=auth_provider_x509_cert_url, \
         client_x509_cert_url=client_x509_cert_url, host_filters=host_filters)
         """
-        return super(Gcp, cls).create(id=id, **params)
+        return super(Gcp, cls).create(id=cls._resource_id, **params)
 
     @classmethod
-    def update(cls, id=_resource_id, **body):
+    def update(cls, **body):
         """
         Update an existing service account partially (one or multiple fields), \
         by supplying a new value for the field(s) to be updated.
@@ -90,4 +90,4 @@ class Gcp(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         automute=automute)
         """
         params = {}
-        return super(Gcp, cls).update(id=id, params=params, **body)
+        return super(Gcp, cls).update(id=cls._resource_id, params=params, **body)

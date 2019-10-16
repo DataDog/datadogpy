@@ -13,16 +13,16 @@ class Azure(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
     _resource_id = 'azure'
 
     @classmethod
-    def list(cls, id=_resource_id, **params):
+    def list(cls, **params):
         """
         List all Datadog-Azure integrations available in your Datadog organization.
 
         >>> api.Azure.list()
         """
-        return super(Azure, cls).get(id=id, **params)
+        return super(Azure, cls).get(id=cls._resource_id, **params)
 
     @classmethod
-    def create(cls, id=_resource_id, **params):
+    def create(cls, **params):
         """
         Add a new Azure integration config.
 
@@ -34,10 +34,10 @@ class Azure(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         >>> api.Azure.create(tenant_name=tenant_name, client_id=client_id, \
         client_secret=client_secret,host_filters=host_filters)
         """
-        return super(Azure, cls).create(id=id, **params)
+        return super(Azure, cls).create(id=cls._resource_id, **params)
 
     @classmethod
-    def delete(cls, id=_resource_id, **body):
+    def delete(cls, **body):
         """
         Delete a given Datadog-Azure integration.
 
@@ -46,10 +46,10 @@ class Azure(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
 
         >>> api.Azure.delete(tenant_name=tenant_name, client_id=client_id)
         """
-        return super(Azure, cls).delete(id=id, body=body)
+        return super(Azure, cls).delete(id=cls._resource_id, body=body)
 
     @classmethod
-    def update_host_filters(cls, id=_resource_id, **params):
+    def update_host_filters(cls, **params):
         """
         Update the defined list of host filters for a given Datadog-Azure integration. \
 
@@ -61,10 +61,10 @@ class Azure(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
             host_filters=host_filters)
         """
         cls._sub_resource_name = 'host_filters'
-        return super(Azure, cls).add_items(id=id, **params)
+        return super(Azure, cls).add_items(id=cls._resource_id, **params)
 
     @classmethod
-    def update(cls, id=_resource_id, **body):
+    def update(cls, **body):
         """
         Update an Azure account configuration.
 
@@ -82,4 +82,4 @@ class Azure(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         params = {}
         params['new_tenant_name'] = body.get('new_tenant_name')
         params['new_client_id'] = body.get('new_client_id')
-        return super(Azure, cls).update(id=id, params=params, **body)
+        return super(Azure, cls).update(id=cls._resource_id, params=params, **body)

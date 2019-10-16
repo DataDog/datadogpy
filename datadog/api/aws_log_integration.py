@@ -13,17 +13,17 @@ class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
     _resource_id = 'aws'
 
     @classmethod
-    def list_log_services(cls, id=_resource_id, **params):
+    def list_log_services(cls, **params):
         """
         List all namespace rules available as options.
 
         >>> api.AwsLogs.list_log_services()
         """
         cls._sub_resource_name = 'logs/services'
-        return super(AwsLogs, cls).get_items(id=id, **params)
+        return super(AwsLogs, cls).get_items(id=cls._resource_id, **params)
 
     @classmethod
-    def add_log_lambda_arn(cls, id=_resource_id, **params):
+    def add_log_lambda_arn(cls, **params):
         """
         Attach the Lambda ARN of the Lambda created for the Datadog-AWS \
         log collection to your AWS account ID to enable log collection.
@@ -34,10 +34,10 @@ class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         >>> api.AwsLogs.add_log_lambda_arn(account_id=account_id, lambda_arn=lambda_arn)
         """
         cls._sub_resource_name = 'logs'
-        return super(AwsLogs, cls).add_items(id=id, **params)
+        return super(AwsLogs, cls).add_items(id=cls._resource_id, **params)
 
     @classmethod
-    def save_services(cls, id=_resource_id, **params):
+    def save_services(cls, **params):
         """
         Enable Automatic Log collection for your AWS services.
 
@@ -47,10 +47,10 @@ class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         >>> api.AwsLogs.save_services()
         """
         cls._sub_resource_name = 'logs/services'
-        return super(AwsLogs, cls).add_items(id=id, **params)
+        return super(AwsLogs, cls).add_items(id=cls._resource_id, **params)
 
     @classmethod
-    def delete_config(cls, id=_resource_id, **params):
+    def delete_config(cls, **params):
         """
         Delete a Datadog-AWS log collection configuration by removing the specific Lambda ARN \
         associated with a given AWS account.
@@ -61,10 +61,10 @@ class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         >>> api.AwsLogs.delete_config(account_id=account_id, lambda_arn=lambda_arn)
         """
         cls._sub_resource_name = 'logs'
-        return super(AwsLogs, cls).delete_items(id=id, **params)
+        return super(AwsLogs, cls).delete_items(id=cls._resource_id, **params)
 
     @classmethod
-    def check_lambda(cls, id=_resource_id, **params):
+    def check_lambda(cls, **params):
         """
         Check function to see if a lambda_arn exists within an account. \
         This sends a job on our side if it does not exist, then immediately returns \
@@ -82,10 +82,10 @@ class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         >>> api.AwsLogs.check_lambda(account_id=account_id, lambda_arn=lambda_arn)
         """
         cls._sub_resource_name = 'logs/check_async'
-        return super(AwsLogs, cls).add_items(id=id, **params)
+        return super(AwsLogs, cls).add_items(id=cls._resource_id, **params)
 
     @classmethod
-    def check_services(cls, id=_resource_id, **params):
+    def check_services(cls, **params):
         """
         Test if permissions are present to add log-forwarding triggers for the \
         given services + AWS account. Input is the same as for save_services.
@@ -98,14 +98,14 @@ class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         >>> api.AwsLogs.check_services()
         """
         cls._sub_resource_name = 'logs/services_async'
-        return super(AwsLogs, cls).add_items(id=id, **params)
+        return super(AwsLogs, cls).add_items(id=cls._resource_id, **params)
 
     @classmethod
-    def list(cls, id=_resource_id, **params):
+    def list(cls, **params):
         """
         List all Datadog-AWS Logs integrations available in your Datadog organization.
 
         >>> api.AwsLogs.list()
         """
         cls._sub_resource_name = 'logs'
-        return super(AwsLogs, cls).get_items(id=id, **params)
+        return super(AwsLogs, cls).get_items(id=cls._resource_id, **params)
