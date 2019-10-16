@@ -50,9 +50,14 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
     def send(cls, metrics=None, attach_host_name=True, **single_metric):
         """
         Submit a metric or a list of metrics to the metric API
+        A metric dictionary should consist of 5 keys: metric, points, host, tags, type (some of which optional),
+        see below:
 
         :param metric: the name of the time series
         :type metric: string
+
+        :param metrics: a list of dictionaries, each item being a metric to send
+        :type metrics: list
 
         :param points: a (timestamp, value) pair or list of (timestamp, value) pairs
         :type points: list
@@ -65,6 +70,12 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
 
         :param type: type of the metric
         :type type: 'gauge' or 'count' or 'rate' string
+
+        >>> api.Metric.send(metric='my.series', points=[(now, 15), (future_10s, 16)])
+
+        >>> metrics = [{'metric': 'my.series', 'type': 'gauge', 'points': [(now, 15), (future_10s, 16)]},
+                {'metric': 'my.series2', 'type': 'gauge', 'points': [(now, 15), (future_10s, 16)]}]
+        >>> api.Metric.send(metrics=metrics)
 
         :returns: Dictionary representing the API's JSON response
         """
