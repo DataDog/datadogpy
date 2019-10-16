@@ -2,6 +2,7 @@ from datadog import api as dog
 from datadog import initialize
 from tests.integration.api.constants import API_KEY, APP_KEY, API_HOST
 
+
 class TestAzureIntegration:
 
     test_tenant_name = "testc44-1234-5678-9101-cc00736ftest"
