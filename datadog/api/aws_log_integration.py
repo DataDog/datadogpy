@@ -1,10 +1,8 @@
-from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
-    SearchableAPIResource, DeletableAPISubResource, \
-    UpdatableAPISubResource, ListableAPISubResource, AddableAPISubResource
+from datadog.api.resources import DeletableAPISubResource, \
+    ListableAPISubResource, AddableAPISubResource
 
 
-class AwsLogs(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
-              DeletableAPISubResource, ListableAPISubResource, UpdatableAPISubResource,
+class AwsLogs(DeletableAPISubResource, ListableAPISubResource,
               AddableAPISubResource):
     """
     A wrapper around AWS Logs API.

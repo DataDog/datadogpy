@@ -1,11 +1,9 @@
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
-    SearchableAPIResource, DeletableAPIResource, \
-    UpdatableAPIResource, ListableAPISubResource, AddableAPISubResource
+    DeletableAPIResource, UpdatableAPIResource, AddableAPISubResource
 
 
-class Azure(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
-            DeletableAPIResource, ListableAPISubResource, UpdatableAPIResource,
-            AddableAPISubResource):
+class Azure(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
+            UpdatableAPIResource, AddableAPISubResource):
     """
     A wrapper around Azure integration API.
     """
@@ -80,6 +78,4 @@ class Azure(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
         client_secret=client_secret, host_filters=host_filters)
         """
         params = {}
-        params['new_tenant_name'] = body.get('new_tenant_name')
-        params['new_client_id'] = body.get('new_client_id')
         return super(Azure, cls).update(id=cls._resource_id, params=params, **body)

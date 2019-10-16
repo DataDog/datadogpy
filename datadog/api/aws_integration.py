@@ -1,11 +1,11 @@
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
-    SearchableAPIResource, DeletableAPIResource, UpdatableAPIResource, \
-    UpdatableAPISubResource, ListableAPISubResource, AddableAPISubResource
+    DeletableAPIResource, UpdatableAPIResource, UpdatableAPISubResource, \
+    ListableAPISubResource
 
 
-class Aws(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
+class Aws(GetableAPIResource, CreateableAPIResource,
           DeletableAPIResource, ListableAPISubResource, UpdatableAPIResource,
-          UpdatableAPISubResource, AddableAPISubResource):
+          UpdatableAPISubResource):
     """
     A wrapper around AWS Integration API.
     """

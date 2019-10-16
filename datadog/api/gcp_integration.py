@@ -1,11 +1,9 @@
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
-    SearchableAPIResource, DeletableAPIResource, \
-    UpdatableAPIResource, ListableAPISubResource, AddableAPISubResource
+    DeletableAPIResource, UpdatableAPIResource
 
 
-class Gcp(GetableAPIResource, CreateableAPIResource, SearchableAPIResource,
-          DeletableAPIResource, ListableAPISubResource, UpdatableAPIResource,
-          AddableAPISubResource):
+class Gcp(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
+          UpdatableAPIResource):
     """
     A wrapper around GCP integration API.
     """
