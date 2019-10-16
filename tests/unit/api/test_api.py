@@ -43,6 +43,42 @@ from tests.util.contextmanagers import EnvVars
 
 class TestInitialization(DatadogAPINoInitialization):
 
+    def test_default_settings_set(self):
+        """
+        Test all the default setting are properly set before calling initialize
+        """
+        from datadog.api import (
+            _api_key,
+            _application_key,
+            _api_version,
+            _api_host,
+            _host_name,
+            _hostname_from_config,
+            _cacert,
+            _proxies,
+            _timeout,
+            _max_timeouts,
+            _max_retries,
+            _backoff_period,
+            _mute,
+            _return_raw_response,
+        )
+
+        assert _api_key is None
+        assert _application_key is None
+        assert _api_version == 'v1'
+        assert _api_host is None
+        assert _host_name is None
+        assert _hostname_from_config is True
+        assert _cacert is True
+        assert _proxies is None
+        assert _timeout == 60
+        assert _max_timeouts == 3
+        assert _max_retries == 3
+        assert _backoff_period == 300
+        assert _mute is True
+        assert _return_raw_response is False
+
     def test_no_initialization_fails(self):
         """
         Raise ApiNotInitialized exception when `initialize` has not ran or no API key was set.
@@ -129,14 +165,14 @@ class TestInitialization(DatadogAPINoInitialization):
         self.assertIn('params', options)
 
         self.assertIn('headers', options)
-        
+
         # for resources in MyParamsApiKey, api key and application key needs to be in url params
         # any api and app keys in headers are ignored
         self.assertEqual(options['headers']['Content-Type'], 'application/json')
         self.assertEqual(options['params']['api_key'], API_KEY)
         self.assertEqual(options['params']['application_key'], APP_KEY)
-        
-        
+
+
 
     def test_initialize_options(self):
         """
