@@ -1,13 +1,11 @@
-import os
 from datadog import api as dog
 from datadog import initialize
+from tests.integration.api.constants import API_KEY, APP_KEY, API_HOST
 
-API_KEY = os.environ.get("DD_TEST_CLIENT_API_KEY", "a" * 32)
-APP_KEY = os.environ.get("DD_TEST_CLIENT_APP_KEY", "a" * 40)
-API_HOST = os.environ.get("DATADOG_HOST")
 TEST_ACCOUNT_ID = "123456789101"
 TEST_ROLE_NAME = "DatadogApiTestRole"
 TEST_LAMBDA_ARN = "arn:aws:lambda:us-east-1:123456789101:function:APITest"
+AVAILABLE_SERVICES = 6
 
 
 class TestAwsLogs:
@@ -31,37 +29,31 @@ class TestAwsLogs:
 
     def test_list_log_services(self):
         output = dog.AwsLogs.list_log_services()
-        assert len(output) >= 6
+        assert len(output) >= AVAILABLE_SERVICES
 
-    def test_add_log_lambda_arn(self):
-        output = dog.AwsLogs.add_log_lambda_arn(
+    def test_aws_logs_crud(self):
+        add_lambda_arn_output = dog.AwsLogs.add_log_lambda_arn(
             account_id=TEST_ACCOUNT_ID,
             lambda_arn=TEST_LAMBDA_ARN
         )
-        assert output == {}
-
-    def test_save_services(self):
-        output = dog.AwsLogs.save_services(
+        assert add_lambda_arn_output == {}
+        save_services_output = dog.AwsLogs.save_services(
             account_id=TEST_ACCOUNT_ID,
             services=["s3", "elb", "elbv2", "cloudfront", "redshift", "lambda"]
         )
-        assert output == {}
-
-    def test_aws_logs_list(self):
-        output = dog.AwsLogs.list()
+        assert save_services_output == {}
+        list_output = dog.AwsLogs.list()
         expected_fields = [
             'services',
             'lambdas',
             'account_id'
         ]
-        assert all(k in output[0].keys() for k in expected_fields)
-
-    def test_delete_aws_log_config(self):
-        output = dog.AwsLogs.delete_config(
+        assert all(k in list_output[0].keys() for k in expected_fields)
+        delete_output = dog.AwsLogs.delete_config(
             account_id=TEST_ACCOUNT_ID,
             lambda_arn=TEST_LAMBDA_ARN
         )
-        assert output == {}
+        assert delete_output == {}
 
     def test_check_lambda(self):
         output = dog.AwsLogs.check_lambda(
