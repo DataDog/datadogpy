@@ -15,36 +15,34 @@ class TestAzureIntegration:
     def setup_class(cls):
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
 
-    def test_azure_create(self):
-        output = dog.Azure.create(
+    def test_azure_crud(self):
+        # Test Create
+        create_output = dog.Azure.create(
             tenant_name=self.test_tenant_name,
             host_filters="api:test",
             client_id=self.test_client_id,
             client_secret=self.test_client_secret
         )
-        assert output == {}
-
-    def test_azure_list(self):
-        tests_pass = False
+        assert create_output == {}
+        # Test List
+        list_tests_pass = False
         for i in dog.Azure.list():
             if (i['tenant_name'] == self.test_tenant_name and
                     i['host_filters'] == 'api:test'):
-                tests_pass = True
-        assert tests_pass
-
-    def test_azure_update_host_filters(self):
+                list_tests_pass = True
+        assert list_tests_pass
+        # Test Update Host Filters
         dog.Azure.update_host_filters(
             tenant_name=self.test_tenant_name,
             host_filters='api:test2',
             client_id=self.test_client_id
         )
-        tests_pass = False
+        update_host_filters_tests_pass = False
         for i in dog.Azure.list():
             if i['host_filters'] == 'api:test2':
-                tests_pass = True
-        assert tests_pass
-
-    def test_azure_update(self):
+                update_host_filters_tests_pass = True
+        assert update_host_filters_tests_pass
+        # Test Update
         dog.Azure.update(
             tenant_name=self.test_tenant_name,
             new_tenant_name=self.test_new_tenant_name,
@@ -53,24 +51,23 @@ class TestAzureIntegration:
             new_client_id=self.test_new_client_id,
             client_secret=self.test_client_secret
         )
-        tests_pass = False
+        update_tests_pass = False
         for i in dog.Azure.list():
             if (i['tenant_name'] == self.test_new_tenant_name and
                     i['host_filters'] == 'api:test3'):
-                tests_pass = True
-        assert tests_pass
-
-    def test_azure_delete(self):
+                update_tests_pass = True
+        assert update_tests_pass
+        # Test Delete
         dog.Azure.delete(
             tenant_name=self.test_new_tenant_name,
             client_id=self.test_new_client_id
         )
-        tests_pass = True
+        delete_tests_pass = True
         list_output = dog.Azure.list()
         if type(list_output) == list:
             for i in dog.Azure.list():
                 if i['tenant_name'] == self.test_new_tenant_name:
-                    tests_pass = False
+                    delete_tests_pass = False
         elif self.not_yet_installed_error in list_output['errors'][0]:
             pass
-        assert tests_pass
+        assert delete_tests_pass
