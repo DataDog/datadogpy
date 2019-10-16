@@ -74,7 +74,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
         >>> api.Metric.send(metric='my.series', points=[(now, 15), (future_10s, 16)])
 
         >>> metrics = [{'metric': 'my.series', 'type': 'gauge', 'points': [(now, 15), (future_10s, 16)]},
-        >>> {'metric': 'my.series', 'type': 'gauge', 'points': [(now, 15), (future_10s, 16)]}]
+                {'metric': 'my.series2', 'type': 'gauge', 'points': [(now, 15), (future_10s, 16)]}]
         >>> api.Metric.send(metrics=metrics)
 
         :returns: Dictionary representing the API's JSON response
