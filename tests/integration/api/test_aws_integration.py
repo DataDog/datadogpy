@@ -85,15 +85,15 @@ class TestAwsIntegration:
 
     def test_update(self):
         dog.Aws.update(
-            existing_account_id=TEST_ACCOUNT_ID_2,
-            existing_role_name=TEST_ROLE_NAME,
-            account_id=TEST_ACCOUNT_ID_4,
+            account_id=TEST_ACCOUNT_ID_2,
+            role_name=TEST_ROLE_NAME,
+            new_account_id=TEST_ACCOUNT_ID_4,
             host_tags=["api:test2"],
-            role_name=TEST_ROLE_NAME_2
+            new_role_name=TEST_ROLE_NAME_2
         )
         output = dog.Aws.list()
         tests_pass = False
         for i in output['accounts']:
-            if i['account_id'] == TEST_ACCOUNT_ID_4 and i['role_name'] == TEST_ROLE_NAME_2:
+            if i.get('account_id') == TEST_ACCOUNT_ID_4 and i.get('role_name') == TEST_ROLE_NAME_2:
                 tests_pass = True
         assert tests_pass
