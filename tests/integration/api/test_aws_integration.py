@@ -1,16 +1,14 @@
-import os
 from datadog import api as dog
 from datadog import initialize
+from tests.integration.api.constants import API_KEY, APP_KEY, API_HOST
 
-API_KEY = os.environ.get("DD_TEST_CLIENT_API_KEY", "a" * 32)
-APP_KEY = os.environ.get("DD_TEST_CLIENT_APP_KEY", "a" * 40)
-API_HOST = os.environ.get("DATADOG_HOST")
 TEST_ACCOUNT_ID_1 = "123456789101"
 TEST_ACCOUNT_ID_2 = "123456789102"
 TEST_ACCOUNT_ID_3 = "123456789103"
 TEST_ACCOUNT_ID_4 = "123456789104"
 TEST_ROLE_NAME = "DatadogApiTestRole"
 TEST_ROLE_NAME_2 = "DatadogApiTestRolo"
+AVAILABLE_NAMESPACES = 76
 
 
 class TestAwsIntegration:
@@ -21,22 +19,6 @@ class TestAwsIntegration:
         level before and after all test methods of the class are called.
         """
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
-        dog.Aws.create(
-            account_id=TEST_ACCOUNT_ID_1,
-            role_name=TEST_ROLE_NAME
-        )
-        dog.Aws.create(
-            account_id=TEST_ACCOUNT_ID_2,
-            role_name=TEST_ROLE_NAME
-        )
-
-    @classmethod
-    def teardown_class(cls):
-        """ teardown any state that was previously setup with a setup_method
-        call.
-        """
-        dog.Aws.delete(account_id=TEST_ACCOUNT_ID_1, role_name=TEST_ROLE_NAME)
-        dog.Aws.delete(account_id=TEST_ACCOUNT_ID_4, role_name=TEST_ROLE_NAME_2)
 
     def test_create(self):
         output = dog.Aws.create(
@@ -52,6 +34,14 @@ class TestAwsIntegration:
             dog.Aws.delete(account_id=TEST_ACCOUNT_ID_3, role_name=TEST_ROLE_NAME)
 
     def test_list(self):
+        dog.Aws.create(
+            account_id=TEST_ACCOUNT_ID_1,
+            role_name=TEST_ROLE_NAME
+        )
+        dog.Aws.create(
+            account_id=TEST_ACCOUNT_ID_2,
+            role_name=TEST_ROLE_NAME
+        )
         output = dog.Aws.list()
         assert "accounts" in output
         assert len(output['accounts']) >= 2
@@ -64,26 +54,46 @@ class TestAwsIntegration:
             'account_id'
         ]
         assert all(k in output['accounts'][0].keys() for k in expected_fields)
+        dog.Aws.delete(account_id=TEST_ACCOUNT_ID_1, role_name=TEST_ROLE_NAME)
+        dog.Aws.delete(account_id=TEST_ACCOUNT_ID_2, role_name=TEST_ROLE_NAME)
 
     def test_delete(self):
+        dog.Aws.create(
+            account_id=TEST_ACCOUNT_ID_1,
+            role_name=TEST_ROLE_NAME
+        )
         output = dog.Aws.delete(account_id=TEST_ACCOUNT_ID_1, role_name=TEST_ROLE_NAME)
         assert output == {}
 
     def test_generate_new_external_id(self):
+        dog.Aws.create(
+            account_id=TEST_ACCOUNT_ID_2,
+            role_name=TEST_ROLE_NAME
+        )
         output = dog.Aws.generate_new_external_id(
             account_id=TEST_ACCOUNT_ID_2,
             role_name=TEST_ROLE_NAME
         )
         assert "external_id" in output
+        dog.Aws.delete(account_id=TEST_ACCOUNT_ID_2, role_name=TEST_ROLE_NAME)
 
     def test_list_namespace_rules(self):
+        dog.Aws.create(
+            account_id=TEST_ACCOUNT_ID_2,
+            role_name=TEST_ROLE_NAME
+        )
         output = dog.Aws.list_namespace_rules(
             account_id=TEST_ACCOUNT_ID_2,
             role_name=TEST_ROLE_NAME
         )
-        assert len(output) >= 76
+        assert len(output) >= AVAILABLE_NAMESPACES
+        dog.Aws.delete(account_id=TEST_ACCOUNT_ID_2, role_name=TEST_ROLE_NAME)
 
     def test_update(self):
+        dog.Aws.create(
+            account_id=TEST_ACCOUNT_ID_2,
+            role_name=TEST_ROLE_NAME
+        )
         dog.Aws.update(
             account_id=TEST_ACCOUNT_ID_2,
             role_name=TEST_ROLE_NAME,
@@ -97,3 +107,4 @@ class TestAwsIntegration:
             if i.get('account_id') == TEST_ACCOUNT_ID_4 and i.get('role_name') == TEST_ROLE_NAME_2:
                 tests_pass = True
         assert tests_pass
+        dog.Aws.delete(account_id=TEST_ACCOUNT_ID_4, role_name=TEST_ROLE_NAME_2)
