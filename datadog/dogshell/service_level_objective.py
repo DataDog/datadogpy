@@ -30,7 +30,6 @@ class ServiceLevelObjectiveClient(object):
         create_parser = verb_parsers.add_parser("create", help="Create a SLO")
         create_parser.add_argument(
             "--type",
-            required=True,
             help="type of the SLO, e.g.",
             choices=["metric", "monitor"],
         )
@@ -47,7 +46,6 @@ class ServiceLevelObjectiveClient(object):
         create_parser.add_argument(
             "--thresholds",
             help="comma separated list of <timeframe>:<target>[:<warning>[:<target_display>[:<warning_display>]]",
-            required=True,
         )
         create_parser.add_argument(
             "--numerator",
@@ -90,7 +88,6 @@ class ServiceLevelObjectiveClient(object):
         )
         update_parser.add_argument(
             "--type",
-            required=True,
             help="type of the SLO (must specify it's original type)",
             choices=["metric", "monitor"],
         )
@@ -101,7 +98,6 @@ class ServiceLevelObjectiveClient(object):
         update_parser.add_argument(
             "--thresholds",
             help="comma separated list of <timeframe>:<target>[:<warning>[:<target_display>[:<warning_display>]]",
-            required=True,
         )
         update_parser.add_argument(
             "--tags",
@@ -183,7 +179,6 @@ class ServiceLevelObjectiveClient(object):
         delete_timeframe_parser.add_argument(
             "timeframes",
             help="CSV of timeframes to delete, e.g. 7d,30d,90d",
-            required=True,
             type=comma_set,
         )
         delete_timeframe_parser.set_defaults(func=cls._delete_timeframe)
@@ -200,13 +195,11 @@ class ServiceLevelObjectiveClient(object):
         history_parser.add_argument("slo_id", help="SLO to query the history")
         history_parser.add_argument(
             "from_ts",
-            required=True,
             type=parse_date_as_epoch_timestamp,
             help="`from` date or timestamp",
         )
         history_parser.add_argument(
             "to_ts",
-            required=True,
             type=parse_date_as_epoch_timestamp,
             help="`to` date or timestamp",
         )
