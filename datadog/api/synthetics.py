@@ -179,11 +179,14 @@ class Synthetics(
         return super(Synthetics, cls).update(id=id, synthetics=True, **params)
 
     @classmethod
-    def pause_test(cls, id, **body):
+    def start_or_pause_test(cls, id, **body):
         """
         Pause a given test
 
         :param id: public id of the test to pause
+        :type id: string
+
+        :param new_status: mew status for the test
         :type id: string
 
         :returns: Dictionary representing the API's JSON response
