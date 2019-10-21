@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from argparse import ArgumentTypeError
 import json
 import re
-from format import force_to_epoch_seconds
+from datadog.util.format import force_to_epoch_seconds
 
 
 def comma_list(list_str, item_func=None):
@@ -56,6 +56,7 @@ def set_of_ints(int_csv):
 
 
 ## Date handling
+
 
 class DateParsingError(Exception):
     """Thrown if parse_date exhausts all possible parsings of a string"""
