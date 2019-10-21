@@ -55,9 +55,6 @@ def set_of_ints(int_csv):
     return set(list_of_ints(int_csv))
 
 
-## Date handling
-
-
 class DateParsingError(Exception):
     """Thrown if parse_date exhausts all possible parsings of a string"""
 
