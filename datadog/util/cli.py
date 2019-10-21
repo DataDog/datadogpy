@@ -1,5 +1,8 @@
+from datetime import datetime, timedelta
 from argparse import ArgumentTypeError
 import json
+import re
+from format import force_to_epoch_seconds
 
 
 def comma_list(list_str, item_func=None):
@@ -50,3 +53,84 @@ def list_of_ints_and_strs(csv):
 
 def set_of_ints(int_csv):
     return set(list_of_ints(int_csv))
+
+
+## Date handling
+
+class DateParsingError(Exception):
+    """Thrown if parse_date exhausts all possible parsings of a string"""
+
+
+_date_fieldre = re.compile(r"(\d+)\s?(\w+) (ago|ahead)")
+
+
+def _midnight():
+    """ Truncate a date to midnight. Default to UTC midnight today."""
+    return datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def parse_date_as_epoch_timestamp(date_str):
+    return force_to_epoch_seconds(parse_date(date_str))
+
+
+def parse_date(date_str):
+    if isinstance(date_str, datetime):
+        return date_str
+
+    # Parse relative dates.
+    if date_str == "today":
+        return _midnight()
+    elif date_str == "yesterday":
+        return _midnight() - timedelta(days=1)
+    elif date_str == "tomorrow":
+        return _midnight() + timedelta(days=1)
+    elif date_str.endswith(("ago", "ahead")):
+        m = _date_fieldre.match(date_str)
+        if m:
+            fields = m.groups()
+        else:
+            fields = date_str.split(" ")[1:]
+        num = int(fields[0])
+        short_unit = fields[1]
+        time_direction = {"ago": -1, "ahead": 1}[fields[2]]
+        assert short_unit, short_unit
+        units = ["weeks", "days", "hours", "minutes", "seconds"]
+        # translate 'h' -> 'hours'
+        short_units = dict([(u[:1], u) for u in units])
+        unit = short_units.get(short_unit, short_unit)
+        # translate 'hour' -> 'hours'
+        if unit[-1] != "s":
+            unit += "s"  # tolerate 1 hour
+        assert unit in units, "'%s' not in %s" % (unit, units)
+        return datetime.utcnow() + time_direction * timedelta(**{unit: num})
+    elif date_str == "now":
+        return datetime.utcnow()
+
+    def _from_epoch_timestamp(seconds):
+        return datetime.utcfromtimestamp(float(seconds))
+
+    def _from_epoch_ms_timestamp(millis):
+        in_sec = float(millis) / 1000.0
+        return _from_epoch_timestamp(in_sec)
+
+    # Or parse date formats (most specific to least specific)
+    parse_funcs = [
+        lambda d: datetime.strptime(d, "%Y-%m-%d %H:%M:%S.%f"),
+        lambda d: datetime.strptime(d, "%Y-%m-%d %H:%M:%S"),
+        lambda d: datetime.strptime(d, "%Y-%m-%dT%H:%M:%S.%f"),
+        lambda d: datetime.strptime(d, "%Y-%m-%dT%H:%M:%S"),
+        lambda d: datetime.strptime(d, "%Y-%m-%d %H:%M"),
+        lambda d: datetime.strptime(d, "%Y-%m-%d-%H"),
+        lambda d: datetime.strptime(d, "%Y-%m-%d"),
+        lambda d: datetime.strptime(d, "%Y-%m"),
+        lambda d: datetime.strptime(d, "%Y"),
+        _from_epoch_timestamp,  # an epoch in seconds
+        _from_epoch_ms_timestamp,  # an epoch in milliseconds
+    ]
+
+    for parse_func in parse_funcs:
+        try:
+            return parse_func(date_str)
+        except Exception:
+            pass
+    raise DateParsingError(u"Could not parse {0} as date".format(date_str))

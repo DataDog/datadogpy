@@ -1,3 +1,4 @@
+from datadog.util.format import force_to_epoch_seconds
 from datadog.api.resources import (
     GetableAPIResource,
     CreateableAPIResource,
@@ -135,5 +136,58 @@ class ServiceLevelObjective(
             "",
             params=params,
             body={"ids": ids},
+            suppress_response_errors_on_codes=[200],
+        )
+
+    @classmethod
+    def can_delete(cls, ids, **params):
+        """
+        Check if the following SLOs can be safely deleted.
+
+        This is used to check if SLO has any references to it.
+
+        :param ids: a list of SLO IDs to check
+        :type ids: list(str)
+
+        :returns: Dictionary representing the API's JSON response
+                  "data.ok" represents a list of SLO ids that have no known references.
+                  "errors" contains a dictionary of SLO ID to known reference(s).
+        """
+        params["ids"] = ids
+        return super(ServiceLevelObjective, cls)._trigger_class_action(
+            "GET",
+            "can_delete",
+            params=params,
+            body=None,
+            suppress_response_errors_on_codes=[200],
+        )
+
+    @classmethod
+    def history(cls, id, from_ts, to_ts, **params):
+        """
+        Get the SLO's history from the given time range.
+
+        :param id: SLO ID to query
+        :type id: str
+
+        :param from_ts: `from` timestamp in epoch seconds to query
+        :type from_ts: int|datetime.datetime
+
+        :param to_ts: `to` timestamp in epoch seconds to query, must be > `from_ts`
+        :type to_ts: int|datetime.datetime
+
+        :returns: Dictionary representing the API's JSON response
+                  "data.ok" represents a list of SLO ids that have no known references.
+                  "errors" contains a dictionary of SLO ID to known reference(s).
+        """
+        params["id"] = id
+        params["from_ts"] = force_to_epoch_seconds(from_ts)
+        params["to_ts"] = force_to_epoch_seconds(to_ts)
+        return super(ServiceLevelObjective, cls)._trigger_class_action(
+            "GET",
+            "history",
+            id=id,
+            params=params,
+            body=None,
             suppress_response_errors_on_codes=[200],
         )
