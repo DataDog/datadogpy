@@ -98,7 +98,7 @@ class ServiceLevelObjectiveClient(object):
         update_parser.add_argument(
             "--description", help="description of the SLO", default=None
         )
-        create_parser.add_argument(
+        update_parser.add_argument(
             "--thresholds",
             help="comma separated list of <timeframe>:<target>[:<warning>[:<target_display>[:<warning_display>]]",
             required=True,
