@@ -14,14 +14,10 @@ class TestSynthetics:
     def setup_class(cls):
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
 
-    def test_api_test(self):
-        """
-        create, update and delete an API test
-        """
-
+    def test_crud_test(self):
         options_api = {"tick_every": 300}
         config_api = {
-            "assertions": [{"operator": "is", "type": "statusCode", "target": 403}],
+            "assertions": [{"operator": "is", "type": "statusCode", "target": 200}],
             "request": {"method": "GET", "url": "https://example.com", "timeout": 300},
         }
 
@@ -37,90 +33,47 @@ class TestSynthetics:
         )
 
         # test that it is live
-        assert output is not None
         assert len(output) > 1
         assert "public_id" in output
         assert output.get("status") == "live"
 
-        test_id = output.get("public_id")
-
+        public_test_id = output["public_id"]
         # get this newly created test
-        output = dog.Synthetics.get_test(id=test_id)
+        output = dog.Synthetics.get_test(id=public_test_id)
         assert "public_id" in output
         assert output["status"] == "live"
 
         # test that we can retrieve results_ids
-        output = dog.Synthetics.get_results(id=test_id)
+        output = dog.Synthetics.get_results(id=public_test_id)
         assert output["results"] is not None
 
         # edit the test
-        config_api['assertions'] = [{"operator": "is_not", "type": "statusCode", "target": 404}]
+        config_api['assertions'] = [{"operator": "isNot", "type": "statusCode", "target": 404}]
         config_api['name'] = "Test with API edited"
+        options_api = {"tick_every": 60}
 
-        output = dog.Synthetics.edit_test(test_id, config=config_api)
+        output = dog.Synthetics.edit_test(id=public_test_id, config=config_api, type='api', locations=["aws:us-west-2"],
+                                          message="Test API edited", name="Test with API edited",
+                                          options=options_api, tags=["test:edited"])
         assert output is not None
 
-        output = dog.Synthetics.get_locations()
-        assert len(output) > 1
+        # pause the test
+        # output = dog.Synthetics.pause_test(id=public_test_id, new_status="paused")
+        # assert output["status"] == "paused"
 
-        # cleanup
-        output = dog.Synthetics.delete_test(public_ids=[test_id])
+        # delete the test
+        output = dog.Synthetics.delete_test(public_ids=[public_test_id])
+        assert output["deleted_tests"] is not None
 
-
-    def test_browser_test(self):
-        """
-        create, update and delete an API test
-        """
-
-        options_browser = {"device_ids": ["laptop_large"], "tick_every": 3600}
-        config_browser = {
-            "assertions": [{"operator": "is not", "type": "statusCode", "target": 403}],
-            "request": {"method": "GET", "url": "https://example.com", "timeout": 60},
-        }
-
-        output = dog.Synthetics.create(
-            config=config_browser,
-            locations=["aws:us-east-2"],
-            message="Test browser",
-            options=options_browser,
-            tags=["test:synthetics"],
-            type="browser",
-            name="Test with Browser"
-        )
-
-        # test that it is paused
-        assert output is not None
-        assert len(output) > 1
-        assert "public_id" in output
-        # the test is paused upon creation
-        assert output["status"] == "paused"
-
-        test_id = output.get("public_id")
-
-        # get this newly created test
-        output = dog.Synthetics.get_test(id=test_id)
-        assert "public_id" in output
-
-        # test that we can retrieve results_ids
-        output = dog.Synthetics.get_results(id=test_id)
-        assert output["results"] is not None
-
-        # edit the test
-        config_browser['assertions'] = [{"operator": "is not", "type": "statusCode", "target": 404}]
-        config_browser['name'] = "Test with Browser edited"
-
-        output = dog.Synthetics.edit_test(id=test_id, config=config_browser)
-        assert output is not None
-
-        # cleanup
-        dog.Synthetics.delete_test(public_ids=[test_id])
+    def test_get_all_tests(self):
+        output = dog.Synthetics.get_all_tests()
+        assert len(output) >= 1
 
     def test_get_locations(self):
         output = dog.Synthetics.get_locations()
-        assert output is not None
         assert len(output) == 1
+        assert len(output["locations"]) >= 10
 
     def test_get_devices(self):
         output = dog.Synthetics.get_devices()
-        assert output is not None
         assert len(output) == 1

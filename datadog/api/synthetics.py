@@ -176,12 +176,10 @@ class Synthetics(
 
         # API path = "synthetics/tests/<public_test_id>"
 
-        cls._resource_name = cls._resource_name + "/tests"
-
-        return super(Synthetics, cls).update(id=id, **params)
+        return super(Synthetics, cls).update(id=id, synthetics=True, **params)
 
     @classmethod
-    def pause_test(cls, id, **params):
+    def pause_test(cls, id, **body):
         """
         Pause a given test
 
@@ -193,7 +191,7 @@ class Synthetics(
 
         # API path = "synthetics/tests/<public_test_id>/status"
 
-        return super(Synthetics, cls).update_items(id=id, synthetics=True, **params)
+        return super(Synthetics, cls).update_items(id=id, synthetics=True, **body)
 
     @classmethod
     def delete_test(cls, **body):
@@ -211,11 +209,6 @@ class Synthetics(
 
         # API path = "synthetics/tests/delete
 
-        path = "delete"
-
         # Need to provide a list of public tests IDs
 
-        params = {}
-        params["public_ids"] = body.get("public_ids")
-
-        return super(Synthetics, cls)._trigger_class_action("POST", path, params=params)
+        return super(Synthetics, cls)._trigger_action("POST", name='synthetics', id='tests/delete', **body)

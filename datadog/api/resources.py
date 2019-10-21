@@ -99,7 +99,7 @@ class UpdatableAPIResource(object):
     Updatable API Resource
     """
     @classmethod
-    def update(cls, id, params=None, **body):
+    def update(cls, id, synthetics=False, params=None, **body):
         """
         Update an API resource object
 
@@ -114,10 +114,16 @@ class UpdatableAPIResource(object):
         if params is None:
             params = {}
 
-        path = '{resource_name}/{resource_id}'.format(
-            resource_name=cls._resource_name,
-            resource_id=id
-        )
+        if synthetics:
+            path = '{resource_name}/tests/{resource_id}'.format(
+                resource_name=cls._resource_name,
+                resource_id=id
+            )
+        else:
+            path = '{resource_name}/{resource_id}'.format(
+                resource_name=cls._resource_name,
+                resource_id=id
+            )
         api_version = getattr(cls, '_api_version', None)
 
         return APIClient.submit('PUT', path, api_version, body, **params)
@@ -301,7 +307,7 @@ class DeletableAPISubResource(object):
     """
 
     @classmethod
-    def delete_items(cls, id, params=None, **body):
+    def delete_items(cls, id, params=None, synthetics=False, **body):
         """
         Delete API sub-resource objects from a resource
 
