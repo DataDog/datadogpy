@@ -4,12 +4,16 @@ from datadog.api.resources import (
     ActionAPIResource,
     GetableAPIResource,
     UpdatableAPIResource,
-    UpdatableAPISubResource
+    UpdatableAPISubResource,
 )
 
 
 class Synthetics(
-    ActionAPIResource, CreateableAPIResource, GetableAPIResource, UpdatableAPIResource, UpdatableAPISubResource
+    ActionAPIResource,
+    CreateableAPIResource,
+    GetableAPIResource,
+    UpdatableAPIResource,
+    UpdatableAPISubResource,
 ):
     """
     A wrapper around Sythetics HTTP API.
@@ -33,21 +37,14 @@ class Synthetics(
 
         name = "tests"
 
-        return super(Synthetics, cls)._trigger_class_action("GET", id=id, synthetics=True, name=name, params=params)
+        return super(Synthetics, cls)._trigger_class_action(
+            "GET", id=id, synthetics=True, name=name, params=params
+        )
 
     @classmethod
     def get_all_tests(cls, **params):
         """
         Get all tests' details.
-
-        :param locations: locations to filter the list of tests by
-        :type locatons: string list
-
-        :param name: name to filter the list of tests by
-        :type name: string
-
-        :param tags: tags to filter the list of tests by scope
-        :type tags: string list
 
         :returns: Dictionary representing the API's JSON response
         """
@@ -58,7 +55,7 @@ class Synthetics(
 
         # API path = "synthetics/tests"
 
-        return super(Synthetics, cls).get(id='tests', params=params)
+        return super(Synthetics, cls).get(id="tests", params=params)
 
     @classmethod
     def get_devices(cls, **params):
@@ -72,7 +69,9 @@ class Synthetics(
 
         name = "browser/devices"
 
-        return super(Synthetics, cls)._trigger_class_action("GET", synthetics=False, name=name, params=params)
+        return super(Synthetics, cls)._trigger_class_action(
+            "GET", synthetics=False, name=name, params=params
+        )
 
     @classmethod
     def get_locations(cls, **params):
@@ -84,7 +83,11 @@ class Synthetics(
 
         name = "locations"
 
-        return super(Synthetics, cls)._trigger_class_action("GET", synthetics=False, name=name, params=params)
+        # API path = "synthetics/locations
+
+        return super(Synthetics, cls)._trigger_class_action(
+            "GET", synthetics=False, name=name, params=params
+        )
 
     @classmethod
     def get_results(cls, id, **params):
@@ -161,7 +164,7 @@ class Synthetics(
 
         # API path = "synthetics/tests"
 
-        return super(Synthetics, cls).create(id='tests', **params)
+        return super(Synthetics, cls).create(id="tests", **params)
 
     @classmethod
     def edit_test(cls, id, **params):
@@ -212,6 +215,6 @@ class Synthetics(
 
         # API path = "synthetics/tests/delete
 
-        # Need to provide a list of public tests IDs
-
-        return super(Synthetics, cls)._trigger_action("POST", name='synthetics', id='tests/delete', **body)
+        return super(Synthetics, cls)._trigger_action(
+            "POST", name="synthetics", id="tests/delete", **body
+        )

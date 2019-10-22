@@ -9,29 +9,44 @@ API_HOST = os.environ.get("DATADOG_HOST")
 
 
 class TestSynthetics:
-
     @classmethod
     def setup_class(cls):
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
-        
-        cls.options_api = {"tick_every": 300}
-        cls.config_api = {
+
+        # config and options for an API test
+        cls.options = {"tick_every": 300}
+        cls.config = {
             "assertions": [{"operator": "is", "type": "statusCode", "target": 200}],
             "request": {"method": "GET", "url": "https://example.com", "timeout": 300},
         }
 
-        # create a test
+        # config and option for a Browser test
+        cls.options_browser = {"device_ids": ["laptop_large"], "tick_every": 900}
+
+        # create an API test
         cls.output = dog.Synthetics.create_test(
-            config=cls.config_api,
+            config=cls.config,
             locations=["aws:us-east-2"],
             message="Test API",
-            options=cls.options_api,
-            tags=["test:synthetics"],
+            options=cls.options,
+            tags=["test:synthetics_api"],
             type="api",
-            name="Test with API"
+            name="Test with API",
+        )
+
+        # create a Browser test
+        cls.output_browser = dog.Synthetics.create_test(
+            config=cls.config,
+            locations=["aws:us-east-2"],
+            message="Test Browser",
+            options=cls.options_browser,
+            tags=["test:synthetics_browser"],
+            type="browser",
+            name="Test with Browser",
         )
 
         cls.public_test_id = cls.output["public_id"]
+        cls.public_test_id_browser = cls.output_browser["public_id"]
 
     @classmethod
     def teardown_class(cls):
@@ -42,32 +57,68 @@ class TestSynthetics:
             cls.public_ids_test_to_delete.append(test["public_id"])
         dog.Synthetics.delete_test(public_ids=cls.public_ids_test_to_delete)
 
-    def test_api_test(cls):
-        # test that the test is live
+    def test_get_update_pause_test(cls):
+        # test that both tests are live
         assert len(cls.output) > 1
         assert "public_id" in cls.output
         assert cls.output["status"] == "live"
+        assert len(cls.output_browser) > 1
+        assert "public_id" in cls.output_browser
+        assert cls.output_browser["status"] == "paused"
 
-        # get this newly created test
-        output = dog.Synthetics.get_test(id=cls.public_test_id)
-        assert "public_id" in output
-        assert output["status"] == "live"
+        # get this newly created tests
+        output_api = dog.Synthetics.get_test(id=cls.public_test_id)
+        assert "public_id" in output_api
+        assert output_api["status"] == "live"
+        output_browser = dog.Synthetics.get_test(id=cls.public_test_id_browser)
+        assert "public_id" in output_browser
+        assert output_browser["status"] == "paused"
 
         # test that we can retrieve results_ids
-        output = dog.Synthetics.get_results(id=cls.public_test_id)
-        assert output["results"] is not None
+        output_api = dog.Synthetics.get_results(id=cls.public_test_id)
+        assert output_api["results"] is not None
+        output_browser = dog.Synthetics.get_results(id=cls.public_test_id_browser)
+        assert output_browser["results"] is not None
 
-        # edit the test
-        cls.options_api = {"tick_every": 60}
-        cls.config_api['assertions'] = [{"operator": "isNot", "type": "statusCode", "target": 404}]
+        # edit the API test
+        cls.options = {"tick_every": 60}
+        cls.config["assertions"] = [
+            {"operator": "isNot", "type": "statusCode", "target": 404}
+        ]
 
-        output = dog.Synthetics.edit_test(id=cls.public_test_id, config=cls.config_api, type='api',
-                                          locations=["aws:us-west-2"],
-                                          message="Test API edited", name="Test with API edited",
-                                          options=cls.options_api, tags=["test:edited"])
+        output = dog.Synthetics.edit_test(
+            id=cls.public_test_id,
+            config=cls.config,
+            type="api",
+            locations=["aws:us-west-2"],
+            message="Test API edited",
+            name="Test with API edited",
+            options=cls.options,
+            tags=["test:edited"],
+        )
         assert "error" not in output
         # test that the new name matches
         assert output["name"] == "Test with API edited"
+
+        # edit the Browser test
+        cls.config["assertions"] = [
+            {"operator": "isNot", "type": "statusCode", "target": 404}
+        ]
+        cls.options_browser = {"device_ids": ["tablet"], "tick_every": 1800}
+
+        output = dog.Synthetics.edit_test(
+            id=cls.public_test_id,
+            config=cls.config,
+            type="api",
+            locations=["aws:us-west-2"],
+            message="Test Browser edited",
+            name="Test Browser edited",
+            options=cls.options_browser,
+            tags=["test:edited"],
+        )
+        assert "error" not in output
+        # test that the new name matches
+        assert output["name"] == "Test Browser edited"
 
         # pause the test
         # output = dog.Synthetics.start_or_pause_test(id=public_test_id, new_status="paused")
