@@ -11,6 +11,9 @@ import pytest
 from datadog import api as dog
 from datadog import initialize
 
+from datadog.api.exceptions import ApiError
+
+
 TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
 API_KEY = os.environ.get("DD_TEST_CLIENT_API_KEY", "a" * 32)
 APP_KEY = os.environ.get("DD_TEST_CLIENT_APP_KEY", "a" * 40)
@@ -116,6 +119,12 @@ class TestDatadog:
         event = get_with_retry("Event", event_id)
         assert not event["event"]["host"]
         assert event["event"]["alert_type"] == "success"
+
+        with pytest.raises(ApiError) as excinfo:
+            dog.Event.create(
+                title="test no hostname", text="test no hostname", attach_host_name=False, alert_type="wrong_type"
+            )
+        assert "Parameter alert_type must be either error, warning, info or success" in str(excinfo.value)
 
         event = dog.Event.create(title="test tags", text="test tags", tags=["test_tag:1", "test_tag:2"])
         assert "test_tag:1" in event["event"]["tags"]
