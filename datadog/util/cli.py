@@ -73,7 +73,6 @@ def parse_date_as_epoch_timestamp(date_str):
 
 
 def parse_date(date_str):
-    print("type: {} - {}".format(type(date_str), date_str))
     if isinstance(date_str, datetime):
         return date_str
     elif isinstance(date_str, time.struct_time):
