@@ -3,6 +3,7 @@ from argparse import ArgumentTypeError
 import json
 import re
 from datadog.util.format import force_to_epoch_seconds
+import time
 
 
 def comma_list(list_str, item_func=None):
@@ -72,8 +73,11 @@ def parse_date_as_epoch_timestamp(date_str):
 
 
 def parse_date(date_str):
+    print("type: {} - {}".format(type(date_str), date_str))
     if isinstance(date_str, datetime):
         return date_str
+    elif isinstance(date_str, time.struct_time):
+        return datetime.fromtimestamp(time.mktime(date_str))
 
     # Parse relative dates.
     if date_str == "today":
