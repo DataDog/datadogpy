@@ -1,7 +1,7 @@
+from datadog.api.exceptions import ApiError
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
     SearchableAPIResource
 from datadog.util.compat import iteritems
-from datadog.api.exceptions import ApiError
 
 
 class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
