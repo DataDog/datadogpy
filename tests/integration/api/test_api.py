@@ -11,8 +11,6 @@ import pytest
 from datadog import api as dog
 from datadog import initialize
 
-from datadog.api.exceptions import ApiError
-
 
 TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
 API_KEY = os.environ.get("DD_TEST_CLIENT_API_KEY", "a" * 32)
