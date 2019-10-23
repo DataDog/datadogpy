@@ -151,8 +151,8 @@ class TestCLI(unittest.TestCase):
             self.assertEqual(
                 expected,
                 actual,
-                "case {}: failed, date_str={} expected={}".format(
-                    i, date_str, expected
+                "case {}: failed, date_str={} expected={} actual={}".format(
+                    i, date_str, expected, actual
                 ),
             )
 
@@ -190,11 +190,12 @@ class TestCLI(unittest.TestCase):
 
         for i, (date_str, expected) in enumerate(cases):
             actual = parse_date_as_epoch_timestamp(date_str)
+            expected_timestamp = calendar.timegm(expected.utctimetuple())
             self.assertEqual(
-                calendar.timegm(expected.utctimetuple()),
+                expected_timestamp,
                 actual,
-                "case {}: failed, date_str={} expected={}".format(
-                    i, date_str, expected
+                "case {}: failed, date_str={} expected={} actual={}".format(
+                    i, date_str, expected_timestamp, actual
                 ),
             )
 
