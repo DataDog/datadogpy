@@ -69,22 +69,26 @@ def _midnight():
 
 
 def parse_date_as_epoch_timestamp(date_str):
-    return force_to_epoch_seconds(parse_date(date_str))
+    return parse_date(date_str, to_epoch_ts=True)
 
 
-def parse_date(date_str):
+def parse_date(date_str, to_epoch_ts=False):
+    formatter = lambda d: d
+    if to_epoch_ts:
+        formatter = lambda d: force_to_epoch_seconds(d)
+
     if isinstance(date_str, datetime):
-        return date_str
+        return formatter(date_str)
     elif isinstance(date_str, time.struct_time):
-        return datetime.fromtimestamp(time.mktime(date_str))
+        return formatter(datetime.fromtimestamp(time.mktime(date_str)))
 
     # Parse relative dates.
     if date_str == "today":
-        return _midnight()
+        return formatter(_midnight())
     elif date_str == "yesterday":
-        return _midnight() - timedelta(days=1)
+        return formatter(_midnight() - timedelta(days=1))
     elif date_str == "tomorrow":
-        return _midnight() + timedelta(days=1)
+        return formatter(_midnight() + timedelta(days=1))
     elif date_str.endswith(("ago", "ahead")):
         m = _date_fieldre.match(date_str)
         if m:
@@ -103,15 +107,18 @@ def parse_date(date_str):
         if unit[-1] != "s":
             unit += "s"  # tolerate 1 hour
         assert unit in units, "'%s' not in %s" % (unit, units)
-        return datetime.utcnow() + time_direction * timedelta(**{unit: num})
+        return formatter(datetime.utcnow() + time_direction * timedelta(**{unit: num}))
     elif date_str == "now":
-        return datetime.utcnow()
+        return formatter(datetime.utcnow())
 
     def _from_epoch_timestamp(seconds):
+        print("_from_epoch_timestamp({})".format(seconds))
         return datetime.utcfromtimestamp(float(seconds))
 
     def _from_epoch_ms_timestamp(millis):
+        print("_from_epoch_ms_timestamp({})".format(millis))
         in_sec = float(millis) / 1000.0
+        print("_from_epoch_ms_timestamp({}) -> {}".format(millis, in_sec))
         return _from_epoch_timestamp(in_sec)
 
     # Or parse date formats (most specific to least specific)
@@ -131,7 +138,7 @@ def parse_date(date_str):
 
     for parse_func in parse_funcs:
         try:
-            return parse_func(date_str)
+            return formatter(parse_func(date_str))
         except Exception:
             pass
     raise DateParsingError(u"Could not parse {0} as date".format(date_str))
