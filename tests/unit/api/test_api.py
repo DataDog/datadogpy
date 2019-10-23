@@ -614,7 +614,7 @@ class TestMetricResource(DatadogAPIWithInitialization):
         m_long = int(1)  # long in Python 3.x
 
         if not is_p3k():
-            m_long = long(1)
+            m_long = long(1)  # noqa: F821
 
         supported_data_types = [1, 1.0, m_long, Decimal(1), Fraction(1, 2)]
 
@@ -627,23 +627,55 @@ class TestMetricResource(DatadogAPIWithInitialization):
         Metric and Distribution support zlib compression
         """
 
-        series = dict(metric='metric.1', points=[(time(), 13.)])
+        # By default, there is no compression
+        # Metrics
+        series = dict(metric="metric.1", points=[(time(), 13.)])
+        Metric.send(attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" not in headers
+        assert req_data == json.dumps({"series": [series]})
+        # Same result when explicitely False
+        Metric.send(compress_payload=False, attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" not in headers
+        assert req_data == json.dumps({"series": [series]})
+        # Distributions
+        series = dict(metric="metric.1", points=[(time(), 13.)])
+        Distribution.send(attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" not in headers
+        assert req_data == json.dumps({"series": [series]})
+        # Same result when explicitely False
+        Distribution.send(compress_payload=False, attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" not in headers
+        assert req_data == json.dumps({"series": [series]})
+
+        # Enabling compression
+        # Metrics
+        series = dict(metric="metric.1", points=[(time(), 13.)])
         compressed_series = zlib.compress(json.dumps({"series": [series]}).encode("utf-8"))
         Metric.send(compress_payload=True, attach_host_name=False, **series)
-
         _, kwargs = self.request_mock.call_args()
-        req_data = kwargs['data']
+        req_data = kwargs["data"]
         headers = kwargs["headers"]
         assert "Content-Encoding" in headers
         assert headers["Content-Encoding"] == "deflate"
         assert req_data == compressed_series
-
+        # Distributions
         series = dict(metric='metric.1', points=[(time(), 13.)])
-        compressed_series = zlib.compress(bytes(json.dumps({"series": [series]}).encode("utf-8")))
+        compressed_series = zlib.compress(json.dumps({"series": [series]}).encode("utf-8"))
         Distribution.send(compress_payload=True, attach_host_name=False, **series)
-
         _, kwargs = self.request_mock.call_args()
-        req_data = kwargs['data']
+        req_data = kwargs["data"]
         headers = kwargs["headers"]
         assert "Content-Encoding" in headers
         assert headers["Content-Encoding"] == "deflate"
