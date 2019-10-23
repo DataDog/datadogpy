@@ -120,13 +120,15 @@ class TestSynthetics:
         # test that the new name matches
         assert output["name"] == "Test Browser edited"
 
-        # pause the test
-        # output = dog.Synthetics.start_or_pause_test(id=public_test_id, new_status="paused")
-        # assert output["status"] == "paused"
+        # pause the API test
+        output = dog.Synthetics.start_or_pause_test(id=cls.public_test_id, new_status="paused")
+        # output is a boolean
+        assert output == True
 
     def test_get_all_tests(self):
         output = dog.Synthetics.get_all_tests()
-        assert len(output) >= 1
+        # 2 tests were created
+        assert len(output) >= 2
 
     def test_get_locations(self):
         output = dog.Synthetics.get_locations()

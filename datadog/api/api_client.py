@@ -178,6 +178,9 @@ class APIClient(object):
                     # suppress ApiError when specified and just return the response
                     if not (suppress_response_errors_on_codes and
                             result.status_code in suppress_response_errors_on_codes):
+                # response_obj can be a bool and not a dict
+                if not isinstance(response_obj, bool):
+                    if response_obj and 'errors' in response_obj:
                         raise ApiError(response_obj)
             else:
                 response_obj = None
