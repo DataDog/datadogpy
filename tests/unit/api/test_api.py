@@ -6,12 +6,13 @@ import tempfile
 from time import time
 
 # 3p
-import mock
+import mock, pytest
 
 # datadog
 from datadog import initialize, api, util
 from datadog.api import (
     Distribution,
+    Event,
     Metric,
     ServiceCheck,
     User
@@ -482,6 +483,19 @@ class TestResources(DatadogAPIWithInitialization):
         )
         _, kwargs = self.request_mock.call_args()
         self.assertIsNone(kwargs["data"])
+
+
+class TestEventResource(DatadogAPIWithInitialization):
+
+    def test_submit_event_wrong_alert_type(self):
+        """
+        Assess that an event submitted with a wrong alert_type raises the correct Exception
+        """
+        with pytest.raises(ApiError) as excinfo:
+            Event.create(
+                title="test no hostname", text="test no hostname", attach_host_name=False, alert_type="wrong_type"
+            )
+        assert "Parameter alert_type must be either error, warning, info or success" in str(excinfo.value)
 
 
 class TestMetricResource(DatadogAPIWithInitialization):

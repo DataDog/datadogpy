@@ -120,12 +120,6 @@ class TestDatadog:
         assert not event["event"]["host"]
         assert event["event"]["alert_type"] == "success"
 
-        with pytest.raises(ApiError) as excinfo:
-            dog.Event.create(
-                title="test no hostname", text="test no hostname", attach_host_name=False, alert_type="wrong_type"
-            )
-        assert "Parameter alert_type must be either error, warning, info or success" in str(excinfo.value)
-
         event = dog.Event.create(title="test tags", text="test tags", tags=["test_tag:1", "test_tag:2"])
         assert "test_tag:1" in event["event"]["tags"]
         assert "test_tag:2" in event["event"]["tags"]
