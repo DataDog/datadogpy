@@ -72,10 +72,15 @@ def parse_date_as_epoch_timestamp(date_str):
     return parse_date(date_str, to_epoch_ts=True)
 
 
+def _parse_date_noop_formatter(d):
+    """ NOOP - only here for pylint """
+    return d
+
+
 def parse_date(date_str, to_epoch_ts=False):
-    formatter = lambda d: d
+    formatter = _parse_date_noop_formatter
     if to_epoch_ts:
-        formatter = lambda d: force_to_epoch_seconds(d)
+        formatter = force_to_epoch_seconds
 
     if isinstance(date_str, datetime):
         return formatter(date_str)
