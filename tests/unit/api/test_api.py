@@ -148,7 +148,8 @@ class TestInitialization(DatadogAPINoInitialization):
         self.assertEqual(options['headers']['Content-Type'], 'application/json')
         self.assertEqual(options['headers']['DD-API-KEY'], API_KEY)
         self.assertEqual(options['headers']['DD-APPLICATION-KEY'], APP_KEY)
-
+        self.assertIsNone(options['params'].get('api_key'))
+        self.assertIsNone(options['params'].get('application_key'))
 
     def test_request_parameters_api_keys_in_params(self):
         """
@@ -172,8 +173,8 @@ class TestInitialization(DatadogAPINoInitialization):
         self.assertEqual(options['headers']['Content-Type'], 'application/json')
         self.assertEqual(options['params']['api_key'], API_KEY)
         self.assertEqual(options['params']['application_key'], APP_KEY)
-
-
+        self.assertIsNone(options['headers'].get('DD-API-KEY'))
+        self.assertIsNone(options['headers'].get('DD-APPLICATION-KEY'))
 
     def test_initialize_options(self):
         """
