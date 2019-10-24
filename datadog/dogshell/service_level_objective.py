@@ -3,7 +3,12 @@ import argparse
 import json
 
 # 3p
-from datadog.util.cli import set_of_ints, comma_set, comma_list_or_empty
+from datadog.util.cli import (
+    set_of_ints,
+    comma_set,
+    comma_list_or_empty,
+    parse_date_as_epoch_timestamp,
+)
 from datadog.util.format import pretty_json
 
 # datadog
@@ -11,7 +16,7 @@ from datadog import api
 from datadog.dogshell.common import report_errors, report_warnings
 
 
-class MonitorClient(object):
+class ServiceLevelObjectiveClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
         parser = subparsers.add_parser(
@@ -25,7 +30,6 @@ class MonitorClient(object):
         create_parser = verb_parsers.add_parser("create", help="Create a SLO")
         create_parser.add_argument(
             "--type",
-            required=True,
             help="type of the SLO, e.g.",
             choices=["metric", "monitor"],
         )
@@ -42,7 +46,6 @@ class MonitorClient(object):
         create_parser.add_argument(
             "--thresholds",
             help="comma separated list of <timeframe>:<target>[:<warning>[:<target_display>[:<warning_display>]]",
-            required=True,
         )
         create_parser.add_argument(
             "--numerator",
@@ -85,7 +88,6 @@ class MonitorClient(object):
         )
         update_parser.add_argument(
             "--type",
-            required=True,
             help="type of the SLO (must specify it's original type)",
             choices=["metric", "monitor"],
         )
@@ -93,10 +95,9 @@ class MonitorClient(object):
         update_parser.add_argument(
             "--description", help="description of the SLO", default=None
         )
-        create_parser.add_argument(
+        update_parser.add_argument(
             "--thresholds",
             help="comma separated list of <timeframe>:<target>[:<warning>[:<target_display>[:<warning_display>]]",
-            required=True,
         )
         update_parser.add_argument(
             "--tags",
@@ -178,10 +179,31 @@ class MonitorClient(object):
         delete_timeframe_parser.add_argument(
             "timeframes",
             help="CSV of timeframes to delete, e.g. 7d,30d,90d",
-            required=True,
             type=comma_set,
         )
         delete_timeframe_parser.set_defaults(func=cls._delete_timeframe)
+
+        can_delete_parser = verb_parsers.add_parser(
+            "can_delete", help="Check if can delete SLOs"
+        )
+        can_delete_parser.add_argument(
+            "slo_ids", help="comma separated list of SLO IDs to delete", type=comma_set
+        )
+        can_delete_parser.set_defaults(func=cls._can_delete)
+
+        history_parser = verb_parsers.add_parser("history", help="Get the SLO history")
+        history_parser.add_argument("slo_id", help="SLO to query the history")
+        history_parser.add_argument(
+            "from_ts",
+            type=parse_date_as_epoch_timestamp,
+            help="`from` date or timestamp",
+        )
+        history_parser.add_argument(
+            "to_ts",
+            type=parse_date_as_epoch_timestamp,
+            help="`to` date or timestamp",
+        )
+        history_parser.set_defaults(func=cls._history)
 
     @classmethod
     def _create(cls, args):
@@ -393,6 +415,34 @@ class MonitorClient(object):
         ops = {args.slo_id: args.timeframes}
 
         res = api.ServiceLevelObjective.bulk_delete(ops)
+        if res is not None:
+            report_warnings(res)
+            report_errors(res)
+
+            if format == "pretty":
+                print(pretty_json(res))
+            else:
+                print(json.dumps(res))
+
+    @classmethod
+    def _can_delete(cls, args):
+        api._timeout = args.timeout
+
+        res = api.ServiceLevelObjective.can_delete(args.slo_ids)
+        if res is not None:
+            report_warnings(res)
+            report_errors(res)
+
+            if format == "pretty":
+                print(pretty_json(res))
+            else:
+                print(json.dumps(res))
+
+    @classmethod
+    def _history(cls, args):
+        api._timeout = args.timeout
+
+        res = api.ServiceLevelObjective.history(args.slo_id)
         if res is not None:
             report_warnings(res)
             report_errors(res)

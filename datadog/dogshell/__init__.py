@@ -17,6 +17,7 @@ from datadog.dogshell.monitor import MonitorClient
 from datadog.dogshell.screenboard import ScreenboardClient
 from datadog.dogshell.search import SearchClient
 from datadog.dogshell.service_check import ServiceCheckClient
+from datadog.dogshell.service_level_objective import ServiceLevelObjectiveClient
 from datadog.dogshell.tag import TagClient
 from datadog.dogshell.timeboard import TimeboardClient
 from datadog.dogshell.dashboard import DashboardClient
@@ -65,6 +66,7 @@ def main():
     HostClient.setup_parser(subparsers)
     DowntimeClient.setup_parser(subparsers)
     ServiceCheckClient.setup_parser(subparsers)
+    ServiceLevelObjectiveClient.setup_parser(subparsers)
 
     args = parser.parse_args()
     config.load(args.config, args.api_key, args.app_key)
