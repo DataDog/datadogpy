@@ -105,11 +105,14 @@ class APIClient(object):
             if not api_version:
                 api_version = _api_version
 
-            # set api and app keys in params only for some endpoints
+            # set api and app keys in params only for some endpoints and thus remove keys from headers
+            # as they cannot be set in both params and headers
             if cls._set_api_and_app_keys_in_params(api_version, path):
                 params['api_key'] = _api_key
+                del headers['DD-API-KEY']
                 if _application_key:
                     params['application_key'] = _application_key
+                    del headers['DD-APPLICATION-KEY']
 
             # Attach host name to body
             if attach_host_name and body:
