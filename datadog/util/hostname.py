@@ -51,8 +51,8 @@ def get_hostname(hostname_from_config):
     config = None
 
     # first, try the config if hostname_from_config is set to True
-    if hostname_from_config:
-        try:
+    try:
+        if hostname_from_config:
             config = get_config()
             config_hostname = config.get('hostname')
             if config_hostname and is_valid_hostname(config_hostname):
@@ -60,8 +60,8 @@ def get_hostname(hostname_from_config):
                             "in an upcoming version of datadogpy. Set hostname_from_config to False "
                             "to get rid of this warning")
                 return config_hostname
-        except CfgNotFound:
-            log.warning("No agent or invalid configuration file found")
+    except CfgNotFound:
+        log.warning("No agent or invalid configuration file found")
 
     # Try to get GCE instance name
     if hostname is None:
