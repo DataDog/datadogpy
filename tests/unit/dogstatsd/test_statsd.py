@@ -198,7 +198,7 @@ class TestDogStatsd(unittest.TestCase):
         for i in range(10000):
             self.statsd.increment('sampled_counter')
         self.assert_almost_equal(3000, len(self.statsd.socket.payloads), 150)
-        t.assert_equal('sampled_counter:1|c|@0.3', self.recv())
+        assert_equal('sampled_counter:1|c|@0.3', self.recv())
 
     def test_tags_and_samples(self):
         for i in range(100):
