@@ -30,7 +30,7 @@ class DogStatsd(object):
 
     def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, max_buffer_size=50, namespace=None,
                  constant_tags=None, use_ms=False, use_default_route=False,
-                 socket_path=None):
+                 socket_path=None, default_sample_rate=1):
         """
         Initialize a DogStatsd object.
 
@@ -76,6 +76,9 @@ class DogStatsd(object):
         :param socket_path: Communicate with dogstatsd through a UNIX socket instead of
         UDP. If set, disables UDP transmission (Linux only)
         :type socket_path: string
+
+        :param default_sample_rate: Sample rate to use by default for all metrics
+        :type default_sample_rate: float
         """
 
         self.lock = Lock()
@@ -122,6 +125,7 @@ class DogStatsd(object):
             namespace = text(namespace)
         self.namespace = namespace
         self.use_ms = use_ms
+        self.default_sample_rate = default_sample_rate
 
     def __enter__(self):
         self.open_buffer(self.max_buffer_size)
@@ -190,7 +194,7 @@ class DogStatsd(object):
             # Only send packets if there are packets to send
             self._flush_buffer()
 
-    def gauge(self, metric, value, tags=None, sample_rate=1):
+    def gauge(self, metric, value, tags=None, sample_rate=None):
         """
         Record the value of a gauge, optionally setting a list of tags and a
         sample rate.
@@ -200,7 +204,7 @@ class DogStatsd(object):
         """
         return self._report(metric, 'g', value, tags, sample_rate)
 
-    def increment(self, metric, value=1, tags=None, sample_rate=1):
+    def increment(self, metric, value=1, tags=None, sample_rate=None):
         """
         Increment a counter, optionally setting a value, tags and a sample
         rate.
@@ -210,7 +214,7 @@ class DogStatsd(object):
         """
         self._report(metric, 'c', value, tags, sample_rate)
 
-    def decrement(self, metric, value=1, tags=None, sample_rate=1):
+    def decrement(self, metric, value=1, tags=None, sample_rate=None):
         """
         Decrement a counter, optionally setting a value, tags and a sample
         rate.
@@ -221,7 +225,7 @@ class DogStatsd(object):
         metric_value = -value if value else value
         self._report(metric, 'c', metric_value, tags, sample_rate)
 
-    def histogram(self, metric, value, tags=None, sample_rate=1):
+    def histogram(self, metric, value, tags=None, sample_rate=None):
         """
         Sample a histogram value, optionally setting tags and a sample rate.
 
@@ -230,7 +234,7 @@ class DogStatsd(object):
         """
         self._report(metric, 'h', value, tags, sample_rate)
 
-    def distribution(self, metric, value, tags=None, sample_rate=1):
+    def distribution(self, metric, value, tags=None, sample_rate=None):
         """
         Send a global distribution value, optionally setting tags and a sample rate.
 
@@ -241,7 +245,7 @@ class DogStatsd(object):
         """
         self._report(metric, 'd', value, tags, sample_rate)
 
-    def timing(self, metric, value, tags=None, sample_rate=1):
+    def timing(self, metric, value, tags=None, sample_rate=None):
         """
         Record a timing, optionally setting tags and a sample rate.
 
@@ -249,7 +253,7 @@ class DogStatsd(object):
         """
         self._report(metric, 'ms', value, tags, sample_rate)
 
-    def timed(self, metric=None, tags=None, sample_rate=1, use_ms=None):
+    def timed(self, metric=None, tags=None, sample_rate=None, use_ms=None):
         """
         A decorator or context manager that will measure the distribution of a
         function's/context's run time. Optionally specify a list of tags or a
@@ -277,7 +281,7 @@ class DogStatsd(object):
         """
         return TimedContextManagerDecorator(self, metric, tags, sample_rate, use_ms)
 
-    def set(self, metric, value, tags=None, sample_rate=1):
+    def set(self, metric, value, tags=None, sample_rate=None):
         """
         Sample a set value.
 
@@ -301,6 +305,9 @@ class DogStatsd(object):
         """
         if value is None:
             return
+
+        if sample_rate is None:
+            sample_rate = self.default_sample_rate
 
         if sample_rate != 1 and random() > sample_rate:
             return
