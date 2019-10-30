@@ -28,13 +28,13 @@ class TestDogwrap(unittest.TestCase):
 
     def test_build_event_body(self):
         # Only cmd is already unicode, the rest is decoded in the function
-        cmd = u"yö dudes"
+        cmd = u"yö friends"
         returncode = 0
         stdout = b"s\xc3\xb9p\xaa"
         stderr = b"d\xc3\xa0wg\xaa"
         notifications = b"@m\xc3\xa9\xaa"
         expected_body = u"%%%\n" \
-            u"**>>>> CMD <<<<**\n```\nyö dudes \n```\n" \
+            u"**>>>> CMD <<<<**\n```\nyö friends \n```\n" \
             u"**>>>> EXIT CODE <<<<**\n\n 0\n\n\n" \
             u"**>>>> STDOUT <<<<**\n```\nsùp\ufffd \n```\n" \
             u"**>>>> STDERR <<<<**\n```\ndàwg\ufffd \n```\n" \
@@ -45,7 +45,7 @@ class TestDogwrap(unittest.TestCase):
         self.assertEqual(expected_body, event_body)
 
     def test_parse_options(self):
-        options, cmd = parse_options([])
+        args, cmd = parse_options()
         self.assertEqual(cmd, '')
 
         # The output of parse_args is already unicode in python 3, so don't encode the input
@@ -54,24 +54,26 @@ class TestDogwrap(unittest.TestCase):
         else:
             arg = u'helløøééé'.encode('utf-8')
 
-        options, cmd = parse_options(['-n', 'name', '-k', 'key', '-m', 'all', '-p', 'low', '-t', '123',
+        args, cmd = parse_options(['-n', 'name', '-k', 'key', '-m', 'all', '-p', 'low', '-t', '123',
                                       '--sigterm_timeout', '456', '--sigkill_timeout', '789',
                                       '--proc_poll_interval', '1.5', '--notify_success', 'success',
-                                      '--notify_error', 'error', '-b', '--tags', 'k1:v1,k2:v2',
+                                      '--notify_error', 'error', '--notify_warning', 'warning', '-b',
+                                      '--tags', 'k1:v1,k2:v2',
                                       'echo', arg])
         self.assertEqual(cmd, u'echo helløøééé')
-        self.assertEqual(options.name, 'name')
-        self.assertEqual(options.api_key, 'key')
-        self.assertEqual(options.submit_mode, 'all')
-        self.assertEqual(options.priority, 'low')
-        self.assertEqual(options.timeout, 123)
-        self.assertEqual(options.sigterm_timeout, 456)
-        self.assertEqual(options.sigkill_timeout, 789)
-        self.assertEqual(options.proc_poll_interval, 1.5)
-        self.assertEqual(options.notify_success, 'success')
-        self.assertEqual(options.notify_error, 'error')
-        self.assertTrue(options.buffer_outs)
-        self.assertEqual(options.tags, 'k1:v1,k2:v2')
+        self.assertEqual(args.name, 'name')
+        self.assertEqual(args.api_key, 'key')
+        self.assertEqual(args.submit_mode, 'all')
+        self.assertEqual(args.priority, 'low')
+        self.assertEqual(args.timeout, 123)
+        self.assertEqual(args.sigterm_timeout, 456)
+        self.assertEqual(args.sigkill_timeout, 789)
+        self.assertEqual(args.proc_poll_interval, 1.5)
+        self.assertEqual(args.notify_success, 'success')
+        self.assertEqual(args.notify_error, 'error')
+        self.assertEqual(args.notify_warning, 'warning')
+        self.assertTrue(args.buffer_outs)
+        self.assertEqual(args.tags, 'k1:v1,k2:v2')
 
         with self.assertRaises(SystemExit):
             parse_options(['-m', 'invalid'])
