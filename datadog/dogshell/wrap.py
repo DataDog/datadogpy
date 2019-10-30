@@ -19,8 +19,7 @@ dogwrap -n test-job -k $API_KEY --timeout=1 "sleep 3"
 '''
 # stdlib
 from __future__ import print_function
-import argparse
-import os
+import optparse
 import subprocess
 import sys
 import threading
@@ -225,112 +224,108 @@ def parse_options(raw_args=None):
     '''
     Parse the raw command line options into an options object and the remaining command string
     '''
-    parser = argparse.ArgumentParser(usage="prog -n [event_name] -k [api_key] --submit_mode \
+    parser = optparse.OptionParser(usage="%prog -n [event_name] -k [api_key] --submit_mode \
 [ all | errors ] [options] \"command\". \n\nNote that you need to enclose your command in \
 quotes to prevent python executing as soon as there is a space in your command. \n \nNOTICE: In \
 normal mode, the whole stderr is printed before stdout, in flush_live mode they will be mixed but \
 there is not guarantee that messages sent by the command on both stderr and stdout are printed in \
-the order they were sent.", epilog="%prog {0}".format(get_version()))
+the order they were sent.", version="%prog {0}".format(get_version()))
 
-    parser.add_argument('-n', '--name', action='store', help="the name of the event \
+    parser.add_option('-n', '--name', action='store', type='string', help="the name of the event \
 as it should appear on your Datadog stream")
-    parser.add_argument('--config', help="location of your dogrc file (default ~/.dogrc)",
-                        default=os.path.expanduser('~/.dogrc'))
-    parser.add_argument('-k', '--api_key', action='store',
+    parser.add_option('-k', '--api_key', action='store', type='string',
                       help="your DataDog API Key")
-    parser.add_argument('-m', '--submit_mode', action='store',
-                      default='errors', choices=['errors', 'all'], help="[ all | errors ] if set \
+    parser.add_option('-m', '--submit_mode', action='store', type='choice',
+                      default='errors', choices=['errors', 'warnings', 'all'], help="[ all | errors | warnings ] if set \
 to error, an event will be sent only of the command exits with a non zero exit status or if it \
-times out.")
-    parser.add_argument('-w', '--warning', nargs='+', action='store', type=int, \
-                        help="a whitespace separated list of exit codes, treated as warnings", default=None)
-    parser.add_argument('-p', '--priority', action='store', choices=['normal', 'low'],
+times out. If set to warning, a list of exit codes need to be provided")
+    parser.add_option('--warning_codes', action='store', type='string', dest='warning_codes', default='',
+                      help="comma separated list of warning codes")
+    parser.add_option('-p', '--priority', action='store', type='choice', choices=['normal', 'low'],
                       help="the priority of the event (default: 'normal')")
-    parser.add_argument('-t', '--timeout', action='store', type=int, default=60 * 60 * 24,
+    parser.add_option('-t', '--timeout', action='store', type='int', default=60 * 60 * 24,
                       help="(in seconds)  a timeout after which your command must be aborted. An \
 event will be sent to your DataDog stream (default: 24hours)")
-    parser.add_argument('--sigterm_timeout', action='store', type=int, default=60 * 2,
+    parser.add_option('--sigterm_timeout', action='store', type='int', default=60 * 2,
                       help="(in seconds)  When your command times out, the \
 process it triggers is sent a SIGTERM. If this sigterm_timeout is reached, it will be sent a \
 SIGKILL signal. (default: 2m)")
-    parser.add_argument('--sigkill_timeout', action='store', type=int, default=60,
+    parser.add_option('--sigkill_timeout', action='store', type='int', default=60,
                       help="(in seconds) how long to wait at most after SIGKILL \
                               has been sent (default: 60s)")
-    parser.add_argument('--proc_poll_interval', action='store', type=float, default=0.5,
+    parser.add_option('--proc_poll_interval', action='store', type='float', default=0.5,
                       help="(in seconds). interval at which your command will be polled \
 (default: 500ms)")
-    parser.add_argument('--notify_success', action='store', default='',
+    parser.add_option('--notify_success', action='store', type='string', default='',
                       help="a message string and @people directives to send notifications in \
 case of success.")
-    parser.add_argument('--notify_error', action='store', default='',
+    parser.add_option('--notify_error', action='store', type='string', default='',
                       help="a message string and @people directives to send notifications in \
 case of error.")
-    parser.add_argument('--notify_warning', action='store', default='',
-                        help="a message string and @people directives to send notifications in \
+    parser.add_option('--notify_waring', action='store', type='string', default='',
+                      help="a message string and @people directives to send notifications in \
     case of warning.")
-    parser.add_argument('-b', '--buffer_outs', action='store_true', dest='buffer_outs', default=False,
+    parser.add_option('-b', '--buffer_outs', action='store_true', dest='buffer_outs', default=False,
                       help="displays the stderr and stdout of the command only once it has \
 returned (the command outputs remains buffered in dogwrap meanwhile)")
-    parser.add_argument('--tags', action='store', dest='tags', default='',
+    parser.add_option('--tags', action='store', type='string', dest='tags', default='',
                       help="comma separated list of tags")
 
-    args = parser.parse_args(args=raw_args)
+    options, args = parser.parse_args(args=raw_args)
 
     if is_p3k():
         cmd = ' '.join(args)
     else:
         cmd = b' '.join(args).decode('utf-8')
 
-    return args, cmd
+    return options, cmd
 
 
 def main():
-    args, cmd = parse_options()
+    options, cmd = parse_options()
 
     # If silent is checked we force the outputs to be buffered (and therefore
     # not forwarded to the Terminal streams) and we just avoid printing the
     # buffers at the end
     returncode, stdout, stderr, duration = execute(
-        cmd, args.timeout,
-        args.sigterm_timeout, args.sigkill_timeout,
-        args.proc_poll_interval, args.buffer_outs)
+        cmd, options.timeout,
+        options.sigterm_timeout, options.sigkill_timeout,
+        options.proc_poll_interval, options.buffer_outs)
 
-    initialize(api_key=args.api_key)
+    initialize(api_key=options.api_key)
     host = api._host_name
+
+    if options.warning_codes:
+        warning_codes = [int(w.strip()) for w in options.warning_codes.split(',')]
 
     if returncode == 0:
         alert_type = SUCCESS
         event_priority = 'low'
-        event_title = u'[%s] %s succeeded in %.2fs' % (host, args.name,
+        event_title = u'[%s] %s succeeded in %.2fs' % (host, options.name,
                                                        duration)
-    elif returncode in args.warning:
+    elif returncode in warning_codes and options.submit_mode == 'warnings':
         alert_type = WARNING
         event_priority = 'normal'
-        if returncode is Timeout:
-            event_title = u'[%s] %s timed out after %.2fs' % (host, args.name, duration)
-            returncode = -1
-        else:
-            event_title = u'[%s] %s failed in %.2fs' % (host, args.name, duration)
     else:
         alert_type = ERROR
         event_priority = 'normal'
 
         if returncode is Timeout:
-            event_title = u'[%s] %s timed out after %.2fs' % (host, args.name, duration)
+            event_title = u'[%s] %s timed out after %.2fs' % (host, options.name, duration)
             returncode = -1
         else:
-            event_title = u'[%s] %s failed in %.2fs' % (host, args.name, duration)
+            event_title = u'[%s] %s failed in %.2fs' % (host, options.name, duration)
 
     notifications = ""
-    if alert_type == SUCCESS and args.notify_success:
-        notifications = args.notify_success
-    elif alert_type == ERROR and args.notify_error:
-        notifications = args.notify_error
-    elif alert_type == WARNING and args.notify_warning:
-        notifications = args.notify_warning
+    if alert_type == SUCCESS and options.notify_success:
+        notifications = options.notify_success
+    elif alert_type == ERROR and options.notify_error:
+        notifications = options.notify_error
+    elif alert_type == WARNING and options.notify_warning:
+        notifications = options.notify_warning
 
-    if args.tags:
-        tags = [t.strip() for t in args.tags.split(',')]
+    if options.tags:
+        tags = [t.strip() for t in options.tags.split(',')]
     else:
         tags = None
 
@@ -338,13 +333,13 @@ def main():
 
     event = {
         'alert_type': alert_type,
-        'aggregation_key': args.name,
+        'aggregation_key': options.name,
         'host': host,
-        'priority': args.priority or event_priority,
+        'priority': options.priority or event_priority,
         'tags': tags
     }
 
-    if args.buffer_outs:
+    if options.buffer_outs:
         if is_p3k():
             stderr = stderr.decode('utf-8')
             stdout = stdout.decode('utf-8')
@@ -352,7 +347,7 @@ def main():
         print(stderr.strip(), file=sys.stderr)
         print(stdout.strip(), file=sys.stdout)
 
-    if args.submit_mode == 'all' or returncode != 0:
+    if options.submit_mode == 'all' or returncode != 0:
         api.Event.create(title=event_title, text=event_body, **event)
 
     sys.exit(returncode)
