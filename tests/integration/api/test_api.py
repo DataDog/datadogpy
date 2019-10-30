@@ -11,6 +11,7 @@ import pytest
 from datadog import api as dog
 from datadog import initialize
 
+
 TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
 API_KEY = os.environ.get("DD_TEST_CLIENT_API_KEY", "a" * 32)
 APP_KEY = os.environ.get("DD_TEST_CLIENT_APP_KEY", "a" * 40)

@@ -34,6 +34,13 @@ def is_higher_py35():
     return _is_py_version_higher_than(3, 5)
 
 
+def is_pypy():
+    """
+    Assert that PyPy is being used (regardless of 2 or 3)
+    """
+    return '__pypy__' in sys.builtin_module_names
+
+
 get_input = input
 
 # Python 3.x
