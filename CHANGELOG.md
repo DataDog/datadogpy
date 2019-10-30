@@ -3,16 +3,16 @@ CHANGELOG
 
 # 0.31.0 / 2019-10-30
 
-* [FEATURE] Add support for SLOs [#453][] and [#464][]
-* [FEATURE] Add ability to send compressed payloads for metrics and distribution. [#466][]
-* [FEATURE] Add parameter to enable/disable hostname lookup from datadog-agent config to avoid warnings [#428][]
-* [FEATURE] Dogstatsd: add ability to specify a default sample rate for all submissions [#470][] (thanks [@dtao][])
-* [BUGFIX] Do not leak file descriptor when reading config [#425][]
+* [BUGFIX] Fix possible issue that could leak file descriptors when reading config [#425][]
 * [BUGFIX] Fix graph snapshot status endpoint [#448][]
 * [BUGFIX] Revert `users` resource name to singular `user` as it was not fully supported [#450][]
 * [BUGFIX] Fix error printing to stderr char by char [#449][]
-* [BUGFIX] Add \_return\_raw\_response to api module to prevent import errors before `initialize` is called [#461][]
+* [BUGFIX] Add `_return_raw_response` to `api` module to prevent import errors before `initialize` is called [#461][]
 * [BUGFIX] Threadstats: Fix periodic timer error on interpreter shutdown [#423][]
+* [FEATURE] Add support for SLOs [#453][] and [#464][]
+* [FEATURE] Add ability to send compressed payloads for metrics and distribution. [#466][]
+* [FEATURE] Add parameter `hostname_from_config` to `initialize` to enable/disable hostname lookup from datadog-agent config to avoid warnings [#428][]
+* [FEATURE] Dogstatsd: add ability to specify a default sample rate for all submissions [#470][] (thanks [@dtao][])
 * [IMPROVEMENT] Send API credentials through headers instead of URL query parameter [#446][]
 * [IMPROVEMENT] Clarify docstring for metrics API [#463][]
 * [IMPROVEMENT] Assert `alert_type` is correct when creating event [#467][]
