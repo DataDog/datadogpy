@@ -1,9 +1,10 @@
 # stdlib
 from copy import deepcopy
-from functools import wraps
+import json
 import os
 import tempfile
 from time import time
+import zlib
 
 # 3p
 import mock, pytest
@@ -205,7 +206,6 @@ class TestInitialization(DatadogAPINoInitialization):
         initialize(api_key=API_KEY, mute=False)
         self.assertRaises(ApiError, MyCreatable.create)
 
-
     def test_return_raw_response(self):
         # Test default initialization sets return_raw_response to False
         initialize()
@@ -216,7 +216,6 @@ class TestInitialization(DatadogAPINoInitialization):
         # Assert we get multiple fields back when set to True
         initialize(api_key="aaaaaaaaaa", app_key="123456", return_raw_response=True)
         data, raw = api.Monitor.get_all()
-
 
     def test_default_values(self):
         with EnvVars(ignore=[
@@ -442,7 +441,7 @@ class TestResources(DatadogAPIWithInitialization):
         )
         self.request_called_with(
             'POST',
-            API_HOST +'/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            API_HOST + '/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
             params={},
             data={'mydata': 'val', 'mydata2': 'val2'}
         )
@@ -633,13 +632,72 @@ class TestMetricResource(DatadogAPIWithInitialization):
         m_long = int(1)  # long in Python 3.x
 
         if not is_p3k():
-            m_long = long(1)
+            m_long = long(1)  # noqa: F821
 
         supported_data_types = [1, 1.0, m_long, Decimal(1), Fraction(1, 2)]
 
         for point in supported_data_types:
             serie = dict(metric='metric.numerical', points=point)
             self.submit_and_assess_metric_payload(serie)
+
+    def test_compression(self):
+        """
+        Metric and Distribution support zlib compression
+        """
+
+        # By default, there is no compression
+        # Metrics
+        series = dict(metric="metric.1", points=[(time(), 13.)])
+        Metric.send(attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" not in headers
+        assert req_data == json.dumps({"series": [series]})
+        # Same result when explicitely False
+        Metric.send(compress_payload=False, attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" not in headers
+        assert req_data == json.dumps({"series": [series]})
+        # Distributions
+        series = dict(metric="metric.1", points=[(time(), 13.)])
+        Distribution.send(attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" not in headers
+        assert req_data == json.dumps({"series": [series]})
+        # Same result when explicitely False
+        Distribution.send(compress_payload=False, attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" not in headers
+        assert req_data == json.dumps({"series": [series]})
+
+        # Enabling compression
+        # Metrics
+        series = dict(metric="metric.1", points=[(time(), 13.)])
+        compressed_series = zlib.compress(json.dumps({"series": [series]}).encode("utf-8"))
+        Metric.send(compress_payload=True, attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" in headers
+        assert headers["Content-Encoding"] == "deflate"
+        assert req_data == compressed_series
+        # Distributions
+        series = dict(metric='metric.1', points=[(time(), 13.)])
+        compressed_series = zlib.compress(json.dumps({"series": [series]}).encode("utf-8"))
+        Distribution.send(compress_payload=True, attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" in headers
+        assert headers["Content-Encoding"] == "deflate"
+        assert req_data == compressed_series
 
 
 class TestServiceCheckResource(DatadogAPIWithInitialization):
@@ -664,7 +722,7 @@ class TestUserResource(DatadogAPIWithInitialization):
     def test_create_user(self):
         User.create(handle="handle", name="name", access_role="ro")
         self.request_called_with(
-            "POST", "https://example.com/api/v1/user", data={"handle": "handle", "name": "name", "access_role":"ro"}
+            "POST", "https://example.com/api/v1/user", data={"handle": "handle", "name": "name", "access_role": "ro"}
         )
 
     def test_get_user(self):
@@ -676,7 +734,7 @@ class TestUserResource(DatadogAPIWithInitialization):
         self.request_called_with(
             "PUT",
             "https://example.com/api/v1/user/handle",
-            data={"name": "name", "access_role":"ro", "email": "email", "disabled": "disabled"}
+            data={"name": "name", "access_role": "ro", "email": "email", "disabled": "disabled"}
         )
 
     def test_delete_user(self):

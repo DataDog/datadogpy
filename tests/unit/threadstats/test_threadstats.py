@@ -102,6 +102,18 @@ class TestUnitThreadStats(unittest.TestCase):
                 )
             )
 
+    def test_init(self):
+        # Test compress_payload setting
+        t = ThreadStats(compress_payload=True)
+        t.start()
+        assert t.reporter.compress_payload is True
+        t.stop()
+        # Default value
+        t = ThreadStats()
+        t.start()
+        assert t.reporter.compress_payload is False
+        t.stop()
+
     def test_timed_decorator(self):
         dog = ThreadStats()
         dog.start(roll_up_interval=1, flush_in_thread=False)
@@ -414,7 +426,6 @@ class TestUnitThreadStats(unittest.TestCase):
         reporter.distributions = []
         dog.flush(150.0)
         assert_equal(len(reporter.distributions), 0)
-
 
     def test_default_host_and_device(self):
         dog = ThreadStats()
@@ -731,10 +742,9 @@ class TestUnitThreadStats(unittest.TestCase):
         dog.histogram('histogram.1', 20, 100.0)
         dog.flush(200.0)
 
-        (first, second, p75, p85, p95, p99, avg, cnt,
-        max_, min_) = self.sort_metrics(reporter.metrics)
+        (first, second, p75, p85, p95, p99, avg, cnt, max_, min_) = self.sort_metrics(reporter.metrics)
 
-		# Assert Metric type
+        # Assert Metric type
         assert_equal(first['type'], 'rate')
         assert_equal(second['type'], 'gauge')
         assert_equal(p75['type'], 'gauge')
@@ -746,9 +756,7 @@ class TestUnitThreadStats(unittest.TestCase):
         assert_equal(max_['type'], 'gauge')
         assert_equal(min_['type'], 'gauge')
 
-
     # Test lambda_wrapper (uses ThreadStats under the hood)
-
     def test_basic_lambda_decorator(self):
 
         @datadog_lambda_wrapper

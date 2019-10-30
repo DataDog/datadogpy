@@ -2,6 +2,7 @@
 import json
 import logging
 import time
+import zlib
 
 # datadog
 from datadog.api import _api_version, _max_timeouts, _backoff_period
@@ -46,7 +47,8 @@ class APIClient(object):
 
     @classmethod
     def submit(cls, method, path, api_version=None, body=None, attach_host_name=False,
-               response_formatter=None, error_formatter=None, suppress_response_errors_on_codes=None, **params):
+               response_formatter=None, error_formatter=None, suppress_response_errors_on_codes=None,
+               compress_payload=False, **params):
         """
         Make an HTTP API request
 
@@ -73,6 +75,9 @@ class APIClient(object):
         :param suppress_response_errors_on_codes: suppress ApiError on `errors` key in the response for the given HTTP
                                                   status codes
         :type suppress_response_errors_on_codes: None|list(int)
+
+        :param compress_payload: compress the payload using zlib
+        :type compress_payload: bool
 
         :param params: dictionary to be sent in the query string of the request
         :type params: dictionary
@@ -134,6 +139,10 @@ class APIClient(object):
             if isinstance(body, dict):
                 body = json.dumps(body)
                 headers['Content-Type'] = 'application/json'
+
+            if compress_payload:
+                body = zlib.compress(body.encode("utf-8"))
+                headers["Content-Encoding"] = "deflate"
 
             # Construct the URL
             url = construct_url(_api_host, api_version, path)

@@ -203,12 +203,14 @@ class TestDatadog:
         def retry_condition(r):
             return not r["series"]
 
-        # Send metrics with single and multi points
+        # Send metrics with single and multi points, and with compression
         assert dog.Metric.send(metric=metric_name_single, points=1, host=host_name)["status"] == "ok"
         points = [(now_ts - 60, 1), (now_ts, 2)]
         assert dog.Metric.send(metric=metric_name_list, points=points, host=host_name)["status"] == "ok"
         points = (now_ts - 60, 1)
-        assert dog.Metric.send(metric=metric_name_tuple, points=points, host=host_name)["status"] == "ok"
+        assert dog.Metric.send(
+            metric=metric_name_tuple, points=points, host=host_name, compress_payload=True
+        )["status"] == "ok"
 
         metric_query_single = get_with_retry(
             "Metric",

@@ -1,7 +1,6 @@
 """
 Datadog API resources.
 """
-# datadog
 
 from datadog.api.api_client import APIClient
 
@@ -56,7 +55,7 @@ class SendableAPIResource(object):
     Fork of CreateableAPIResource class with different method names
     """
     @classmethod
-    def send(cls, attach_host_name=False, id=None, **body):
+    def send(cls, attach_host_name=False, id=None, compress_payload=False, **body):
         """
         Create an API resource object
 
@@ -66,6 +65,9 @@ class SendableAPIResource(object):
         :param id: create a new resource object as a child of the given object
         :type id: id
 
+        :param compress_payload: compress the payload using zlib
+        :type compress_payload: bool
+
         :param body: new resource object attributes
         :type body: dictionary
 
@@ -74,14 +76,22 @@ class SendableAPIResource(object):
         api_version = getattr(cls, '_api_version', None)
 
         if id is None:
-            return APIClient.submit('POST', cls._resource_name, api_version, body,
-                                    attach_host_name=attach_host_name)
+            return APIClient.submit(
+                'POST',
+                cls._resource_name,
+                api_version,
+                body,
+                attach_host_name=attach_host_name,
+                compress_payload=compress_payload
+            )
 
         path = '{resource_name}/{resource_id}'.format(
             resource_name=cls._resource_name,
             resource_id=id
         )
-        return APIClient.submit('POST', path, api_version, body, attach_host_name=attach_host_name)
+        return APIClient.submit(
+            'POST', path, api_version, body, attach_host_name=attach_host_name, compress_payload=compress_payload
+        )
 
 
 class UpdatableAPIResource(object):
