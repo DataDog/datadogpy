@@ -124,7 +124,6 @@ class MonitorClient(object):
                                        help="monitors to check if they can be deleted")
         can_delete_parser.set_defaults(func=cls._can_delete)
 
-
     @classmethod
     def _post(cls, args):
         api._timeout = args.timeout
