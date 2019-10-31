@@ -88,6 +88,8 @@ options = {
 initialize(**options)
 ```
 
+See the full list of available [DogStatsD Client instantiation parameters](https://docs.datadoghq.com/developers/dogstatsd/?tab=python#client-instantiation-parameters).
+
 #### Origin detection over UDP
 
 Origin detection is a method to detect which pod `DogStatsD` packets are coming from in order to add the pod's tags to the tag list.
