@@ -50,7 +50,7 @@ def get_hostname(hostname_from_config):
     hostname = None
     config = None
 
-    # first, try the config
+    # first, try the config if hostname_from_config is set to True
     try:
         if hostname_from_config:
             config = get_config()

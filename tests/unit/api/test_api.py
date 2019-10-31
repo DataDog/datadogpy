@@ -40,6 +40,8 @@ from tests.unit.api.helper import (
     HOST_NAME,
     FAKE_PROXY
 )
+from datadog.util.hostname import CfgNotFound, get_hostname
+
 from tests.util.contextmanagers import EnvVars
 
 
@@ -117,9 +119,15 @@ class TestInitialization(DatadogAPINoInitialization):
         initialize()
         self.assertEqual(api._host_name, HOST_NAME, api._host_name)
 
+    def test_hostname_warning_not_present(self):
+        try:
+            get_hostname(hostname_from_config=False)
+        except CfgNotFound:
+            pytest.fail("Unexpected CfgNotFound Exception")
+
     def test_errors_suppressed(self):
         """
-        API `errors` field ApiError supppressed when specified
+        API `errors` field ApiError suppressed when specified
         """
         # Test API, application keys, API host, and some HTTP client options
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
