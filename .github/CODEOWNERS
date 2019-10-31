@@ -4,3 +4,6 @@
 
 # All your base
 *                   @DataDog/integrations-tools-and-libraries
+
+# Documentation
+*.md                @DataDog/baklava
