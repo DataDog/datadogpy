@@ -128,7 +128,7 @@ def get_ec2_instance_id():
         finally:
             # Reset the previous default timeout
             socket.setdefaulttimeout(old_timeout)
-    except:
+    except Exception:
         return socket.gethostname()
 
 
