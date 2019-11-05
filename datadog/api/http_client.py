@@ -97,7 +97,7 @@ class RequestClient(HTTPClient):
                 pass
             else:
                 raise _remove_context(HTTPError(e.response.status_code, result.reason))
-        except TypeError as e:
+        except TypeError:
             raise TypeError(
                 u"Your installed version of `requests` library seems not compatible with"
                 u"Datadog's usage. We recommand upgrading it ('pip install -U requests')."

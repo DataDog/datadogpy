@@ -81,7 +81,7 @@ class DashboardClient(object):
             widgets = sys.stdin.read()
         try:
             widgets = json.loads(widgets)
-        except:
+        except Exception:
             raise Exception('bad json parameter')
 
         # Required arguments
@@ -117,7 +117,7 @@ class DashboardClient(object):
             widgets = sys.stdin.read()
         try:
             widgets = json.loads(widgets)
-        except:
+        except Exception:
             raise Exception('bad json parameter')
 
         # Required arguments

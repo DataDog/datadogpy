@@ -126,7 +126,7 @@ class MonitorClient(object):
         if args.options is not None:
             try:
                 options = json.loads(args.options)
-            except:
+            except Exception:
                 raise Exception('bad json parameter')
 
         if args.tags:
@@ -192,7 +192,7 @@ class MonitorClient(object):
         if args.options is not None:
             try:
                 to_update['options'] = json.loads(args.options)
-            except:
+            except Exception:
                 raise Exception('bad json parameter')
 
         res = api.Monitor.update(args.monitor_id, **to_update)
