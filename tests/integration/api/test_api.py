@@ -400,6 +400,35 @@ class TestDatadog:
 
         assert dog.Monitor.delete(monitor["id"]) == {"deleted_monitor_id": monitor["id"]}
 
+    def test_monitor_can_delete(self):
+        # Create a monitor.
+        query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
+        options = {"silenced": {"*": int(time.time()) + 60 * 60}, "notify_no_data": False}
+        monitor = dog.Monitor.create(type="metric alert", query=query, options=options)
+
+        # Check if you can delete the monitor.
+        monitor_ids = [monitor["id"]]
+        assert dog.Monitor.can_delete(monitor_ids=monitor_ids) == {"data": {"ok": monitor_ids}, "errors": None}
+
+        # Create a monitor-based SLO.
+        slo = dog.ServiceLevelObjective.create(type="monitor", monitor_ids=monitor_ids)
+
+        # Check if you can delete the monitor.
+        monitor_ids = [monitor["id"]]
+        assert dog.Monitor.can_delete(monitor_ids=monitor_ids) == {
+            "data": {"ok": []},
+            "errors": {
+                str(monitor["id"]): ["monitor {} is referenced in slos: {}".format(monitor["id"], slo["id"])]
+            }
+        }
+
+        # Delete the SLO.
+        dog.ServiceLevelObjective.delete(slo["id"])
+
+        # Check if you can delete the monitor.
+        monitor_ids = [monitor["id"]]
+        assert dog.Monitor.can_delete(monitor_ids=monitor_ids) == {"data": {"ok": monitor_ids}, "errors": None}
+
     def test_service_level_objective_crud(self):
         numerator = "sum:my.custom.metric{type:good}.as_count()"
         denominator = "sum:my.custom.metric{*}.as_count()"
