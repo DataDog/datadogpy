@@ -71,7 +71,7 @@ api.Event.create(title=title, text=text, tags=tags)
 
 ## DogStatsD
 
-For usage of DogStatsD metrics, the Agent must be [running and available](https://docs.datadoghq.com/developers/dogstatsd/?tab=python).
+In order to use DogStatsD metrics, the Agent must be [running and available](https://docs.datadoghq.com/developers/dogstatsd/?tab=python).
 
 ### Instantiate the DogStatsD client
 
@@ -115,11 +115,11 @@ After the client is created, you can start sending custom metrics to Datadog. Se
 * [Submit a HISTOGRAM metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#histogram)
 * [Submit a DISTRIBUTION metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#distribution)
 
-Some options are suppported when submitting metrics, like [applying a Sample Rate to your metrics](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#metric-submission-options) or [Tagging your metrics with your custom Tags](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#metric-tagging).
+Some options are suppported when submitting metrics, like [applying a Sample Rate to your metrics](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#metric-submission-options) or [tagging your metrics with your custom tags](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#metric-tagging).
 
 #### Events
 
-After the client is created, you can start sending events to your Datadog Event Stream. See the dedicated [Event Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/events/dogstatsd/?tab=python) to see how to submit an event to Datadog Event Stream.
+After the client is created, you can start sending events to your Datadog Event Stream. See the dedicated [Event Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/events/dogstatsd/?tab=python) to see how to submit an event to your Datadog Event Stream.
 
 #### Service Checks
 
