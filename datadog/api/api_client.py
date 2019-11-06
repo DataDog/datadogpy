@@ -175,7 +175,7 @@ class APIClient(object):
                     raise ValueError('Invalid JSON response: {0}'.format(content))
 
                 # response_obj can be a bool and not a dict
-                if not isinstance(response_obj, bool):
+                if isinstance(response_obj, dict):
                     if response_obj and 'errors' in response_obj:
                         # suppress ApiError when specified and just return the response
                         if not (suppress_response_errors_on_codes and

@@ -1,19 +1,21 @@
 from datadog.api.exceptions import ApiError
 from datadog.api.resources import (
     CreateableAPIResource,
-    ActionAPIResource,
     GetableAPIResource,
-    UpdatableAPIResource,
-    UpdatableAPISubResource,
+    ActionAPIResource,
+    UpdatableAPISyntheticsResource,
+    UpdatableAPISyntheticsSubResource,
+    ActionAPISyntheticsResource,
 )
 
 
 class Synthetics(
     ActionAPIResource,
+    ActionAPISyntheticsResource,
     CreateableAPIResource,
     GetableAPIResource,
-    UpdatableAPIResource,
-    UpdatableAPISubResource,
+    UpdatableAPISyntheticsResource,
+    UpdatableAPISyntheticsSubResource,
 ):
     """
     A wrapper around Sythetics HTTP API.
@@ -37,8 +39,8 @@ class Synthetics(
 
         name = "tests"
 
-        return super(Synthetics, cls)._trigger_class_action(
-            "GET", id=id, synthetics=True, name=name, params=params
+        return super(Synthetics, cls)._trigger_synthetics_class_action(
+            "GET", id=id, name=name, params=params
         )
 
     @classmethod
@@ -69,8 +71,8 @@ class Synthetics(
 
         name = "browser/devices"
 
-        return super(Synthetics, cls)._trigger_class_action(
-            "GET", synthetics=False, name=name, params=params
+        return super(Synthetics, cls)._trigger_synthetics_class_action(
+            "GET", name=name, params=params
         )
 
     @classmethod
@@ -85,8 +87,8 @@ class Synthetics(
 
         # API path = "synthetics/locations
 
-        return super(Synthetics, cls)._trigger_class_action(
-            "GET", synthetics=False, name=name, params=params
+        return super(Synthetics, cls)._trigger_synthetics_class_action(
+            "GET", name=name, params=params
         )
 
     @classmethod
@@ -104,7 +106,7 @@ class Synthetics(
 
         path = "tests/{}/results".format(id)
 
-        return super(Synthetics, cls)._trigger_class_action("GET", path, params=params)
+        return super(Synthetics, cls)._trigger_synthetics_class_action("GET", path, params=params)
 
     @classmethod
     def get_result(cls, id, result_id, **params):
@@ -124,7 +126,7 @@ class Synthetics(
 
         path = "tests/{}/results/{}".format(id, result_id)
 
-        return super(Synthetics, cls)._trigger_class_action("GET", path, params=params)
+        return super(Synthetics, cls)._trigger_synthetics_class_action("GET", path, params=params)
 
     @classmethod
     def create_test(cls, **params):
@@ -179,7 +181,7 @@ class Synthetics(
 
         # API path = "synthetics/tests/<public_test_id>"
 
-        return super(Synthetics, cls).update(id=id, synthetics=True, **params)
+        return super(Synthetics, cls).update_synthetics(id=id, **params)
 
     @classmethod
     def start_or_pause_test(cls, id, **body):
@@ -197,7 +199,7 @@ class Synthetics(
 
         # API path = "synthetics/tests/<public_test_id>/status"
 
-        return super(Synthetics, cls).update_items(id=id, synthetics=True, **body)
+        return super(Synthetics, cls).update_synthetics_items(id=id, **body)
 
     @classmethod
     def delete_test(cls, **body):

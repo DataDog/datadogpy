@@ -42,4 +42,3 @@ pip-log.txt
 .eggs/
 .env/
 .idea/
-.vscode/
