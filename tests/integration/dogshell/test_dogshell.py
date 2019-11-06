@@ -376,6 +376,38 @@ class TestDogshell:
         assert str(out["id"]) == monitor_id
         assert out["options"]["silenced"] == {}
 
+        # Test can_delete monitor
+        monitor_ids = [monitor_id]
+        out, _, _ = self.dogshell(["monitor", "can_delete", monitor_ids])
+        out = json.loads(out)
+        assert out["data"]["ok"] == monitor_ids
+        assert out["errors"] is None
+
+        # Create a monitor-based SLO
+        out, _, _ = self.dogshell(
+            ["service_level_objective", "create", "--type", "monitor", "--monitor_ids", monitor_ids]
+        )
+        out = json.loads(out)
+        slo_id = out["data"][0]["id"]
+
+        # Test can_delete monitor
+        out, _, _ = self.dogshell(["monitor", "can_delete", monitor_ids])
+        out = json.loads(out)
+        assert out["data"]["ok"] == []
+        assert out["errors"] == {
+            str(monitor_id): ["monitor {} is referenced in slos: {}".format(monitor_id, slo_id)]
+        }
+
+        # Delete a service_level_objective
+        _, _, _ = self.dogshell(["service_level_objective", "delete", slo_id])
+
+        # Test can_delete monitor
+        monitor_ids = [monitor_id]
+        out, _, _ = self.dogshell(["monitor", "can_delete", monitor_ids])
+        out = json.loads(out)
+        assert out["data"]["ok"] == monitor_ids
+        assert out["errors"] is None
+
         # Delete a monitor
         self.dogshell(["monitor", "delete", monitor_id])
         # Verify that it's not on the server anymore
