@@ -114,8 +114,8 @@ class MyActionable(ActionAPIResource):
     _resource_name = 'actionables'
 
     @classmethod
-    def trigger_class_action(cls, method, name, id=None, params=None, **body):
-        super(MyActionable, cls)._trigger_class_action(method, name, id, params, **body)
+    def trigger_class_action(cls, method, name, synthetics=False, id=None, params=None, **body):
+        super(MyActionable, cls)._trigger_class_action(method, name, synthetics, id, params, **body)
 
     @classmethod
     def trigger_action(cls, method, name, id=None, **body):
