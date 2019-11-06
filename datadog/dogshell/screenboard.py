@@ -107,10 +107,7 @@ class ScreenboardClient(object):
     def _push(cls, args):
         api._timeout = args.timeout
         for f in args.file:
-            try:
-                screen_obj = json.load(f)
-            except Exception as err:
-                raise Exception("Could not parse {0}: {1}".format(f.name, err))
+            screen_obj = json.load(f)
 
             if args.append_auto_text:
                 datetime_str = datetime.now().strftime('%x %X')
@@ -172,10 +169,7 @@ class ScreenboardClient(object):
         graphs = args.graphs
         if args.graphs is None:
             graphs = sys.stdin.read()
-        try:
-            graphs = json.loads(graphs)
-        except Exception:
-            raise Exception('bad json parameter')
+        graphs = json.loads(graphs)
         res = api.Screenboard.create(
             title=args.title, description=args.description, graphs=[graphs],
             template_variables=args.template_variables, width=args.width, height=args.height)
@@ -193,10 +187,7 @@ class ScreenboardClient(object):
         graphs = args.graphs
         if args.graphs is None:
             graphs = sys.stdin.read()
-        try:
-            graphs = json.loads(graphs)
-        except Exception:
-            raise Exception('bad json parameter')
+        graphs = json.loads(graphs)
 
         res = api.Screenboard.update(
             args.screenboard_id, board_title=args.title, description=args.description,
@@ -269,10 +260,7 @@ class ScreenboardClient(object):
         graphs = args.graphs
         if args.graphs is None:
             graphs = sys.stdin.read()
-        try:
-            graphs = json.loads(graphs)
-        except Exception:
-            raise Exception('bad json parameter')
+        graphs = json.loads(graphs)
         res = api.Screenboard.create(board_title=args.filename,
                                      description="Description for {0}".format(args.filename),
                                      widgets=[graphs])

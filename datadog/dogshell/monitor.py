@@ -124,10 +124,7 @@ class MonitorClient(object):
         format = args.format
         options = None
         if args.options is not None:
-            try:
-                options = json.loads(args.options)
-            except Exception:
-                raise Exception('bad json parameter')
+            options = json.loads(args.options)
 
         if args.tags:
             tags = sorted(set([t.strip() for t in args.tags.split(',') if t.strip()]))
@@ -190,10 +187,7 @@ class MonitorClient(object):
             to_update['query'] = args.query_opt
 
         if args.options is not None:
-            try:
-                to_update['options'] = json.loads(args.options)
-            except Exception:
-                raise Exception('bad json parameter')
+            to_update['options'] = json.loads(args.options)
 
         res = api.Monitor.update(args.monitor_id, **to_update)
 

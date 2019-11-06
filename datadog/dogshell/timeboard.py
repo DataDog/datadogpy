@@ -139,10 +139,7 @@ class TimeboardClient(object):
         graphs = args.graphs
         if args.graphs is None:
             graphs = sys.stdin.read()
-        try:
-            graphs = json.loads(graphs)
-        except Exception:
-            raise Exception('bad json parameter')
+        graphs = json.loads(graphs)
         res = api.Timeboard.create(
             title=args.filename,
             description="Description for {0}".format(args.filename),
@@ -234,10 +231,7 @@ class TimeboardClient(object):
         graphs = args.graphs
         if args.graphs is None:
             graphs = sys.stdin.read()
-        try:
-            graphs = json.loads(graphs)
-        except Exception:
-            raise Exception('bad json parameter')
+        graphs = json.loads(graphs)
         res = api.Timeboard.create(title=args.title, description=args.description, graphs=[graphs],
                                    template_variables=args.template_variables)
         report_warnings(res)
@@ -254,10 +248,7 @@ class TimeboardClient(object):
         graphs = args.graphs
         if args.graphs is None:
             graphs = sys.stdin.read()
-        try:
-            graphs = json.loads(graphs)
-        except Exception:
-            raise Exception('bad json parameter')
+        graphs = json.loads(graphs)
 
         res = api.Timeboard.update(args.timeboard_id, title=args.title,
                                    description=args.description, graphs=graphs,
