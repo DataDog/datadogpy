@@ -6,7 +6,7 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/datadog.svg)](https://pypi.org/project/datadog)
 [![PyPI - Downloads](https://pepy.tech/badge/datadog)](https://pepy.tech/project/datadog)
 
-Datadogpy is a collection of tools suitable for inclusion in existing Python projects or for development of standalone scripts. It provides an abstraction on top of Datadog's raw HTTP interface and the Agent's DogStatsD metrics aggregation server, to interact with Datadog and efficiently report events and metrics.
+The Datadog Python Library is a collection of tools suitable for inclusion in existing Python projects or for the development of standalone scripts. It provides an abstraction on top of Datadog's raw HTTP interface and the Agent's DogStatsD metrics aggregation server, to interact with Datadog and efficiently report events and metrics.
 
 - Library Documentation: https://datadogpy.readthedocs.io/en/latest/
 - HTTP API Documentation: https://docs.datadoghq.com/api/
@@ -26,7 +26,7 @@ To install from source:
 
 ## Datadog API
 
-Find below a working example to submit an Event to your Event Stream:
+Find below a working example for submitting an event to your Event Stream:
 
 ```python
 from datadog import initialize, api
@@ -45,9 +45,9 @@ tags = ['version:1', 'application:web']
 api.Event.create(title=title, text=text, tags=tags)
 ```
 
-**Consult the full list of supported Datadog API endpoint with working code examples in [Datadog-API documentation](https://docs.datadoghq.com/api/?lang=python).**
+**Consult the full list of supported Datadog API endpoints with working code examples in [the Datadog API documentation](https://docs.datadoghq.com/api/?lang=python).**
 
-**Note**: The full list of available Datadog API endpoint is also available in the [Datadog-py Readthedoc documentation](https://datadogpy.readthedocs.io/en/latest/)
+**Note**: The full list of available Datadog API endpoints is also available in the [Datadog Python Library documentation](https://datadogpy.readthedocs.io/en/latest/)
 
 #### Environment Variables
 
@@ -75,7 +75,7 @@ In order to use DogStatsD metrics, the Agent must be [running and available](htt
 
 ### Instantiate the DogStatsD client
 
-Once Datadog-py is installed, instantiate it in your code:
+Once the Datadog Python Library is installed, instantiate the StatsD client in your code:
 
 ```python
 from datadog import statsd
@@ -88,12 +88,12 @@ options = {
 initialize(**options)
 ```
 
-See the full list of available [DogStatsD Client instantiation parameters](https://docs.datadoghq.com/developers/dogstatsd/?tab=python#client-instantiation-parameters).
+See the full list of available [DogStatsD client instantiation parameters](https://docs.datadoghq.com/developers/dogstatsd/?tab=python#client-instantiation-parameters).
 
 #### Origin detection over UDP
 
 Origin detection is a method to detect which pod `DogStatsD` packets are coming from in order to add the pod's tags to the tag list.
-The `DogStatsD` client attaches an internal tag, `entity_id`. The value of this tag is the content of the `DD_ENTITY_ID` environment variable if found, which is the pod's UID. This tag is used by the Datadog Agent to insert container tags to the metrics. You should only `append` to the `constant_tags` list to avoid overwriting this global tag.
+The `DogStatsD` client attaches an internal tag, `entity_id`. The value of this tag is the content of the `DD_ENTITY_ID` environment variable if found, which is the pod's UID. The Datadog Agent uses this tag to add container tags to the metrics. To avoid overwriting this global tag, make sure to only `append` to the `constant_tags` list.
 
 To enable origin detection over UDP, add the following lines to your application manifest
 ```yaml
