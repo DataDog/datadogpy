@@ -306,6 +306,14 @@ def main():
     elif returncode in warning_codes and options.submit_mode == 'warnings':
         alert_type = WARNING
         event_priority = 'normal'
+    elif options.submit_mode == 'warnings' and not warning_codes:
+        # Exit - warning codes need to be provided
+        print("A comma separated list of exit codes need to be provided")
+        sys.exit()
+    elif warning_codes and not options.submit_mode == 'warnings':
+        # Exit - submit mode: warning needs to be set
+        print("Submit mode --warning needs to be set")
+        sys.exit()
     else:
         alert_type = ERROR
         event_priority = 'normal'
