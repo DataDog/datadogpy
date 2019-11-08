@@ -419,3 +419,115 @@ class ActionAPIResource(object):
             # Do not add body to GET requests, it causes 400 Bad request responses on EU site
             body = None
         return APIClient.submit(method, path, api_version, body)
+
+
+class UpdatableAPISyntheticsSubResource(object):
+    """
+    Update Synthetics sub resource
+    """
+
+    @classmethod
+    def update_synthetics_items(cls, id, params=None, **body):
+        """
+        Update API sub-resource objects of a resource
+
+        :param id: resource id to update sub-resource objects from
+        :type id: id
+
+        :param params: request parameters
+        :type params: dictionary
+
+        :param body: updated sub-resource objects attributes
+        :type body: dictionary
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        if params is None:
+            params = {}
+
+        path = '{resource_name}/tests/{resource_id}/{sub_resource_name}'.format(
+            resource_name=cls._resource_name,
+            resource_id=id,
+            sub_resource_name=cls._sub_resource_name
+        )
+        api_version = getattr(cls, '_api_version', None)
+
+        return APIClient.submit('PUT', path, api_version, body, **params)
+
+
+class UpdatableAPISyntheticsResource(object):
+    """
+    Update Synthetics resource
+    """
+
+    @classmethod
+    def update_synthetics(cls, id, params=None, **body):
+        """
+        Update an API resource object
+
+        :param params: updated resource object source
+        :type params: dictionary
+
+        :param body: updated resource object attributes
+        :type body: dictionary
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        if params is None:
+            params = {}
+
+        path = '{resource_name}/tests/{resource_id}'.format(
+            resource_name=cls._resource_name,
+            resource_id=id
+        )
+        api_version = getattr(cls, '_api_version', None)
+
+        return APIClient.submit('PUT', path, api_version, body, **params)
+
+
+class ActionAPISyntheticsResource(object):
+    """
+    Actionable Synthetics API Resource
+    """
+    @classmethod
+    def _trigger_synthetics_class_action(cls, method, name, id=None, params=None, **body):
+        """
+        Trigger an action
+
+        :param method: HTTP method to use to contact API endpoint
+        :type method: HTTP method string
+
+        :param name: action name
+        :type name: string
+
+        :param id: trigger the action for the specified resource object
+        :type id: id
+
+        :param params: action parameters
+        :type params: dictionary
+
+        :param body: action body
+        :type body: dictionary
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        if params is None:
+            params = {}
+
+        api_version = getattr(cls, '_api_version', None)
+
+        if id is None:
+            path = '{resource_name}/{action_name}'.format(
+                resource_name=cls._resource_name,
+                action_name=name
+            )
+        else:
+            path = '{resource_name}/{action_name}/{resource_id}'.format(
+                resource_name=cls._resource_name,
+                resource_id=id,
+                action_name=name
+            )
+        if method == "GET":
+            # Do not add body to GET requests, it causes 400 Bad request responses on EU site
+            body = None
+        return APIClient.submit(method, path, api_version, body, **params)

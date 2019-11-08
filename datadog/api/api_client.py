@@ -174,11 +174,13 @@ class APIClient(object):
                 except ValueError:
                     raise ValueError('Invalid JSON response: {0}'.format(content))
 
-                if response_obj and 'errors' in response_obj:
-                    # suppress ApiError when specified and just return the response
-                    if not (suppress_response_errors_on_codes and
-                            result.status_code in suppress_response_errors_on_codes):
-                        raise ApiError(response_obj)
+                # response_obj can be a bool and not a dict
+                if isinstance(response_obj, dict):
+                    if response_obj and 'errors' in response_obj:
+                        # suppress ApiError when specified and just return the response
+                        if not (suppress_response_errors_on_codes and
+                                result.status_code in suppress_response_errors_on_codes):
+                            raise ApiError(response_obj)
             else:
                 response_obj = None
 
