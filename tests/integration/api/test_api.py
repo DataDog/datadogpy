@@ -537,6 +537,11 @@ class TestDatadog:
             "errors": None,
         }
 
+        # Delete the monitor to clean up the test.
+        assert dog.Monitor.delete(monitor["id"]) == {
+            "deleted_monitor_id": monitor["id"]
+        }
+
     def test_service_level_objective_crud(self):
         numerator = "sum:my.custom.metric{type:good}.as_count()"
         denominator = "sum:my.custom.metric{*}.as_count()"
