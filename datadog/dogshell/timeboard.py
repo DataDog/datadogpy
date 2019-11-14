@@ -141,7 +141,7 @@ class TimeboardClient(object):
             graphs = sys.stdin.read()
         try:
             graphs = json.loads(graphs)
-        except:
+        except Exception:
             raise Exception('bad json parameter')
         res = api.Timeboard.create(
             title=args.filename,
@@ -236,7 +236,7 @@ class TimeboardClient(object):
             graphs = sys.stdin.read()
         try:
             graphs = json.loads(graphs)
-        except:
+        except Exception:
             raise Exception('bad json parameter')
         res = api.Timeboard.create(title=args.title, description=args.description, graphs=[graphs],
                                    template_variables=args.template_variables)
@@ -256,7 +256,7 @@ class TimeboardClient(object):
             graphs = sys.stdin.read()
         try:
             graphs = json.loads(graphs)
-        except:
+        except Exception:
             raise Exception('bad json parameter')
 
         res = api.Timeboard.update(args.timeboard_id, title=args.title,

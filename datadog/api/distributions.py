@@ -8,10 +8,13 @@ class Distribution(SendableAPIResource):
     _resource_name = 'distribution_points'
 
     @classmethod
-    def send(cls, distributions=None, attach_host_name=True, **distribution):
+    def send(cls, distributions=None, attach_host_name=True, compress_payload=False, **distribution):
         """
         Submit a distribution metric or a list of distribution metrics to the distribution metric
         API
+
+        :param compress_payload: compress the payload using zlib
+        :type compress_payload: bool
         :param metric: the name of the time series
         :type metric: string
         :param points: a (timestamp, [list of values]) pair or
@@ -33,4 +36,6 @@ class Distribution(SendableAPIResource):
             # One distribution is sent
             distribution['points'] = format_points(distribution['points'])
             series_dict = {"series": [distribution]}
-        return super(Distribution, cls).send(attach_host_name=attach_host_name, **series_dict)
+        return super(Distribution, cls).send(
+            attach_host_name=attach_host_name, compress_payload=compress_payload, **series_dict
+        )

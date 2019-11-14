@@ -1,6 +1,23 @@
 CHANGELOG
 =========
 
+# 0.31.0 / 2019-10-30
+
+* [BUGFIX] Fix possible issue that could leak file descriptors when reading config [#425][]
+* [BUGFIX] Fix graph snapshot status endpoint [#448][]
+* [BUGFIX] Revert `users` resource name to singular `user` as it was not fully supported [#450][]
+* [BUGFIX] Fix error printing to stderr char by char [#449][]
+* [BUGFIX] Add `_return_raw_response` to `api` module to prevent import errors before `initialize` is called [#461][]
+* [BUGFIX] Threadstats: Fix periodic timer error on interpreter shutdown [#423][]
+* [FEATURE] Add support for SLOs [#453][] and [#464][]
+* [FEATURE] Add ability to send compressed payloads for metrics and distribution. [#466][]
+* [FEATURE] Add parameter `hostname_from_config` to `initialize` to enable/disable hostname lookup from datadog-agent config to avoid warnings [#428][]
+* [FEATURE] Dogstatsd: add ability to specify a default sample rate for all submissions [#470][] (thanks [@dtao][])
+* [IMPROVEMENT] Send API credentials through headers instead of URL query parameter [#446][]
+* [IMPROVEMENT] Clarify docstring for metrics API [#463][]
+* [IMPROVEMENT] Assert `alert_type` is correct when creating event [#467][]
+* [IMPROVEMENT] Dogshell: make query and type optional when updating a monitor [#447][]
+
 # 0.30.0 / 2019-09-12
 
 * [BUGFIX] Treat `API_HOST` as URL, not as string [#411][]
@@ -434,6 +451,21 @@ See [#8][], thanks [@benweatherman][]
 [#418]: https://github.com/DataDog/datadogpy/issues/418
 [#420]: https://github.com/DataDog/datadogpy/issues/420
 [#421]: https://github.com/DataDog/datadogpy/issues/421
+[#423]: https://github.com/DataDog/datadogpy/issues/423
+[#425]: https://github.com/DataDog/datadogpy/issues/425
+[#428]: https://github.com/DataDog/datadogpy/issues/428
+[#446]: https://github.com/DataDog/datadogpy/issues/446
+[#447]: https://github.com/DataDog/datadogpy/issues/447
+[#448]: https://github.com/DataDog/datadogpy/issues/448
+[#449]: https://github.com/DataDog/datadogpy/issues/449
+[#450]: https://github.com/DataDog/datadogpy/issues/450
+[#453]: https://github.com/DataDog/datadogpy/issues/453
+[#461]: https://github.com/DataDog/datadogpy/issues/461
+[#463]: https://github.com/DataDog/datadogpy/issues/463
+[#464]: https://github.com/DataDog/datadogpy/issues/464
+[#466]: https://github.com/DataDog/datadogpy/issues/466
+[#467]: https://github.com/DataDog/datadogpy/issues/467
+[#470]: https://github.com/DataDog/datadogpy/issues/470
 [@Alphadash]: https://github.com/Alphadash
 [@GrahamDumpleton]: https://github.com/GrahamDumpleton
 [@Hefeweizen]: https://github.com/Hefeweizen
@@ -448,6 +480,7 @@ See [#8][], thanks [@benweatherman][]
 [@cabouffard]: https://github.com/cabouffard
 [@clokep]: https://github.com/clokep
 [@dcrosta]: https://github.com/dcrosta
+[@dtao]: https://github.com/dtao
 [@dotlambda]: https://github.com/dotlambda
 [@drstevens]: https://github.com/drstevens
 [@emad]: https://github.com/emad

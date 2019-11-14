@@ -1,19 +1,22 @@
 # stdlib
 from copy import deepcopy
-from functools import wraps
+import json
 import os
 import tempfile
 from time import time
+import zlib
 
 # 3p
-import mock
+import mock, pytest
 
 # datadog
 from datadog import initialize, api, util
 from datadog.api import (
     Distribution,
+    Event,
     Metric,
-    ServiceCheck
+    ServiceCheck,
+    User
 )
 from datadog.api.exceptions import ApiError, ApiNotInitialized
 from datadog.util.compat import is_p3k
@@ -21,6 +24,7 @@ from tests.unit.api.helper import (
     DatadogAPIWithInitialization,
     DatadogAPINoInitialization,
     MyCreatable,
+    MyParamsApiKeyCreatable,
     MyUpdatable,
     MyDeletable,
     MyGetable,
@@ -36,10 +40,48 @@ from tests.unit.api.helper import (
     HOST_NAME,
     FAKE_PROXY
 )
+from datadog.util.hostname import CfgNotFound, get_hostname
+
 from tests.util.contextmanagers import EnvVars
 
 
 class TestInitialization(DatadogAPINoInitialization):
+
+    def test_default_settings_set(self):
+        """
+        Test all the default setting are properly set before calling initialize
+        """
+        from datadog.api import (
+            _api_key,
+            _application_key,
+            _api_version,
+            _api_host,
+            _host_name,
+            _hostname_from_config,
+            _cacert,
+            _proxies,
+            _timeout,
+            _max_timeouts,
+            _max_retries,
+            _backoff_period,
+            _mute,
+            _return_raw_response,
+        )
+
+        assert _api_key is None
+        assert _application_key is None
+        assert _api_version == 'v1'
+        assert _api_host is None
+        assert _host_name is None
+        assert _hostname_from_config is True
+        assert _cacert is True
+        assert _proxies is None
+        assert _timeout == 60
+        assert _max_timeouts == 3
+        assert _max_retries == 3
+        assert _backoff_period == 300
+        assert _mute is True
+        assert _return_raw_response is False
 
     def test_no_initialization_fails(self):
         """
@@ -77,6 +119,25 @@ class TestInitialization(DatadogAPINoInitialization):
         initialize()
         self.assertEqual(api._host_name, HOST_NAME, api._host_name)
 
+    def test_hostname_warning_not_present(self):
+        try:
+            get_hostname(hostname_from_config=False)
+        except CfgNotFound:
+            pytest.fail("Unexpected CfgNotFound Exception")
+
+    def test_errors_suppressed(self):
+        """
+        API `errors` field ApiError suppressed when specified
+        """
+        # Test API, application keys, API host, and some HTTP client options
+        initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
+
+        # Make a simple API call
+        self.load_request_response(response_body='{"data": {}, "errors": ["foo error"]}')
+        resp = MyCreatable.create(params={"suppress_response_errors_on_codes": [200]})
+        self.assertNotIsInstance(resp, ApiError)
+        self.assertDictEqual({"data": {}, "errors": ["foo error"]}, resp)
+
     def test_request_parameters(self):
         """
         API parameters are set with `initialize` method.
@@ -92,13 +153,37 @@ class TestInitialization(DatadogAPINoInitialization):
         # Assert `requests` parameters
         self.assertIn('params', options)
 
-        self.assertIn('api_key', options['params'])
-        self.assertEqual(options['params']['api_key'], API_KEY)
-        self.assertIn('application_key', options['params'])
-        self.assertEqual(options['params']['application_key'], APP_KEY)
+        self.assertIn('headers', options)
+        self.assertEqual(options['headers']['Content-Type'], 'application/json')
+        self.assertEqual(options['headers']['DD-API-KEY'], API_KEY)
+        self.assertEqual(options['headers']['DD-APPLICATION-KEY'], APP_KEY)
+        assert "api_key" not in options['params']
+        assert "application_key" not in options['params']
+
+    def test_request_parameters_api_keys_in_params(self):
+        """
+        API parameters are set with `initialize` method.
+        """
+        # Test API, application keys, API host, and some HTTP client options
+        initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
+
+        # Make a simple API call
+        MyParamsApiKeyCreatable.create()
+
+        _, options = self.request_mock.call_args()
+
+        # Assert `requests` parameters
+        self.assertIn('params', options)
 
         self.assertIn('headers', options)
-        self.assertEqual(options['headers'], {'Content-Type': 'application/json'})
+
+        # for resources in MyParamsApiKey, api key and application key needs to be in url params
+        # any api and app keys in headers are ignored
+        self.assertEqual(options['headers']['Content-Type'], 'application/json')
+        self.assertEqual(options['params']['api_key'], API_KEY)
+        self.assertEqual(options['params']['application_key'], APP_KEY)
+        assert "DD-API-KEY" not in options['headers']
+        assert "DD-APPLICATION-KEY" not in options['headers']
 
     def test_initialize_options(self):
         """
@@ -129,7 +214,6 @@ class TestInitialization(DatadogAPINoInitialization):
         initialize(api_key=API_KEY, mute=False)
         self.assertRaises(ApiError, MyCreatable.create)
 
-
     def test_return_raw_response(self):
         # Test default initialization sets return_raw_response to False
         initialize()
@@ -140,7 +224,6 @@ class TestInitialization(DatadogAPINoInitialization):
         # Assert we get multiple fields back when set to True
         initialize(api_key="aaaaaaaaaa", app_key="123456", return_raw_response=True)
         data, raw = api.Monitor.get_all()
-
 
     def test_default_values(self):
         with EnvVars(ignore=[
@@ -366,7 +449,7 @@ class TestResources(DatadogAPIWithInitialization):
         )
         self.request_called_with(
             'POST',
-            API_HOST +'/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            API_HOST + '/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
             params={},
             data={'mydata': 'val', 'mydata2': 'val2'}
         )
@@ -408,6 +491,19 @@ class TestResources(DatadogAPIWithInitialization):
         )
         _, kwargs = self.request_mock.call_args()
         self.assertIsNone(kwargs["data"])
+
+
+class TestEventResource(DatadogAPIWithInitialization):
+
+    def test_submit_event_wrong_alert_type(self):
+        """
+        Assess that an event submitted with a wrong alert_type raises the correct Exception
+        """
+        with pytest.raises(ApiError) as excinfo:
+            Event.create(
+                title="test no hostname", text="test no hostname", attach_host_name=False, alert_type="wrong_type"
+            )
+        assert "Parameter alert_type must be either error, warning, info or success" in str(excinfo.value)
 
 
 class TestMetricResource(DatadogAPIWithInitialization):
@@ -544,13 +640,72 @@ class TestMetricResource(DatadogAPIWithInitialization):
         m_long = int(1)  # long in Python 3.x
 
         if not is_p3k():
-            m_long = long(1)
+            m_long = long(1)  # noqa: F821
 
         supported_data_types = [1, 1.0, m_long, Decimal(1), Fraction(1, 2)]
 
         for point in supported_data_types:
             serie = dict(metric='metric.numerical', points=point)
             self.submit_and_assess_metric_payload(serie)
+
+    def test_compression(self):
+        """
+        Metric and Distribution support zlib compression
+        """
+
+        # By default, there is no compression
+        # Metrics
+        series = dict(metric="metric.1", points=[(time(), 13.)])
+        Metric.send(attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" not in headers
+        assert req_data == json.dumps({"series": [series]})
+        # Same result when explicitely False
+        Metric.send(compress_payload=False, attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" not in headers
+        assert req_data == json.dumps({"series": [series]})
+        # Distributions
+        series = dict(metric="metric.1", points=[(time(), 13.)])
+        Distribution.send(attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" not in headers
+        assert req_data == json.dumps({"series": [series]})
+        # Same result when explicitely False
+        Distribution.send(compress_payload=False, attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" not in headers
+        assert req_data == json.dumps({"series": [series]})
+
+        # Enabling compression
+        # Metrics
+        series = dict(metric="metric.1", points=[(time(), 13.)])
+        compressed_series = zlib.compress(json.dumps({"series": [series]}).encode("utf-8"))
+        Metric.send(compress_payload=True, attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" in headers
+        assert headers["Content-Encoding"] == "deflate"
+        assert req_data == compressed_series
+        # Distributions
+        series = dict(metric='metric.1', points=[(time(), 13.)])
+        compressed_series = zlib.compress(json.dumps({"series": [series]}).encode("utf-8"))
+        Distribution.send(compress_payload=True, attach_host_name=False, **series)
+        _, kwargs = self.request_mock.call_args()
+        req_data = kwargs["data"]
+        headers = kwargs["headers"]
+        assert "Content-Encoding" in headers
+        assert headers["Content-Encoding"] == "deflate"
+        assert req_data == compressed_series
 
 
 class TestServiceCheckResource(DatadogAPIWithInitialization):
@@ -568,3 +723,32 @@ class TestServiceCheckResource(DatadogAPIWithInitialization):
         ServiceCheck.check(
             check='check_pg', host_name='host0', status=1, message=None,
             timestamp=None, tags=None)
+
+
+class TestUserResource(DatadogAPIWithInitialization):
+
+    def test_create_user(self):
+        User.create(handle="handle", name="name", access_role="ro")
+        self.request_called_with(
+            "POST", "https://example.com/api/v1/user", data={"handle": "handle", "name": "name", "access_role": "ro"}
+        )
+
+    def test_get_user(self):
+        User.get("handle")
+        self.request_called_with("GET", "https://example.com/api/v1/user/handle")
+
+    def test_update_user(self):
+        User.update("handle", name="name", access_role="ro", email="email", disabled="disabled")
+        self.request_called_with(
+            "PUT",
+            "https://example.com/api/v1/user/handle",
+            data={"name": "name", "access_role": "ro", "email": "email", "disabled": "disabled"}
+        )
+
+    def test_delete_user(self):
+        User.delete("handle")
+        self.request_called_with("DELETE", "https://example.com/api/v1/user/handle")
+
+    def test_get_all_users(self):
+        User.get_all()
+        self.request_called_with("GET", "https://example.com/api/v1/user")

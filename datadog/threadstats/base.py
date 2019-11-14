@@ -26,7 +26,7 @@ log = logging.getLogger('datadog.threadstats')
 
 class ThreadStats(object):
 
-    def __init__(self, namespace="", constant_tags=None):
+    def __init__(self, namespace="", constant_tags=None, compress_payload=False):
         """
         Initialize a threadstats object.
 
@@ -35,6 +35,9 @@ class ThreadStats(object):
 
         :param constant_tags: Tags to attach to every metric reported by this client
         :type constant_tags: list of strings
+
+        :param compress_payload: compress the payload using zlib
+        :type compress_payload: bool
 
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by ThreadStats client
         :type DATADOG_TAGS: list of strings
@@ -48,6 +51,7 @@ class ThreadStats(object):
 
         # State
         self._disabled = True
+        self.compress_payload = compress_payload
 
     def start(self, flush_interval=10, roll_up_interval=10, device=None,
               flush_in_thread=True, flush_in_greenlet=False, disabled=False):
@@ -108,7 +112,7 @@ class ThreadStats(object):
         # The reporter is responsible for sending metrics off to their final destination.
         # It's abstracted to support easy unit testing and in the near future, forwarding
         # to the datadog agent.
-        self.reporter = HttpReporter()
+        self.reporter = HttpReporter(compress_payload=self.compress_payload)
 
         self._is_flush_in_progress = False
         self.flush_count = 0
@@ -398,10 +402,10 @@ class ThreadStats(object):
             try:
                 log.debug("Flushing metrics in thread")
                 self.flush()
-            except:
+            except Exception:
                 try:
                     log.exception("Error flushing in thread")
-                except:
+                except Exception:
                     pass
 
         log.info("Starting flush thread with interval %s." % self.flush_interval)
@@ -423,10 +427,10 @@ class ThreadStats(object):
                     log.debug("Flushing metrics in greenlet")
                     self.flush()
                     gevent.sleep(self.flush_interval)
-                except:
+                except Exception:
                     try:
                         log.exception("Error flushing in greenlet")
-                    except:
+                    except Exception:
                         pass
 
         log.info("Starting flush greenlet with interval %s." % self.flush_interval)

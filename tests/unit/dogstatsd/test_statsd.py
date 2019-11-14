@@ -193,6 +193,13 @@ class TestDogStatsd(unittest.TestCase):
         self.assert_almost_equal(3000, len(self.statsd.socket.payloads), 150)
         assert_equal('sampled_counter:1|c|@0.3', self.recv())
 
+    def test_default_sample_rate(self):
+        self.statsd.default_sample_rate = 0.3
+        for i in range(10000):
+            self.statsd.increment('sampled_counter')
+        self.assert_almost_equal(3000, len(self.statsd.socket.payloads), 150)
+        assert_equal('sampled_counter:1|c|@0.3', self.recv())
+
     def test_tags_and_samples(self):
         for i in range(100):
             self.statsd.gauge('gst', 23, tags=["sampled"], sample_rate=0.9)

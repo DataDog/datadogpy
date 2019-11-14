@@ -174,7 +174,7 @@ class ScreenboardClient(object):
             graphs = sys.stdin.read()
         try:
             graphs = json.loads(graphs)
-        except:
+        except Exception:
             raise Exception('bad json parameter')
         res = api.Screenboard.create(
             title=args.title, description=args.description, graphs=[graphs],
@@ -195,7 +195,7 @@ class ScreenboardClient(object):
             graphs = sys.stdin.read()
         try:
             graphs = json.loads(graphs)
-        except:
+        except Exception:
             raise Exception('bad json parameter')
 
         res = api.Screenboard.update(
@@ -271,7 +271,7 @@ class ScreenboardClient(object):
             graphs = sys.stdin.read()
         try:
             graphs = json.loads(graphs)
-        except:
+        except Exception:
             raise Exception('bad json parameter')
         res = api.Screenboard.create(board_title=args.filename,
                                      description="Description for {0}".format(args.filename),

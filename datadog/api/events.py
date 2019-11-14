@@ -1,3 +1,4 @@
+from datadog.api.exceptions import ApiError
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
     SearchableAPIResource
 from datadog.util.compat import iteritems
@@ -58,6 +59,10 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
 
         >>> api.Event.create(title=title, text=text, tags=tags)
         """
+        if params.get("alert_type"):
+            if params["alert_type"] not in ["error", "warning", "info", "success"]:
+                raise ApiError("Parameter alert_type must be either error, warning, info or success")
+
         return super(Event, cls).create(attach_host_name=attach_host_name, **params)
 
     @classmethod

@@ -2,6 +2,7 @@
 import json
 import logging
 import time
+import zlib
 
 # datadog
 from datadog.api import _api_version, _max_timeouts, _backoff_period
@@ -14,7 +15,7 @@ from datadog.api.exceptions import (
 )
 from datadog.api.http_client import resolve_http_client
 from datadog.util.compat import is_p3k
-from datadog.util.format import construct_url
+from datadog.util.format import construct_url, construct_path
 
 
 log = logging.getLogger('datadog.api')
@@ -46,7 +47,8 @@ class APIClient(object):
 
     @classmethod
     def submit(cls, method, path, api_version=None, body=None, attach_host_name=False,
-               response_formatter=None, error_formatter=None, **params):
+               response_formatter=None, error_formatter=None, suppress_response_errors_on_codes=None,
+               compress_payload=False, **params):
         """
         Make an HTTP API request
 
@@ -70,6 +72,13 @@ class APIClient(object):
         :param attach_host_name: link the new resource object to the host name
         :type attach_host_name: bool
 
+        :param suppress_response_errors_on_codes: suppress ApiError on `errors` key in the response for the given HTTP
+                                                  status codes
+        :type suppress_response_errors_on_codes: None|list(int)
+
+        :param compress_payload: compress the payload using zlib
+        :type compress_payload: bool
+
         :param params: dictionary to be sent in the query string of the request
         :type params: dictionary
 
@@ -90,9 +99,25 @@ class APIClient(object):
             if _api_key is None:
                 raise ApiNotInitialized("API key is not set."
                                         " Please run 'initialize' method first.")
-            params['api_key'] = _api_key
+
+            # Set api and app keys in headers
+            headers = {}
+            headers['DD-API-KEY'] = _api_key
             if _application_key:
-                params['application_key'] = _application_key
+                headers['DD-APPLICATION-KEY'] = _application_key
+
+            # Check if the api_version is provided
+            if not api_version:
+                api_version = _api_version
+
+            # set api and app keys in params only for some endpoints and thus remove keys from headers
+            # as they cannot be set in both params and headers
+            if cls._set_api_and_app_keys_in_params(api_version, path):
+                params['api_key'] = _api_key
+                del headers['DD-API-KEY']
+                if _application_key:
+                    params['application_key'] = _application_key
+                    del headers['DD-APPLICATION-KEY']
 
             # Attach host name to body
             if attach_host_name and body:
@@ -110,15 +135,14 @@ class APIClient(object):
             if 'tags' in params and isinstance(params['tags'], list):
                 params['tags'] = ','.join(params['tags'])
 
-            # Check if the api_version is provided
-            if not api_version:
-                api_version = _api_version
-
             # Process the body, if necessary
-            headers = {}
             if isinstance(body, dict):
                 body = json.dumps(body)
                 headers['Content-Type'] = 'application/json'
+
+            if compress_payload:
+                body = zlib.compress(body.encode("utf-8"))
+                headers["Content-Encoding"] = "deflate"
 
             # Construct the URL
             url = construct_url(_api_host, api_version, path)
@@ -150,8 +174,13 @@ class APIClient(object):
                 except ValueError:
                     raise ValueError('Invalid JSON response: {0}'.format(content))
 
-                if response_obj and 'errors' in response_obj:
-                    raise ApiError(response_obj)
+                # response_obj can be a bool and not a dict
+                if isinstance(response_obj, dict):
+                    if response_obj and 'errors' in response_obj:
+                        # suppress ApiError when specified and just return the response
+                        if not (suppress_response_errors_on_codes and
+                                result.status_code in suppress_response_errors_on_codes):
+                            raise ApiError(response_obj)
             else:
                 response_obj = None
 
@@ -177,7 +206,7 @@ class APIClient(object):
                 raise
         except ApiError as e:
             if _mute:
-                for error in e.args[0]['errors']:
+                for error in (e.args[0].get('errors') or []):
                     log.error(error)
                 if error_formatter is None:
                     return e.args[0]
@@ -233,3 +262,23 @@ class APIClient(object):
         backed_off_time = now - cls._backoff_timestamp
         backoff_time_left = cls._backoff_period - backed_off_time
         return round(backed_off_time, 2), round(backoff_time_left, 2)
+
+    @classmethod
+    def _set_api_and_app_keys_in_params(cls, api_version, path):
+        """
+        Some endpoints need api and app keys to be set in params only
+        For these endpoints, api and app keys in headers are ignored
+        :return: True if this endpoint needs api and app keys params set
+        """
+        constructed_path = construct_path(api_version, path)
+
+        set_of_paths = {
+            "v1/series",
+            "v1/check_run",
+            "v1/events",
+            "v1/screen",
+        }
+        if constructed_path in set_of_paths:
+            return True
+
+        return False

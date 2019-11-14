@@ -16,6 +16,7 @@ _max_timeouts = 3
 _max_retries = 3
 _backoff_period = 300
 _mute = True
+_return_raw_response = False
 
 # Resources
 from datadog.api.comments import Comment
@@ -39,3 +40,5 @@ from datadog.api.aws_integration import Aws
 from datadog.api.aws_log_integration import AwsLogs
 from datadog.api.azure_integration import Azure
 from datadog.api.gcp_integration import Gcp
+from datadog.api.service_level_objectives import ServiceLevelObjective
+from datadog.api.synthetics import Synthetics

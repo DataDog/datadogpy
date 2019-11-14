@@ -23,7 +23,7 @@ jobs:
         TOXENV: "py34"
       Py35:
         PYTHON_VERSION: "3.5"
-        TOXENV: "py35,flake8"
+        TOXENV: "py35"
       Py36:
         PYTHON_VERSION: "3.6"
         TOXENV: "py36"
@@ -36,6 +36,9 @@ jobs:
       Pypy3:
         PYTHON_VERSION: "pypy3"
         TOXENV: "pypy3"
+      Lint:
+        PYTHON_VERSION: "3.5"
+        TOXENV: "flake8"
   steps:
   - task: UsePythonVersion@0
     displayName: Use python $(PYTHON_VERSION)

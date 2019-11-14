@@ -5,6 +5,7 @@ import os
 import time
 
 import requests
+import pytest
 
 # datadog
 from datadog import api as dog
@@ -130,7 +131,11 @@ class TestDatadog:
         }
 
         timeboard = dog.Timeboard.create(title="api timeboard", description="my api timeboard", graphs=[graph])
+        assert "api timeboard" == timeboard["dash"]["title"]
+        assert "my api timeboard" == timeboard["dash"]["description"]
+        assert timeboard["dash"]["graphs"][0] == graph
 
+        timeboard = get_with_retry("Timeboard", timeboard["dash"]["id"])
         assert "api timeboard" == timeboard["dash"]["title"]
         assert "my api timeboard" == timeboard["dash"]["description"]
         assert timeboard["dash"]["graphs"][0] == graph
@@ -156,9 +161,7 @@ class TestDatadog:
         ids = [str(timeboard["id"]) for timeboard in timeboards]
         assert str(timeboard["dash"]["id"]) in ids
 
-        assert dog.Timeboard.get(timeboard["dash"]["id"])["dash"]["id"] == timeboard["dash"]["id"]
-        dog.Timeboard.delete(timeboard["dash"]["id"])
-        assert "errors" in dog.Timeboard.get(timeboard["dash"]["id"])
+        assert dog.Timeboard.delete(timeboard["dash"]["id"]) is None
 
     def test_search(self):
         results = dog.Infrastructure.search(q="")
@@ -176,12 +179,14 @@ class TestDatadog:
         def retry_condition(r):
             return not r["series"]
 
-        # Send metrics with single and multi points
+        # Send metrics with single and multi points, and with compression
         assert dog.Metric.send(metric=metric_name_single, points=1, host=host_name)["status"] == "ok"
         points = [(now_ts - 60, 1), (now_ts, 2)]
         assert dog.Metric.send(metric=metric_name_list, points=points, host=host_name)["status"] == "ok"
         points = (now_ts - 60, 1)
-        assert dog.Metric.send(metric=metric_name_tuple, points=points, host=host_name)["status"] == "ok"
+        assert dog.Metric.send(
+            metric=metric_name_tuple, points=points, host=host_name, compress_payload=True
+        )["status"] == "ok"
 
         metric_query_single = get_with_retry(
             "Metric",
@@ -311,7 +316,7 @@ class TestDatadog:
         create_res = dog.Screenboard.create(**board)
         _compare_screenboard(board, create_res)
 
-        get_res = dog.Screenboard.get(create_res["id"])
+        get_res = get_with_retry("Screenboard", create_res["id"])
         _compare_screenboard(get_res, create_res)
         assert get_res["id"] == create_res["id"]
 
@@ -327,10 +332,12 @@ class TestDatadog:
         assert share_res["board_id"] == get_res["id"]
         public_url = share_res["public_url"]
 
+        time.sleep(WAIT_TIME)
         response = requests.get(public_url)
         assert response.status_code == 200
 
         dog.Screenboard.revoke(get_res["id"])
+        time.sleep(WAIT_TIME)
         response = requests.get(public_url)
         assert response.status_code == 404
 
@@ -343,7 +350,11 @@ class TestDatadog:
 
         options = {"silenced": {"*": int(time.time()) + 60 * 60}, "notify_no_data": False}
         monitor = dog.Monitor.create(type="metric alert", query=query, options=options)
+        assert monitor["query"] == query
+        assert monitor["options"]["notify_no_data"] == options["notify_no_data"]
+        assert monitor["options"]["silenced"] == options["silenced"]
 
+        monitor = get_with_retry("Monitor", monitor["id"])
         assert monitor["query"] == query
         assert monitor["options"]["notify_no_data"] == options["notify_no_data"]
         assert monitor["options"]["silenced"] == options["silenced"]
@@ -363,9 +374,31 @@ class TestDatadog:
         monitors = [m for m in dog.Monitor.get_all() if m["id"] == monitor["id"]]
         assert len(monitors) == 1
 
-        assert dog.Monitor.get(monitor["id"])["id"] == monitor["id"]
         assert dog.Monitor.delete(monitor["id"]) == {"deleted_monitor_id": monitor["id"]}
 
+    def test_service_level_objective_crud(self):
+        numerator = "sum:my.custom.metric{type:good}.as_count()"
+        denominator = "sum:my.custom.metric{*}.as_count()"
+        query = {"numerator": numerator, "denominator": denominator}
+        thresholds = [{"timeframe": "7d", "target": 90}]
+        name = "test SLO {}".format(time.time())
+        slo = dog.ServiceLevelObjective.create(type="metric", query=query, thresholds=thresholds, name=name,
+                                               tags=["type:test"])["data"][0]
+        assert slo["name"] == name
+
+        numerator2 = "sum:my.custom.metric{type:good,!type:ignored}.as_count()"
+        denominator2 = "sum:my.custom.metric{!type:ignored}.as_count()"
+        query = {"numerator": numerator2, "denominator": denominator2}
+        slo = dog.ServiceLevelObjective.update(id=slo["id"], type="metric", query=query, thresholds=thresholds,
+                                               name=name, tags=["type:test"])["data"][0]
+        assert slo["name"] == name
+        slos = [s for s in dog.ServiceLevelObjective.get_all()["data"] if s["id"] == slo["id"]]
+        assert len(slos) == 1
+
+        assert dog.ServiceLevelObjective.get(slo["id"])["data"]["id"] == slo["id"]
+        dog.ServiceLevelObjective.delete(slo["id"])
+
+    @pytest.mark.admin_needed
     def test_monitor_muting(self):
         query1 = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
         query2 = "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100"
@@ -384,6 +417,9 @@ class TestDatadog:
         monitor2 = dog.Monitor.mute(monitor2["id"], scope="host:foo")
         assert monitor2["options"]["silenced"] == {"host:foo": None}
 
+        get_with_retry(
+            "Monitor", monitor2["id"], retry_condition=lambda r: r["options"]["silenced"] != {"host:foo": None}
+        )
         monitor2 = dog.Monitor.unmute(monitor2["id"], scope="host:foo")
         assert monitor2["options"]["silenced"] == {}
 
@@ -395,25 +431,26 @@ class TestDatadog:
         end = start + 1000
 
         # Create downtime
-        downtime = dog.Downtime.create(scope="env:staging", start=start, end=end)
+        downtime = dog.Downtime.create(scope="test_tag:1", start=start, end=end)
         assert downtime["start"] == start
         assert downtime["end"] == end
-        assert downtime["scope"] == ["env:staging"]
+        assert downtime["scope"] == ["test_tag:1"]
         assert downtime["disabled"] is False
+
+        get_with_retry("Downtime", downtime["id"])
 
         # Update downtime
         message = "Doing some testing on staging."
         end = int(time.time()) + 60000
-        downtime = dog.Downtime.update(downtime["id"], scope="env:test", end=end, message=message)
+        downtime = dog.Downtime.update(downtime["id"], scope="test_tag:2", end=end, message=message)
         assert downtime["end"] == end
         assert downtime["message"] == message
-        assert downtime["scope"] == ["env:test"]
+        assert downtime["scope"] == ["test_tag:2"]
         assert downtime["disabled"] is False
 
         # Delete downtime
         assert dog.Downtime.delete(downtime["id"]) is None
-        downtime = dog.Downtime.get(downtime["id"])
-        assert downtime["disabled"] is True
+        downtime = get_with_retry("Downtime", downtime["id"], retry_condition=lambda r: r["disabled"] is False)
 
     def test_service_check(self):
         assert dog.ServiceCheck.check(
@@ -486,7 +523,7 @@ class TestDatadog:
         assert embed["graph_title"] == title
 
         var = "asdfasdfasdf"
-        response_graph = dog.Embed.get(embed["embed_id"], var=var)
+        response_graph = get_with_retry("Embed", embed["embed_id"], var=var)
         # Check the graph has the same embed_id and the template_var is added to the url
         assert "embed_id" in response_graph
         assert response_graph["embed_id"] == embed["embed_id"]
@@ -496,8 +533,8 @@ class TestDatadog:
         assert "success" in dog.Embed.enable(embed["embed_id"])
 
         assert "success" in dog.Embed.revoke(embed["embed_id"])
-        assert "errors" in dog.Embed.get(embed["embed_id"])
 
+    @pytest.mark.admin_needed
     def test_user_crud(self):
         now = int(time.time())
         handle = "user{}@test.com".format(now)
@@ -506,10 +543,17 @@ class TestDatadog:
 
         # test create user
         user = dog.User.create(handle=handle, name=name, access_role="ro")
+        assert "user" in user
         assert user["user"]["handle"] == handle
         assert user["user"]["name"] == name
         assert user["user"]["disabled"] is False
         assert user["user"]["access_role"] == "ro"
+
+        # test get user
+        user = get_with_retry("User", handle)
+        assert "user" in user
+        assert user["user"]["handle"] == handle
+        assert user["user"]["name"] == name
 
         # test update user
         user = dog.User.update(handle, name=alternate_name, access_role="st")
@@ -518,16 +562,13 @@ class TestDatadog:
         assert user["user"]["disabled"] is False
         assert user["user"]["access_role"] == "st"
 
-        # test get user
-        user = dog.User.get(handle)
-        assert user["user"]["handle"] == handle
-        assert user["user"]["name"] == alternate_name
-
         # test disable user
         dog.User.delete(handle)
         u = dog.User.get(handle)
+        assert "user" in u
         assert u["user"]["disabled"] is True
 
         # test get all users
         u = dog.User.get_all()
+        assert "users" in u
         assert len(u["users"]) >= 1
