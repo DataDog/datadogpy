@@ -14,7 +14,7 @@ class TestGcpIntegration:
 
     def test_gcp_crud(self):
         # Test Create
-        create_output = dog.Gcp.create(
+        create_output = dog.GcpIntegration.create(
             type="service_account",
             project_id=self.test_project_id,
             private_key_id="fake_private_key_id",
@@ -29,14 +29,14 @@ class TestGcpIntegration:
         )
         assert create_output == {}
         # Test Update
-        dog.Gcp.update(
+        dog.GcpIntegration.update(
             project_id=self.test_project_id,
             client_email=self.test_client_email,
             host_filters="api:test2",
             automute=True
         )
         update_tests_pass = False
-        for i in dog.Gcp.list():
+        for i in dog.GcpIntegration.list():
             if (i['project_id'] == self.test_project_id and
                     i['host_filters'] == 'api:test2' and
                     i['automute'] is True):
@@ -44,14 +44,14 @@ class TestGcpIntegration:
         assert update_tests_pass
         # Test List
         list_tests_pass = False
-        for i in dog.Gcp.list():
+        for i in dog.GcpIntegration.list():
             if (i['project_id'] == self.test_project_id and
                     i['host_filters'] == 'api:test2' and
                     i['automute'] is True):
                 list_tests_pass = True
         assert list_tests_pass
         # Test Delete
-        delete_output = dog.Gcp.delete(
+        delete_output = dog.GcpIntegration.delete(
             project_id=self.test_project_id,
             client_email=self.test_client_email
         )

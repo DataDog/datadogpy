@@ -21,7 +21,7 @@ class TestAwsIntegration:
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
 
     def test_create(self):
-        output = dog.Aws.create(
+        output = dog.AwsIntegration.create(
             account_id=TEST_ACCOUNT_ID_3,
             role_name=TEST_ROLE_NAME,
             host_tags=["api:test"],
@@ -31,18 +31,18 @@ class TestAwsIntegration:
         try:
             assert "external_id" in output
         finally:
-            dog.Aws.delete(account_id=TEST_ACCOUNT_ID_3, role_name=TEST_ROLE_NAME)
+            dog.AwsIntegration.delete(account_id=TEST_ACCOUNT_ID_3, role_name=TEST_ROLE_NAME)
 
     def test_list(self):
-        dog.Aws.create(
+        dog.AwsIntegration.create(
             account_id=TEST_ACCOUNT_ID_1,
             role_name=TEST_ROLE_NAME
         )
-        dog.Aws.create(
+        dog.AwsIntegration.create(
             account_id=TEST_ACCOUNT_ID_2,
             role_name=TEST_ROLE_NAME
         )
-        output = dog.Aws.list()
+        output = dog.AwsIntegration.list()
         assert "accounts" in output
         assert len(output['accounts']) >= 2
         expected_fields = [
@@ -54,57 +54,57 @@ class TestAwsIntegration:
             'account_id'
         ]
         assert all(k in output['accounts'][0].keys() for k in expected_fields)
-        dog.Aws.delete(account_id=TEST_ACCOUNT_ID_1, role_name=TEST_ROLE_NAME)
-        dog.Aws.delete(account_id=TEST_ACCOUNT_ID_2, role_name=TEST_ROLE_NAME)
+        dog.AwsIntegration.delete(account_id=TEST_ACCOUNT_ID_1, role_name=TEST_ROLE_NAME)
+        dog.AwsIntegration.delete(account_id=TEST_ACCOUNT_ID_2, role_name=TEST_ROLE_NAME)
 
     def test_delete(self):
-        dog.Aws.create(
+        dog.AwsIntegration.create(
             account_id=TEST_ACCOUNT_ID_1,
             role_name=TEST_ROLE_NAME
         )
-        output = dog.Aws.delete(account_id=TEST_ACCOUNT_ID_1, role_name=TEST_ROLE_NAME)
+        output = dog.AwsIntegration.delete(account_id=TEST_ACCOUNT_ID_1, role_name=TEST_ROLE_NAME)
         assert output == {}
 
     def test_generate_new_external_id(self):
-        dog.Aws.create(
+        dog.AwsIntegration.create(
             account_id=TEST_ACCOUNT_ID_2,
             role_name=TEST_ROLE_NAME
         )
-        output = dog.Aws.generate_new_external_id(
+        output = dog.AwsIntegration.generate_new_external_id(
             account_id=TEST_ACCOUNT_ID_2,
             role_name=TEST_ROLE_NAME
         )
         assert "external_id" in output
-        dog.Aws.delete(account_id=TEST_ACCOUNT_ID_2, role_name=TEST_ROLE_NAME)
+        dog.AwsIntegration.delete(account_id=TEST_ACCOUNT_ID_2, role_name=TEST_ROLE_NAME)
 
     def test_list_namespace_rules(self):
-        dog.Aws.create(
+        dog.AwsIntegration.create(
             account_id=TEST_ACCOUNT_ID_2,
             role_name=TEST_ROLE_NAME
         )
-        output = dog.Aws.list_namespace_rules(
+        output = dog.AwsIntegration.list_namespace_rules(
             account_id=TEST_ACCOUNT_ID_2,
             role_name=TEST_ROLE_NAME
         )
         assert len(output) >= AVAILABLE_NAMESPACES
-        dog.Aws.delete(account_id=TEST_ACCOUNT_ID_2, role_name=TEST_ROLE_NAME)
+        dog.AwsIntegration.delete(account_id=TEST_ACCOUNT_ID_2, role_name=TEST_ROLE_NAME)
 
     def test_update(self):
-        dog.Aws.create(
+        dog.AwsIntegration.create(
             account_id=TEST_ACCOUNT_ID_2,
             role_name=TEST_ROLE_NAME
         )
-        dog.Aws.update(
+        dog.AwsIntegration.update(
             account_id=TEST_ACCOUNT_ID_2,
             role_name=TEST_ROLE_NAME,
             new_account_id=TEST_ACCOUNT_ID_4,
             host_tags=["api:test2"],
             new_role_name=TEST_ROLE_NAME_2
         )
-        output = dog.Aws.list()
+        output = dog.AwsIntegration.list()
         tests_pass = False
         for i in output['accounts']:
             if i.get('account_id') == TEST_ACCOUNT_ID_4 and i.get('role_name') == TEST_ROLE_NAME_2:
                 tests_pass = True
         assert tests_pass
-        dog.Aws.delete(account_id=TEST_ACCOUNT_ID_4, role_name=TEST_ROLE_NAME_2)
+        dog.AwsIntegration.delete(account_id=TEST_ACCOUNT_ID_4, role_name=TEST_ROLE_NAME_2)

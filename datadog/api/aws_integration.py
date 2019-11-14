@@ -3,7 +3,7 @@ from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
     ListableAPISubResource
 
 
-class Aws(GetableAPIResource, CreateableAPIResource,
+class AwsIntegration(GetableAPIResource, CreateableAPIResource,
           DeletableAPIResource, ListableAPISubResource, UpdatableAPIResource,
           UpdatableAPISubResource):
     """
@@ -17,9 +17,9 @@ class Aws(GetableAPIResource, CreateableAPIResource,
         """
         List all Datadog-AWS integrations available in your Datadog organization.
 
-        >>> api.Aws.list()
+        >>> api.AwsIntegration.list()
         """
-        return super(Aws, cls).get(id=cls._resource_id, **params)
+        return super(AwsIntegration, cls).get(id=cls._resource_id, **params)
 
     @classmethod
     def create(cls, **params):
@@ -70,11 +70,11 @@ class Aws(GetableAPIResource, CreateableAPIResource,
         >>> host_tags = ["<KEY>:<VALUE>"]
         >>> account_specific_namespace_rules = {"namespace1":true/false, "namespace2":true/false}
 
-        >>> api.Aws.create(account_id=account_id, role_name=role_name, \
+        >>> api.AwsIntegration.create(account_id=account_id, role_name=role_name, \
         filter_tags=filter_tags,host_tags=host_tags,\
         account_specific_namespace_rules=account_specific_namespace_rules)
         """
-        return super(Aws, cls).create(id=cls._resource_id, **params)
+        return super(AwsIntegration, cls).create(id=cls._resource_id, **params)
 
     @classmethod
     def update(cls, **body):
@@ -164,7 +164,7 @@ class Aws(GetableAPIResource, CreateableAPIResource,
         >>> host_tags = ["<KEY>:<VALUE>"]
         >>> account_specific_namespace_rules = {"namespace1":true/false, "namespace2":true/false}
 
-        >>> api.Aws.update(account_id=account_id, role_name=role_name, \
+        >>> api.AwsIntegration.update(account_id=account_id, role_name=role_name, \
         new_account_id=new_account_id, new_role_name=new_role_name, \
         filter_tags=filter_tags,host_tags=host_tags,\
         account_specific_namespace_rules=account_specific_namespace_rules)
@@ -184,7 +184,7 @@ class Aws(GetableAPIResource, CreateableAPIResource,
                 body['access_key_id'] = body.pop('new_access_key_id')
             if body.get('new_secret_access_key'):
                 body['secret_access_key'] = body.pop('new_secret_access_key')
-        return super(Aws, cls).update(id=cls._resource_id, params=params, **body)
+        return super(AwsIntegration, cls).update(id=cls._resource_id, params=params, **body)
 
     @classmethod
     def delete(cls, **body):
@@ -194,19 +194,19 @@ class Aws(GetableAPIResource, CreateableAPIResource,
         >>> account_id = "<AWS_ACCOUNT_ID>"
         >>> role_name = "<Datadog Integration Role Name>"
 
-        >>> api.Aws.delete()
+        >>> api.AwsIntegration.delete()
         """
-        return super(Aws, cls).delete(id=cls._resource_id, body=body)
+        return super(AwsIntegration, cls).delete(id=cls._resource_id, body=body)
 
     @classmethod
     def list_namespace_rules(cls, **params):
         """
         List all namespace rules available as options.
 
-        >>> api.Aws.list_namespace_rules()
+        >>> api.AwsIntegration.list_namespace_rules()
         """
         cls._sub_resource_name = 'available_namespace_rules'
-        return super(Aws, cls).get_items(id=cls._resource_id, **params)
+        return super(AwsIntegration, cls).get_items(id=cls._resource_id, **params)
 
     @classmethod
     def generate_new_external_id(cls, **params):
@@ -216,7 +216,7 @@ class Aws(GetableAPIResource, CreateableAPIResource,
         >>> account_id = "<AWS_ACCOUNT_ID>"
         >>> role_name = "<Datadog Integration Role Name>"
 
-        >>> api.Aws.generate_new_external_id()
+        >>> api.AwsIntegration.generate_new_external_id()
         """
         cls._sub_resource_name = 'generate_new_external_id'
-        return super(Aws, cls).update_items(id=cls._resource_id, **params)
+        return super(AwsIntegration, cls).update_items(id=cls._resource_id, **params)

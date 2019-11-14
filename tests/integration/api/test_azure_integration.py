@@ -18,7 +18,7 @@ class TestAzureIntegration:
 
     def test_azure_crud(self):
         # Test Create
-        create_output = dog.Azure.create(
+        create_output = dog.AzureIntegration.create(
             tenant_name=self.test_tenant_name,
             host_filters="api:test",
             client_id=self.test_client_id,
@@ -27,24 +27,24 @@ class TestAzureIntegration:
         assert create_output == {}
         # Test List
         list_tests_pass = False
-        for i in dog.Azure.list():
+        for i in dog.AzureIntegration.list():
             if (i['tenant_name'] == self.test_tenant_name and
                     i['host_filters'] == 'api:test'):
                 list_tests_pass = True
         assert list_tests_pass
         # Test Update Host Filters
-        dog.Azure.update_host_filters(
+        dog.AzureIntegration.update_host_filters(
             tenant_name=self.test_tenant_name,
             host_filters='api:test2',
             client_id=self.test_client_id
         )
         update_host_filters_tests_pass = False
-        for i in dog.Azure.list():
+        for i in dog.AzureIntegration.list():
             if i['host_filters'] == 'api:test2':
                 update_host_filters_tests_pass = True
         assert update_host_filters_tests_pass
         # Test Update
-        dog.Azure.update(
+        dog.AzureIntegration.update(
             tenant_name=self.test_tenant_name,
             new_tenant_name=self.test_new_tenant_name,
             host_filters="api:test3",
@@ -53,20 +53,20 @@ class TestAzureIntegration:
             client_secret=self.test_client_secret
         )
         update_tests_pass = False
-        for i in dog.Azure.list():
+        for i in dog.AzureIntegration.list():
             if (i['tenant_name'] == self.test_new_tenant_name and
                     i['host_filters'] == 'api:test3'):
                 update_tests_pass = True
         assert update_tests_pass
         # Test Delete
-        dog.Azure.delete(
+        dog.AzureIntegration.delete(
             tenant_name=self.test_new_tenant_name,
             client_id=self.test_new_client_id
         )
         delete_tests_pass = True
-        list_output = dog.Azure.list()
+        list_output = dog.AzureIntegration.list()
         if type(list_output) == list:
-            for i in dog.Azure.list():
+            for i in dog.AzureIntegration.list():
                 if i['tenant_name'] == self.test_new_tenant_name:
                     delete_tests_pass = False
         elif self.not_yet_installed_error in list_output['errors'][0]:

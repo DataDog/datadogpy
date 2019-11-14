@@ -2,7 +2,7 @@ from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
     DeletableAPIResource, UpdatableAPIResource, AddableAPISubResource
 
 
-class Azure(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
+class AzureIntegration(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
             UpdatableAPIResource, AddableAPISubResource):
     """
     A wrapper around Azure integration API.
@@ -15,9 +15,9 @@ class Azure(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
         """
         List all Datadog-Azure integrations available in your Datadog organization.
 
-        >>> api.Azure.list()
+        >>> api.AzureIntegration.list()
         """
-        return super(Azure, cls).get(id=cls._resource_id, **params)
+        return super(AzureIntegration, cls).get(id=cls._resource_id, **params)
 
     @classmethod
     def create(cls, **params):
@@ -29,10 +29,10 @@ class Azure(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
         >>> client_secret = "<AZURE_CLIENT_SECRET>"
         >>> host_filters = ["<KEY>:<VALUE>"]
 
-        >>> api.Azure.create(tenant_name=tenant_name, client_id=client_id, \
+        >>> api.AzureIntegration.create(tenant_name=tenant_name, client_id=client_id, \
         client_secret=client_secret,host_filters=host_filters)
         """
-        return super(Azure, cls).create(id=cls._resource_id, **params)
+        return super(AzureIntegration, cls).create(id=cls._resource_id, **params)
 
     @classmethod
     def delete(cls, **body):
@@ -42,9 +42,9 @@ class Azure(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
         >>> tenant_name = "<AZURE_TENANT_NAME>"
         >>> client_id = "<AZURE_CLIENT_ID>"
 
-        >>> api.Azure.delete(tenant_name=tenant_name, client_id=client_id)
+        >>> api.AzureIntegration.delete(tenant_name=tenant_name, client_id=client_id)
         """
-        return super(Azure, cls).delete(id=cls._resource_id, body=body)
+        return super(AzureIntegration, cls).delete(id=cls._resource_id, body=body)
 
     @classmethod
     def update_host_filters(cls, **params):
@@ -55,11 +55,11 @@ class Azure(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
         >>> client_id = "<AZURE_CLIENT_ID>"
         >>> host_filters = "<KEY>:<VALUE>"
 
-        >>> api.Azure.update_host_filters(tenant_name=tenant_name, client_id=client_id, \
+        >>> api.AzureIntegration.update_host_filters(tenant_name=tenant_name, client_id=client_id, \
             host_filters=host_filters)
         """
         cls._sub_resource_name = 'host_filters'
-        return super(Azure, cls).add_items(id=cls._resource_id, **params)
+        return super(AzureIntegration, cls).add_items(id=cls._resource_id, **params)
 
     @classmethod
     def update(cls, **body):
@@ -73,9 +73,9 @@ class Azure(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
         >>> client_secret = "<AZURE_CLIENT_SECRET>"
         >>> host_filters = "<KEY>:<VALUE>"
 
-        >>> api.Azure.update(tenant_name=tenant_name, client_id=client_id, \
+        >>> api.AzureIntegration.update(tenant_name=tenant_name, client_id=client_id, \
         new_tenant_name=new_tenant_name, new_client_id=new_client_id,\
         client_secret=client_secret, host_filters=host_filters)
         """
         params = {}
-        return super(Azure, cls).update(id=cls._resource_id, params=params, **body)
+        return super(AzureIntegration, cls).update(id=cls._resource_id, params=params, **body)

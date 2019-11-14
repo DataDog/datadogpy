@@ -2,7 +2,7 @@ from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
     DeletableAPIResource, UpdatableAPIResource
 
 
-class Gcp(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
+class GcpIntegration(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
           UpdatableAPIResource):
     """
     A wrapper around GCP integration API.
@@ -15,9 +15,9 @@ class Gcp(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
         """
         List all Datadog-Gcp integrations available in your Datadog organization.
 
-        >>> api.Gcp.list()
+        >>> api.GcpIntegration.list()
         """
-        return super(Gcp, cls).get(id=cls._resource_id, **params)
+        return super(GcpIntegration, cls).get(id=cls._resource_id, **params)
 
     @classmethod
     def delete(cls, **body):
@@ -27,9 +27,9 @@ class Gcp(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
         >>> project_id="<GCP_CLIENT_ID>"
         >>> client_email="<GCP_CLIENT_EMAIL>"
 
-        >>> api.Gcp.delete(project_id=project_id, client_email=client_email)
+        >>> api.GcpIntegration.delete(project_id=project_id, client_email=client_email)
         """
-        return super(Gcp, cls).delete(id=cls._resource_id, body=body)
+        return super(GcpIntegration, cls).delete(id=cls._resource_id, body=body)
 
     @classmethod
     def create(cls, **params):
@@ -55,14 +55,14 @@ class Gcp(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
         >>> client_x509_cert_url="<GCP_CLIENT_X509_CERT_URL>"
         >>> host_filters="<KEY>:<VALUE>,<KEY>:<VALUE>"
 
-        >>> api.Gcp.create(type=type, project_id=project_id, \
+        >>> api.GcpIntegration.create(type=type, project_id=project_id, \
         private_key_id=private_key_id,private_key=private_key, \
         client_email=client_email, client_id=client_id, \
         auth_uri=auth_uri, token_uri=token_uri, \
         auth_provider_x509_cert_url=auth_provider_x509_cert_url, \
         client_x509_cert_url=client_x509_cert_url, host_filters=host_filters)
         """
-        return super(Gcp, cls).create(id=cls._resource_id, **params)
+        return super(GcpIntegration, cls).create(id=cls._resource_id, **params)
 
     @classmethod
     def update(cls, **body):
@@ -83,9 +83,9 @@ class Gcp(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
         >>> host_filters="<NEW_HOST_FILTERS>"
         >>> automute=true #boolean
 
-        >>> api.Gcp.update(project_id=project_id, \
+        >>> api.GcpIntegration.update(project_id=project_id, \
         client_email=client_email, host_filters=host_filters, \
         automute=automute)
         """
         params = {}
-        return super(Gcp, cls).update(id=cls._resource_id, params=params, **body)
+        return super(GcpIntegration, cls).update(id=cls._resource_id, params=params, **body)

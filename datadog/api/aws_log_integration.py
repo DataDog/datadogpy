@@ -2,7 +2,7 @@ from datadog.api.resources import DeletableAPISubResource, \
     ListableAPISubResource, AddableAPISubResource
 
 
-class AwsLogs(DeletableAPISubResource, ListableAPISubResource,
+class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource,
               AddableAPISubResource):
     """
     A wrapper around AWS Logs API.
@@ -15,10 +15,10 @@ class AwsLogs(DeletableAPISubResource, ListableAPISubResource,
         """
         List all namespace rules available as options.
 
-        >>> api.AwsLogs.list_log_services()
+        >>> api.AwsLogsIntegration.list_log_services()
         """
         cls._sub_resource_name = 'logs/services'
-        return super(AwsLogs, cls).get_items(id=cls._resource_id, **params)
+        return super(AwsLogsIntegration, cls).get_items(id=cls._resource_id, **params)
 
     @classmethod
     def add_log_lambda_arn(cls, **params):
@@ -29,10 +29,10 @@ class AwsLogs(DeletableAPISubResource, ListableAPISubResource,
         >>> account_id = "<AWS_ACCOUNT_ID>"
         >>> lambda_arn = "<AWS_LAMBDA_ARN>"
 
-        >>> api.AwsLogs.add_log_lambda_arn(account_id=account_id, lambda_arn=lambda_arn)
+        >>> api.AwsLogsIntegration.add_log_lambda_arn(account_id=account_id, lambda_arn=lambda_arn)
         """
         cls._sub_resource_name = 'logs'
-        return super(AwsLogs, cls).add_items(id=cls._resource_id, **params)
+        return super(AwsLogsIntegration, cls).add_items(id=cls._resource_id, **params)
 
     @classmethod
     def save_services(cls, **params):
@@ -42,10 +42,10 @@ class AwsLogs(DeletableAPISubResource, ListableAPISubResource,
         >>> account_id = "<AWS_ACCOUNT_ID>"
         >>> services = ["s3", "elb", "elbv2", "cloudfront", "redshift", "lambda"]
 
-        >>> api.AwsLogs.save_services()
+        >>> api.AwsLogsIntegration.save_services()
         """
         cls._sub_resource_name = 'logs/services'
-        return super(AwsLogs, cls).add_items(id=cls._resource_id, **params)
+        return super(AwsLogsIntegration, cls).add_items(id=cls._resource_id, **params)
 
     @classmethod
     def delete_config(cls, **params):
@@ -56,10 +56,10 @@ class AwsLogs(DeletableAPISubResource, ListableAPISubResource,
         >>> account_id = "<AWS_ACCOUNT_ID>"
         >>> lambda_arn = "<AWS_LAMBDA_ARN>"
 
-        >>> api.AwsLogs.delete_config(account_id=account_id, lambda_arn=lambda_arn)
+        >>> api.AwsLogsIntegration.delete_config(account_id=account_id, lambda_arn=lambda_arn)
         """
         cls._sub_resource_name = 'logs'
-        return super(AwsLogs, cls).delete_items(id=cls._resource_id, **params)
+        return super(AwsLogsIntegration, cls).delete_items(id=cls._resource_id, **params)
 
     @classmethod
     def check_lambda(cls, **params):
@@ -77,10 +77,10 @@ class AwsLogs(DeletableAPISubResource, ListableAPISubResource,
         >>> account_id = "<AWS_ACCOUNT_ID>"
         >>> lambda_arn = "<AWS_LAMBDA_ARN>"
 
-        >>> api.AwsLogs.check_lambda(account_id=account_id, lambda_arn=lambda_arn)
+        >>> api.AwsLogsIntegration.check_lambda(account_id=account_id, lambda_arn=lambda_arn)
         """
         cls._sub_resource_name = 'logs/check_async'
-        return super(AwsLogs, cls).add_items(id=cls._resource_id, **params)
+        return super(AwsLogsIntegration, cls).add_items(id=cls._resource_id, **params)
 
     @classmethod
     def check_services(cls, **params):
@@ -93,17 +93,17 @@ class AwsLogs(DeletableAPISubResource, ListableAPISubResource,
         >>> account_id = "<AWS_ACCOUNT_ID>"
         >>> services = ["s3", "elb", "elbv2", "cloudfront", "redshift", "lambda"]
 
-        >>> api.AwsLogs.check_services()
+        >>> api.AwsLogsIntegration.check_services()
         """
         cls._sub_resource_name = 'logs/services_async'
-        return super(AwsLogs, cls).add_items(id=cls._resource_id, **params)
+        return super(AwsLogsIntegration, cls).add_items(id=cls._resource_id, **params)
 
     @classmethod
     def list(cls, **params):
         """
         List all Datadog-AWS Logs integrations available in your Datadog organization.
 
-        >>> api.AwsLogs.list()
+        >>> api.AwsLogsIntegration.list()
         """
         cls._sub_resource_name = 'logs'
-        return super(AwsLogs, cls).get_items(id=cls._resource_id, **params)
+        return super(AwsLogsIntegration, cls).get_items(id=cls._resource_id, **params)
