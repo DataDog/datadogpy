@@ -3,7 +3,7 @@ from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
 
 
 class GcpIntegration(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
-          UpdatableAPIResource):
+                     UpdatableAPIResource):
     """
     A wrapper around GCP integration API.
     """

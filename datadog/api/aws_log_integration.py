@@ -3,7 +3,7 @@ from datadog.api.resources import DeletableAPISubResource, \
 
 
 class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource,
-              AddableAPISubResource):
+                         AddableAPISubResource):
     """
     A wrapper around AWS Logs API.
     """

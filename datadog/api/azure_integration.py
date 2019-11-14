@@ -3,7 +3,7 @@ from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
 
 
 class AzureIntegration(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
-            UpdatableAPIResource, AddableAPISubResource):
+                       UpdatableAPIResource, AddableAPISubResource):
     """
     A wrapper around Azure integration API.
     """
