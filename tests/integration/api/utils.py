@@ -1,3 +1,4 @@
+import time
 # datadog
 from datadog import api as dog
 
