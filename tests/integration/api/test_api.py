@@ -259,6 +259,25 @@ class TestDatadog:
         assert len(metric_query_tuple["series"][0]["pointlist"]) == 1
         assert metric_query_tuple["series"][0]["pointlist"][0][1] == 1
 
+    def test_distribution_metrics(self):
+        now = datetime.datetime.now()
+        now_ts = int(time.mktime(now.timetuple()))
+        metric_name = "test.distribution_metric." + str(now_ts)
+        host_name = "test.host." + str(now_ts)
+
+        # Submit a distribution metric
+        assert dog.Distribution.send(
+            distributions=[{
+                'metric': metric_name,
+                'points': [(now_ts - 60, [1.0])],
+                'type': 'distribution',
+                'host': host_name,
+            }]
+        )["status"] == "ok"
+
+        # FIXME: Query and verify the test metric result. Currently, it takes
+        # too long for a new distribution metric to become available for query.
+
     def test_graph_snapshot(self):
         metric_query = "system.load.1{*}"
         event_query = "*"
