@@ -273,6 +273,7 @@ class APIClient(object):
         constructed_path = construct_path(api_version, path)
 
         set_of_paths = {
+            "v1/distribution_points",
             "v1/series",
             "v1/check_run",
             "v1/events",
