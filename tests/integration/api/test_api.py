@@ -615,3 +615,69 @@ class TestDatadog:
         u = dog.User.get_all()
         assert "users" in u
         assert len(u["users"]) >= 1
+
+    @pytest.mark.admin_needed
+    def test_roles_crud(self):
+        role_name = "test_role"
+
+        data = {
+                "type": "roles",
+                "attributes": {
+                    "name": role_name
+                }
+            }
+
+        # test create role
+        role = dog.Roles.create(data=data)
+        assert "roles" in role["data"]["type"]
+        assert role["data"]["id"] is not None
+        assert role["data"]["attributes"]["name"] == role_name
+
+        role_uuid = role["data"]["id"]
+
+        # test update role
+        new_role_name = "test_role_2"
+        data = {
+                "type": "roles",
+                "attributes": {
+                    "name": new_role_name
+                }
+            }
+
+        role = dog.Roles.update(role_uuid, data=data)
+        assert "roles" in role["data"]["type"]
+        assert role["data"]["id"] is not None
+        assert role["data"]["attributes"]["name"] == new_role_name
+
+        # test assign permission
+
+        permissions = dog.Permissions.get_all()
+        assert "permissions" in permissions["data"][0]["type"]
+        assert len(permissions["data"]) > 0
+
+        permission_uuid = permissions["data"][0]["id"]
+        data = {
+                    "type": "permissions",
+                    "id": permission_uuid
+                }
+
+        role = dog.Roles.assign_permission(role_uuid, data=data)
+        assert "permissions" in role["data"][0]["type"]
+
+        # test unassign permission
+        data = {
+            "type": "permissions",
+            "id": permission_uuid
+        }
+
+        role = dog.Roles.unassign_permission(role_uuid, data=data)
+        assert "permissions" in role["data"][0]["type"]
+        assert len(permissions["data"]) > 0
+
+
+        # test delete role
+        dog.Roles.delete(role_uuid)
+
+        # check if new role is deleted successfully
+        res = dog.Roles.get(role_uuid)
+        assert "errors" in res
