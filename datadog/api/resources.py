@@ -132,6 +132,12 @@ class CustomUpdatableAPIResource(object):
         """
         Update an API resource object
 
+        :param method: HTTP method, defaults to PUT
+        :type params: string
+
+        :param params: updatable resource id
+        :type params: string
+
         :param params: updated resource object source
         :type params: dictionary
 
