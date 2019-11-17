@@ -3,8 +3,9 @@ from datadog.api.resources import ActionAPIResource, CreateableAPIResource, Cust
 
 from datadog.api.api_client import APIClient
 
+
 class Roles(ActionAPIResource, CreateableAPIResource, CustomUpdatableAPIResource, GetableAPIResource,
-          ListableAPIResource, DeletableAPIResource):
+            ListableAPIResource, DeletableAPIResource):
     """
     A wrapper around Tag HTTP API.
     """

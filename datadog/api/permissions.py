@@ -3,7 +3,7 @@ from datadog.api.resources import ActionAPIResource, CreateableAPIResource, Cust
 
 
 class Permissions(ActionAPIResource, CreateableAPIResource, CustomUpdatableAPIResource, GetableAPIResource,
-            ListableAPIResource, DeletableAPIResource):
+                ListableAPIResource, DeletableAPIResource):
     """
     A wrapper around Tag HTTP API.
     """
