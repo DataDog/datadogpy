@@ -1,9 +1,10 @@
 CHANGELOG
 =========
 
-# 0.31.0 / 2019-11-18
+# 0.32.0 / 2019-11-18
 
 * [BUGFIX] Fix distribution metric submission by sending api/app keys through query params for this endpoint. [#480][]
+* [FEATURE] Add Synthetics support [#433][]
 
 # 0.31.0 / 2019-10-30
 
@@ -458,6 +459,7 @@ See [#8][], thanks [@benweatherman][]
 [#423]: https://github.com/DataDog/datadogpy/issues/423
 [#425]: https://github.com/DataDog/datadogpy/issues/425
 [#428]: https://github.com/DataDog/datadogpy/issues/428
+[#433]: https://github.com/DataDog/datadogpy/issues/433
 [#446]: https://github.com/DataDog/datadogpy/issues/446
 [#447]: https://github.com/DataDog/datadogpy/issues/447
 [#448]: https://github.com/DataDog/datadogpy/issues/448
