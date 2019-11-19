@@ -79,10 +79,7 @@ class DashboardClient(object):
         widgets = args.widgets
         if args.widgets is None:
             widgets = sys.stdin.read()
-        try:
-            widgets = json.loads(widgets)
-        except Exception:
-            raise Exception('bad json parameter')
+        widgets = json.loads(widgets)
 
         # Required arguments
         payload = {
@@ -115,10 +112,7 @@ class DashboardClient(object):
         widgets = args.widgets
         if args.widgets is None:
             widgets = sys.stdin.read()
-        try:
-            widgets = json.loads(widgets)
-        except Exception:
-            raise Exception('bad json parameter')
+        widgets = json.loads(widgets)
 
         # Required arguments
         payload = {
