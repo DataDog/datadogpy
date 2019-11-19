@@ -40,5 +40,7 @@ from datadog.api.aws_integration import AwsIntegration
 from datadog.api.aws_log_integration import AwsLogsIntegration
 from datadog.api.azure_integration import AzureIntegration
 from datadog.api.gcp_integration import GcpIntegration
+from datadog.api.roles import Roles
+from datadog.api.permissions import Permissions
 from datadog.api.service_level_objectives import ServiceLevelObjective
 from datadog.api.synthetics import Synthetics
