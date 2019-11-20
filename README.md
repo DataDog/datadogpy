@@ -1,23 +1,21 @@
-The Datadog Python library
-===========================
+# The Datadog Python library
+
 [![Unit Tests](https://dev.azure.com/datadoghq/datadogpy/_apis/build/status/DataDog.datadogpy.unit?branchName=master)](https://dev.azure.com/datadoghq/datadogpy/_build/latest?definitionId=10&branchName=master)
 [![Integration Tests](https://dev.azure.com/datadoghq/datadogpy/_apis/build/status/DataDog.datadogpy.integration?branchName=master)](https://dev.azure.com/datadoghq/datadogpy/_build/latest?definitionId=13&branchName=master)
 [![Documentation Status](https://readthedocs.org/projects/datadogpy/badge/?version=latest)](https://readthedocs.org/projects/datadogpy/?badge=latest)
 [![PyPI - Version](https://img.shields.io/pypi/v/datadog.svg)](https://pypi.org/project/datadog)
 [![PyPI - Downloads](https://pepy.tech/badge/datadog)](https://pepy.tech/project/datadog)
 
-Datadogpy is a collection of tools suitable for inclusion in existing Python projects or for development of standalone scripts. It provides an abstraction on top of Datadog's raw HTTP interface and the Agent's StatsD metrics aggregation server, to interact with Datadog and efficiently report events and metrics.
+The Datadog Python Library is a collection of tools suitable for inclusion in existing Python projects or for the development of standalone scripts. It provides an abstraction on top of Datadog's raw HTTP interface and the Agent's DogStatsD metrics aggregation server, to interact with Datadog and efficiently report events and metrics.
 
-For usage of StatsD metrics, the Agent must be [running and available](https://docs.datadoghq.com/developers/dogstatsd/).
-
-- Library Documentation: http://datadogpy.readthedocs.org/en/latest/
-- HTTP API Documentation: http://docs.datadoghq.com/api/
-- DatadogHQ: http://datadoghq.com
+- Library Documentation: https://datadogpy.readthedocs.io/en/latest/
+- HTTP API Documentation: https://docs.datadoghq.com/api/
+- DatadogHQ: https://datadoghq.com
 
 See [CHANGELOG.md](CHANGELOG.md) for changes.
 
-Installation
-------------
+## Installation
+
 To install from pip:
 
     pip install datadog
@@ -26,54 +24,36 @@ To install from source:
 
     python setup.py install
 
+## Datadog API
 
-Quick Start Guide
------------------
+Find below a working example for submitting an event to your Event Stream:
+
 ```python
-# Configure the module according to your needs
-from datadog import initialize
+from datadog import initialize, api
 
 options = {
-    'api_key':'api_key',
-    'app_key':'app_key'
+    'api_key': '<YOUR_API_KEY>',
+    'app_key': '<YOUR_APP_KEY>'
 }
 
 initialize(**options)
-
-# Use Datadog REST API client
-from datadog import api
 
 title = "Something big happened!"
 text = 'And let me tell you all about it here!'
 tags = ['version:1', 'application:web']
 
 api.Event.create(title=title, text=text, tags=tags)
-
-
-# Use Statsd, a Python client for DogStatsd
-from datadog import statsd
-
-# Uncomment to set namespace or add tags to everything
-# statsd.namespace = 'localdev'
-# statsd.constant_tags = ['testing', 'dogstats']
-
-statsd.increment('whatever')
-statsd.gauge('foo', 42)
-
-# Or ThreadStats, an alternative tool to collect and flush metrics, using Datadog REST API
-from datadog import ThreadStats
-stats = ThreadStats()
-stats.start()
-stats.increment('home.page.hits')
-
 ```
 
-Environment Variables
----------------------
+**Consult the full list of supported Datadog API endpoints with working code examples in [the Datadog API documentation](https://docs.datadoghq.com/api/?lang=python).**
+
+**Note**: The full list of available Datadog API endpoints is also available in the [Datadog Python Library documentation](https://datadogpy.readthedocs.io/en/latest/)
+
+#### Environment Variables
 
 As an alternate method to using the `initialize` function with the `options` parameters, set the environment variables `DATADOG_API_KEY` and `DATADOG_APP_KEY` within the context of your application.
 
-If `DATADOG_API_KEY` or `DATADOG_APP_KEY` are not set, the library will attempt to fall back to Datadog's APM environmnent variable prefixes: `DD_API_KEY` and `DD_APP_KEY`.
+If `DATADOG_API_KEY` or `DATADOG_APP_KEY` are not set, the library attempts to fall back to Datadog's APM environmnent variable prefixes: `DD_API_KEY` and `DD_APP_KEY`.
 
 ```python
 from datadog import initialize, api
@@ -89,15 +69,31 @@ tags = ['version:1', 'application:web']
 api.Event.create(title=title, text=text, tags=tags)
 ```
 
-Thread Safety
--------------
-`DogStatsD` and `ThreadStats` are thread-safe.
+## DogStatsD
 
-Origin detection over UDP
--------------
+In order to use DogStatsD metrics, the Agent must be [running and available](https://docs.datadoghq.com/developers/dogstatsd/?tab=python).
+
+### Instantiate the DogStatsD client
+
+Once the Datadog Python Library is installed, instantiate the StatsD client in your code:
+
+```python
+from datadog import statsd
+
+options = {
+    'statsd_host':'127.0.0.1',
+    'statsd_port':8125
+}
+
+initialize(**options)
+```
+
+See the full list of available [DogStatsD client instantiation parameters](https://docs.datadoghq.com/developers/dogstatsd/?tab=python#client-instantiation-parameters).
+
+#### Origin detection over UDP
+
 Origin detection is a method to detect which pod `DogStatsD` packets are coming from in order to add the pod's tags to the tag list.
-The `DogStatsD` client attaches an internal tag, `entity_id`. The value of this tag is the content of the `DD_ENTITY_ID` environment variable if found, which is the pod's UID.
-This tag will be used by the Datadog Agent to insert container tags to the metrics. You should only `append` to the `constant_tags` list to avoid overwriting this global tag.
+The `DogStatsD` client attaches an internal tag, `entity_id`. The value of this tag is the content of the `DD_ENTITY_ID` environment variable if found, which is the pod's UID. The Datadog Agent uses this tag to add container tags to the metrics. To avoid overwriting this global tag, make sure to only `append` to the `constant_tags` list.
 
 To enable origin detection over UDP, add the following lines to your application manifest
 ```yaml
@@ -107,3 +103,29 @@ env:
       fieldRef:
         fieldPath: metadata.uid
 ```
+
+### Usage
+#### Metrics
+
+After the client is created, you can start sending custom metrics to Datadog. See the dedicated [Metric Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python) to see how to submit all supported metric types to Datadog with working code examples:
+
+* [Submit a COUNT metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#count).
+* [Submit a GAUGE metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#gauge).
+* [Submit a SET metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#set)
+* [Submit a HISTOGRAM metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#histogram)
+* [Submit a TIMER metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#timer)
+* [Submit a DISTRIBUTION metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#distribution)
+
+Some options are suppported when submitting metrics, like [applying a Sample Rate to your metrics](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#metric-submission-options) or [tagging your metrics with your custom tags](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#metric-tagging).
+
+#### Events
+
+After the client is created, you can start sending events to your Datadog Event Stream. See the dedicated [Event Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/events/dogstatsd/?tab=python) to see how to submit an event to your Datadog Event Stream.
+
+#### Service Checks
+
+After the client is created, you can start sending Service Checks to Datadog. See the dedicated [Service Check Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/service_checks/dogstatsd_service_checks_submission/?tab=python) to see how to submit a Service Check to Datadog.
+
+## Thread Safety
+
+`DogStatsD` and `ThreadStats` are thread-safe.
