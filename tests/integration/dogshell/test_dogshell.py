@@ -11,6 +11,7 @@ import pytest
 import requests
 
 from datadog.util.compat import is_p3k, ConfigParser
+from ..api.constants import MONITOR_REFERENCED_IN_SLO_MESSAGE
 
 
 TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
@@ -407,7 +408,7 @@ class TestDogshell:
         out = json.loads(out)
         assert out["data"]["ok"] == []
         assert out["errors"] == {
-            str(monitor_id): ["monitor {} is referenced in slos: {}".format(monitor_id, slo_id)]
+            str(monitor_id): [MONITOR_REFERENCED_IN_SLO_MESSAGE.format(monitor_id, slo_id)]
         }
 
         # Delete a service_level_objective

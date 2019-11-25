@@ -11,6 +11,7 @@ import pytest
 from datadog import api as dog
 from datadog import initialize
 
+from .constants import MONITOR_REFERENCED_IN_SLO_MESSAGE
 from .utils import get_with_retry
 
 TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
@@ -501,7 +502,7 @@ class TestDatadog:
             "data": {"ok": []},
             "errors": {
                 str(monitor["id"]): [
-                    "monitor {} is referenced in slos: {}".format(
+                    MONITOR_REFERENCED_IN_SLO_MESSAGE.format(
                         monitor["id"], slo["id"]
                     )
                 ]
