@@ -330,9 +330,8 @@ class MonitorClient(object):
     @classmethod
     def _can_delete(cls, args):
         api._timeout = args.timeout
-        res = api.Monitor.can_delete(monitor_ids=args.monitor_ids)
-        report_warnings(res)
-        report_errors(res)
+        monitor_ids = [i.strip() for i in args.monitor_ids.split(',') if i.strip()]
+        res = api.Monitor.can_delete(monitor_ids=monitor_ids)
         if format == 'pretty':
             print(pretty_json(res))
         else:

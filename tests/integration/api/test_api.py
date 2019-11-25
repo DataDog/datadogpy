@@ -500,18 +500,12 @@ class TestDatadog:
 
         # Create a monitor-based SLO.
         name = "test SLO {}".format(time.time())
-        numerator = "sum:my.custom.metric{type:good}.as_count()"
-        denominator = "sum:my.custom.metric{*}.as_count()"
-        query = {"numerator": numerator, "denominator": denominator}
         thresholds = [{"timeframe": "7d", "target": 90}]
-        name = "test SLO {}".format(time.time())
         slo = dog.ServiceLevelObjective.create(
             type="monitor",
             monitor_ids=monitor_ids,
-            query=query,
             thresholds=thresholds,
             name=name,
-            tags=["type:test"],
         )["data"][0]
 
         # Check if you can delete the monitor.

@@ -377,21 +377,33 @@ class TestDogshell:
         assert out["options"]["silenced"] == {}
 
         # Test can_delete monitor
-        monitor_ids = [monitor_id]
-        out, _, _ = self.dogshell(["monitor", "can_delete", monitor_ids])
+        monitor_ids = [int(monitor_id)]
+        str_monitor_ids = str(monitor_id)
+        out, _, _ = self.dogshell(["monitor", "can_delete", str_monitor_ids])
         out = json.loads(out)
         assert out["data"]["ok"] == monitor_ids
         assert out["errors"] is None
 
         # Create a monitor-based SLO
         out, _, _ = self.dogshell(
-            ["service_level_objective", "create", "--type", "monitor", "--monitor_ids", monitor_ids]
+            [
+                "service_level_objective",
+                "create",
+                "--type",
+                "monitor",
+                "--monitor_ids",
+                str_monitor_ids,
+                "--name",
+                "test_slo",
+                "--thresholds",
+                "7d:90",
+            ]
         )
         out = json.loads(out)
         slo_id = out["data"][0]["id"]
 
         # Test can_delete monitor
-        out, _, _ = self.dogshell(["monitor", "can_delete", monitor_ids])
+        out, _, _ = self.dogshell(["monitor", "can_delete", str_monitor_ids])
         out = json.loads(out)
         assert out["data"]["ok"] == []
         assert out["errors"] == {
@@ -402,8 +414,7 @@ class TestDogshell:
         _, _, _ = self.dogshell(["service_level_objective", "delete", slo_id])
 
         # Test can_delete monitor
-        monitor_ids = [monitor_id]
-        out, _, _ = self.dogshell(["monitor", "can_delete", monitor_ids])
+        out, _, _ = self.dogshell(["monitor", "can_delete", str_monitor_ids])
         out = json.loads(out)
         assert out["data"]["ok"] == monitor_ids
         assert out["errors"] is None
