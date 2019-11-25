@@ -11,6 +11,7 @@ import pytest
 from datadog import api as dog
 from datadog import initialize
 
+from .utils import get_with_retry
 
 TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
 API_KEY = os.environ.get("DD_TEST_CLIENT_API_KEY", "a" * 32)
@@ -18,39 +19,6 @@ APP_KEY = os.environ.get("DD_TEST_CLIENT_APP_KEY", "a" * 40)
 API_HOST = os.environ.get("DATADOG_HOST")
 FAKE_PROXY = {"https": "http://user:pass@10.10.1.10:3128/"}
 WAIT_TIME = 10
-
-
-def get_with_retry(
-    resource_type,
-    resource_id=None,
-    operation="get",
-    retry_limit=10,
-    retry_condition=lambda r: r.get("errors"),
-    **kwargs
-):
-    if resource_id is None:
-        resource = getattr(getattr(dog, resource_type), operation)(**kwargs)
-    else:
-        resource = getattr(getattr(dog, resource_type), operation)(
-            resource_id, **kwargs
-        )
-    retry_counter = 0
-    while retry_condition(resource) and retry_counter < retry_limit:
-        if resource_id is None:
-            resource = getattr(getattr(dog, resource_type), operation)(**kwargs)
-        else:
-            resource = getattr(getattr(dog, resource_type), operation)(
-                resource_id, **kwargs
-            )
-        retry_counter += 1
-        time.sleep(WAIT_TIME)
-    if retry_condition(resource):
-        raise Exception(
-            "Retry limit reached performing `{}` on resource {}, ID {}".format(
-                operation, resource_type, resource_id
-            )
-        )
-    return resource
 
 
 class TestDatadog:
@@ -313,6 +281,25 @@ class TestDatadog:
         assert metric_query_tuple["series"][0]["scope"] == "host:{}".format(host_name)
         assert len(metric_query_tuple["series"][0]["pointlist"]) == 1
         assert metric_query_tuple["series"][0]["pointlist"][0][1] == 1
+
+    def test_distribution_metrics(self):
+        now = datetime.datetime.now()
+        now_ts = int(time.mktime(now.timetuple()))
+        metric_name = "test.distribution_metric." + str(now_ts)
+        host_name = "test.host." + str(now_ts)
+
+        # Submit a distribution metric
+        assert dog.Distribution.send(
+            distributions=[{
+                'metric': metric_name,
+                'points': [(now_ts - 60, [1.0])],
+                'type': 'distribution',
+                'host': host_name,
+            }]
+        )["status"] == "ok"
+
+        # FIXME: Query and verify the test metric result. Currently, it takes
+        # too long for a new distribution metric to become available for query.
 
     def test_graph_snapshot(self):
         metric_query = "system.load.1{*}"
@@ -769,3 +756,69 @@ class TestDatadog:
         u = dog.User.get_all()
         assert "users" in u
         assert len(u["users"]) >= 1
+
+    @pytest.mark.admin_needed
+    def test_roles_crud(self):
+        role_name = "test_role"
+
+        data = {
+                "type": "roles",
+                "attributes": {
+                    "name": role_name
+                }
+            }
+
+        # test create role
+        role = dog.Roles.create(data=data)
+        assert "roles" in role["data"]["type"]
+        assert role["data"]["id"] is not None
+        assert role["data"]["attributes"]["name"] == role_name
+
+        role_uuid = role["data"]["id"]
+
+        # test update role
+        new_role_name = "test_role_2"
+        data = {
+                "type": "roles",
+                "attributes": {
+                    "name": new_role_name
+                }
+            }
+
+        role = dog.Roles.update(role_uuid, data=data)
+        assert "roles" in role["data"]["type"]
+        assert role["data"]["id"] is not None
+        assert role["data"]["attributes"]["name"] == new_role_name
+
+        # test assign permission
+
+        permissions = dog.Permissions.get_all()
+        assert "permissions" in permissions["data"][0]["type"]
+        assert len(permissions["data"]) > 0
+
+        permission_uuid = permissions["data"][0]["id"]
+        data = {
+                    "type": "permissions",
+                    "id": permission_uuid
+                }
+
+        role = dog.Roles.assign_permission(role_uuid, data=data)
+        assert "permissions" in role["data"][0]["type"]
+
+        # test unassign permission
+        data = {
+            "type": "permissions",
+            "id": permission_uuid
+        }
+
+        role = dog.Roles.unassign_permission(role_uuid, data=data)
+        assert "permissions" in role["data"][0]["type"]
+        assert len(permissions["data"]) > 0
+
+
+        # test delete role
+        dog.Roles.delete(role_uuid)
+
+        # check if new role is deleted successfully
+        res = dog.Roles.get(role_uuid)
+        assert "errors" in res

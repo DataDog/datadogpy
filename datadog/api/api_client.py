@@ -179,11 +179,13 @@ class APIClient(object):
                 except ValueError:
                     raise ValueError('Invalid JSON response: {0}'.format(content))
 
-                if response_obj and 'errors' in response_obj:
-                    # suppress ApiError when specified and just return the response
-                    if not (suppress_response_errors_on_codes and
-                            result.status_code in suppress_response_errors_on_codes):
-                        raise ApiError(response_obj)
+                # response_obj can be a bool and not a dict
+                if isinstance(response_obj, dict):
+                    if response_obj and 'errors' in response_obj:
+                        # suppress ApiError when specified and just return the response
+                        if not (suppress_response_errors_on_codes and
+                                result.status_code in suppress_response_errors_on_codes):
+                            raise ApiError(response_obj)
             else:
                 response_obj = None
 
@@ -276,6 +278,7 @@ class APIClient(object):
         constructed_path = construct_path(api_version, path)
 
         set_of_paths = {
+            "v1/distribution_points",
             "v1/series",
             "v1/check_run",
             "v1/events",

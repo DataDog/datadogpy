@@ -402,10 +402,10 @@ class ThreadStats(object):
             try:
                 log.debug("Flushing metrics in thread")
                 self.flush()
-            except:
+            except Exception:
                 try:
                     log.exception("Error flushing in thread")
-                except:
+                except Exception:
                     pass
 
         log.info("Starting flush thread with interval %s." % self.flush_interval)
@@ -427,10 +427,10 @@ class ThreadStats(object):
                     log.debug("Flushing metrics in greenlet")
                     self.flush()
                     gevent.sleep(self.flush_interval)
-                except:
+                except Exception:
                     try:
                         log.exception("Error flushing in greenlet")
-                    except:
+                    except Exception:
                         pass
 
         log.info("Starting flush greenlet with interval %s." % self.flush_interval)
