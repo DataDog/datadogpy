@@ -137,7 +137,6 @@ class APIClient(object):
 
             # If defined, make sure monitor_ids are defined as a comma-separated string
             if 'monitor_ids' in params and isinstance(params['monitor_ids'], list):
-                mapped_monitor_ids = [str(i) for i in params['monitor_ids']]
                 params['monitor_ids'] = ','.join(str(i) for i in params['monitor_ids'])
 
             # Process the body, if necessary
