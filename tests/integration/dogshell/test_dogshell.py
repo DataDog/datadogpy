@@ -447,7 +447,7 @@ class TestDogshell:
         invalid_query = "THIS IS A BAD QUERY"
         out, _, _ = self.dogshell(["monitor", "validate", monitor_type, invalid_query, "--options", valid_options])
         out = json.loads(out)
-        assert out == {"errors": ["thresholds parameter must be specified in the options"]}
+        assert out == {"errors": ["The value provided for parameter 'query' is invalid"]}
 
         # Check with a valid query, invalid options.
         valid_query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200"

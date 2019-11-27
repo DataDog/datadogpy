@@ -487,7 +487,7 @@ class TestDatadog:
         # Check with an invalid query.
         invalid_query = "THIS IS A BAD QUERY"
         res = dog.Monitor.validate(type=monitor_type, query=invalid_query, options=valid_options)
-        assert res == {"errors": ["thresholds parameter must be specified in the options"]}
+        assert res == {"errors": ["The value provided for parameter 'query' is invalid"]}
 
         # Check with a valid query, invalid options.
         valid_query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200"
