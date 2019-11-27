@@ -129,10 +129,10 @@ class MonitorClient(object):
         validate_parser.add_argument('type', help="type of the monitor, e.g."
                                      "'metric alert' 'service check'")
         validate_parser.add_argument('query', help="query to notify on with syntax varying "
-                                    "depending on what type of monitor you are creating")
+                                     "depending on what type of monitor you are creating")
         validate_parser.add_argument('--name', help="name of the alert", default=None)
         validate_parser.add_argument('--message', help="message to include with notifications"
-                                    " for this monitor", default=None)
+                                     " for this monitor", default=None)
         validate_parser.add_argument('--tags', help="comma-separated list of tags", default=None)
         validate_parser.add_argument('--options', help="json options for the monitor", default=None)
         validate_parser.set_defaults(func=cls._validate)
