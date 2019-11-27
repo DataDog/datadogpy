@@ -44,14 +44,13 @@ class DowntimeClient(object):
         show_parser.add_argument('downtime_id', help="downtime to show")
         show_parser.set_defaults(func=cls._show_downtime)
 
-        show_all_parser = verb_parsers.add_parser('show_all', help="Show a list of all downtimes")
-        show_all_parser.add_argument('--current_only', help="only return downtimes that"
-                                     " are active when the request is made", default=None)
-        show_all_parser.set_defaults(func=cls._show_all_downtime)
-
         delete_parser = verb_parsers.add_parser('delete', help="Delete a downtime")
         delete_parser.add_argument('downtime_id', help="downtime to delete")
         delete_parser.set_defaults(func=cls._cancel_downtime)
+
+        cancel_parser = verb_parsers.add_parser('cancel_by_scope', help="Cancel all downtimes with a given scope")
+        cancel_parser.add_argument('scope', help="The scope of the downtimes to cancel")
+        cancel_parser.set_defaults(func=cls._cancel_downtime_by_scope)
 
     @classmethod
     def _schedule_downtime(cls, args):
@@ -100,12 +99,10 @@ class DowntimeClient(object):
             print(json.dumps(res))
 
     @classmethod
-    def _show_all_downtime(cls, args):
+    def _cancel_downtime_by_scope(cls, args):
         api._timeout = args.timeout
         format = args.format
-        res = api.Downtime.get_all(current_only=args.current_only)
-        report_warnings(res)
-        report_errors(res)
+        res = api.Downtime.cancel_downtime_by_scope(scope=args.scope)
         if format == 'pretty':
             print(pretty_json(res))
         else:
