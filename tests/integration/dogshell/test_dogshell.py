@@ -438,6 +438,28 @@ class TestDogshell:
         _, _, return_code = self.dogshell(["monitor", "unmute_all"], check_return_code=False)
         assert return_code != 0
 
+        # Test validate monitor
+        monitor_type = "metric alert"
+        valid_options = {"thresholds": {"critical": 200.0}}
+        invalid_options = {"thresholds": {"critical": 90.0}}
+
+        # Check with an invalid query.
+        invalid_query = "THIS IS A BAD QUERY"
+        out, _, _ = self.dogshell(["monitor", "validate", monitor_type, invalid_query, "--options", valid_options])
+        out = json.loads(out)
+        assert out == {"errors": ["thresholds parameter must be specified in the options"]}
+
+        # Check with a valid query, invalid options.
+        valid_query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200"
+        out, _, _ = self.dogshell(["monitor", "validate", monitor_type, valid_query, "--options", invalid_options])
+        out = json.loads(out)
+        assert out == {"errors": ["Alert threshold (90.0) does not match that used in the query (200.0)."]}
+
+        # Check with a valid query, valid options.
+        out, _, _ = self.dogshell(["monitor", "validate", monitor_type, valid_query, "--options", valid_options])
+        out = json.loads(out)
+        assert out == {}
+
     def test_host_muting(self):
         # Submit a metric to create a host
         hostname = "my.test.host{}".format(self.get_unique())
