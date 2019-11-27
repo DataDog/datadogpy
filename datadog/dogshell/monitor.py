@@ -118,6 +118,12 @@ class MonitorClient(object):
                                    action='store_true')
         unmute_parser.set_defaults(func=cls._unmute)
 
+        can_delete_parser = verb_parsers.add_parser('can_delete',
+                                                    help="Check if you can delete some monitors")
+        can_delete_parser.add_argument('monitor_ids',
+                                       help="monitors to check if they can be deleted")
+        can_delete_parser.set_defaults(func=cls._can_delete)
+
     @classmethod
     def _post(cls, args):
         api._timeout = args.timeout
@@ -310,6 +316,16 @@ class MonitorClient(object):
         res = api.Monitor.unmute(args.monitor_id, scope=args.scope, all_scopes=args.all_scopes)
         report_warnings(res)
         report_errors(res)
+        if format == 'pretty':
+            print(pretty_json(res))
+        else:
+            print(json.dumps(res))
+
+    @classmethod
+    def _can_delete(cls, args):
+        api._timeout = args.timeout
+        monitor_ids = [i.strip() for i in args.monitor_ids.split(',') if i.strip()]
+        res = api.Monitor.can_delete(monitor_ids=monitor_ids)
         if format == 'pretty':
             print(pretty_json(res))
         else:

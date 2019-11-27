@@ -11,6 +11,7 @@ import pytest
 import requests
 
 from datadog.util.compat import is_p3k, ConfigParser
+from ..api.constants import MONITOR_REFERENCED_IN_SLO_MESSAGE
 
 
 TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
@@ -375,6 +376,49 @@ class TestDogshell:
         out = json.loads(out)
         assert str(out["id"]) == monitor_id
         assert out["options"]["silenced"] == {}
+
+        # Test can_delete monitor
+        monitor_ids = [int(monitor_id)]
+        str_monitor_ids = str(monitor_id)
+        out, _, _ = self.dogshell(["monitor", "can_delete", str_monitor_ids])
+        out = json.loads(out)
+        assert out["data"]["ok"] == monitor_ids
+        assert out["errors"] is None
+
+        # Create a monitor-based SLO
+        out, _, _ = self.dogshell(
+            [
+                "service_level_objective",
+                "create",
+                "--type",
+                "monitor",
+                "--monitor_ids",
+                str_monitor_ids,
+                "--name",
+                "test_slo",
+                "--thresholds",
+                "7d:90",
+            ]
+        )
+        out = json.loads(out)
+        slo_id = out["data"][0]["id"]
+
+        # Test can_delete monitor
+        out, _, _ = self.dogshell(["monitor", "can_delete", str_monitor_ids])
+        out = json.loads(out)
+        assert out["data"]["ok"] == []
+        assert out["errors"] == {
+            str(monitor_id): [MONITOR_REFERENCED_IN_SLO_MESSAGE.format(monitor_id, slo_id)]
+        }
+
+        # Delete a service_level_objective
+        _, _, _ = self.dogshell(["service_level_objective", "delete", slo_id])
+
+        # Test can_delete monitor
+        out, _, _ = self.dogshell(["monitor", "can_delete", str_monitor_ids])
+        out = json.loads(out)
+        assert out["data"]["ok"] == monitor_ids
+        assert out["errors"] is None
 
         # Delete a monitor
         self.dogshell(["monitor", "delete", monitor_id])

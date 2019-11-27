@@ -11,6 +11,7 @@ import pytest
 from datadog import api as dog
 from datadog import initialize
 
+from .constants import MONITOR_REFERENCED_IN_SLO_MESSAGE
 from .utils import get_with_retry
 
 TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
@@ -19,8 +20,6 @@ APP_KEY = os.environ.get("DD_TEST_CLIENT_APP_KEY", "a" * 40)
 API_HOST = os.environ.get("DATADOG_HOST")
 FAKE_PROXY = {"https": "http://user:pass@10.10.1.10:3128/"}
 WAIT_TIME = 10
-
-
 
 
 class TestDatadog:
@@ -42,9 +41,10 @@ class TestDatadog:
         get_with_retry(
             "Tag",
             hostname,
-            retry_condition=lambda r: "test_tag:1" not in r["tags"] or "test_tag:2" not in r["tags"],
+            retry_condition=lambda r: "test_tag:1" not in r["tags"]
+            or "test_tag:2" not in r["tags"],
             retry_limit=30,
-            source="datadog"
+            source="datadog",
         )
 
         # The response from `update` can be flaky, so let's test that it work by getting the tags
@@ -54,13 +54,15 @@ class TestDatadog:
             hostname,
             retry_condition=lambda r: r["tags"] != ["test_tag:3"],
             retry_limit=30,
-            source="datadog"
+            source="datadog",
         )
 
         all_tags = dog.Tag.get_all()
         assert "tags" in all_tags
 
-        assert dog.Tag.delete(hostname, source="datadog") is None  # Expect no response body on success
+        assert (
+            dog.Tag.delete(hostname, source="datadog") is None
+        )  # Expect no response body on success
 
     def test_events(self):
         now = datetime.datetime.now()
@@ -72,8 +74,12 @@ class TestDatadog:
         before_ts = int(time.mktime((now - datetime.timedelta(minutes=5)).timetuple()))
         before_title = "start test title " + str(before_ts)
         before_message = "test message " + str(before_ts)
-        now_event = dog.Event.create(title=now_title, text=now_message, date_happened=now_ts)
-        before_event = dog.Event.create(title=before_title, text=before_message, date_happened=before_ts)
+        now_event = dog.Event.create(
+            title=now_title, text=now_message, date_happened=now_ts
+        )
+        before_event = dog.Event.create(
+            title=before_title, text=before_message, date_happened=before_ts
+        )
 
         assert now_event["event"]["title"] == now_title
         assert now_event["event"]["text"] == now_message
@@ -83,32 +89,46 @@ class TestDatadog:
         assert before_event["event"]["date_happened"] == before_ts
 
         # The returned event doesn"t contain host information, we need to get it separately
-        event_id = dog.Event.create(title="test host", text="test host", host=self.host_name)["event"]["id"]
+        event_id = dog.Event.create(
+            title="test host", text="test host", host=self.host_name
+        )["event"]["id"]
         event = get_with_retry("Event", event_id)
         assert event["event"]["host"] == self.host_name
 
         event_id = dog.Event.create(
-            title="test no hostname", text="test no hostname", attach_host_name=False, alert_type="success"
+            title="test no hostname",
+            text="test no hostname",
+            attach_host_name=False,
+            alert_type="success",
         )["event"]["id"]
         event = get_with_retry("Event", event_id)
         assert not event["event"]["host"]
         assert event["event"]["alert_type"] == "success"
 
-        event = dog.Event.create(title="test tags", text="test tags", tags=["test_tag:1", "test_tag:2"])
+        event = dog.Event.create(
+            title="test tags", text="test tags", tags=["test_tag:1", "test_tag:2"]
+        )
         assert "test_tag:1" in event["event"]["tags"]
         assert "test_tag:2" in event["event"]["tags"]
 
         now_ts = int(time.mktime(datetime.datetime.now().timetuple()))
         event_id = dog.Event.create(
-            title="test source", text="test source", source_type_name="vsphere", priority="low"
+            title="test source",
+            text="test source",
+            source_type_name="vsphere",
+            priority="low",
         )["event"]["id"]
         get_with_retry("Event", event_id)
-        events = dog.Event.query(start=now_ts - 100, end=now_ts + 100, priority="low", sources="vsphere")
+        events = dog.Event.query(
+            start=now_ts - 100, end=now_ts + 100, priority="low", sources="vsphere"
+        )
         assert events["events"], "No events found in stream"
         assert event_id in [event["id"] for event in events["events"]]
 
     def test_comments(self):
-        assert TEST_USER is not None, "You must set DD_TEST_CLIENT_USER environment to run comment tests"
+        assert (
+            TEST_USER is not None
+        ), "You must set DD_TEST_CLIENT_USER environment to run comment tests"
 
         now = datetime.datetime.now()
         now_ts = int(time.mktime(now.timetuple()))
@@ -119,18 +139,27 @@ class TestDatadog:
         assert comment["comment"]["message"] == message
 
         get_with_retry("Event", comment_id)
-        comment = dog.Comment.update(comment_id, handle=TEST_USER, message=message + " updated")
+        comment = dog.Comment.update(
+            comment_id, handle=TEST_USER, message=message + " updated"
+        )
         assert comment["comment"]["message"] == message + " updated"
-        reply = dog.Comment.create(handle=TEST_USER, message=message + " reply", related_event_id=comment_id)
+        reply = dog.Comment.create(
+            handle=TEST_USER, message=message + " reply", related_event_id=comment_id
+        )
         assert reply["comment"]["message"] == message + " reply"
 
     def test_timeboard(self):
         graph = {
             "title": "test metric graph",
-            "definition": {"requests": [{"q": "testing.metric.1{host:blah.host.1}"}], "viz": "timeseries"},
+            "definition": {
+                "requests": [{"q": "testing.metric.1{host:blah.host.1}"}],
+                "viz": "timeseries",
+            },
         }
 
-        timeboard = dog.Timeboard.create(title="api timeboard", description="my api timeboard", graphs=[graph])
+        timeboard = dog.Timeboard.create(
+            title="api timeboard", description="my api timeboard", graphs=[graph]
+        )
         assert "api timeboard" == timeboard["dash"]["title"]
         assert "my api timeboard" == timeboard["dash"]["description"]
         assert timeboard["dash"]["graphs"][0] == graph
@@ -142,7 +171,10 @@ class TestDatadog:
 
         graph = {
             "title": "updated test metric graph",
-            "definition": {"requests": [{"q": "testing.metric.1{host:blah.host.1}"}], "viz": "timeseries"},
+            "definition": {
+                "requests": [{"q": "testing.metric.1{host:blah.host.1}"}],
+                "viz": "timeseries",
+            },
         }
 
         timeboard = dog.Timeboard.update(
@@ -180,13 +212,29 @@ class TestDatadog:
             return not r["series"]
 
         # Send metrics with single and multi points, and with compression
-        assert dog.Metric.send(metric=metric_name_single, points=1, host=host_name)["status"] == "ok"
+        assert (
+            dog.Metric.send(metric=metric_name_single, points=1, host=host_name)[
+                "status"
+            ]
+            == "ok"
+        )
         points = [(now_ts - 60, 1), (now_ts, 2)]
-        assert dog.Metric.send(metric=metric_name_list, points=points, host=host_name)["status"] == "ok"
+        assert (
+            dog.Metric.send(metric=metric_name_list, points=points, host=host_name)[
+                "status"
+            ]
+            == "ok"
+        )
         points = (now_ts - 60, 1)
-        assert dog.Metric.send(
-            metric=metric_name_tuple, points=points, host=host_name, compress_payload=True
-        )["status"] == "ok"
+        assert (
+            dog.Metric.send(
+                metric=metric_name_tuple,
+                points=points,
+                host=host_name,
+                compress_payload=True,
+            )["status"]
+            == "ok"
+        )
 
         metric_query_single = get_with_retry(
             "Metric",
@@ -267,7 +315,9 @@ class TestDatadog:
         snapshot_url = snap["snapshot_url"]
 
         # Test with an event query
-        snap = dog.Graph.create(metric_query=metric_query, start=start, end=end, event_query=event_query)
+        snap = dog.Graph.create(
+            metric_query=metric_query, start=start, end=end, event_query=event_query
+        )
         assert snap["metric_query"] == metric_query
         assert snap["event_query"] == event_query
         snapshot_url = snap["snapshot_url"]
@@ -295,7 +345,11 @@ class TestDatadog:
 
         # Test snapshot status endpoint
         get_with_retry(
-            "Graph", snapshot_url, operation="status", retry_condition=lambda r: r["status_code"] != 200, retry_limit=20
+            "Graph",
+            snapshot_url,
+            operation="status",
+            retry_condition=lambda r: r["status_code"] != 200,
+            retry_limit=20,
         )
 
     def test_screenboard(self):
@@ -319,7 +373,14 @@ class TestDatadog:
                     "query": "tags:release",
                     "time": {"live_span": "1w"},
                 },
-                {"type": "image", "height": 20, "width": 32, "y": 7, "x": 32, "url": "http://path/to/image.jpg"},
+                {
+                    "type": "image",
+                    "height": 20,
+                    "width": 32,
+                    "y": 7,
+                    "x": 32,
+                    "url": "http://path/to/image.jpg",
+                },
             ],
         }
 
@@ -328,7 +389,14 @@ class TestDatadog:
             "height": 768,
             "board_title": "datadog test",
             "widgets": [
-                {"type": "image", "height": 20, "width": 32, "y": 7, "x": 32, "url": "http://path/to/image.jpg"}
+                {
+                    "type": "image",
+                    "height": 20,
+                    "width": 32,
+                    "y": 7,
+                    "x": 32,
+                    "url": "http://path/to/image.jpg",
+                }
             ],
         }
 
@@ -367,7 +435,10 @@ class TestDatadog:
         # Metric alerts
         query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
 
-        options = {"silenced": {"*": int(time.time()) + 60 * 60}, "notify_no_data": False}
+        options = {
+            "silenced": {"*": int(time.time()) + 60 * 60},
+            "notify_no_data": False,
+        }
         monitor = dog.Monitor.create(type="metric alert", query=query, options=options)
         assert monitor["query"] == query
         assert monitor["options"]["notify_no_data"] == options["notify_no_data"]
@@ -385,7 +456,9 @@ class TestDatadog:
         assert monitor["options"]["silenced"] == options["silenced"]
 
         name = "test_monitors"
-        monitor = dog.Monitor.update(monitor["id"], query=query2, name=name, options={"notify_no_data": True})
+        monitor = dog.Monitor.update(
+            monitor["id"], query=query2, name=name, options={"notify_no_data": True}
+        )
         assert monitor["name"] == name
         assert monitor["query"] == query2
         assert monitor["options"]["notify_no_data"] is True
@@ -393,7 +466,63 @@ class TestDatadog:
         monitors = [m for m in dog.Monitor.get_all() if m["id"] == monitor["id"]]
         assert len(monitors) == 1
 
-        assert dog.Monitor.delete(monitor["id"]) == {"deleted_monitor_id": monitor["id"]}
+        assert dog.Monitor.delete(monitor["id"]) == {
+            "deleted_monitor_id": monitor["id"]
+        }
+
+    def test_monitor_can_delete(self):
+        # Create a monitor.
+        query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
+        options = {
+            "silenced": {"*": int(time.time()) + 60 * 60},
+            "notify_no_data": False,
+        }
+        monitor = dog.Monitor.create(type="metric alert", query=query, options=options)
+
+        # Check if you can delete the monitor.
+        monitor_ids = [monitor["id"]]
+        assert dog.Monitor.can_delete(monitor_ids=monitor_ids) == {
+            "data": {"ok": monitor_ids},
+            "errors": None,
+        }
+
+        # Create a monitor-based SLO.
+        name = "test SLO {}".format(time.time())
+        thresholds = [{"timeframe": "7d", "target": 90}]
+        slo = dog.ServiceLevelObjective.create(
+            type="monitor",
+            monitor_ids=monitor_ids,
+            thresholds=thresholds,
+            name=name,
+        )["data"][0]
+
+        # Check if you can delete the monitor.
+        monitor_ids = [monitor["id"]]
+        assert dog.Monitor.can_delete(monitor_ids=monitor_ids) == {
+            "data": {"ok": []},
+            "errors": {
+                str(monitor["id"]): [
+                    MONITOR_REFERENCED_IN_SLO_MESSAGE.format(
+                        monitor["id"], slo["id"]
+                    )
+                ]
+            },
+        }
+
+        # Delete the SLO.
+        dog.ServiceLevelObjective.delete(slo["id"])
+
+        # Check if you can delete the monitor.
+        monitor_ids = [monitor["id"]]
+        assert dog.Monitor.can_delete(monitor_ids=monitor_ids) == {
+            "data": {"ok": monitor_ids},
+            "errors": None,
+        }
+
+        # Delete the monitor to clean up the test.
+        assert dog.Monitor.delete(monitor["id"]) == {
+            "deleted_monitor_id": monitor["id"]
+        }
 
     def test_service_level_objective_crud(self):
         numerator = "sum:my.custom.metric{type:good}.as_count()"
@@ -401,17 +530,32 @@ class TestDatadog:
         query = {"numerator": numerator, "denominator": denominator}
         thresholds = [{"timeframe": "7d", "target": 90}]
         name = "test SLO {}".format(time.time())
-        slo = dog.ServiceLevelObjective.create(type="metric", query=query, thresholds=thresholds, name=name,
-                                               tags=["type:test"])["data"][0]
+        slo = dog.ServiceLevelObjective.create(
+            type="metric",
+            query=query,
+            thresholds=thresholds,
+            name=name,
+            tags=["type:test"],
+        )["data"][0]
         assert slo["name"] == name
 
         numerator2 = "sum:my.custom.metric{type:good,!type:ignored}.as_count()"
         denominator2 = "sum:my.custom.metric{!type:ignored}.as_count()"
         query = {"numerator": numerator2, "denominator": denominator2}
-        slo = dog.ServiceLevelObjective.update(id=slo["id"], type="metric", query=query, thresholds=thresholds,
-                                               name=name, tags=["type:test"])["data"][0]
+        slo = dog.ServiceLevelObjective.update(
+            id=slo["id"],
+            type="metric",
+            query=query,
+            thresholds=thresholds,
+            name=name,
+            tags=["type:test"],
+        )["data"][0]
         assert slo["name"] == name
-        slos = [s for s in dog.ServiceLevelObjective.get_all()["data"] if s["id"] == slo["id"]]
+        slos = [
+            s
+            for s in dog.ServiceLevelObjective.get_all()["data"]
+            if s["id"] == slo["id"]
+        ]
         assert len(slos) == 1
 
         assert dog.ServiceLevelObjective.get(slo["id"])["data"]["id"] == slo["id"]
@@ -437,7 +581,9 @@ class TestDatadog:
         assert monitor2["options"]["silenced"] == {"host:foo": None}
 
         get_with_retry(
-            "Monitor", monitor2["id"], retry_condition=lambda r: r["options"]["silenced"] != {"host:foo": None}
+            "Monitor",
+            monitor2["id"],
+            retry_condition=lambda r: r["options"]["silenced"] != {"host:foo": None},
         )
         monitor2 = dog.Monitor.unmute(monitor2["id"], scope="host:foo")
         assert monitor2["options"]["silenced"] == {}
@@ -461,7 +607,9 @@ class TestDatadog:
         # Update downtime
         message = "Doing some testing on staging."
         end = int(time.time()) + 60000
-        downtime = dog.Downtime.update(downtime["id"], scope="test_tag:2", end=end, message=message)
+        downtime = dog.Downtime.update(
+            downtime["id"], scope="test_tag:2", end=end, message=message
+        )
         assert downtime["end"] == end
         assert downtime["message"] == message
         assert downtime["scope"] == ["test_tag:2"]
@@ -469,11 +617,17 @@ class TestDatadog:
 
         # Delete downtime
         assert dog.Downtime.delete(downtime["id"]) is None
-        downtime = get_with_retry("Downtime", downtime["id"], retry_condition=lambda r: r["disabled"] is False)
+        downtime = get_with_retry(
+            "Downtime", downtime["id"], retry_condition=lambda r: r["disabled"] is False
+        )
 
     def test_service_check(self):
         assert dog.ServiceCheck.check(
-            check="check_pg", host_name="host0", status=1, message="PG is WARNING", tags=["db:prod_data"]
+            check="check_pg",
+            host_name="host0",
+            status=1,
+            message="PG is WARNING",
+            tags=["db:prod_data"],
         ) == {"status": "ok"}
 
     def test_host_muting(self):
@@ -496,7 +650,13 @@ class TestDatadog:
         # We shouldn"t be able to mute a host that"s already muted, unless we include
         # the override param.
         end2 = end + 60 * 15
-        get_with_retry("Host", hostname, operation="mute", retry_condition=lambda r: "errors" not in r, end=end2)
+        get_with_retry(
+            "Host",
+            hostname,
+            operation="mute",
+            retry_condition=lambda r: "errors" not in r,
+            end=end2,
+        )
         mute = dog.Host.mute(hostname, end=end2, override=True)
         assert mute["hostname"] == hostname
         assert mute["action"] == "Muted"
@@ -532,7 +692,13 @@ class TestDatadog:
         title = "Custom titles!"
         # Dump the dictionary to a JSON string and make an API call
         graph_json = json.dumps(graph_def)
-        embed = dog.Embed.create(graph_json=graph_json, timeframe=timeframe, size=size, legend=legend, title=title)
+        embed = dog.Embed.create(
+            graph_json=graph_json,
+            timeframe=timeframe,
+            size=size,
+            legend=legend,
+            title=title,
+        )
         # Check various embed attributes
         assert "embed_id" in embed
         assert embed["revoked"] is False

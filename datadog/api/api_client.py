@@ -135,6 +135,10 @@ class APIClient(object):
             if 'tags' in params and isinstance(params['tags'], list):
                 params['tags'] = ','.join(params['tags'])
 
+            # If defined, make sure monitor_ids are defined as a comma-separated string
+            if 'monitor_ids' in params and isinstance(params['monitor_ids'], list):
+                params['monitor_ids'] = ','.join(str(i) for i in params['monitor_ids'])
+
             # Process the body, if necessary
             if isinstance(body, dict):
                 body = json.dumps(body)

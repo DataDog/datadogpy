@@ -118,8 +118,8 @@ class ServiceLevelObjectiveClient(object):
         update_parser.add_argument(
             "--monitor_ids",
             help="explicit monitor_ids to use (CSV)",
-            default=None,
-            type=set_of_ints,
+            default=[],
+            type=list,
         )
         update_parser.add_argument(
             "--monitor_search", help="monitor search terms to use", default=None
@@ -247,7 +247,7 @@ class ServiceLevelObjectiveClient(object):
         elif args.monitor_search:
             params["monitor_search"] = args.monitor_search
         else:
-            params["monitor_ids"] = args.monitor_ids
+            params["monitor_ids"] = list(args.monitor_ids)
             if args.groups and len(args.monitor_ids) == 1:
                 groups = args.groups.split("|")
                 params["groups"] = groups
@@ -255,7 +255,7 @@ class ServiceLevelObjectiveClient(object):
         if args.tags:
             params["tags"] = args.tags
 
-        res = api.ServiceLevelObjective.create(return_raw=True, **params)
+        res = api.ServiceLevelObjective.create(**params)
         report_warnings(res)
         report_errors(res)
         if format == "pretty":
