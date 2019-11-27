@@ -124,6 +124,19 @@ class MonitorClient(object):
                                        help="monitors to check if they can be deleted")
         can_delete_parser.set_defaults(func=cls._can_delete)
 
+        validate_parser = verb_parsers.add_parser('validate',
+                                                  help="Validates if a monitor definition is correct")
+        validate_parser.add_argument('type', help="type of the monitor, e.g."
+                                     "'metric alert' 'service check'")
+        validate_parser.add_argument('query', help="query to notify on with syntax varying "
+                                    "depending on what type of monitor you are creating")
+        validate_parser.add_argument('--name', help="name of the alert", default=None)
+        validate_parser.add_argument('--message', help="message to include with notifications"
+                                    " for this monitor", default=None)
+        validate_parser.add_argument('--tags', help="comma-separated list of tags", default=None)
+        validate_parser.add_argument('--options', help="json options for the monitor", default=None)
+        validate_parser.set_defaults(func=cls._validate)
+
     @classmethod
     def _post(cls, args):
         api._timeout = args.timeout
@@ -326,6 +339,28 @@ class MonitorClient(object):
         api._timeout = args.timeout
         monitor_ids = [i.strip() for i in args.monitor_ids.split(',') if i.strip()]
         res = api.Monitor.can_delete(monitor_ids=monitor_ids)
+        if format == 'pretty':
+            print(pretty_json(res))
+        else:
+            print(json.dumps(res))
+
+    @classmethod
+    def _validate(cls, args):
+        api._timeout = args.timeout
+        format = args.format
+        options = None
+        if args.options is not None:
+            options = json.loads(args.options)
+
+        if args.tags:
+            tags = sorted(set([t.strip() for t in args.tags.split(',') if t.strip()]))
+        else:
+            tags = None
+
+        res = api.Monitor.validate(type=args.type, query=args.query, name=args.name,
+                                   message=args.message, tags=tags, options=options)
+        # report_warnings(res)
+        # report_errors(res)
         if format == 'pretty':
             print(pretty_json(res))
         else:

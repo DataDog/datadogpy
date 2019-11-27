@@ -384,15 +384,15 @@ class ActionAPIResource(object):
     Actionable API Resource
     """
     @classmethod
-    def _trigger_class_action(cls, method, name, id=None, params=None, **body):
+    def _trigger_class_action(cls, method, action_name, id=None, params=None, **body):
         """
         Trigger an action
 
         :param method: HTTP method to use to contact API endpoint
         :type method: HTTP method string
 
-        :param name: action name
-        :type name: string
+        :param action_name: action name
+        :type action_name: string
 
         :param id: trigger the action for the specified resource object
         :type id: id
@@ -413,13 +413,13 @@ class ActionAPIResource(object):
         if id is None:
             path = '{resource_name}/{action_name}'.format(
                 resource_name=cls._resource_name,
-                action_name=name
+                action_name=action_name
             )
         else:
             path = '{resource_name}/{resource_id}/{action_name}'.format(
                 resource_name=cls._resource_name,
                 resource_id=id,
-                action_name=name
+                action_name=action_name
             )
         if method == "GET":
             # Do not add body to GET requests, it causes 400 Bad request responses on EU site
