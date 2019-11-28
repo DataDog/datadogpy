@@ -128,7 +128,7 @@ class MonitorClient(object):
                                                   help="Validates if a monitor definition is correct")
         validate_parser.add_argument('type', help="type of the monitor, e.g."
                                      "'metric alert' 'service check'")
-        validate_parser.add_argument('query', help="query to notify on with syntax varying "
+        validate_parser.add_argument('query', help="the monitor query"
                                      "depending on what type of monitor you are creating")
         validate_parser.add_argument('--name', help="name of the alert", default=None)
         validate_parser.add_argument('--message', help="message to include with notifications"
