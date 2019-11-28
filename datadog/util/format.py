@@ -20,3 +20,11 @@ def force_to_epoch_seconds(epoch_sec_or_dt):
     if isinstance(epoch_sec_or_dt, datetime.datetime):
         return calendar.timegm(epoch_sec_or_dt.timetuple())
     return epoch_sec_or_dt
+
+
+def normalize_tags(tag_list):
+    final_tag_list = []
+    for tag in tag_list:
+        # remove commas and whitespaces from the tag
+        final_tag_list.append(tag.replace(",", "_").replace(" ", ""))
+    return final_tag_list

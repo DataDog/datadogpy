@@ -20,6 +20,7 @@ from datadog.api import (
 )
 from datadog.api.exceptions import ApiError, ApiNotInitialized
 from datadog.util.compat import is_p3k
+from datadog.util.format import normalize_tags
 from tests.unit.api.helper import (
     DatadogAPIWithInitialization,
     DatadogAPINoInitialization,
@@ -124,6 +125,11 @@ class TestInitialization(DatadogAPINoInitialization):
             get_hostname(hostname_from_config=False)
         except CfgNotFound:
             pytest.fail("Unexpected CfgNotFound Exception")
+
+    def test_normalize_tags(self):
+        tag_list_test = ["tag1, tag2", "tag3 ,tag4", "tag5,tag6"]
+        tag_list_final = normalize_tags(tag_list_test)
+        assert tag_list_final == ["tag1_tag2", "tag3_tag4", "tag5_tag6"]
 
     def test_errors_suppressed(self):
         """
