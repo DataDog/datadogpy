@@ -19,6 +19,7 @@ dogwrap -n test-job -k $API_KEY --timeout=1 "sleep 3"
 '''
 # stdlib
 from __future__ import print_function
+from copy import copy
 import optparse
 import subprocess
 import sys
@@ -220,16 +221,31 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
         )
 
 
+def generate_warning_codes(option, opt, options_warning):
+    try:
+        # options_warning should be a comma separated string
+        warning_codes = [options_warning.split(",")]
+        return warning_codes
+    except ValueError:
+        raise optparse.OptionValueError("option %s: invalid warning codes value(s): %r" % (opt, options_warning))
+
+
+class WarningOption(optparse.Option):
+    TYPES = optparse.Option.TYPES + ("warning_codes",)
+    TYPE_CHECKER = copy(optparse.Option.TYPE_CHECKER)
+    TYPE_CHECKER["warning_codes"] = generate_warning_codes
+
+
 def parse_options(raw_args=None):
     '''
     Parse the raw command line options into an options object and the remaining command string
     '''
     parser = optparse.OptionParser(usage="%prog -n [event_name] -k [api_key] --submit_mode \
-[ all | errors ] [options] \"command\". \n\nNote that you need to enclose your command in \
+[ all | errors | warnings] [options] \"command\". \n\nNote that you need to enclose your command in \
 quotes to prevent python executing as soon as there is a space in your command. \n \nNOTICE: In \
 normal mode, the whole stderr is printed before stdout, in flush_live mode they will be mixed but \
 there is not guarantee that messages sent by the command on both stderr and stdout are printed in \
-the order they were sent.", version="%prog {0}".format(get_version()))
+the order they were sent.", version="%prog {0}".format(get_version()), option_class=WarningOption)
 
     parser.add_option('-n', '--name', action='store', type='string', help="the name of the event \
 as it should appear on your Datadog stream")
@@ -239,7 +255,7 @@ as it should appear on your Datadog stream")
                       default='errors', choices=['errors', 'warnings', 'all'], help="[ all | errors | warnings ] if set \
 to error, an event will be sent only of the command exits with a non zero exit status or if it \
 times out. If set to warning, a list of exit codes need to be provided")
-    parser.add_option('--warning_codes', action='store', type='string', dest='warning_codes', default='',
+    parser.add_option('--warning_codes', action='store', type='warning_codes', dest='warning_codes', default='',
                       help="comma separated list of warning codes")
     parser.add_option('-p', '--priority', action='store', type='choice', choices=['normal', 'low'],
                       help="the priority of the event (default: 'normal')")
@@ -296,7 +312,8 @@ def main():
     host = api._host_name
 
     if options.warning_codes:
-        warning_codes = [int(w.strip()) for w in options.warning_codes.split(',')]
+        warning_codes = generate_warning_codes(WarningOption, "--warning_codes", options.warning_codes)
+        # warning_codes = [int(w.strip()) for w in options.warning_codes.split(',')]
 
     if returncode == 0:
         alert_type = SUCCESS
