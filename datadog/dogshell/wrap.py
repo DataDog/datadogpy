@@ -223,14 +223,16 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
 
 def generate_warning_codes(option, opt, options_warning):
     try:
-        # options_warning should be a comma separated string
-        warning_codes = [options_warning.split(",")]
+        # options_warning is a string e.g.: --warning_codes 123,456,789
+        # we need to create a list from it
+        warning_codes = options_warning.split(",")
         return warning_codes
     except ValueError:
         raise optparse.OptionValueError("option %s: invalid warning codes value(s): %r" % (opt, options_warning))
 
 
 class WarningOption(optparse.Option):
+    # https://docs.python.org/3.7/library/optparse.html#adding-new-types
     TYPES = optparse.Option.TYPES + ("warning_codes",)
     TYPE_CHECKER = copy(optparse.Option.TYPE_CHECKER)
     TYPE_CHECKER["warning_codes"] = generate_warning_codes
@@ -312,8 +314,7 @@ def main():
     host = api._host_name
 
     if options.warning_codes:
-        warning_codes = generate_warning_codes(WarningOption, "--warning_codes", options.warning_codes)
-        # warning_codes = [int(w.strip()) for w in options.warning_codes.split(',')]
+        warning_codes = options.warning_codes
 
     if returncode == 0:
         alert_type = SUCCESS
