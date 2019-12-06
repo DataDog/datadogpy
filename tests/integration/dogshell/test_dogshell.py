@@ -124,7 +124,7 @@ class TestDogshell:
 
         # Give the host some tags
         tags0 = ["t0", "t1"]
-        out, _, _ = self.dogshell_with_retry(["tag", "add", host] + tags0)
+        out, _, _ = self.dogshell_with_retry(["tag", "add", host] + tags0, retry_limit=15)
         for t in tags0:
             assert t in out
 
