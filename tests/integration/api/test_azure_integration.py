@@ -16,6 +16,15 @@ class TestAzureIntegration:
     def setup_class(cls):
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
 
+    @classmethod
+    def teardown_class(cls):
+        # Should be deleted as part of the test
+        # but cleanup here if test fails
+        dog.AzureIntegration.delete(
+            tenant_name=cls.test_new_tenant_name,
+            client_id=cls.test_new_client_id
+        )
+
     def test_azure_crud(self):
         # Test Create
         create_output = dog.AzureIntegration.create(

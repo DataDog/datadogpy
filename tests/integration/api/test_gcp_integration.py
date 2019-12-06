@@ -12,6 +12,15 @@ class TestGcpIntegration:
     def setup_class(cls):
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
 
+    @classmethod
+    def teardown_class(cls):
+        # Should be deleted as part of the test
+        # but cleanup here if test fails
+        dog.GcpIntegration.delete(
+            project_id=cls.test_project_id,
+            client_email=cls.test_client_email
+        )
+
     def test_gcp_crud(self):
         # Test Create
         create_output = dog.GcpIntegration.create(
