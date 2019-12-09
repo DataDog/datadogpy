@@ -24,10 +24,19 @@ WAIT_TIME = 10
 
 class TestDatadog:
     host_name = "test.host.integration"
+    cleanup_role_uuids = []
 
     @classmethod
     def setup_class(cls):
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
+
+    @classmethod
+    def teardown_class(cls):
+        # Ensure we cleanup any resources we created during tests
+        # These should be removed during tests, but here as well in case of test failures
+        for uuid in cls.cleanup_role_uuids:
+            dog.Roles.delete(uuid)
+
 
     def test_tags(self):
         hostname = "test.tags.host" + str(time.time())
@@ -771,6 +780,7 @@ class TestDatadog:
 
         # test create role
         role = dog.Roles.create(data=data)
+        self.cleanup_role_uuids.append(role["data"]["id"])
         assert "roles" in role["data"]["type"]
         assert role["data"]["id"] is not None
         assert role["data"]["attributes"]["name"] == role_name
@@ -782,7 +792,8 @@ class TestDatadog:
         data = {
                 "type": "roles",
                 "attributes": {
-                    "name": new_role_name
+                    "name": new_role_name,
+                    "id": role_uuid,
                 }
             }
 
