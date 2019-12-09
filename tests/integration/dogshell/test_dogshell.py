@@ -440,8 +440,8 @@ class TestDogshell:
 
         # Test validate monitor
         monitor_type = "metric alert"
-        valid_options = {"thresholds": {"critical": 200.0}}
-        invalid_options = {"thresholds": {"critical": 90.0}}
+        valid_options = '{"thresholds": {"critical": 200.0}}'
+        invalid_options = '{"thresholds": {"critical": 90.0}}'
 
         # Check with an invalid query.
         invalid_query = "THIS IS A BAD QUERY"
