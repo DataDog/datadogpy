@@ -123,8 +123,9 @@ class TestDogshell:
         )
 
         # Give the host some tags
+        # The host tag association can take some time, so bump the retry limit to reduce flakiness
         tags0 = ["t0", "t1"]
-        out, _, _ = self.dogshell_with_retry(["tag", "add", host] + tags0)
+        out, _, _ = self.dogshell_with_retry(["tag", "add", host] + tags0, retry_limit=30)
         for t in tags0:
             assert t in out
 
