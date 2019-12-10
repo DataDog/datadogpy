@@ -683,7 +683,8 @@ class TestDatadog:
                 "Downtime", downtime["id"], retry_condition=lambda r: r["disabled"] is False
             )
         for downtime in downtimes_with_scope_two:
-            get_with_retry("Downtime", downtime["id"])
+            d = get_with_retry("Downtime", downtime["id"])
+            assert d["disabled"] is False
 
         # Cancel downtimes with scope `scope_two`
         dog.Downtime.cancel_downtime_by_scope(scope=scope_two)
