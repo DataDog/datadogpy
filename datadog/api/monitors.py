@@ -131,3 +131,12 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
         :returns: Dictionary representing the API's JSON response
         """
         return super(Monitor, cls)._trigger_class_action('GET', 'can_delete', params=params)
+
+    @classmethod
+    def validate(cls, **body):
+        """
+        Checks if the monitors definition is valid.
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        return super(Monitor, cls)._trigger_class_action('POST', 'validate', **body)
