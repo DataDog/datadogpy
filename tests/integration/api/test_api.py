@@ -24,10 +24,19 @@ WAIT_TIME = 10
 
 class TestDatadog:
     host_name = "test.host.integration"
+    cleanup_role_uuids = []
 
     @classmethod
     def setup_class(cls):
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
+
+    @classmethod
+    def teardown_class(cls):
+        # Ensure we cleanup any resources we created during tests
+        # These should be removed during tests, but here as well in case of test failures
+        for uuid in cls.cleanup_role_uuids:
+            dog.Roles.delete(uuid)
+
 
     def test_tags(self):
         hostname = "test.tags.host" + str(time.time())
@@ -470,6 +479,25 @@ class TestDatadog:
             "deleted_monitor_id": monitor["id"]
         }
 
+    def test_monitor_validate(self):
+        monitor_type = "metric alert"
+        valid_options = {"thresholds": {"critical": 200.0}}
+        invalid_options = {"thresholds": {"critical": 90.0}}
+
+        # Check with an invalid query.
+        invalid_query = "THIS IS A BAD QUERY"
+        res = dog.Monitor.validate(type=monitor_type, query=invalid_query, options=valid_options)
+        assert res == {"errors": ["The value provided for parameter 'query' is invalid"]}
+
+        # Check with a valid query, invalid options.
+        valid_query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200"
+        res = dog.Monitor.validate(type=monitor_type, query=valid_query, options=invalid_options)
+        assert res == {"errors": ["Alert threshold (90.0) does not match that used in the query (200.0)."]}
+
+        # Check with a valid query, valid options.
+        res = dog.Monitor.validate(type=monitor_type, query=valid_query, options=valid_options)
+        assert res == {}
+
     def test_monitor_can_delete(self):
         # Create a monitor.
         query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
@@ -771,6 +799,7 @@ class TestDatadog:
 
         # test create role
         role = dog.Roles.create(data=data)
+        self.cleanup_role_uuids.append(role["data"]["id"])
         assert "roles" in role["data"]["type"]
         assert role["data"]["id"] is not None
         assert role["data"]["attributes"]["name"] == role_name
@@ -782,7 +811,8 @@ class TestDatadog:
         data = {
                 "type": "roles",
                 "attributes": {
-                    "name": new_role_name
+                    "name": new_role_name,
+                    "id": role_uuid,
                 }
             }
 
