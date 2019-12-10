@@ -649,6 +649,51 @@ class TestDatadog:
             "Downtime", downtime["id"], retry_condition=lambda r: r["disabled"] is False
         )
 
+    def test_downtime_cancel_by_scope(self):
+        scope_one = "test:integration_one"
+        scope_two = "test:integration_two"
+        start = int(time.time())
+
+        # Create downtime with scope_one
+        end = start + 1000
+        downtime_one = dog.Downtime.create(scope=scope_one, start=start, end=end)
+        assert downtime_one["scope"] == [scope_one]
+        assert downtime_one["disabled"] is False
+
+        # Create downtime with scope_one
+        end = int(time.time()) + 60000
+        downtime_two = dog.Downtime.create(scope=scope_one, start=start, end=end)
+        assert downtime_two["scope"] == [scope_one]
+        assert downtime_two["disabled"] is False
+
+        end = int(time.time()) + 120000
+        downtime_three = dog.Downtime.create(scope=scope_two, start=start, end=end)
+        assert downtime_three["scope"] == [scope_two]
+        assert downtime_three["disabled"] is False
+
+        downtimes_with_scope_one = [downtime_one, downtime_two]
+        downtimes_with_scope_two = [downtime_three]
+
+        # Cancel downtimes with scope `scope_one`
+        dog.Downtime.cancel_downtime_by_scope(scope=scope_one)
+
+        # Verify only the downtimes with scope `scope_one` were canceled
+        for downtime in downtimes_with_scope_one:
+            get_with_retry(
+                "Downtime", downtime["id"], retry_condition=lambda r: r["disabled"] is False
+            )
+        for downtime in downtimes_with_scope_two:
+            get_with_retry("Downtime", downtime["id"])
+
+        # Cancel downtimes with scope `scope_two`
+        dog.Downtime.cancel_downtime_by_scope(scope=scope_two)
+
+        # Verify downtimes with scope `scope_two` were canceled
+        for downtime in downtimes_with_scope_two:
+            get_with_retry(
+                "Downtime", downtime["id"], retry_condition=lambda r: r["disabled"] is False
+            )
+
     def test_service_check(self):
         assert dog.ServiceCheck.check(
             check="check_pg",
