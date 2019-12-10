@@ -535,6 +535,24 @@ class TestDogshell:
         assert out["scope"][0] == scope
         assert out["disabled"] is True
 
+    def test_downtime_cancel_by_scope(self):
+        # Schedule a downtime
+        scope = "env:staging"
+        out, _, _ = self.dogshell(["downtime", "post", scope, str(int(time.time()))])
+        out = json.loads(out)
+        assert out["scope"][0] == scope
+        assert out["disabled"] is False
+        downtime_id = str(out["id"])
+
+        # Cancel the downtime by scope
+        self.dogshell(["downtime", "cancel_by_scope", scope])
+
+        # Get downtime and check if it is cancelled
+        out, _, _ = self.dogshell(["downtime", "show", downtime_id])
+        out = json.loads(out)
+        assert out["scope"][0] == scope
+        assert out["disabled"] is True
+
     def test_service_check(self):
         out, _, _ = self.dogshell(["service_check", "check", "check_pg", "host0", "1"])
         out = json.loads(out)
