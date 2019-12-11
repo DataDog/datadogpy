@@ -31,7 +31,7 @@ logging.getLogger('datadog.threadstats').addHandler(NullHandler())
 
 def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
                statsd_host=None, statsd_port=None, statsd_use_default_route=False,
-               statsd_socket_path=None, statsd_namespace=None, statsd_content_tags=None,
+               statsd_socket_path=None, statsd_namespace=None, statsd_constant_tags=None,
                return_raw_response=False, hostname_from_config=True, **kwargs):
     """
     Initialize and configure Datadog.api and Datadog.statsd modules
