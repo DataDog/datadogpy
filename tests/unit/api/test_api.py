@@ -18,7 +18,7 @@ from datadog.api import (
     ServiceCheck,
     User
 )
-from datadog.api.exceptions import ApiError, ApiNotInitialized
+from datadog.api.exceptions import ApiError, ApiNotInitialized, DatadogException
 from datadog.util.compat import is_p3k
 from tests.unit.api.helper import (
     DatadogAPIWithInitialization,
@@ -88,6 +88,11 @@ class TestInitialization(DatadogAPINoInitialization):
         Raise ApiNotInitialized exception when `initialize` has not ran or no API key was set.
         """
         self.assertRaises(ApiNotInitialized, MyCreatable.create)
+
+        """
+        ApiNotInitialized is a subclass of DatadogException.
+        """
+        self.assertRaises(DatadogException, MyCreatable.create)
 
         # No API key => only stats in statsd mode should work
         initialize()
@@ -213,6 +218,9 @@ class TestInitialization(DatadogAPINoInitialization):
         # Repeat with mute to False
         initialize(api_key=API_KEY, mute=False)
         self.assertRaises(ApiError, MyCreatable.create)
+
+        # ApiError is a subclass of DatadogException
+        self.assertRaises(DatadogException, MyCreatable.create)
 
     def test_return_raw_response(self):
         # Test default initialization sets return_raw_response to False

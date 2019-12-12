@@ -3,7 +3,20 @@ API & HTTP Clients exceptions.
 """
 
 
-class ProxyError(Exception):
+class DatadogException(Exception):
+    """
+    Base class for Datadog API exceptions.  Use this for patterns like the following:
+
+        try:
+            # do something with the Datadog API
+        except datadog.api.exceptions.DatadogException:
+            # handle any Datadog-specific exceptions
+    """
+    def __init__(self, message, *args, **kwargs):
+        super(DatadogException, self).__init__(message, *args, **kwargs)
+
+
+class ProxyError(DatadogException):
     """
     HTTP connection to the configured proxy server failed.
     """
@@ -15,7 +28,7 @@ class ProxyError(Exception):
         super(ProxyError, self).__init__(message)
 
 
-class ClientError(Exception):
+class ClientError(DatadogException):
     """
     HTTP connection to Datadog endpoint is not possible.
     """
@@ -28,7 +41,7 @@ class ClientError(Exception):
         super(ClientError, self).__init__(message)
 
 
-class HttpTimeout(Exception):
+class HttpTimeout(DatadogException):
     """
     HTTP connection timeout.
     """
@@ -41,7 +54,7 @@ class HttpTimeout(Exception):
         super(HttpTimeout, self).__init__(message)
 
 
-class HttpBackoff(Exception):
+class HttpBackoff(DatadogException):
     """
     Backing off after too many timeouts.
     """
@@ -51,7 +64,7 @@ class HttpBackoff(Exception):
         super(HttpBackoff, self).__init__(message)
 
 
-class HTTPError(Exception):
+class HTTPError(DatadogException):
     """
     Datadog returned a HTTP error.
     """
@@ -67,7 +80,7 @@ class HTTPError(Exception):
         super(HTTPError, self).__init__(message)
 
 
-class ApiError(Exception):
+class ApiError(DatadogException):
     """
     Datadog returned an API error (known HTTPError).
 
@@ -75,5 +88,5 @@ class ApiError(Exception):
     """
 
 
-class ApiNotInitialized(Exception):
+class ApiNotInitialized(DatadogException):
     "No API key is set"
