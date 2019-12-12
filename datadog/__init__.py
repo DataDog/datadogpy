@@ -64,6 +64,9 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
 
     :param statsd_socket_path: path to the DogStatsd UNIX socket. Supersedes statsd_host
     and stats_port if provided.
+    
+    :param statsd_constant_tags: A list of tags to be applied to all metrics ("tag", "tag:value")
+    :type statsd_constant_tags: list of strings
 
     :param cacert: Path to local certificate file used to verify SSL \
         certificates. Can also be set to True (default) to use the systems \
