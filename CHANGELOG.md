@@ -6,9 +6,9 @@ CHANGELOG
 * [FEATURE] Roles and Permissions APIs [#481][]
 * [FEATURE] Add support for Azure, GCP and AWS integrations endpoints [#429][]
 * [FEATURE] Add support for new `Monitor.can_delete` endpoint [#474][]
-* [FEATURE]  Add support for the `Monitor.validate` endpoint [#487][]
+* [FEATURE] Add support for the `Monitor.validate` endpoint [#487][]
 * [FEATURE] Add support for `/v1/downtime/cancel/by_scope` [#488][]
-* [IMPROVEMENT] dogshell: remove Exception wrapping [#477][]
+* [IMPROVEMENT] Dogshell: remove Exception wrapping [#477][]
 
 # 0.32.0 / 2019-11-18
 
