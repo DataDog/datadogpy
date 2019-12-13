@@ -12,8 +12,6 @@ class DatadogException(Exception):
         except datadog.api.exceptions.DatadogException:
             # handle any Datadog-specific exceptions
     """
-    def __init__(self, message, *args, **kwargs):
-        super(DatadogException, self).__init__(message, *args, **kwargs)
 
 
 class ProxyError(DatadogException):

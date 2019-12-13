@@ -18,7 +18,16 @@ from datadog.api import (
     ServiceCheck,
     User
 )
-from datadog.api.exceptions import ApiError, ApiNotInitialized, DatadogException
+from datadog.api.exceptions import (
+    DatadogException,
+    ProxyError,
+    ClientError,
+    HttpTimeout,
+    HttpBackoff,
+    HTTPError,
+    ApiError,
+    ApiNotInitialized,
+)
 from datadog.util.compat import is_p3k
 from tests.unit.api.helper import (
     DatadogAPIWithInitialization,
@@ -88,11 +97,6 @@ class TestInitialization(DatadogAPINoInitialization):
         Raise ApiNotInitialized exception when `initialize` has not ran or no API key was set.
         """
         self.assertRaises(ApiNotInitialized, MyCreatable.create)
-
-        """
-        ApiNotInitialized is a subclass of DatadogException.
-        """
-        self.assertRaises(DatadogException, MyCreatable.create)
 
         # No API key => only stats in statsd mode should work
         initialize()
@@ -219,9 +223,6 @@ class TestInitialization(DatadogAPINoInitialization):
         initialize(api_key=API_KEY, mute=False)
         self.assertRaises(ApiError, MyCreatable.create)
 
-        # ApiError is a subclass of DatadogException
-        self.assertRaises(DatadogException, MyCreatable.create)
-
     def test_return_raw_response(self):
         # Test default initialization sets return_raw_response to False
         initialize()
@@ -322,6 +323,86 @@ class TestInitialization(DatadogAPINoInitialization):
             del os.environ["DATADOG_API_KEY"]
             del os.environ["DATADOG_APP_KEY"]
             del os.environ["DATADOG_HOST"]
+
+
+class TestExceptions(DatadogAPINoInitialization):
+
+    def test_base_exception(self):
+        args = [ "foo" ]
+        with pytest.raises(DatadogException):
+            raise DatadogException(*args)
+
+    def test_proxyerror_exception(self):
+        args = [ "GET", "http://localhost:8080", HTTPError("oh no") ]
+        kwargs = { "method": "GET", "url": "http://localhost:8080", "exception": HTTPError("oh no") }
+        with pytest.raises(ProxyError):
+            raise ProxyError(*args)
+        with pytest.raises(DatadogException):
+            raise ProxyError(*args)
+        with pytest.raises(ProxyError):
+            raise ProxyError(**kwargs)
+        with pytest.raises(DatadogException):
+            raise ProxyError(**kwargs)
+
+    def test_clienterror_exception(self):
+        args = [ "GET", "http://localhost:8080", HTTPError("oh no") ]
+        kwargs = { "method": "GET", "url": "http://localhost:8080", "exception": HTTPError("oh no") }
+        with pytest.raises(ClientError):
+            raise ClientError(*args)
+        with pytest.raises(DatadogException):
+            raise ClientError(*args)
+        with pytest.raises(ClientError):
+            raise ClientError(**kwargs)
+        with pytest.raises(DatadogException):
+            raise ClientError(**kwargs)
+
+    def test_httptimeout_exception(self):
+        args = [ "GET", "http://localhost:8080", 5 ]
+        kwargs = { "method": "GET", "url": "http://localhost:8080", "timeout": 5 }
+        with pytest.raises(HttpTimeout):
+            raise HttpTimeout(*args)
+        with pytest.raises(DatadogException):
+            raise HttpTimeout(*args)
+        with pytest.raises(HttpTimeout):
+            raise HttpTimeout(**kwargs)
+        with pytest.raises(DatadogException):
+            raise HttpTimeout(**kwargs)
+
+    def test_httpbackoff_exception(self):
+        args = [ 30 ]
+        kwargs = { "backoff_period": 30 }
+        with pytest.raises(HttpBackoff):
+            raise HttpBackoff(*args)
+        with pytest.raises(DatadogException):
+            raise HttpBackoff(*args)
+        with pytest.raises(HttpBackoff):
+            raise HttpBackoff(**kwargs)
+        with pytest.raises(DatadogException):
+            raise HttpBackoff(**kwargs)
+
+    def test_httperror_exception(self):
+        args = [ 500, "oh no" ]
+        kwargs = { "status_code": 500, "reason": "oh no" }
+        with pytest.raises(HTTPError):
+            raise HTTPError(*args)
+        with pytest.raises(DatadogException):
+            raise HTTPError(*args)
+        with pytest.raises(HTTPError):
+            raise HTTPError(**kwargs)
+        with pytest.raises(DatadogException):
+            raise HTTPError(**kwargs)
+
+    def test_apierror_exception(self):
+        with pytest.raises(ApiError):
+            raise ApiError()
+        with pytest.raises(DatadogException):
+            raise ApiError()
+
+    def test_apinotinitialized_exception(self):
+        with pytest.raises(ApiNotInitialized):
+            raise ApiNotInitialized()
+        with pytest.raises(DatadogException):
+            raise ApiNotInitialized()
 
 
 class TestResources(DatadogAPIWithInitialization):
