@@ -24,10 +24,19 @@ WAIT_TIME = 10
 
 class TestDatadog:
     host_name = "test.host.integration"
+    cleanup_role_uuids = []
 
     @classmethod
     def setup_class(cls):
         initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
+
+    @classmethod
+    def teardown_class(cls):
+        # Ensure we cleanup any resources we created during tests
+        # These should be removed during tests, but here as well in case of test failures
+        for uuid in cls.cleanup_role_uuids:
+            dog.Roles.delete(uuid)
+
 
     def test_tags(self):
         hostname = "test.tags.host" + str(time.time())
@@ -470,6 +479,25 @@ class TestDatadog:
             "deleted_monitor_id": monitor["id"]
         }
 
+    def test_monitor_validate(self):
+        monitor_type = "metric alert"
+        valid_options = {"thresholds": {"critical": 200.0}}
+        invalid_options = {"thresholds": {"critical": 90.0}}
+
+        # Check with an invalid query.
+        invalid_query = "THIS IS A BAD QUERY"
+        res = dog.Monitor.validate(type=monitor_type, query=invalid_query, options=valid_options)
+        assert res == {"errors": ["The value provided for parameter 'query' is invalid"]}
+
+        # Check with a valid query, invalid options.
+        valid_query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200"
+        res = dog.Monitor.validate(type=monitor_type, query=valid_query, options=invalid_options)
+        assert res == {"errors": ["Alert threshold (90.0) does not match that used in the query (200.0)."]}
+
+        # Check with a valid query, valid options.
+        res = dog.Monitor.validate(type=monitor_type, query=valid_query, options=valid_options)
+        assert res == {}
+
     def test_monitor_can_delete(self):
         # Create a monitor.
         query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
@@ -621,6 +649,52 @@ class TestDatadog:
             "Downtime", downtime["id"], retry_condition=lambda r: r["disabled"] is False
         )
 
+    def test_downtime_cancel_by_scope(self):
+        scope_one = "test:integration_one"
+        scope_two = "test:integration_two"
+        start = int(time.time())
+
+        # Create downtime with scope_one
+        end = start + 1000
+        downtime_one = dog.Downtime.create(scope=scope_one, start=start, end=end)
+        assert downtime_one["scope"] == [scope_one]
+        assert downtime_one["disabled"] is False
+
+        # Create downtime with scope_one
+        end = int(time.time()) + 60000
+        downtime_two = dog.Downtime.create(scope=scope_one, start=start, end=end)
+        assert downtime_two["scope"] == [scope_one]
+        assert downtime_two["disabled"] is False
+
+        end = int(time.time()) + 120000
+        downtime_three = dog.Downtime.create(scope=scope_two, start=start, end=end)
+        assert downtime_three["scope"] == [scope_two]
+        assert downtime_three["disabled"] is False
+
+        downtimes_with_scope_one = [downtime_one, downtime_two]
+        downtimes_with_scope_two = [downtime_three]
+
+        # Cancel downtimes with scope `scope_one`
+        dog.Downtime.cancel_downtime_by_scope(scope=scope_one)
+
+        # Verify only the downtimes with scope `scope_one` were canceled
+        for downtime in downtimes_with_scope_one:
+            get_with_retry(
+                "Downtime", downtime["id"], retry_condition=lambda r: r["disabled"] is False
+            )
+        for downtime in downtimes_with_scope_two:
+            d = get_with_retry("Downtime", downtime["id"])
+            assert d["disabled"] is False
+
+        # Cancel downtimes with scope `scope_two`
+        dog.Downtime.cancel_downtime_by_scope(scope=scope_two)
+
+        # Verify downtimes with scope `scope_two` were canceled
+        for downtime in downtimes_with_scope_two:
+            get_with_retry(
+                "Downtime", downtime["id"], retry_condition=lambda r: r["disabled"] is False
+            )
+
     def test_service_check(self):
         assert dog.ServiceCheck.check(
             check="check_pg",
@@ -771,6 +845,7 @@ class TestDatadog:
 
         # test create role
         role = dog.Roles.create(data=data)
+        self.cleanup_role_uuids.append(role["data"]["id"])
         assert "roles" in role["data"]["type"]
         assert role["data"]["id"] is not None
         assert role["data"]["attributes"]["name"] == role_name
@@ -782,7 +857,8 @@ class TestDatadog:
         data = {
                 "type": "roles",
                 "attributes": {
-                    "name": new_role_name
+                    "name": new_role_name,
+                    "id": role_uuid,
                 }
             }
 

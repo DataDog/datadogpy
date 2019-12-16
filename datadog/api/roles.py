@@ -18,7 +18,7 @@ class Roles(ActionAPIResource, CreateableAPIResource, CustomUpdatableAPIResource
         Update a role's attributes
 
         :param id: uuid of the role
-        :param body: dict with type of the input and modified attributes
+        :param body: dict with type of the input, role `id`, and modified attributes
         :returns: Dictionary representing the API's JSON response
         """
         params = {}

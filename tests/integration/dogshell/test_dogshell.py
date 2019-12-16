@@ -123,8 +123,9 @@ class TestDogshell:
         )
 
         # Give the host some tags
+        # The host tag association can take some time, so bump the retry limit to reduce flakiness
         tags0 = ["t0", "t1"]
-        out, _, _ = self.dogshell_with_retry(["tag", "add", host] + tags0)
+        out, _, _ = self.dogshell_with_retry(["tag", "add", host] + tags0, retry_limit=30)
         for t in tags0:
             assert t in out
 
@@ -437,6 +438,28 @@ class TestDogshell:
         _, _, return_code = self.dogshell(["monitor", "unmute_all"], check_return_code=False)
         assert return_code != 0
 
+        # Test validate monitor
+        monitor_type = "metric alert"
+        valid_options = '{"thresholds": {"critical": 200.0}}'
+        invalid_options = '{"thresholds": {"critical": 90.0}}'
+
+        # Check with an invalid query.
+        invalid_query = "THIS IS A BAD QUERY"
+        out, _, _ = self.dogshell(["monitor", "validate", monitor_type, invalid_query, "--options", valid_options])
+        out = json.loads(out)
+        assert out == {"errors": ["The value provided for parameter 'query' is invalid"]}
+
+        # Check with a valid query, invalid options.
+        valid_query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200"
+        out, _, _ = self.dogshell(["monitor", "validate", monitor_type, valid_query, "--options", invalid_options])
+        out = json.loads(out)
+        assert out == {"errors": ["Alert threshold (90.0) does not match that used in the query (200.0)."]}
+
+        # Check with a valid query, valid options.
+        out, _, _ = self.dogshell(["monitor", "validate", monitor_type, valid_query, "--options", valid_options])
+        out = json.loads(out)
+        assert out == {}
+
     def test_host_muting(self):
         # Submit a metric to create a host
         hostname = "my.test.host{}".format(self.get_unique())
@@ -505,6 +528,24 @@ class TestDogshell:
 
         # Cancel downtime
         self.dogshell(["downtime", "delete", downtime_id])
+
+        # Get downtime and check if it is cancelled
+        out, _, _ = self.dogshell(["downtime", "show", downtime_id])
+        out = json.loads(out)
+        assert out["scope"][0] == scope
+        assert out["disabled"] is True
+
+    def test_downtime_cancel_by_scope(self):
+        # Schedule a downtime
+        scope = "env:staging"
+        out, _, _ = self.dogshell(["downtime", "post", scope, str(int(time.time()))])
+        out = json.loads(out)
+        assert out["scope"][0] == scope
+        assert out["disabled"] is False
+        downtime_id = str(out["id"])
+
+        # Cancel the downtime by scope
+        self.dogshell(["downtime", "cancel_by_scope", scope])
 
         # Get downtime and check if it is cancelled
         out, _, _ = self.dogshell(["downtime", "show", downtime_id])

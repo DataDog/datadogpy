@@ -69,7 +69,7 @@ class Embed(ListableAPIResource, GetableAPIResource, ActionAPIResource, Createab
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Embed, cls)._trigger_class_action('GET', id=embed_id, name='enable')
+        return super(Embed, cls)._trigger_class_action('GET', id=embed_id, action_name='enable')
 
     @classmethod
     def revoke(cls, embed_id):
@@ -81,4 +81,4 @@ class Embed(ListableAPIResource, GetableAPIResource, ActionAPIResource, Createab
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Embed, cls)._trigger_class_action('GET', id=embed_id,  name='revoke')
+        return super(Embed, cls)._trigger_class_action('GET', id=embed_id,  action_name='revoke')
