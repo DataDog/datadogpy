@@ -15,7 +15,7 @@ from datadog.api.exceptions import (
 )
 from datadog.api.http_client import resolve_http_client
 from datadog.util.compat import is_p3k
-from datadog.util.format import construct_url, construct_path
+from datadog.util.format import construct_url, construct_path, normalize_tags
 
 
 log = logging.getLogger('datadog.api')
@@ -133,7 +133,8 @@ class APIClient(object):
 
             # If defined, make sure tags are defined as a comma-separated string
             if 'tags' in params and isinstance(params['tags'], list):
-                params['tags'] = ','.join(params['tags'])
+                tag_list = normalize_tags(params['tags'])
+                params['tags'] = ','.join(tag_list)
 
             # If defined, make sure monitor_ids are defined as a comma-separated string
             if 'monitor_ids' in params and isinstance(params['monitor_ids'], list):
