@@ -231,7 +231,7 @@ def generate_warning_codes(option, opt, options_warning):
         raise optparse.OptionValueError("option %s: invalid warning codes value(s): %r" % (opt, options_warning))
 
 
-class WarningOption(optparse.Option):
+class DogwrapOption(optparse.Option):
     # https://docs.python.org/3.7/library/optparse.html#adding-new-types
     TYPES = optparse.Option.TYPES + ("warning_codes",)
     TYPE_CHECKER = copy(optparse.Option.TYPE_CHECKER)
@@ -247,7 +247,7 @@ def parse_options(raw_args=None):
 quotes to prevent python executing as soon as there is a space in your command. \n \nNOTICE: In \
 normal mode, the whole stderr is printed before stdout, in flush_live mode they will be mixed but \
 there is not guarantee that messages sent by the command on both stderr and stdout are printed in \
-the order they were sent.", version="%prog {0}".format(get_version()), option_class=WarningOption)
+the order they were sent.", version="%prog {0}".format(get_version()), option_class=DogwrapOption)
 
     parser.add_option('-n', '--name', action='store', type='string', help="the name of the event \
 as it should appear on your Datadog stream")
