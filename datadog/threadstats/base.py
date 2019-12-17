@@ -202,8 +202,8 @@ class ThreadStats(object):
     def histogram(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
         """
         Sample a histogram value. Histograms will produce metrics that
-        describe the distribution of the recorded values, namely the maximum,
-        median, average, count and the 95th percentile. Optionally, specify
+        describe the distribution of the recorded values, namely the maximum, mininum,
+        average, count and the 75/85/95/99 percentiles. Optionally, specify
         a list of ``tags`` to associate with the metric.
 
         >>> stats.histogram('uploaded_file.size', uploaded_file.size())
