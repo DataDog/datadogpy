@@ -124,8 +124,7 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout,
         # code when it finishes
         returncode = poll_proc(proc, proc_poll_interval, cmd_timeout)
 
-        # Let's harvest the outputs collected by our background threads after
-        # making sure they're done reading it.
+        # Let's harvest the outputs collected by our background threads after making sure they're done reading it.
         out_reader.join()
         err_reader.join()
         stdout = out_reader.content
@@ -316,7 +315,7 @@ def main():
     if options.warning_codes:
         # Convert warning codes from string to int since return codes will evaluate the latter
         warning_codes = list(map(int, options.warning_codes))
-        
+
     if returncode == 0:
         alert_type = SUCCESS
         event_priority = 'low'
