@@ -240,8 +240,6 @@ class DogStatsd(object):
 
         >>> statsd.distribution('uploaded.file.size', 1445)
         >>> statsd.distribution('album.photo.count', 26, tags=["gender:female"])
-
-        This is a beta feature that must be enabled specifically for your organization.
         """
         self._report(metric, 'd', value, tags, sample_rate)
 
