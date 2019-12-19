@@ -280,7 +280,7 @@ case of success.")
     parser.add_option('--notify_error', action='store', type='string', default='',
                       help="a message string and @people directives to send notifications in \
 case of error.")
-    parser.add_option('--notify_waring', action='store', type='string', default='',
+    parser.add_option('--notify_warning', action='store', type='string', default='',
                       help="a message string and @people directives to send notifications in \
     case of warning.")
     parser.add_option('-b', '--buffer_outs', action='store_true', dest='buffer_outs', default=False,
@@ -314,24 +314,27 @@ def main():
     host = api._host_name
 
     if options.warning_codes:
-        warning_codes = options.warning_codes
-
+        # Convert warning codes from string to int since return codes will evaluate the latter
+        warning_codes = list(map(int, options.warning_codes))
+        
     if returncode == 0:
         alert_type = SUCCESS
         event_priority = 'low'
         event_title = u'[%s] %s succeeded in %.2fs' % (host, options.name,
                                                        duration)
-    elif returncode in warning_codes and options.submit_mode == 'warnings':
-        alert_type = WARNING
-        event_priority = 'normal'
-    elif options.submit_mode == 'warnings' and not warning_codes:
-        # Exit - warning codes need to be provided
-        print("A comma separated list of exit codes need to be provided")
-        sys.exit()
-    elif warning_codes and not options.submit_mode == 'warnings':
-        # Exit - submit mode: warning needs to be set
-        print("Submit mode --warning needs to be set")
-        sys.exit()
+    elif returncode != 0 and options.submit_mode == 'warnings':
+        if warning_codes == ['']:
+            # the list of warning codes is empty - the option was not specified
+            print("A comma separated list of exit codes need to be provided")
+            sys.exit()
+        elif returncode in warning_codes:
+            alert_type = WARNING
+            event_priority = 'normal'
+            event_title = u'[%s] %s failed in %.2fs' % (host, options.name,
+                                                           duration)
+        else:
+            print("Command exited with a different exit code that the one(s) provided")
+            sys.exit()
     else:
         alert_type = ERROR
         event_priority = 'normal'
@@ -343,6 +346,7 @@ def main():
             event_title = u'[%s] %s failed in %.2fs' % (host, options.name, duration)
 
     notifications = ""
+
     if alert_type == SUCCESS and options.notify_success:
         notifications = options.notify_success
     elif alert_type == ERROR and options.notify_error:
