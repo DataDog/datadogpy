@@ -124,7 +124,8 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout,
         # code when it finishes
         returncode = poll_proc(proc, proc_poll_interval, cmd_timeout)
 
-        # Let's harvest the outputs collected by our background threads after making sure they're done reading it.
+        # Let's harvest the outputs collected by our background threads
+        # after making sure they're done reading it.
         out_reader.join()
         err_reader.join()
         stdout = out_reader.content
@@ -330,7 +331,7 @@ def main():
             alert_type = WARNING
             event_priority = 'normal'
             event_title = u'[%s] %s failed in %.2fs' % (host, options.name,
-                                                           duration)
+                                                        duration)
         else:
             print("Command exited with a different exit code that the one(s) provided")
             sys.exit()
