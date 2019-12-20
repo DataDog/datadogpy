@@ -257,8 +257,8 @@ as it should appear on your Datadog stream")
                       default='errors', choices=['errors', 'warnings', 'all'], help="[ all | errors | warnings ] if set \
 to error, an event will be sent only of the command exits with a non zero exit status or if it \
 times out. If set to warning, a list of exit codes need to be provided")
-    parser.add_option('--warning_codes', action='store', type='warning_codes', dest='warning_codes', default='',
-                      help="comma separated list of warning codes")
+    parser.add_option('--warning_codes', action='store', type='warning_codes', dest='warning_codes',
+                      help="comma separated list of warning codes, e.g: 127,255")
     parser.add_option('-p', '--priority', action='store', type='choice', choices=['normal', 'low'],
                       help="the priority of the event (default: 'normal')")
     parser.add_option('-t', '--timeout', action='store', type='int', default=60 * 60 * 24,
@@ -313,6 +313,8 @@ def main():
     initialize(api_key=options.api_key)
     host = api._host_name
 
+    warning_codes = None
+
     if options.warning_codes:
         # Convert warning codes from string to int since return codes will evaluate the latter
         warning_codes = list(map(int, options.warning_codes))
@@ -323,7 +325,7 @@ def main():
         event_title = u'[%s] %s succeeded in %.2fs' % (host, options.name,
                                                        duration)
     elif returncode != 0 and options.submit_mode == 'warnings':
-        if warning_codes == ['']:
+        if not warning_codes:
             # the list of warning codes is empty - the option was not specified
             print("A comma separated list of exit codes need to be provided")
             sys.exit()
