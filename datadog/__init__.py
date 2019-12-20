@@ -31,8 +31,8 @@ logging.getLogger('datadog.threadstats').addHandler(NullHandler())
 
 def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
                statsd_host=None, statsd_port=None, statsd_use_default_route=False,
-               statsd_socket_path=None, statsd_namespace=None, return_raw_response=False,
-               hostname_from_config=True, **kwargs):
+               statsd_socket_path=None, statsd_namespace=None, statsd_constant_tags=None,
+               return_raw_response=False, hostname_from_config=True, **kwargs):
     """
     Initialize and configure Datadog.api and Datadog.statsd modules
 
@@ -64,6 +64,9 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
 
     :param statsd_socket_path: path to the DogStatsd UNIX socket. Supersedes statsd_host
     and stats_port if provided.
+
+    :param statsd_constant_tags: A list of tags to be applied to all metrics ("tag", "tag:value")
+    :type statsd_constant_tags: list of string
 
     :param cacert: Path to local certificate file used to verify SSL \
         certificates. Can also be set to True (default) to use the systems \
@@ -105,6 +108,8 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
             statsd.port = int(statsd_port)
     if statsd_namespace:
         statsd.namespace = text(statsd_namespace)
+    if statsd_constant_tags:
+        statsd.constant_tags += statsd_constant_tags
 
     api._return_raw_response = return_raw_response
 
