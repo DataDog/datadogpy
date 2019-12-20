@@ -19,6 +19,7 @@ dogwrap -n test-job -k $API_KEY --timeout=1 "sleep 3"
 '''
 # stdlib
 from __future__ import print_function
+from copy import copy
 import optparse
 import subprocess
 import sys
@@ -33,6 +34,7 @@ from datadog.util.compat import is_p3k
 
 SUCCESS = 'success'
 ERROR = 'error'
+WARNING = 'warning'
 
 MAX_EVENT_BODY_LENGTH = 3000
 
@@ -122,8 +124,8 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout,
         # code when it finishes
         returncode = poll_proc(proc, proc_poll_interval, cmd_timeout)
 
-        # Let's harvest the outputs collected by our background threads after
-        # making sure they're done reading it.
+        # Let's harvest the outputs collected by our background threads
+        # after making sure they're done reading it.
         out_reader.join()
         err_reader.join()
         stdout = out_reader.content
@@ -219,25 +221,44 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
         )
 
 
+def generate_warning_codes(option, opt, options_warning):
+    try:
+        # options_warning is a string e.g.: --warning_codes 123,456,789
+        # we need to create a list from it
+        warning_codes = options_warning.split(",")
+        return warning_codes
+    except ValueError:
+        raise optparse.OptionValueError("option %s: invalid warning codes value(s): %r" % (opt, options_warning))
+
+
+class DogwrapOption(optparse.Option):
+    # https://docs.python.org/3.7/library/optparse.html#adding-new-types
+    TYPES = optparse.Option.TYPES + ("warning_codes",)
+    TYPE_CHECKER = copy(optparse.Option.TYPE_CHECKER)
+    TYPE_CHECKER["warning_codes"] = generate_warning_codes
+
+
 def parse_options(raw_args=None):
     '''
     Parse the raw command line options into an options object and the remaining command string
     '''
     parser = optparse.OptionParser(usage="%prog -n [event_name] -k [api_key] --submit_mode \
-[ all | errors ] [options] \"command\". \n\nNote that you need to enclose your command in \
+[ all | errors | warnings] [options] \"command\". \n\nNote that you need to enclose your command in \
 quotes to prevent python executing as soon as there is a space in your command. \n \nNOTICE: In \
 normal mode, the whole stderr is printed before stdout, in flush_live mode they will be mixed but \
 there is not guarantee that messages sent by the command on both stderr and stdout are printed in \
-the order they were sent.", version="%prog {0}".format(get_version()))
+the order they were sent.", version="%prog {0}".format(get_version()), option_class=DogwrapOption)
 
     parser.add_option('-n', '--name', action='store', type='string', help="the name of the event \
 as it should appear on your Datadog stream")
     parser.add_option('-k', '--api_key', action='store', type='string',
                       help="your DataDog API Key")
     parser.add_option('-m', '--submit_mode', action='store', type='choice',
-                      default='errors', choices=['errors', 'all'], help="[ all | errors ] if set \
+                      default='errors', choices=['errors', 'warnings', 'all'], help="[ all | errors | warnings ] if set \
 to error, an event will be sent only of the command exits with a non zero exit status or if it \
-times out.")
+times out. If set to warning, a list of exit codes need to be provided")
+    parser.add_option('--warning_codes', action='store', type='warning_codes', dest='warning_codes',
+                      help="comma separated list of warning codes, e.g: 127,255")
     parser.add_option('-p', '--priority', action='store', type='choice', choices=['normal', 'low'],
                       help="the priority of the event (default: 'normal')")
     parser.add_option('-t', '--timeout', action='store', type='int', default=60 * 60 * 24,
@@ -259,6 +280,9 @@ case of success.")
     parser.add_option('--notify_error', action='store', type='string', default='',
                       help="a message string and @people directives to send notifications in \
 case of error.")
+    parser.add_option('--notify_warning', action='store', type='string', default='',
+                      help="a message string and @people directives to send notifications in \
+    case of warning.")
     parser.add_option('-b', '--buffer_outs', action='store_true', dest='buffer_outs', default=False,
                       help="displays the stderr and stdout of the command only once it has \
 returned (the command outputs remains buffered in dogwrap meanwhile)")
@@ -289,11 +313,30 @@ def main():
     initialize(api_key=options.api_key)
     host = api._host_name
 
+    warning_codes = None
+
+    if options.warning_codes:
+        # Convert warning codes from string to int since return codes will evaluate the latter
+        warning_codes = list(map(int, options.warning_codes))
+
     if returncode == 0:
         alert_type = SUCCESS
         event_priority = 'low'
         event_title = u'[%s] %s succeeded in %.2fs' % (host, options.name,
                                                        duration)
+    elif returncode != 0 and options.submit_mode == 'warnings':
+        if not warning_codes:
+            # the list of warning codes is empty - the option was not specified
+            print("A comma separated list of exit codes need to be provided")
+            sys.exit()
+        elif returncode in warning_codes:
+            alert_type = WARNING
+            event_priority = 'normal'
+            event_title = u'[%s] %s failed in %.2fs' % (host, options.name,
+                                                        duration)
+        else:
+            print("Command exited with a different exit code that the one(s) provided")
+            sys.exit()
     else:
         alert_type = ERROR
         event_priority = 'normal'
@@ -305,10 +348,13 @@ def main():
             event_title = u'[%s] %s failed in %.2fs' % (host, options.name, duration)
 
     notifications = ""
+
     if alert_type == SUCCESS and options.notify_success:
         notifications = options.notify_success
     elif alert_type == ERROR and options.notify_error:
         notifications = options.notify_error
+    elif alert_type == WARNING and options.notify_warning:
+        notifications = options.notify_warning
 
     if options.tags:
         tags = [t.strip() for t in options.tags.split(',')]
