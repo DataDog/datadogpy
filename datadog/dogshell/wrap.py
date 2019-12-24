@@ -253,6 +253,8 @@ the order they were sent.", version="%prog {0}".format(get_version()), option_cl
 as it should appear on your Datadog stream")
     parser.add_option('-k', '--api_key', action='store', type='string',
                       help="your DataDog API Key")
+    parser.add_option('-s', '--site', action='store', type='choice', default='us', choices=['us', 'eu'], help="The site \
+to send data, US or EU, default: US")
     parser.add_option('-m', '--submit_mode', action='store', type='choice',
                       default='errors', choices=['errors', 'warnings', 'all'], help="[ all | errors | warnings ] if set \
 to error, an event will be sent only of the command exits with a non zero exit status or if it \
@@ -310,7 +312,12 @@ def main():
         options.sigterm_timeout, options.sigkill_timeout,
         options.proc_poll_interval, options.buffer_outs)
 
-    initialize(api_key=options.api_key)
+    if options.site.lower() == 'eu':
+        api_host = 'https://api.datadoghq.eu'
+    else:
+        api_host = 'https://api.datadoghq.com'
+
+    initialize(api_key=options.api_key, api_host=api_host)
     host = api._host_name
 
     warning_codes = None
