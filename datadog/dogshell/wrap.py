@@ -390,7 +390,7 @@ def main():
 
     if options.submit_mode == 'all' or returncode != 0:
         if options.send_metric:
-            api.Metric.send(metric='dogwrap.event.duration', points=duration, type="gauge")
+            api.Metric.send(metric='dogwrap.duration', points=duration, type="gauge")
         api.Event.create(title=event_title, text=event_body, **event)
 
     sys.exit(returncode)
