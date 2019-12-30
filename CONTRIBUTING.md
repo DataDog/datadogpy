@@ -1,107 +1,111 @@
-# Contributing
+# How to contribute
 
-We love pull requests. Here's a quick guide.
+First of all, thanks for contributing!
 
-Fork, then clone the repo:
+This document provides some basic guidelines for contributing to this repository. To propose improvements, feel free to submit a PR.
 
-    git clone git@github.com:your-username/datadogpy.git
+## Reporting a Bug - Requesting a feature - Github Issues
 
-Make sure the tests pass:
+* **Ensure the bug was not already reported** by searching on GitHub under [Issues][1].
+* If you're unable to find an open issue addressing the problem, [open a new one][2]. 
+  - **Fill out the issue template completely**. Label the issue properly.
+    - Add `severity/` label.
+    - Add `documentation` label if this issue is related to documentation changes.
+* If you have a feature request, it is encouraged to [contact support][3] so the request can be prioritized and properly tracked.
+* **Do not open an issue if you have a question**, instead [contact support][3].
 
-    # !!!WARNING!!! The integration tests will use these keys to do destructive changes.
-    # Never use keys for an organization that contains anything important.
-    export DD_TEST_CLIENT_API_KEY=<api_key_for_a_testing_org>
-    export DD_TEST_CLIENT_APP_KEY=<app_key_for_a_testing_org>
-    export DD_TEST_CLIENT_USER=<user_handle_for_testing_comments_api>
-    python setup.py test
+## Suggesting an enhancements - Pull Requests
 
-Make your change. Add tests for your change. Make the tests pass again.
+Have you fixed an issues? Many thanks!
 
-You can also install this project locally in editable mode to make changes and run any manual tests. This can be done by installing using the following pip command:
+Read the [development guide][/DEVELOPMENT.md] for more information on how to get started.
 
-```
-pip install -e <path_to_cloned_project_dir>
-```
+In order to ease/speed up our review, here are some items you can check/improve when submitting your PR:
+* **Ensure an [Issue has been created](#reporting)**. 
+* Avoid changing too many things at once.
+  - Make sure that your Pull Requests only fixes one Issue at the time.
+* **Write tests** for the code you wrote.
+* Make sure that **all tests pass locally**.
+* Summarize your PR with a **meaningful title** and **fill out the pull request description template completely!**
+* Add the most suitable changelog label choosing one of the following:
+  * `changelog/Added` for new features.
+  * `changelog/Changed` for changes in existing functionality.
+  * `changelog/Deprecated` for soon-to-be removed features.
+  * `changelog/Removed` for now removed features.
+  * `changelog/Fixed` for any bug fixes.
+  * `changelog/Security` in case of vulnerabilities.
+  * `changelog/no-changelog` in case this PR should not appear in the changelog at all.
 
-Push to your fork and [submit a pull request][pr].
+See [here][4] for more details about changelogs.
 
-[pr]: https://github.com/your-username/datadogpy/compare/DataDog:master...master
+Your pull request must pass all CI tests before we will merge it. If you're seeing
+an error and don't think it's your fault, it may not be! [Join us on Slack][5] or send us an email, and together we'll 
+get it sorted out.
 
-At this point you're waiting on us. We may suggest some changes or
-improvements or alternatives.
+### Keep it small, focused
 
-# Adding new API endpoints
-This section outlines the process for adding a new endpoint to this API client.
+Avoid changing too many things at once. For instance if you're fixing two different
+checks at once, it makes reviewing harder and the _time-to-release_ longer.
 
-Let's use the example of creating an endpoint for `Hosts`. This example endpoint accepts either a GET or DELETE request at the `/hosts` endpoint as well as a GET request at the `hosts/totals` endpoint.
+### Pull Request title
 
-**NOTE:** This endpoint is just an example and doesn't describe the existing `hosts` resource.
+Unless the PR is marked with the proper exclusion label, the title will be used
+to automatically fill the changelog entries. For this reason the title must be
+concise but explanatory.
 
-Start by adding a new file `hosts.py` to the `datadog/api` folder for the new endpoint. Use the following simple class structure:
+### Commit Messages
 
-```
-from datadog.api.resources import (
-    GetableAPIResource,
-    DeletableAPIResource
-)
+Please don't be this person: `git commit -m "Fixed stuff"`. Take a moment to
+write meaningful commit messages.
 
-class Hosts(GetableAPIResource, DeletableAPIResource):
-    """
-    A wrapper around Hosts HTTP API.
-    """
-    _resource_name = 'hosts'
-```
+The commit message should describe the reason for the change and give extra details
+that will allow someone later on to understand in 5 seconds the thing you've been
+working on for a day.
 
-Each class has the above simple structure, most importantly the following two pieces:
+### Releasing
 
-* A `_resource_name` - Indicates the URI of the api.
-* A set of classes to inherit from. This is where the get/post/put/delete request code is defined for you. Available options are:
+The release procedure is managed by Datadog, instructions can be found in the [RELEASING](/RELEASING.md) document.
 
-| Class Name         | Description                                                                                     |
-| --------------------- | ----------------------------------------------------------------------------------------------- |
-| CreateableAPIResource | Wrapper class for providing a `POST` request for your class, implementing a `create` method.    |
-| SendableAPIResource   | Fork of CreateableAPIResource class with a `send` method.                                       |
-| UpdatableAPIResource  | Wrapper class for providing a `PUT` request for your class, implementing an `update` method.    |
-| DeletableAPIResource  | Wrapper class for providing a `DELETE` request for your class, implementing an `delete` method. |
-| GetableAPIResource    | Wrapper class for providing a `GET` request for your class, implementing an `get` method.       |
-| ListableAPIResource   | Wrapper class for providing a `GET` request for your class, implementing an `get_all` method.   |
-| SearchableAPIResource | Fork of ListableAPIResource class with a `_search` method.                                      |
-| ActionAPIResource     | Generic wrapper to trigger any type of HTTP request.                                            |
+## Asking a questions
 
-More information about the available classes to inherit from can be found in the [`resources.py`](https://github.com/DataDog/datadogpy/blob/master/datadog/api/resources.py) file.
+Need help? Contact [Datadog support][3]
 
-Looking back at the class above:
+## Additional Notes
 
-* The URI this class can access is defined: `hosts`.
-* The `delete` and `get` methods can be called by inheriting `GetableAPIResource` and `DeletableAPIResource`.
+### Issue and Pull Request Labels
 
-The remaining piece is to add support for the `GET` request to the `hosts/totals` URI. To do this, update your code to include:
+This section lists the labels we use to help us track and manage issues and pull requests.
 
-```
-from datadog.api.resources import (
-    GetableAPIResource,
-    DeletableAPIResource,
-    ActionAPIResource
-)
+| Label name                    | Usage                    | Description 
+|-------------------------------|--------------------------|------------------------------------------------------------
+| `backward-incompatible`       | Issues and Pull Requests | Warn for backward incompatible changes. 
+| `changelog/Added`             | Pull Request Only        | Added features results into a minor version bump.
+| `changelog/Changed`           | Pull Request Only        | Changed features results into a major version bump.
+| `changelog/Deprecated`        | Pull Request Only        | Deprecated features results into a major version bump.
+| `changelog/Fixed`             | Pull Request Only        | Fixed features results into a bug fix version bump.
+| `changelog/no-changelog`      | Pull Request Only        | Changes don't appear in changelog.
+| `changelog/Removed`           | Pull Request Only        | Deprecated features results into a major version bump.
+| `changelog/Security`          | Pull Request Only        | Fixed features results into a bug fix version bump.
+| `community/help-wanted`       | Issue Only               | Community help wanted.
+| `community`                   | Issues and Pull Requests | Community driven changes.
+| `dev/testing`                 | Issues and Pull Requests | Tests related changes.
+| `dev/tooling`                 | Issues and Pull Requests | Tooling related changes.
+| `do-not-merge/HOLD`           | Pull Request Only        | Do not merge this PR.
+| `do-not-merge/WIP`            | Pull Request Only        | Do not merge this PR.
+| `documentation`               | Issues and Pull Requests | Documentation related changes.
+| `duplicate`                   | Issue Only               | Duplicate issue.
+| `invalid`                     | Issue Only               | Invalid issue.
+| `kind/bug`                    | Issue Only               | Bug related issue.
+| `kind/feature-request`        | Issue Only               | Feature request related issue.
+| `severity/critical`           | Issue Only               | Critical severity issue.
+| `severity/major`              | Issue Only               | Major severity issue.
+| `severity/minor`              | Issue Only               | Minor severity issue.
+| `severity/normal`             | Issue Only               | Normal severity issue.
+| `stale`                       | Issues and Pull Requests | Stale - Bot reminder.
 
-class Hosts(GetableAPIResource, DeletableAPIResource, ActionAPIResource):
-    """
-    A wrapper around Hosts HTTP API.
-    """
-    _resource_name = 'hosts'
-    @classmethod
-    def totals(cls):
-        """
-        Get total number of hosts active and up.
 
-        :returns: Dictionary representing the API's JSON response
-        """
-        return super(Hosts, cls)._trigger_class_action('GET', 'totals')
-```
-
-Notice the addition of the new inherited class `ActionAPIResource`, and the new function `totals`. This new `totals` function calls the `_trigger_class_action` method from that class and appends `totals` to our URI, making the full path: `baseAPI/hosts/totals`.
-
-Now you can use your new SDK and call the following methods with various params and request bodies:
-* `Hosts.totals()`
-* `Hosts.get()`
-* `Hosts.delete()`
+[1]: https://github.com/DataDog/datadogpy/issues
+[2]: https://github.com/DataDog/datadogpy/issues/new
+[3]: https://docs.datadoghq.com/help
+[4]: https://keepachangelog.com/en/1.0.0
+[5]: https://datadoghq.slack.com

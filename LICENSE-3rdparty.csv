@@ -1,7 +1,0 @@
-Component,Origin,License,Copyright
-import,decorator,BSD 2-Clause,Copyright (c) 2005-2018, Michele Simionato
-import,requests,Apache-2.0,Copyright 2019 Kenneth Reitz
-import,argparse,OSI Approved :: Python Software Foundation License,argparse is (c) 2006-2009 Steven J. Bethard <steven.bethard@gmail.com>.
-import (test),pytest,MIT License,Copyright (c) 2004-2019 Holger Krekel and others
-import (test),mock,BSD 2-Clause,Copyright (c) 2003-2013, Michael Foord & the mock team
-import (test),freezegun,Apache-2.0,Copyright 2012 Steve Pulec
