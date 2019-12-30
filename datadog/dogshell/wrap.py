@@ -312,7 +312,7 @@ def main():
         options.sigterm_timeout, options.sigkill_timeout,
         options.proc_poll_interval, options.buffer_outs)
 
-    if options.site == 'datadoghq.eu' or options.site == 'eu':
+    if options.site in ('datadoghq.eu', 'eu'):
         api_host = 'https://api.datadoghq.eu'
     else:
         api_host = 'https://api.datadoghq.com'
