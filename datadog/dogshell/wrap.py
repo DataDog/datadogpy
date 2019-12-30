@@ -288,7 +288,7 @@ case of error.")
     parser.add_option('-b', '--buffer_outs', action='store_true', dest='buffer_outs', default=False,
                       help="displays the stderr and stdout of the command only once it has \
 returned (the command outputs remains buffered in dogwrap meanwhile)")
-    parser.add_option('--send_metrics', action='store_true', dest='send_metrics', default=False,
+    parser.add_option('--send_metric', action='store_true', dest='send_metric', default=False,
                       help="sends a metric for event duration")
     parser.add_option('--tags', action='store', type='string', dest='tags', default='',
                       help="comma separated list of tags")
@@ -389,7 +389,7 @@ def main():
         print(stdout.strip(), file=sys.stdout)
 
     if options.submit_mode == 'all' or returncode != 0:
-        if options.send_metrics:
+        if options.send_metric:
             api.Metric.send(metric='dogwrap.event.duration', points=duration, type="gauge")
         api.Event.create(title=event_title, text=event_body, **event)
 
