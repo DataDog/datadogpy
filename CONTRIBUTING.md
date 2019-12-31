@@ -16,7 +16,7 @@ This document provides some basic guidelines for contributing to this repository
 
 ## Suggesting an enhancements - Pull Requests
 
-Have you fixed an issues? Many thanks!
+Have you fixed an issue? Many thanks!
 
 Read the [development guide][/DEVELOPMENT.md] for more information on how to get started.
 

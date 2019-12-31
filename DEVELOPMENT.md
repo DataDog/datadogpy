@@ -100,9 +100,9 @@ Integration tests need an _API_ and _APP Keys_ to run against a Datadog account.
 
 We use `tox` to run tests. You can find the [tox.ini](/tox.ini) config in the root directory.
 We create 2 environments:
-- The Default environment: It will run all Unit tests, Performance test and Integration tests not marked as `admin_needed`.
+- Default environments: they will run all Unit, Performance and Integration tests not marked as `admin_needed`.
   - Execute this with the `tox` command.
-- The `integration-admin` environment: It will only run integration test marked with the `admin_needed` marker.
+- The explicit `integration-admin` environment: It will only run integration tests marked with the `admin_needed` marker.
   - Tests marked as `admin-needed` need an API and APP Key with admin permissions. 
   - __!!!WARNING!!!__ These tests will use these keys to do destructive changes on your Datadog account. 
     - __Never use keys for an organization that contains anything important!__.
@@ -157,9 +157,7 @@ This can be done by installing using the following pip command:
 pip install -e <path_to_cloned_project_dir>
 ```
 
-Push to your fork and [submit a pull request][pr].
-
-[pr]: https://github.com/your-username/datadogpy/compare/DataDog:master...master
+Push to your fork and submit a [pull request](/CONTRIBUTING.md).
 
 At this point you're waiting on us. We may suggest some changes or
 improvements or alternatives.
