@@ -103,7 +103,7 @@ We create 2 environments:
 - The Default environment: It will run all Unit tests, Performance test and Integration tests not marked as `admin_needed`.
   - Execute this with the `tox` command.
 - The `integration-admin` environment: It will only run integration test marked with the `admin_needed` marker.
-  - Tests marked as `admin-needed` need a API and APP Key with admin permissions. 
+  - Tests marked as `admin-needed` need an API and APP Key with admin permissions. 
   - __!!!WARNING!!!__ These tests will use these keys to do destructive changes on your Datadog account. 
     - __Never use keys for an organization that contains anything important!__.
 
