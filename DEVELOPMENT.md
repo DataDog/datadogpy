@@ -8,31 +8,8 @@ Fork, then clone the repo:
 
     git clone git@github.com:your-username/datadogpy.git
 
-Make sure the tests pass:
 
-    # !!!WARNING!!! The integration tests will use these keys to do destructive changes.
-    # Never use keys for an organization that contains anything important.
-    export DD_TEST_CLIENT_API_KEY=<api_key_for_a_testing_org>
-    export DD_TEST_CLIENT_APP_KEY=<app_key_for_a_testing_org>
-    export DD_TEST_CLIENT_USER=<user_handle_for_testing_comments_api>
-    python setup.py test
-
-Make your change. Add tests for your change. Make the tests pass again.
-
-You can also install this project locally in editable mode to make changes and run any manual tests. This can be done by installing using the following pip command:
-
-```
-pip install -e <path_to_cloned_project_dir>
-```
-
-Push to your fork and [submit a pull request][pr].
-
-[pr]: https://github.com/your-username/datadogpy/compare/DataDog:master...master
-
-At this point you're waiting on us. We may suggest some changes or
-improvements or alternatives.
-
-# Adding new API endpoints
+## Adding new API endpoints
 This section outlines the process for adding a new endpoint to this API client.
 
 Let's use the example of creating an endpoint for `Hosts`. This example endpoint accepts either a GET or DELETE request at the `/hosts` endpoint as well as a GET request at the `hosts/totals` endpoint.
@@ -107,3 +84,82 @@ Now you can use your new SDK and call the following methods with various params 
 * `Hosts.totals()`
 * `Hosts.get()`
 * `Hosts.delete()`
+
+### Tests
+
+This project contains:
+- [Datadog API Client](/datadog/api)
+- [Dogshell](/datadog/dogshell)
+- [DogStatsD](/datadog/dogstatsd)
+- [Threadstats](/datadog/threadstats)
+
+
+We have [unit](/tests/unit), [integration](/tests/integration) and [performance](/tests/performamce) tests.
+Integration tests need an _API_ and _APP Keys_ to run against a Datadog account.
+- __WARNING__: Never use keys for an organization that contains anything important.
+
+We use `tox` to run tests. You can find the [tox.ini](/tox.ini) config in the root directory.
+We create 2 environments:
+- The Default environment: It will run all Unit tests, Performance test and Integration tests not marked as `admin_needed`.
+  - Execute this with the `tox` command.
+- The `integration-admin` environment: It will only run integration test marked with the `admin_needed` marker.
+  - Tests marked as `admin-needed` need a API and APP Key with admin permissions. 
+  - __!!!WARNING!!!__ These tests will use these keys to do destructive changes on your Datadog account. 
+    - __Never use keys for an organization that contains anything important!__.
+
+#### Setup Integration Tests
+
+To setup integration tests you will need to export the following environment variables.
+
+```
+# !!!WARNING!!! The integration tests will use these keys to do destructive changes.
+# Never use keys for an organization that contains anything important.
+export DD_TEST_CLIENT_API_KEY=<api_key_for_a_testing_org>
+export DD_TEST_CLIENT_APP_KEY=<app_key_for_a_testing_org>
+export DD_TEST_CLIENT_USER=<user_handle_for_testing_comments_api>
+```
+
+#### Run tests
+
+To run all tests you will need to Setup integration tests with Admin level API and APP Keys.
+then you can run both commands below:
+
+```
+tox
+tox -e integration-admin
+```
+
+If you don't want to use admin level API and APP keys, just run `tox`.
+
+If you want to run a subset of the tests, you can pass `pytest` arguments.
+For example, in the example below, we exclude all integrations tests using the `--ignore` arguments.
+As a consequence, we only execute unit and performance tests:
+
+```
+tox -- --ignore=tests/integration/api --ignore=tests/integration/dogshell
+```
+
+Another example below shows how you can run tests for a specific module/folder by using the `-k` argument from `pytest`. 
+In this command, we only run `dogstatsd` tests.
+
+```
+tox -- -k dogstatsd
+```
+
+## Submit Your Changes
+
+Make your change. Add tests for your change. Make the tests pass again.
+
+You can also install this project locally in editable mode to make changes and run any manual tests. 
+This can be done by installing using the following pip command:
+
+```
+pip install -e <path_to_cloned_project_dir>
+```
+
+Push to your fork and [submit a pull request][pr].
+
+[pr]: https://github.com/your-username/datadogpy/compare/DataDog:master...master
+
+At this point you're waiting on us. We may suggest some changes or
+improvements or alternatives.
