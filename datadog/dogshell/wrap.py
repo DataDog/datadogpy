@@ -390,10 +390,11 @@ def main():
 
     if options.submit_mode == 'all' or returncode != 0:
         if options.send_metric:
+            event_name_tag = "event_name{}".format(options.name)
             if tags:
-                duration_tags = tags.append(options.name)
+                duration_tags = tags + [event_name_tag]
             else:
-                duration_tags = [options.name]
+                duration_tags = [event_name_tag]
             api.Metric.send(metric='dogwrap.duration', points=duration, tags=duration_tags, type="gauge")
         api.Event.create(title=event_title, text=event_body, **event)
 
