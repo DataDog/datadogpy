@@ -1,7 +1,6 @@
 from setuptools import setup
 
 from io import open
-import sys
 
 
 def get_readme_md_contents():
@@ -11,7 +10,7 @@ def get_readme_md_contents():
         return long_description
 
 
-install_reqs = ["decorator>=3.3.2", "requests>=2.6.0"]
+install_reqs = ["decorator>=4.4.0", "requests>=2.22.0"]
 
 setup(
     name="datadog",
