@@ -1,7 +1,6 @@
 from datadog.api.exceptions import ApiError
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
     SearchableAPIResource
-from datadog.util.compat import iteritems
 
 
 class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
@@ -86,6 +85,6 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
             else:
                 return v
 
-        params = dict((k, timestamp_to_integer(k, v)) for k, v in iteritems(params))
+        params = dict((k, timestamp_to_integer(k, v)) for k, v in params.items())
 
         return super(Event, cls)._search(**params)

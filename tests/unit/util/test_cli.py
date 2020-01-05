@@ -2,6 +2,7 @@ from argparse import ArgumentTypeError
 from freezegun import freeze_time
 import datetime
 import unittest
+import sys
 
 from datadog.util.cli import (
     comma_list,
@@ -15,7 +16,6 @@ from datadog.util.cli import (
     parse_date_as_epoch_timestamp,
     parse_date,
 )
-from datadog.util.compat import is_pypy
 from datadog.util.format import force_to_epoch_seconds
 
 
@@ -145,7 +145,7 @@ class TestCLI(unittest.TestCase):
             ("2019-10", datetime.datetime(2019, 10, 1, 0, 0, 0, 0)),
             ("1571805872", test_date),  # seconds
         ]
-        if not is_pypy():
+        if '__pypy__' not in sys.builtin_module_names:
             cases.append(
                 ("1571805872000", test_date)
             )  # millis, pypy does not work (known)
@@ -155,9 +155,7 @@ class TestCLI(unittest.TestCase):
             self.assertEqual(
                 expected,
                 actual,
-                "case {}: failed, date_str={} expected={} actual={}".format(
-                    i, date_str, expected, actual
-                ),
+                f"case {i}: failed, date_str={date_str} expected={expected} actual={actual}"
             )
 
         # test invalid case
@@ -190,7 +188,7 @@ class TestCLI(unittest.TestCase):
             ("2019-10", datetime.datetime(2019, 10, 1, 0, 0, 0, 0)),
             ("1571805872", test_date),  # seconds
         ]
-        if not is_pypy():
+        if '__pypy__' not in sys.builtin_module_names:
             cases.append(
                 ("1571805872000", test_date)
             )  # millis, pypy does not work (known)
@@ -201,9 +199,7 @@ class TestCLI(unittest.TestCase):
             self.assertEqual(
                 expected_timestamp,
                 actual_timestamp,
-                "case {}: failed, date_str={} expected={} actual={}".format(
-                    i, date_str, expected_timestamp, actual_timestamp
-                ),
+                f"case {i}: failed, date_str={date_str} expected={expected_timestamp} actual={actual_timestamp}"
             )
 
         # test invalid case

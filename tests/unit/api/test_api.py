@@ -7,7 +7,8 @@ from time import time
 import zlib
 
 # 3p
-import mock, pytest
+import mock
+import pytest
 
 # datadog
 from datadog import initialize, api, util
@@ -28,7 +29,6 @@ from datadog.api.exceptions import (
     ApiError,
     ApiNotInitialized,
 )
-from datadog.util.compat import is_p3k
 from datadog.util.format import normalize_tags
 from tests.unit.api.helper import (
     DatadogAPIWithInitialization,
@@ -117,12 +117,8 @@ class TestInitialization(DatadogAPINoInitialization):
         # Generate a fake agent config
         tmpfilepath = os.path.join(tempfile.gettempdir(), "tmp-agentconfig")
         with open(tmpfilepath, "wb") as f:
-            if is_p3k():
-                f.write(bytes("[Main]\n", 'UTF-8'))
-                f.write(bytes("hostname: {0}\n".format(HOST_NAME), 'UTF-8'))
-            else:
-                f.write("[Main]\n")
-                f.write("hostname: {0}\n".format(HOST_NAME))
+            f.write(bytes("[Main]\n", 'UTF-8'))
+            f.write(bytes(f"hostname: {HOST_NAME}\n", 'UTF-8'))
         # Mock get_config_path to return this fake agent config
         mock_config_path.return_value = tmpfilepath
 
@@ -469,8 +465,7 @@ class TestResources(DatadogAPIWithInitialization):
         resource_id = 123
         MyListableSubResource.get_items(resource_id, otherparam="val")
         self.request_called_with(
-            'GET',
-            API_HOST + '/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            'GET', f'{API_HOST}/api/v1/resource_name/{resource_id}/sub_resource_name',
             params={'otherparam': "val"}
         )
         _, kwargs = self.request_mock.call_args()
@@ -483,8 +478,7 @@ class TestResources(DatadogAPIWithInitialization):
         resource_id = 123
         MyAddableSubResource.add_items(resource_id, params={'myparam': 'val1'}, mydata='val2')
         self.request_called_with(
-            'POST',
-            API_HOST + '/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            'POST', f'{API_HOST}/api/v1/resource_name/{resource_id}/sub_resource_name',
             params={'myparam': 'val1'},
             data={'mydata': 'val2'}
         )
@@ -496,8 +490,7 @@ class TestResources(DatadogAPIWithInitialization):
         resource_id = 123
         MyUpdatableSubResource.update_items(resource_id, params={'myparam': 'val1'}, mydata='val2')
         self.request_called_with(
-            'PUT',
-            API_HOST + '/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            'PUT', f'{API_HOST}/api/v1/resource_name/{resource_id}/sub_resource_name',
             params={'myparam': 'val1'},
             data={'mydata': 'val2'}
         )
@@ -509,8 +502,7 @@ class TestResources(DatadogAPIWithInitialization):
         resource_id = 123
         MyDeletableSubResource.delete_items(resource_id, params={'myparam': 'val1'}, mydata='val2')
         self.request_called_with(
-            'DELETE',
-            API_HOST + '/api/v1/resource_name/{0}/sub_resource_name'.format(resource_id),
+            'DELETE', f'{API_HOST}/api/v1/resource_name/{resource_id}/sub_resource_name',
             params={'myparam': 'val1'},
             data={'mydata': 'val2'}
         )
@@ -529,8 +521,7 @@ class TestResources(DatadogAPIWithInitialization):
             mydata2='val2'
         )
         self.request_called_with(
-            'POST',
-            API_HOST + '/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            'POST', f'{API_HOST}/api/v1/actionables/{actionable_object_id}/actionname',
             params={'myparam': 'val1'},
             data={'mydata': 'val', 'mydata2': 'val2'}
         )
@@ -543,8 +534,7 @@ class TestResources(DatadogAPIWithInitialization):
             mydata2='val2'
         )
         self.request_called_with(
-            'POST',
-            API_HOST + '/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            'POST', f'{API_HOST}/api/v1/actionables/{actionable_object_id}/actionname',
             params={},
             data={'mydata': 'val', 'mydata2': 'val2'}
         )
@@ -556,8 +546,7 @@ class TestResources(DatadogAPIWithInitialization):
             params={'param1': 'val1', 'param2': 'val2'}
         )
         self.request_called_with(
-            'GET',
-            API_HOST + '/api/v1/actionables/{0}/actionname'.format(str(actionable_object_id)),
+            'GET', f'{API_HOST}/api/v1/actionables/{actionable_object_id}/actionname',
             params={'param1': 'val1', 'param2': 'val2'}
         )
         _, kwargs = self.request_mock.call_args()
@@ -570,8 +559,7 @@ class TestResources(DatadogAPIWithInitialization):
             mydata="val"
         )
         self.request_called_with(
-            'POST',
-            API_HOST + '/api/v1/actionname/{0}'.format(actionable_object_id),
+            'POST', f'{API_HOST}/api/v1/actionname/{actionable_object_id}',
             data={'mydata': "val"}
         )
 
@@ -581,8 +569,7 @@ class TestResources(DatadogAPIWithInitialization):
             id=actionable_object_id,
         )
         self.request_called_with(
-            'GET',
-            API_HOST + '/api/v1/actionname/{0}'.format(actionable_object_id)
+            'GET', f'{API_HOST}/api/v1/actionname/{actionable_object_id}'
         )
         _, kwargs = self.request_mock.call_args()
         self.assertIsNone(kwargs["data"])
@@ -732,11 +719,7 @@ class TestMetricResource(DatadogAPIWithInitialization):
         from decimal import Decimal
         from fractions import Fraction
 
-        m_long = int(1)  # long in Python 3.x
-
-        if not is_p3k():
-            m_long = long(1)  # noqa: F821
-
+        m_long = int(1)
         supported_data_types = [1, 1.0, m_long, Decimal(1), Fraction(1, 2)]
 
         for point in supported_data_types:

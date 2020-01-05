@@ -6,7 +6,6 @@ import random
 import itertools
 import threading
 
-from datadog.util.compat import iternext
 from datadog.threadstats.constants import MetricType
 
 
@@ -96,7 +95,7 @@ class Histogram(Metric):
         self.min = float("inf")
         self.sum = []
         self.iter_counter = itertools.count()
-        self.count = iternext(self.iter_counter)
+        self.count = next(self.iter_counter)
         self.sample_size = 1000
         self.samples = []
         self.percentiles = [0.75, 0.85, 0.95, 0.99]
@@ -109,7 +108,7 @@ class Histogram(Metric):
             self.samples.append(value)
         else:
             self.samples[random.randrange(0, self.sample_size)] = value
-        self.count = iternext(self.iter_counter)
+        self.count = next(self.iter_counter)
 
     def flush(self, timestamp, interval):
         if not self.count:

@@ -20,7 +20,6 @@ import pytest
 from datadog import initialize, statsd
 from datadog.dogstatsd.base import DogStatsd
 from datadog.dogstatsd.context import TimedContextManagerDecorator
-from datadog.util.compat import is_higher_py35, is_p3k
 from tests.util.contextmanagers import preserve_environment_variable
 from tests.unit.dogstatsd.fixtures import load_fixtures
 
@@ -36,10 +35,7 @@ class FakeSocket(object):
         self.payloads = deque()
 
     def send(self, payload):
-        if is_p3k():
-            assert type(payload) == bytes
-        else:
-            assert type(payload) == str
+        assert type(payload) == bytes
         self.payloads.append(payload)
 
     def recv(self):
@@ -73,7 +69,7 @@ class TestDogStatsd(unittest.TestCase):
 
         # Mock the proc filesystem
         route_data = load_fixtures('route')
-        self._procfs_mock = patch('datadog.util.compat.builtins.open', mock_open())
+        self._procfs_mock = patch('builtins.open', mock_open())
         self._procfs_mock.__enter__().return_value.readlines.return_value = route_data.split("\n")
 
     def tearDown(self):
@@ -121,7 +117,7 @@ class TestDogStatsd(unittest.TestCase):
         assert_equal(statsd.socket_path, options['statsd_socket_path'])
         assert_equal(statsd.host, None)
         assert_equal(statsd.port, None)
-    
+
     def test_dogstatsd_initialization_with_env_vars(self):
         """
         Dogstatsd can retrieve its config from env vars when
@@ -178,8 +174,8 @@ class TestDogStatsd(unittest.TestCase):
         assert_equal('gt:123.4|g|#country:china,age:45,blue', self.recv())
 
     def test_tagged_counter(self):
-        self.statsd.increment('ct', tags=[u'country:españa', 'red'])
-        assert_equal(u'ct:1|c|#country:españa,red', self.recv())
+        self.statsd.increment('ct', tags=['country:españa', 'red'])
+        assert_equal('ct:1|c|#country:españa,red', self.recv())
 
     def test_tagged_histogram(self):
         self.statsd.histogram('h', 1, tags=['red'])
@@ -214,31 +210,31 @@ class TestDogStatsd(unittest.TestCase):
         assert_equal('t:123|ms', self.recv())
 
     def test_event(self):
-        self.statsd.event('Title', u'L1\nL2', priority='low', date_happened=1375296969)
-        assert_equal(u'_e{5,6}:Title|L1\\nL2|d:1375296969|p:low', self.recv())
+        self.statsd.event('Title', 'L1\nL2', priority='low', date_happened=1375296969)
+        assert_equal('_e{5,6}:Title|L1\\nL2|d:1375296969|p:low', self.recv())
 
-        self.statsd.event('Title', u'♬ †øU †øU ¥ºu T0µ ♪',
+        self.statsd.event('Title', '♬ †øU †øU ¥ºu T0µ ♪',
                           aggregation_key='key', tags=['t1', 't2:v2'])
-        assert_equal(u'_e{5,19}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2', self.recv())
+        assert_equal('_e{5,19}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2', self.recv())
 
     def test_event_constant_tags(self):
         self.statsd.constant_tags = ['bar:baz', 'foo']
-        self.statsd.event('Title', u'L1\nL2', priority='low', date_happened=1375296969)
-        assert_equal(u'_e{5,6}:Title|L1\\nL2|d:1375296969|p:low|#bar:baz,foo', self.recv())
+        self.statsd.event('Title', 'L1\nL2', priority='low', date_happened=1375296969)
+        assert_equal('_e{5,6}:Title|L1\\nL2|d:1375296969|p:low|#bar:baz,foo', self.recv())
 
-        self.statsd.event('Title', u'♬ †øU †øU ¥ºu T0µ ♪',
+        self.statsd.event('Title', '♬ †øU †øU ¥ºu T0µ ♪',
                           aggregation_key='key', tags=['t1', 't2:v2'])
-        assert_equal(u'_e{5,19}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2,bar:baz,foo', self.recv())
+        assert_equal('_e{5,19}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2,bar:baz,foo', self.recv())
 
     def test_service_check(self):
         now = int(time.time())
         self.statsd.service_check(
             'my_check.name', self.statsd.WARNING,
             tags=['key1:val1', 'key2:val2'], timestamp=now,
-            hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪")
+            hostname='i-abcd1234', message="♬ †øU \n†øU ¥ºu|m: T0µ ♪")
         assert_equal(
-            u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}'
-            .format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\: T0µ ♪"), self.recv())
+            f'_sc|my_check.name|{self.statsd.WARNING}|d:{now}|h:i-abcd1234|#key1:val1,key2:val2|m:♬ †øU \\n†øU ¥ºu|m\: T0µ ♪',
+            self.recv())
 
     def test_service_check_constant_tags(self):
         self.statsd.constant_tags = ['bar:baz', 'foo']
@@ -246,18 +242,18 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.service_check(
             'my_check.name', self.statsd.WARNING,
             timestamp=now,
-            hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪")
+            hostname='i-abcd1234', message="♬ †øU \n†øU ¥ºu|m: T0µ ♪")
         assert_equal(
-            u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#bar:baz,foo|m:{2}'
-            .format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\: T0µ ♪"), self.recv())
+            f'_sc|my_check.name|{self.statsd.WARNING}|d:{now}|h:i-abcd1234|#bar:baz,foo|m:♬ †øU \\n†øU ¥ºu|m\: T0µ ♪',
+            self.recv())
 
         self.statsd.service_check(
             'my_check.name', self.statsd.WARNING,
             tags=['key1:val1', 'key2:val2'], timestamp=now,
-            hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪")
+            hostname='i-abcd1234', message="♬ †øU \n†øU ¥ºu|m: T0µ ♪")
         assert_equal(
-            u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2,bar:baz,foo|m:{2}'
-            .format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\: T0µ ♪"), self.recv())
+            f'_sc|my_check.name|{self.statsd.WARNING}|d:{now}|h:i-abcd1234|#key1:val1,key2:val2,bar:baz,foo|m:♬ †øU \\n†øU ¥ºu|m\: T0µ ♪',
+            self.recv())
 
     def test_metric_namespace(self):
         """
@@ -269,18 +265,18 @@ class TestDogStatsd(unittest.TestCase):
 
     # Test Client level contant tags
     def test_gauge_constant_tags(self):
-        self.statsd.constant_tags=['bar:baz', 'foo']
+        self.statsd.constant_tags = ['bar:baz', 'foo']
         self.statsd.gauge('gauge', 123.4)
         assert self.recv() == 'gauge:123.4|g|#bar:baz,foo'
 
     def test_counter_constant_tag_with_metric_level_tags(self):
-        self.statsd.constant_tags=['bar:baz', 'foo']
+        self.statsd.constant_tags = ['bar:baz', 'foo']
         self.statsd.increment('page.views', tags=['extra'])
         assert_equal('page.views:1|c|#extra,bar:baz,foo', self.recv())
 
     def test_gauge_constant_tags_with_metric_level_tags_twice(self):
         metric_level_tag = ['foo:bar']
-        self.statsd.constant_tags=['bar:baz']
+        self.statsd.constant_tags = ['bar:baz']
         self.statsd.gauge('gauge', 123.4, tags=metric_level_tag)
         assert self.recv() == 'gauge:123.4|g|#foo:bar,bar:baz'
 
@@ -409,12 +405,9 @@ class TestDogStatsd(unittest.TestCase):
         assert_equal('tests.unit.dogstatsd.test_statsd.func', name)
         self.assert_almost_equal(0.5, float(value), 0.1)
 
-    @pytest.mark.skipif(not is_higher_py35(), reason="Coroutines are supported on Python 3.5 or higher.")
     def test_timed_coroutine(self):
         """
         Measure the distribution of a coroutine function's run time.
-
-        Warning: Python > 3.5 only.
         """
         import asyncio
 
@@ -596,8 +589,8 @@ class TestDogStatsd(unittest.TestCase):
 
     def test_tags_from_environment_and_constant(self):
         with preserve_environment_variable('DATADOG_TAGS'):
-           os.environ['DATADOG_TAGS'] = 'country:china,age:45,blue'
-           statsd = DogStatsd(constant_tags=['country:canada', 'red'])
+            os.environ['DATADOG_TAGS'] = 'country:china,age:45,blue'
+            statsd = DogStatsd(constant_tags=['country:canada', 'red'])
         statsd.socket = FakeSocket()
         statsd.gauge('gt', 123.4)
         assert_equal('gt:123.4|g|#country:canada,red,country:china,age:45,blue', statsd.socket.recv())
@@ -616,8 +609,9 @@ class TestDogStatsd(unittest.TestCase):
             statsd = DogStatsd(constant_tags=['country:canada', 'red'])
         statsd.socket = FakeSocket()
         statsd.gauge('gt', 123.4)
-        assert_equal('gt:123.4|g|#country:canada,red,dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d', statsd.socket.recv())
-    
+        assert_equal('gt:123.4|g|#country:canada,red,dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d',
+                     statsd.socket.recv())
+
     def test_entity_tag_and_tags_from_environment_and_constant(self):
         with preserve_environment_variable('DATADOG_TAGS'):
             os.environ['DATADOG_TAGS'] = 'country:china,age:45,blue'
@@ -626,7 +620,8 @@ class TestDogStatsd(unittest.TestCase):
                 statsd = DogStatsd(constant_tags=['country:canada', 'red'])
         statsd.socket = FakeSocket()
         statsd.gauge('gt', 123.4)
-        assert_equal('gt:123.4|g|#country:canada,red,country:china,age:45,blue,dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d', statsd.socket.recv())
+        assert_equal('gt:123.4|g|#country:canada,red,country:china,age:45,blue,dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d',
+                     statsd.socket.recv())
 
     def test_gauge_doesnt_send_None(self):
         self.statsd.gauge('metric', None)

@@ -1,18 +1,12 @@
 # stdlib
-from __future__ import print_function
 import os
 import sys
-
-# datadog
-from datadog.util.compat import is_p3k, configparser, IterableUserDict,\
-    get_input
+import configparser
+from collections import UserDict
 
 
 def print_err(msg):
-    if is_p3k():
-        print(msg + '\n', file=sys.stderr)
-    else:
-        sys.stderr.write(msg + '\n')
+    print(f'{msg}\n', file=sys.stderr)
 
 
 def report_errors(res):
@@ -20,9 +14,9 @@ def report_errors(res):
         errors = res['errors']
         if isinstance(errors, list):
             for error in errors:
-                print_err("ERROR: {}".format(error))
+                print_err(f"ERROR: {error}")
         else:
-            print_err("ERROR: {}".format(errors))
+            print_err(f"ERROR: {errors}")
         sys.exit(1)
     return False
 
@@ -32,14 +26,14 @@ def report_warnings(res):
         warnings = res['warnings']
         if isinstance(warnings, list):
             for warning in warnings:
-                print_err("WARNING: {}".format(warning))
+                print_err(f"WARNING: {warning}")
         else:
-            print_err("WARNING: {}".format(warnings))
+            print_err(f"WARNING: {warnings}")
         return True
     return False
 
 
-class DogshellConfig(IterableUserDict):
+class DogshellConfig(UserDict):
 
     def load(self, config_file, api_key, app_key):
         config = configparser.ConfigParser()
@@ -56,14 +50,13 @@ class DogshellConfig(IterableUserDict):
                 try:
                     response = ''
                     while response.strip().lower() not in ['y', 'n']:
-                        response = get_input('%s does not exist. Would you like to'
-                                             ' create it? [Y/n] ' % config_file)
+                        response = input(f'{config_file} does not exist. Would you like to create it? [Y/n] ')
                         if response.strip().lower() in ['', 'y', 'yes']:
                             # Read the api and app keys from stdin
-                            api_key = get_input("What is your api key? (Get it here: "
-                                                "https://app.datadoghq.com/account/settings#api) ")
-                            app_key = get_input("What is your application key? (Generate one here: "
-                                                "https://app.datadoghq.com/account/settings#api) ")
+                            api_key = input("What is your api key? (Get it here: "
+                                            "https://app.datadoghq.com/account/settings#api) ")
+                            app_key = input("What is your application key? (Generate one here: "
+                                            "https://app.datadoghq.com/account/settings#api) ")
 
                             # Write the config file
                             config.add_section('Connection')

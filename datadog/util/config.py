@@ -1,9 +1,8 @@
+from io import StringIO
+import pkg_resources as pkg
+import configparser
 import os
-import string
 import sys
-
-# datadog
-from datadog.util.compat import configparser, StringIO, is_p3k, pkg
 
 # CONSTANTS
 DATADOG_CONF = "datadog.conf"
@@ -35,10 +34,7 @@ def get_os():
 
 def skip_leading_wsp(f):
     "Works on a file, returns a file-like object"
-    if is_p3k():
-        return StringIO("\n".join(x.strip(" ") for x in f.readlines()))
-    else:
-        return StringIO("\n".join(map(string.strip, f.readlines())))
+    return StringIO("\n".join(x.strip(" ") for x in f.readlines()))
 
 
 def _windows_commondata_path():
@@ -114,10 +110,7 @@ def get_config(cfg_path=None, options=None):
         config_path = get_config_path(cfg_path, os_name=get_os())
         config = configparser.ConfigParser()
         with open(config_path) as config_file:
-            if is_p3k():
-                config.read_file(skip_leading_wsp(config_file))
-            else:
-                config.readfp(skip_leading_wsp(config_file))
+            config.read_file(skip_leading_wsp(config_file))
 
         # bulk import
         for option in config.options('Main'):
@@ -133,7 +126,7 @@ def get_version():
     """
     Resolve `datadog` package version.
     """
-    version = u"unknown"
+    version = "unknown"
 
     if not pkg:
         return version
@@ -148,6 +141,6 @@ def get_version():
             raise pkg.DistributionNotFound
         version = dist.version
     except pkg.DistributionNotFound:
-        version = u"Please install `datadog` with setup.py"
+        version = "Please install `datadog` with setup.py"
 
     return version

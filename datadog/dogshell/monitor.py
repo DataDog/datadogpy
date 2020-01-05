@@ -182,19 +182,19 @@ class MonitorClient(object):
         if args.type:
             if args.type_opt:
                 msg = 'Duplicate arguments for `type`. Using optional value --type'
-                print_err("WARNING: {}".format(msg))
+                print_err(f"WARNING: {msg}")
             else:
                 to_update['type'] = args.type
             msg = "[DEPRECATION] `type` is no longer required to `update` and may be omitted"
-            print_err("WARNING: {}".format(msg))
+            print_err(f"WARNING: {msg}")
         if args.query:
             if args.query_opt:
                 msg = 'Duplicate arguments for `query`. Using optional value --query'
-                print_err("WARNING: {}".format(msg))
+                print_err(f"WARNING: {msg}")
             else:
                 to_update['query'] = args.query
             msg = "[DEPRECATION] `query` is no longer required to `update` and may be omitted"
-            print_err("WARNING: {}".format(msg))
+            print_err(f"WARNING: {msg}")
         if args.name:
             to_update['name'] = args.name
         if args.message:

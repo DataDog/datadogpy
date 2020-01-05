@@ -1,3 +1,4 @@
+from configparser import ConfigParser
 from hashlib import md5
 import json
 import os
@@ -10,7 +11,6 @@ import tempfile
 import pytest
 import requests
 
-from datadog.util.compat import is_p3k, ConfigParser
 from ..api.constants import MONITOR_REFERENCED_IN_SLO_MESSAGE
 
 
@@ -20,12 +20,8 @@ WAIT_TIME = 10
 
 def get_temp_file():
     """Return a (fn, fp) pair"""
-    if is_p3k():
-        fn = "/tmp/{0}-{1}".format(time.time(), random.random())
-        return (fn, open(fn, "w+"))
-    else:
-        tf = tempfile.NamedTemporaryFile()
-        return (tf.name, tf)
+    fn = f"/tmp/{time.time()}-{random.random()}"
+    return (fn, open(fn, "w+"))
 
 
 class TestDogshell:
@@ -113,8 +109,8 @@ class TestDogshell:
     def test_metrics(self):
         # Submit a unique metric from a unique host
         unique = self.get_unique()
-        metric = "test.dogshell.test_metric_{}".format(unique)
-        host = "{}{}".format(self.host_name, unique)
+        metric = f"test.dogshell.test_metric_{unique}"
+        host = f"{self.host_name}{unique}"
         self.dogshell(["metric", "post", "--host", host, metric, "1"])
 
         # Query for the host and metric
@@ -158,7 +154,7 @@ class TestDogshell:
 
         # Update the file and push it to the server
         unique = self.get_unique()
-        dash["title"] = "dash title {}".format(unique)
+        dash["title"] = f"dash title {unique}"
         name, temp1 = get_temp_file()
         json.dump(dash, temp1)
         temp1.flush()
@@ -225,7 +221,7 @@ class TestDogshell:
 
         # Update the file and push it to the server
         unique = self.get_unique()
-        screenboard["title"] = "screenboard title {}".format(unique)
+        screenboard["title"] = f"screenboard title {unique}"
         name, temp1 = get_temp_file()
         json.dump(screenboard, temp1)
         temp1.flush()
@@ -462,7 +458,7 @@ class TestDogshell:
 
     def test_host_muting(self):
         # Submit a metric to create a host
-        hostname = "my.test.host{}".format(self.get_unique())
+        hostname = f"my.test.host{self.get_unique()}"
         self.dogshell(["metric", "post", "--host", hostname, "metric", "1"])
 
         # Wait for the host to appear
@@ -566,8 +562,8 @@ class TestDogshell:
         if use_cl_args:
             cmd = [
                 "dog",
-                "--api-key={0}".format(os.environ["DD_TEST_CLIENT_API_KEY"]),
-                "--application-key={0}".format(os.environ["DD_TEST_CLIENT_APP_KEY"]),
+                f"--api-key={os.environ['DD_TEST_CLIENT_API_KEY']}",
+                f"--application-key={os.environ['DD_TEST_CLIENT_APP_KEY']}",
             ] + args
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
         if stdin:
@@ -590,9 +586,7 @@ class TestDogshell:
             retry_count += 1
         if retry_condition(out, return_code):
             raise Exception(
-                "Retry limit reached for command {}:\nSTDOUT: {}\nSTDERR: {}\nSTATUS_CODE: {}".format(
-                    cmd, out, err, return_code
-                )
+                f"Retry limit reached for command {cmd}:\nSTDOUT: {out}\nSTDERR: {err}\nSTATUS_CODE: {return_code}"
             )
         return out, err, return_code
 

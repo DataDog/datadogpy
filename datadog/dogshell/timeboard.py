@@ -129,8 +129,7 @@ class TimeboardClient(object):
                 dash_summary['id'], os.path.join(args.pull_dir, filename + ".json"),
                 args.timeout, format, args.string_ids)
         if format == 'pretty':
-            print(("\n### Total: {0} dashboards to {1} ###"
-                  .format(len(used_filenames), os.path.realpath(args.pull_dir))))
+            print(f"\n### Total: {len(used_filenames)} dashboards to {os.path.realpath(args.pull_dir)} ###")
 
     @classmethod
     def _new_file(cls, args):
@@ -142,7 +141,7 @@ class TimeboardClient(object):
         graphs = json.loads(graphs)
         res = api.Timeboard.create(
             title=args.filename,
-            description="Description for {0}".format(args.filename),
+            description=f"Description for {args.filename}",
             graphs=[graphs])
 
         report_warnings(res)
@@ -178,9 +177,9 @@ class TimeboardClient(object):
             json.dump(dash_obj, f, indent=2)
 
             if format == 'pretty':
-                print(u"Downloaded dashboard {0} to file {1}".format(dash_id, filename))
+                print(f"Downloaded dashboard {dash_id} to file {filename}")
             else:
-                print(u"{0} {1}".format(dash_id, filename))
+                print(f"{dash_id} {filename}")
 
     @classmethod
     def _push(cls, args):
@@ -189,12 +188,11 @@ class TimeboardClient(object):
             try:
                 dash_obj = json.load(f)
             except Exception as err:
-                raise Exception("Could not parse {0}: {1}".format(f.name, err))
+                raise Exception(f"Could not parse {f.name}: {err}")
 
             if args.append_auto_text:
                 datetime_str = datetime.now().strftime('%x %X')
-                auto_text = ("<br/>\nUpdated at {0} from {1} ({2}) on {3}"
-                             .format(datetime_str, f.name, dash_obj["id"], platform.node()))
+                auto_text = (f"<br/>\nUpdated at {datetime_str} from {f.name} ({dash_obj['id']}) on {platform.node()}")
                 dash_obj["description"] += auto_text
             tpl_vars = dash_obj.get("template_variables", [])
 
@@ -210,8 +208,7 @@ class TimeboardClient(object):
                                            graphs=dash_obj["graphs"], template_variables=tpl_vars)
 
             if 'errors' in res:
-                print_err('Upload of dashboard {0} from file {1} failed.'
-                          .format(dash_obj["id"], f.name))
+                print_err(f'Upload of dashboard {dash_obj["id"]} from file {f.name} failed.')
 
             report_warnings(res)
             report_errors(res)
@@ -222,7 +219,7 @@ class TimeboardClient(object):
                 print(json.dumps(res))
 
             if args.format == 'pretty':
-                print("Uploaded file {0} (dashboard {1})".format(f.name, dash_obj["id"]))
+                print(f"Uploaded file {f.name} (dashboard {dash_obj['id']})")
 
     @classmethod
     def _post(cls, args):
@@ -310,8 +307,7 @@ class TimeboardClient(object):
     @classmethod
     def _web_view(cls, args):
         dash_id = json.load(args.file)['id']
-        url = api._api_host + "/dash/dash/{0}".format(dash_id)
-        webbrowser.open(url)
+        webbrowser.open(f"{api._api_host}/dash/dash/{dash_id}")
 
     @classmethod
     def _escape(cls, s):

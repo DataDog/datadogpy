@@ -252,7 +252,7 @@ class TestDatadog:
             retry_limit=20,
             start=now_ts - 600,
             end=now_ts + 600,
-            query="{}{{host:{}}}".format(metric_name_single, host_name),
+            query=f"{metric_name_single}{{host:{host_name}}}",
         )
         metric_query_list = get_with_retry(
             "Metric",
@@ -261,7 +261,7 @@ class TestDatadog:
             retry_limit=20,
             start=now_ts - 600,
             end=now_ts + 600,
-            query="{}{{host:{}}}".format(metric_name_list, host_name),
+            query=f"{metric_name_list}{{host:{host_name}}}",
         )
         metric_query_tuple = get_with_retry(
             "Metric",
@@ -270,25 +270,25 @@ class TestDatadog:
             retry_limit=20,
             start=now_ts - 600,
             end=now_ts + 600,
-            query="{}{{host:{}}}".format(metric_name_tuple, host_name),
+            query=f"{metric_name_tuple}{{host:{host_name}}}",
         )
 
         assert len(metric_query_single["series"]) == 1
         assert metric_query_single["series"][0]["metric"] == metric_name_single
-        assert metric_query_single["series"][0]["scope"] == "host:{}".format(host_name)
+        assert metric_query_single["series"][0]["scope"] == f"host:{host_name}"
         assert len(metric_query_single["series"][0]["pointlist"]) == 1
         assert metric_query_single["series"][0]["pointlist"][0][1] == 1
 
         assert len(metric_query_list["series"]) == 1
         assert metric_query_list["series"][0]["metric"] == metric_name_list
-        assert metric_query_list["series"][0]["scope"] == "host:{}".format(host_name)
+        assert metric_query_list["series"][0]["scope"] == f"host:{host_name}"
         assert len(metric_query_list["series"][0]["pointlist"]) == 2
         assert metric_query_list["series"][0]["pointlist"][0][1] == 1
         assert metric_query_list["series"][0]["pointlist"][1][1] == 2
 
         assert len(metric_query_tuple["series"]) == 1
         assert metric_query_tuple["series"][0]["metric"] == metric_name_tuple
-        assert metric_query_tuple["series"][0]["scope"] == "host:{}".format(host_name)
+        assert metric_query_tuple["series"][0]["scope"] == f"host:{host_name}"
         assert len(metric_query_tuple["series"][0]["pointlist"]) == 1
         assert metric_query_tuple["series"][0]["pointlist"][0][1] == 1
 
@@ -515,7 +515,7 @@ class TestDatadog:
         }
 
         # Create a monitor-based SLO.
-        name = "test SLO {}".format(time.time())
+        name = f"test SLO {time.time()}"
         thresholds = [{"timeframe": "7d", "target": 90}]
         slo = dog.ServiceLevelObjective.create(
             type="monitor",
@@ -557,7 +557,7 @@ class TestDatadog:
         denominator = "sum:my.custom.metric{*}.as_count()"
         query = {"numerator": numerator, "denominator": denominator}
         thresholds = [{"timeframe": "7d", "target": 90}]
-        name = "test SLO {}".format(time.time())
+        name = f"test SLO {time.time()}"
         slo = dog.ServiceLevelObjective.create(
             type="metric",
             query=query,
@@ -796,7 +796,7 @@ class TestDatadog:
     @pytest.mark.admin_needed
     def test_user_crud(self):
         now = int(time.time())
-        handle = "user{}@test.com".format(now)
+        handle = f"user{now}@test.com"
         name = "Test User"
         alternate_name = "Test User Alt"
 

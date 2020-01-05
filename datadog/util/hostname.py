@@ -1,4 +1,5 @@
 # stdlib
+from urllib import request
 import json
 import logging
 import re
@@ -7,7 +8,6 @@ import subprocess
 import types
 
 # datadog
-from datadog.util.compat import url_lib, is_p3k, iteritems
 from datadog.util.config import get_config, get_os, CfgNotFound
 
 VALID_HOSTNAME_RFC_1123_PATTERN = re.compile(r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$")  # noqa
@@ -77,10 +77,7 @@ def get_hostname(hostname_from_config):
                 p = subprocess.Popen(['/bin/hostname', '-f'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
                 out, err = p.communicate()
                 if p.returncode == 0:
-                    if is_p3k():
-                        return out.decode("utf-8").strip()
-                    else:
-                        return out.strip()
+                    return out.decode("utf-8").strip()
             except Exception:
                 return None
 
@@ -91,7 +88,7 @@ def get_hostname(hostname_from_config):
                 hostname = unix_hostname
 
     # if we have an ec2 default hostname, see if there's an instance-id available
-    if hostname is not None and True in [hostname.lower().startswith(p) for p in [u'ip-', u'domu']]:
+    if hostname is not None and True in [hostname.lower().startswith(p) for p in ['ip-', 'domu']]:
         instanceid = EC2.get_instance_id(config)
         if instanceid:
             hostname = instanceid
@@ -107,8 +104,8 @@ def get_hostname(hostname_from_config):
 
     if hostname is None:
         log.warning(
-            u"Unable to reliably determine host name. You can define one in your `hosts` file, "
-            u"or in `datadog.conf` file if you have Datadog Agent installed."
+            "Unable to reliably determine host name. You can define one in your `hosts` file, "
+            "or in `datadog.conf` file if you have Datadog Agent installed."
         )
 
     return hostname
@@ -123,7 +120,7 @@ def get_ec2_instance_id():
         socket.setdefaulttimeout(0.25)
 
         try:
-            return url_lib.urlopen(url_lib.Request("http://169.254.169.254/latest/"
+            return request.urlopen(request.Request("http://169.254.169.254/latest/"
                                                    "meta-data/instance-id")).read()
         finally:
             # Reset the previous default timeout
@@ -156,7 +153,7 @@ class GCE(object):
             pass
 
         try:
-            opener = url_lib.build_opener()
+            opener = request.build_opener()
             opener.addheaders = [('X-Google-Metadata-Request', 'True')]
             GCE.metadata = json.loads(opener.open(GCE.URL).read().strip())
 
@@ -201,8 +198,8 @@ class EC2(object):
             pass
 
         try:
-            iam_role = url_lib.urlopen(EC2.URL + "/iam/security-credentials").read().strip()
-            iam_params = json.loads(url_lib.urlopen(EC2.URL + "/iam/security-credentials" + "/" +
+            iam_role = request.urlopen(EC2.URL + "/iam/security-credentials").read().strip()
+            iam_params = json.loads(request.urlopen(EC2.URL + "/iam/security-credentials" + "/" +
                                     str(iam_role)).read().strip())
             from boto.ec2.connection import EC2Connection
             connection = EC2Connection(aws_access_key_id=iam_params['AccessKeyId'],
@@ -210,8 +207,8 @@ class EC2(object):
                                        security_token=iam_params['Token'])
             instance_object = connection.get_only_instances([EC2.metadata['instance-id']])[0]
 
-            EC2_tags = [u"%s:%s" % (tag_key, tag_value) for tag_key, tag_value
-                        in iteritems(instance_object.tags)]
+            EC2_tags = [f"{tag_key}:{tag_value}" for tag_key, tag_value
+                        in instance_object.tags.items()]
 
         except Exception:
             log.exception("Problem retrieving custom EC2 tags")
@@ -231,19 +228,6 @@ class EC2(object):
         """Use the ec2 http service to introspect the instance. This adds latency \
         if not running on EC2
         """
-        # >>> import urllib2
-        # >>> urllib2.urlopen('http://169.254.169.254/latest/', timeout=1).read()
-        # 'meta-data\nuser-data'
-        # >>> urllib2.urlopen('http://169.254.169.254/latest/meta-data', timeout=1).read()
-        # 'ami-id\nami-launch-index\nami-manifest-path\nhostname\ninstance-id\nlocal-ipv4\
-        # npublic-keys/\nreservation-id\nsecurity-groups'
-        # >>> urllib2.urlopen('http://169.254.169.254/latest/meta-data/instance-id',
-        # timeout=1).read()
-        # 'i-deadbeef'
-
-        # Every call may add TIMEOUT seconds in latency so don't abuse this call
-        # python 2.4 does not support an explicit timeout argument so force it here
-        # Rather than monkey-patching urllib2, just lower the timeout globally for these calls
 
         if not agentConfig['collect_instance_metadata']:
             log.info("Instance metadata collection is disabled. Not collecting it.")
@@ -259,7 +243,7 @@ class EC2(object):
         for k in ('instance-id', 'hostname', 'local-hostname', 'public-hostname', 'ami-id',
                   'local-ipv4', 'public-keys', 'public-ipv4', 'reservation-id', 'security-groups'):
             try:
-                v = url_lib.urlopen(EC2.URL + "/" + str(k)).read().strip()
+                v = request.urlopen(f'{EC2.URL}/{str(k)}').read().strip()
                 assert type(v) in (types.StringType, types.UnicodeType) and len(v) > 0, \
                     "%s is not a string" % v
                 EC2.metadata[k] = v

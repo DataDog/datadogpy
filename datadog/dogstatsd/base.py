@@ -12,7 +12,6 @@ from threading import Lock
 # datadog
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.dogstatsd.route import get_default_route
-from datadog.util.compat import text
 
 # Logging
 log = logging.getLogger('datadog.dogstatsd')
@@ -119,10 +118,10 @@ class DogStatsd(object):
         self.constant_tags = constant_tags + env_tags
         entity_id = os.environ.get('DD_ENTITY_ID')
         if entity_id:
-            entity_tag = '{name}:{value}'.format(name=ENTITY_ID_TAG_NAME, value=entity_id)
+            entity_tag = f'{ENTITY_ID_TAG_NAME}:{entity_id}'
             self.constant_tags.append(entity_tag)
         if namespace is not None:
-            namespace = text(namespace)
+            namespace = str(namespace)
         self.namespace = namespace
         self.use_ms = use_ms
         self.default_sample_rate = default_sample_rate
@@ -319,7 +318,7 @@ class DogStatsd(object):
             metric,
             value,
             metric_type,
-            ("|@" + text(sample_rate)) if sample_rate != 1 else "",
+            ("|@" + str(sample_rate)) if sample_rate != 1 else "",
             ("|#" + ",".join(tags)) if tags else "",
         )
 
@@ -334,7 +333,7 @@ class DogStatsd(object):
             # dogstatsd is overflowing, drop the packets (mimicks the UDP behaviour)
             return
         except (socket.error, socket.herror, socket.gaierror) as se:
-            log.warning("Error submitting packet: {}, dropping the packet and closing the socket".format(se))
+            log.warning(f"Error submitting packet: {se}, dropping the packet and closing the socket")
             self.close_socket()
         except Exception as e:
             log.error("Unexpected error: %s", str(e))
@@ -371,25 +370,24 @@ class DogStatsd(object):
         # Append all client level tags to every event
         tags = self._add_constant_tags(tags)
 
-        string = u'_e{%d,%d}:%s|%s' % (len(title), len(text), title, text)
+        string = '_e{%d,%d}:%s|%s' % (len(title), len(text), title, text)
         if date_happened:
-            string = '%s|d:%d' % (string, date_happened)
+            string = f'{string}|d:{date_happened}'
         if hostname:
-            string = '%s|h:%s' % (string, hostname)
+            string = f'{string}|h:{hostname}'
         if aggregation_key:
-            string = '%s|k:%s' % (string, aggregation_key)
+            string = f'{string}|k:{aggregation_key}'
         if priority:
-            string = '%s|p:%s' % (string, priority)
+            string = f'{string}|p:{priority}'
         if source_type_name:
-            string = '%s|s:%s' % (string, source_type_name)
+            string = f'{string}|s:{source_type_name}'
         if alert_type:
-            string = '%s|t:%s' % (string, alert_type)
+            string = f'{string}|t:{alert_type}'
         if tags:
-            string = '%s|#%s' % (string, ','.join(tags))
+            string = f'{string}|#{",".join(tags)}'
 
         if len(string) > 8 * 1024:
-            raise Exception(u'Event "%s" payload is too big (more than 8KB), '
-                            'event discarded' % title)
+            raise Exception(f'Event "{title}" payload is too big (more than 8KB), event discarded')
 
         self._send(string)
 
@@ -402,19 +400,19 @@ class DogStatsd(object):
         """
         message = self._escape_service_check_message(message) if message is not None else ''
 
-        string = u'_sc|{0}|{1}'.format(check_name, status)
+        string = f'_sc|{check_name}|{status}'
 
         # Append all client level tags to every status check
         tags = self._add_constant_tags(tags)
 
         if timestamp:
-            string = u'{0}|d:{1}'.format(string, timestamp)
+            string = f'{string}|d:{timestamp}'
         if hostname:
-            string = u'{0}|h:{1}'.format(string, hostname)
+            string = f'{string}|h:{hostname}'
         if tags:
-            string = u'{0}|#{1}'.format(string, ','.join(tags))
+            string = f'{string}|#{",".join(tags)}'
         if message:
-            string = u'{0}|m:{1}'.format(string, message)
+            string = f'{string}|m:{message}'
 
         self._send(string)
 

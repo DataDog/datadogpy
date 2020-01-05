@@ -87,19 +87,14 @@ class TestUnitThreadStats(unittest.TestCase):
         if count:
             self.assertEqual(
                 len(matching_metrics), count,
-                u"Candidate size assertion failure: expected {expected}, found {count}. "
-                u"Metric name={name}, value={value}, tags={tags}.".format(
-                    expected=count, count=len(matching_metrics),
-                    name=name, value=value, tags=tags
-                )
+                f"Candidate size assertion failure: expected {count}, found {len(matching_metrics)}. "
+                f"Metric name={name}, value={value}, tags={tags}."
             )
         else:
             self.assertTrue(
                 len(matching_metrics) > 0,
-                u"Candidate size assertion failure: no matching metric found. "
-                u"Metric name={name}, value={value}, tags={tags}.".format(
-                    name=name, value=value, tags=tags
-                )
+                f"Candidate size assertion failure: no matching metric found. "
+                f"Metric name={name}, value={value}, tags={tags}."
             )
 
     def test_init(self):

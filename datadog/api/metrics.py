@@ -138,6 +138,6 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
             params['from'] = params.pop('start')
             params['to'] = params.pop('end')
         except KeyError as e:
-            raise ApiError("The parameter '{0}' is required".format(e.args[0]))
+            raise ApiError(f"The parameter '{e.args[0]}' is required")
 
         return super(Metric, cls)._search(**params)

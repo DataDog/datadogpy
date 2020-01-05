@@ -4,6 +4,7 @@ from datadog import api as dog
 
 WAIT_TIME = 10
 
+
 def get_with_retry(
         resource_type,
         resource_id=None,
@@ -26,6 +27,6 @@ def get_with_retry(
         time.sleep(WAIT_TIME)
     if retry_condition(resource):
         raise Exception(
-            "Retry limit reached performing `{}` on resource {}, ID {}".format(operation, resource_type, resource_id)
+            f"Retry limit reached performing `{operation}` on resource {resource_type}, ID {resource_id}"
         )
     return resource

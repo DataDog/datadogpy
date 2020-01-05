@@ -1,7 +1,5 @@
 """
 Decorator `timed` for coroutine methods.
-
-Warning: requires Python 3.5 or higher.
 """
 # stdlib
 from functools import wraps

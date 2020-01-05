@@ -34,10 +34,7 @@ class Roles(ActionAPIResource, CreateableAPIResource, CustomUpdatableAPIResource
         :returns: Dictionary representing the API's JSON response
         """
         params = {}
-        path = '{resource_name}/{resource_id}/permissions'.format(
-            resource_name=cls._resource_name,
-            resource_id=id
-        )
+        path = f'{cls._resource_name}/{id}/permissions'
         api_version = getattr(cls, '_api_version', None)
 
         return APIClient.submit("POST", path, api_version, body, **params)
@@ -52,10 +49,7 @@ class Roles(ActionAPIResource, CreateableAPIResource, CustomUpdatableAPIResource
         :returns: Dictionary representing the API's JSON response
         """
         params = {}
-        path = '{resource_name}/{resource_id}/permissions'.format(
-            resource_name=cls._resource_name,
-            resource_id=id
-        )
+        path = f'{cls._resource_name}/{id}/permissions'
         api_version = getattr(cls, '_api_version', None)
 
         return APIClient.submit("DELETE", path, api_version, body, **params)

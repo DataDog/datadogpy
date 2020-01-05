@@ -9,11 +9,11 @@ def pretty_json(obj):
 
 
 def construct_url(host, api_version, path):
-    return "{}/api/{}/{}".format(host.strip("/"), api_version.strip("/"), path.strip("/"))
+    return f"{host.strip('/')}/api/{api_version.strip('/')}/{path.strip('/')}"
 
 
 def construct_path(api_version, path):
-    return "{}/{}".format(api_version.strip("/"), path.strip("/"))
+    return f"{api_version.strip('/')}/{path.strip('/')}"
 
 
 def force_to_epoch_seconds(epoch_sec_or_dt):

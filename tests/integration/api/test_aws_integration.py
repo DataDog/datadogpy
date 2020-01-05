@@ -15,6 +15,7 @@ ROLE_NAMES = [TEST_ROLE_NAME, TEST_ROLE_NAME_2]
 ACCOUNT_IDS = [TEST_ACCOUNT_ID_1, TEST_ACCOUNT_ID_2, TEST_ACCOUNT_ID_3, TEST_ACCOUNT_ID_4]
 AVAILABLE_NAMESPACES = 76
 
+
 class TestAwsIntegration:
 
     # List of dictionaries representing the AWS Accounts to cleanup between tests

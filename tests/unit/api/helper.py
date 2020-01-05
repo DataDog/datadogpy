@@ -23,8 +23,6 @@ from datadog.api.resources import (
     DeletableAPISubResource,
     ActionAPIResource
 )
-from datadog.util.compat import iteritems, is_p3k
-from tests.util.contextmanagers import EnvVars
 
 
 API_KEY = "apikey"
@@ -142,10 +140,7 @@ class DatadogAPITestCase(unittest.TestCase):
         Load the repsonse body from the given payload
         """
         mock_response = MockResponse(raise_for_status=raise_for_status)
-        if is_p3k():
-            mock_response.raw = BytesIO(bytes(response_body, 'utf-8'))
-        else:
-            mock_response.raw = BytesIO(response_body)
+        mock_response.raw = BytesIO(bytes(response_body, 'utf-8'))
         mock_response.status_code = status_code
 
         self.request_mock.request = Mock(return_value=mock_response)
@@ -175,12 +170,12 @@ class DatadogAPITestCase(unittest.TestCase):
 
         if params:
             self.assertIn('params', others)
-            for (k, v) in iteritems(params):
+            for (k, v) in params.items():
                 self.assertIn(k, others['params'], others['params'])
                 self.assertEqual(v, others['params'][k])
 
     def assertIn(self, first, second, msg=None):
-        msg = msg or "{0} not in {1}".format(first, second)
+        msg = msg or f"{first} not in {second}"
         self.assertTrue(first in second, msg)
 
 

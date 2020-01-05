@@ -1,9 +1,6 @@
 import time
-# import unittest
-import threading
 
 from datadog import lambda_metric, datadog_lambda_wrapper
-from datadog.threadstats.aws_lambda import _lambda_stats
 
 
 TOTAL_NUMBER_OF_THREADS = 1000
@@ -28,21 +25,3 @@ def wrapped_function(id):
     time.sleep(0.001)
 
     lambda_metric("common_dist", 42)
-
-
-# Lambda wrapper - mute thread safety test, python 2.7 issues
-# class TestWrapperThreadSafety(unittest.TestCase):
-
-#     def test_wrapper_thread_safety(self):
-#         _lambda_stats.reporter = MemoryReporter()
-
-#         for i in range(TOTAL_NUMBER_OF_THREADS):
-#             threading.Thread(target=wrapped_function, args=[i]).start()
-#         # Wait all threads to finish
-#         time.sleep(10)
-
-#         # Check that at least one flush happened
-#         self.assertGreater(_lambda_stats.reporter.dist_flush_counter, 0)
-
-#         dists = _lambda_stats.reporter.distributions
-#         self.assertEqual(len(dists), TOTAL_NUMBER_OF_THREADS + 1)

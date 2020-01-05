@@ -1,4 +1,5 @@
-from datadog.util.compat import urlparse
+from urllib.parse import urlparse
+
 from datadog.api.resources import (
     CreateableAPIResource,
     ActionAPIResource,
@@ -47,8 +48,7 @@ class Graph(CreateableAPIResource, ActionAPIResource):
         """
         snap_path = urlparse(snapshot_url).path
         snap_path = snap_path.split('/snapshot/view/')[1].split('.png')[0]
-
-        snapshot_status_url = 'graph/snapshot_status/{0}'.format(snap_path)
+        snapshot_status_url = f'graph/snapshot_status/{snap_path}'
 
         return super(Graph, cls)._trigger_action('GET', snapshot_status_url)
 

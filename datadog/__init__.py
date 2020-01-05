@@ -16,7 +16,6 @@ import os.path
 from datadog import api
 from datadog.dogstatsd import DogStatsd, statsd  # noqa
 from datadog.threadstats import ThreadStats, datadog_lambda_wrapper, lambda_metric  # noqa
-from datadog.util.compat import iteritems, NullHandler, text
 from datadog.util.config import get_version
 from datadog.util.hostname import get_hostname
 
@@ -24,9 +23,9 @@ from datadog.util.hostname import get_hostname
 __version__ = get_version()
 
 # Loggers
-logging.getLogger('datadog.api').addHandler(NullHandler())
-logging.getLogger('datadog.dogstatsd').addHandler(NullHandler())
-logging.getLogger('datadog.threadstats').addHandler(NullHandler())
+logging.getLogger('datadog.api').addHandler(logging.NullHandler())
+logging.getLogger('datadog.dogstatsd').addHandler(logging.NullHandler())
+logging.getLogger('datadog.threadstats').addHandler(logging.NullHandler())
 
 
 def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
@@ -107,13 +106,12 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
         if statsd_port:
             statsd.port = int(statsd_port)
     if statsd_namespace:
-        statsd.namespace = text(statsd_namespace)
+        statsd.namespace = str(statsd_namespace)
     if statsd_constant_tags:
         statsd.constant_tags += statsd_constant_tags
 
     api._return_raw_response = return_raw_response
 
     # HTTP client and API options
-    for key, value in iteritems(kwargs):
-        attribute = "_{}".format(key)
-        setattr(api, attribute, value)
+    for key, value in kwargs.items():
+        setattr(api, f"_{key}", value)

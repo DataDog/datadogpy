@@ -14,7 +14,6 @@ from datadog.api.exceptions import (
     ApiNotInitialized
 )
 from datadog.api.http_client import resolve_http_client
-from datadog.util.compat import is_p3k
 from datadog.util.format import construct_url, construct_path, normalize_tags
 
 
@@ -172,12 +171,9 @@ class APIClient(object):
 
             if content:
                 try:
-                    if is_p3k():
-                        response_obj = json.loads(content.decode('utf-8'))
-                    else:
-                        response_obj = json.loads(content)
+                    response_obj = json.loads(content.decode('utf-8'))
                 except ValueError:
-                    raise ValueError('Invalid JSON response: {0}'.format(content))
+                    raise ValueError(f'Invalid JSON response: {content}')
 
                 # response_obj can be a bool and not a dict
                 if isinstance(response_obj, dict):
@@ -233,8 +229,7 @@ class APIClient(object):
         # number of timeouts, then enter the backoff state, recording the time
         # we started backing off
         if not cls._backoff_timestamp and cls._timeout_counter >= cls._max_timeouts:
-            log.info("Max number of datadog timeouts exceeded, backing off for {0} seconds"
-                     .format(cls._backoff_period))
+            log.info(f"Max number of datadog timeouts exceeded, backing off for {cls._backoff_period} seconds")
             cls._backoff_timestamp = now
             should_submit = False
 
@@ -244,14 +239,12 @@ class APIClient(object):
         elif cls._backoff_timestamp:
             backed_off_time, backoff_time_left = cls._backoff_status()
             if backoff_time_left < 0:
-                log.info("Exiting backoff state after {0} seconds, will try to submit metrics again"
-                         .format(backed_off_time))
+                log.info(f"Exiting backoff state after {backed_off_time} seconds, will try to submit metrics again")
                 cls._backoff_timestamp = None
                 cls._timeout_counter = 0
                 should_submit = True
             else:
-                log.info("In backoff state, won't submit metrics for another {0} seconds"
-                         .format(backoff_time_left))
+                log.info(f"In backoff state, won't submit metrics for another {backoff_time_left} seconds")
                 should_submit = False
         else:
             should_submit = True

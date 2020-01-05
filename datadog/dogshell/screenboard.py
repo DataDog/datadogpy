@@ -111,8 +111,8 @@ class ScreenboardClient(object):
 
             if args.append_auto_text:
                 datetime_str = datetime.now().strftime('%x %X')
-                auto_text = ("<br/>\nUpdated at {0} from {1} ({2}) on {3}"
-                             .format(datetime_str, f.name, screen_obj["id"], platform.node()))
+                auto_text = (f"<br/>\nUpdated at {datetime_str} from {f.name}"
+                             f" ({screen_obj['id']}) on {platform.node()}")
                 screen_obj["description"] += auto_text
 
             if 'id' in screen_obj:
@@ -123,8 +123,7 @@ class ScreenboardClient(object):
                 res = api.Screenboard.create(**screen_obj)
 
             if 'errors' in res:
-                print_err('Upload of screenboard {0} from file {1} failed.'
-                          .format(screen_obj["id"], f.name))
+                print_err(f'Upload of screenboard {screen_obj["id"]} from file {f.name} failed.')
 
             report_warnings(res)
             report_errors(res)
@@ -135,7 +134,7 @@ class ScreenboardClient(object):
                 print(json.dumps(res))
 
             if args.format == 'pretty':
-                print("Uploaded file {0} (screenboard {1})".format(f.name, screen_obj["id"]))
+                print(f"Uploaded file {f.name} (screenboard {screen_obj['id']})")
 
     @classmethod
     def _write_screen_to_file(cls, screenboard_id, filename, timeout,
@@ -157,9 +156,9 @@ class ScreenboardClient(object):
             json.dump(screen_obj, f, indent=2)
 
             if format == 'pretty':
-                print("Downloaded screenboard {0} to file {1}".format(screenboard_id, filename))
+                print(f"Downloaded screenboard {screenboard_id} to file {filename}")
             else:
-                print("{0} {1}".format(screenboard_id, filename))
+                print(f"{screenboard_id} {filename}")
 
     @classmethod
     def _post(cls, args):
@@ -203,8 +202,7 @@ class ScreenboardClient(object):
     @classmethod
     def _web_view(cls, args):
         dash_id = json.load(args.file)['id']
-        url = api._api_host + "/dash/dash/{0}".format(dash_id)
-        webbrowser.open(url)
+        webbrowser.open(f"{api._api_host}/dash/dash/{dash_id}")
 
     @classmethod
     def _show(cls, args):
@@ -262,7 +260,7 @@ class ScreenboardClient(object):
             graphs = sys.stdin.read()
         graphs = json.loads(graphs)
         res = api.Screenboard.create(board_title=args.filename,
-                                     description="Description for {0}".format(args.filename),
+                                     description=f"Description for {args.filename}",
                                      widgets=[graphs])
         report_warnings(res)
         report_errors(res)

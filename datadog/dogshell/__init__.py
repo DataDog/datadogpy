@@ -45,7 +45,7 @@ def main():
     parser.add_argument('--timeout', help="time to wait in seconds before timing"
                         " out an API call (default 10)", default=10, type=int)
     parser.add_argument('-v', '--version', help='Dog API version', action='version',
-                        version='%(prog)s {0}'.format(get_version()))
+                        version=f'%(prog)s {get_version()}')
 
     config = DogshellConfig()
 

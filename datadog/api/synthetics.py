@@ -104,8 +104,7 @@ class Synthetics(
 
         # API path = "synthetics/tests/<public_test_id>/results
 
-        path = "tests/{}/results".format(id)
-
+        path = f"tests/{id}/results"
         return super(Synthetics, cls)._trigger_synthetics_class_action("GET", path, params=params)
 
     @classmethod
@@ -124,8 +123,7 @@ class Synthetics(
 
         # API path = "synthetics/tests/results/<result_id>
 
-        path = "tests/{}/results/{}".format(id, result_id)
-
+        path = f"tests/{id}/results/{result_id}"
         return super(Synthetics, cls)._trigger_synthetics_class_action("GET", path, params=params)
 
     @classmethod

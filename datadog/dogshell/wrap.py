@@ -18,7 +18,6 @@ dogwrap -n test-job -k $API_KEY --timeout=1 "sleep 3"
 
 '''
 # stdlib
-from __future__ import print_function
 from copy import copy
 import optparse
 import subprocess
@@ -29,7 +28,6 @@ import time
 # datadog
 from datadog import initialize, api
 from datadog.util.config import get_version
-from datadog.util.compat import is_p3k
 
 
 SUCCESS = 'success'
@@ -108,13 +106,13 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout,
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     except Exception:
-        print(u"Failed to execute %s" % (repr(cmd)), file=sys.stderr)
+        print(f"Failed to execute {repr(cmd)}", file=sys.stderr)
         raise
     try:
         # Let's that the threads collecting the output from the command in the
         # background
-        stdout = sys.stdout.buffer if is_p3k() else sys.stdout
-        stderr = sys.stderr.buffer if is_p3k() else sys.stderr
+        stdout = sys.stdout.buffer
+        stderr = sys.stderr.buffer
         out_reader = OutputReader(proc.stdout, stdout if not buffer_outs else None)
         err_reader = OutputReader(proc.stderr, stderr if not buffer_outs else None)
         out_reader.start()
@@ -166,14 +164,11 @@ def trim_text(text, max_len):
         return text
 
     trimmed_text = \
-        u"{top_third}\n"\
-        u"```\n" \
-        u"*...trimmed...*\n" \
-        u"```\n" \
-        u"{bottom_two_third}\n".format(
-            top_third=text[:max_len // 3],
-            bottom_two_third=text[len(text) - (2 * max_len) // 3:]
-        )
+        f"{text[:max_len // 3]}\n"\
+        "```\n" \
+        "*...trimmed...*\n" \
+        "```\n" \
+        f"{text[len(text) - (2 * max_len) // 3:]}\n"
 
     return trimmed_text
 
@@ -184,41 +179,32 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
 
     Note: do not exceed MAX_EVENT_BODY_LENGTH length.
     """
-    fmt_stdout = u""
-    fmt_stderr = u""
-    fmt_notifications = u""
+    fmt_stdout = ""
+    fmt_stderr = ""
+    fmt_notifications = ""
 
     max_length = MAX_EVENT_BODY_LENGTH // 2 if stdout and stderr else MAX_EVENT_BODY_LENGTH
 
     if stdout:
-        fmt_stdout = u"**>>>> STDOUT <<<<**\n```\n{stdout} \n```\n".format(
-            stdout=trim_text(stdout.decode("utf-8", "replace"), max_length)
-        )
+        stdout = trim_text(stdout.decode("utf-8", "replace"), max_length)
+        fmt_stdout = f"**>>>> STDOUT <<<<**\n```\n{stdout} \n```\n"
 
     if stderr:
-        fmt_stderr = u"**>>>> STDERR <<<<**\n```\n{stderr} \n```\n".format(
-            stderr=trim_text(stderr.decode("utf-8", "replace"), max_length)
-        )
+        stderr = trim_text(stderr.decode("utf-8", "replace"), max_length)
+        fmt_stderr = f"**>>>> STDERR <<<<**\n```\n{stderr} \n```\n"
 
     if notifications:
-        fmt_notifications = u"**>>>> NOTIFICATIONS <<<<**\n\n {notifications}\n".format(
-            notifications=notifications.decode("utf-8", "replace")
-        )
+        notifications = notifications.decode("utf-8", "replace")
+        fmt_notifications = f"**>>>> NOTIFICATIONS <<<<**\n\n {notifications}\n"
 
     return \
-        u"%%%\n" \
-        u"**>>>> CMD <<<<**\n```\n{command} \n```\n" \
-        u"**>>>> EXIT CODE <<<<**\n\n {returncode}\n\n\n" \
-        u"{stdout}" \
-        u"{stderr}" \
-        u"{notifications}" \
-        u"%%%\n".format(
-            command=cmd,
-            returncode=returncode,
-            stdout=fmt_stdout,
-            stderr=fmt_stderr,
-            notifications=fmt_notifications,
-        )
+        "%%%\n" \
+        f"**>>>> CMD <<<<**\n```\n{cmd} \n```\n" \
+        f"**>>>> EXIT CODE <<<<**\n\n {returncode}\n\n\n" \
+        f"{fmt_stdout}" \
+        f"{fmt_stderr}" \
+        f"{fmt_notifications}" \
+        "%%%\n"
 
 
 def generate_warning_codes(option, opt, options_warning):
@@ -228,7 +214,8 @@ def generate_warning_codes(option, opt, options_warning):
         warning_codes = options_warning.split(",")
         return warning_codes
     except ValueError:
-        raise optparse.OptionValueError("option %s: invalid warning codes value(s): %r" % (opt, options_warning))
+        raise optparse.OptionValueError(
+            f"option {opt}: invalid warning codes value(s): {repr(options_warning)}")
 
 
 class DogwrapOption(optparse.Option):
@@ -247,7 +234,7 @@ def parse_options(raw_args=None):
 quotes to prevent python executing as soon as there is a space in your command. \n \nNOTICE: In \
 normal mode, the whole stderr is printed before stdout, in flush_live mode they will be mixed but \
 there is not guarantee that messages sent by the command on both stderr and stdout are printed in \
-the order they were sent.", version="%prog {0}".format(get_version()), option_class=DogwrapOption)
+the order they were sent.", version=f"%prog {get_version()}", option_class=DogwrapOption)
 
     parser.add_option('-n', '--name', action='store', type='string', help="the name of the event \
 as it should appear on your Datadog stream")
@@ -292,12 +279,7 @@ returned (the command outputs remains buffered in dogwrap meanwhile)")
                       help="comma separated list of tags")
 
     options, args = parser.parse_args(args=raw_args)
-
-    if is_p3k():
-        cmd = ' '.join(args)
-    else:
-        cmd = b' '.join(args).decode('utf-8')
-
+    cmd = ' '.join(args)
     return options, cmd
 
 
@@ -329,8 +311,7 @@ def main():
     if returncode == 0:
         alert_type = SUCCESS
         event_priority = 'low'
-        event_title = u'[%s] %s succeeded in %.2fs' % (host, options.name,
-                                                       duration)
+        event_title = f'[{host}] {options.name} succeeded in {duration:.2f}s'
     elif returncode != 0 and options.submit_mode == 'warnings':
         if not warning_codes:
             # the list of warning codes is empty - the option was not specified
@@ -339,8 +320,7 @@ def main():
         elif returncode in warning_codes:
             alert_type = WARNING
             event_priority = 'normal'
-            event_title = u'[%s] %s failed in %.2fs' % (host, options.name,
-                                                        duration)
+            event_title = f'[{host}] {options.name} failed in {duration:.2f}s'
         else:
             print("Command exited with a different exit code that the one(s) provided")
             sys.exit()
@@ -349,10 +329,10 @@ def main():
         event_priority = 'normal'
 
         if returncode is Timeout:
-            event_title = u'[%s] %s timed out after %.2fs' % (host, options.name, duration)
+            event_title = f'[{host}] {options.name} timed out after {duration:.2f}s'
             returncode = -1
         else:
-            event_title = u'[%s] %s failed in %.2fs' % (host, options.name, duration)
+            event_title = f'[{host}] {options.name} failed in {duration:.2f}s'
 
     notifications = ""
 
@@ -379,9 +359,8 @@ def main():
     }
 
     if options.buffer_outs:
-        if is_p3k():
-            stderr = stderr.decode('utf-8')
-            stdout = stdout.decode('utf-8')
+        stderr = stderr.decode('utf-8')
+        stdout = stdout.decode('utf-8')
 
         print(stderr.strip(), file=sys.stderr)
         print(stdout.strip(), file=sys.stdout)

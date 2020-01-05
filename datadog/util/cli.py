@@ -39,7 +39,7 @@ def list_of_ints(int_csv):
     try:
         return [int(i.strip()) for i in int_csv.strip().split(",")]
     except Exception:
-        raise ArgumentTypeError("Invalid list of ints: {0}".format(int_csv))
+        raise ArgumentTypeError(f"Invalid list of ints: {int_csv}")
 
 
 def list_of_ints_and_strs(csv):
@@ -117,13 +117,13 @@ def parse_date(date_str, to_epoch_ts=False):
         return formatter(datetime.utcnow())
 
     def _from_epoch_timestamp(seconds):
-        print("_from_epoch_timestamp({})".format(seconds))
+        print(f"_from_epoch_timestamp({seconds})")
         return datetime.utcfromtimestamp(float(seconds))
 
     def _from_epoch_ms_timestamp(millis):
-        print("_from_epoch_ms_timestamp({})".format(millis))
+        print(f"_from_epoch_ms_timestamp({millis})")
         in_sec = float(millis) / 1000.0
-        print("_from_epoch_ms_timestamp({}) -> {}".format(millis, in_sec))
+        print(f"_from_epoch_ms_timestamp({millis}) -> {in_sec}")
         return _from_epoch_timestamp(in_sec)
 
     # Or parse date formats (most specific to least specific)
@@ -146,4 +146,4 @@ def parse_date(date_str, to_epoch_ts=False):
             return formatter(parse_func(date_str))
         except Exception:
             pass
-    raise DateParsingError(u"Could not parse {0} as date".format(date_str))
+    raise DateParsingError(f"Could not parse {date_str} as date")

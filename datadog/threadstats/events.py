@@ -2,8 +2,6 @@
 Event aggregator class.
 """
 
-from datadog.util.compat import iteritems
-
 
 class EventsAggregator(object):
     """
@@ -14,7 +12,7 @@ class EventsAggregator(object):
 
     def add_event(self, **event):
         # Clean empty values
-        event = dict((k, v) for k, v in iteritems(event) if v is not None)
+        event = dict((k, v) for k, v in event.items() if v)
         self._events.append(event)
 
     def flush(self):
