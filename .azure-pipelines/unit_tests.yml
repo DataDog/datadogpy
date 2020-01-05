@@ -15,12 +15,6 @@ jobs:
     vmImage: "Ubuntu-16.04"
   strategy:
     matrix:
-      Py27:
-        PYTHON_VERSION: "2.7"
-        TOXENV: "py27"
-      Py35:
-        PYTHON_VERSION: "3.5"
-        TOXENV: "py35"
       Py36:
         PYTHON_VERSION: "3.6"
         TOXENV: "py36"
@@ -30,14 +24,11 @@ jobs:
       Py38:
         PYTHON_VERSION: "3.8"
         TOXENV: "py38"
-      Pypy2:
-        PYTHON_VERSION: "pypy2"
-        TOXENV: "pypy2"
       Pypy3:
         PYTHON_VERSION: "pypy3"
         TOXENV: "pypy3"
       Lint:
-        PYTHON_VERSION: "3.5"
+        PYTHON_VERSION: "3.6"
         TOXENV: "flake8"
   steps:
   - task: UsePythonVersion@0
