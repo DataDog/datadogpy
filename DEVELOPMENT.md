@@ -121,29 +121,72 @@ export DD_TEST_CLIENT_USER=<user_handle_for_testing_comments_api>
 
 #### Run tests
 
-To run all tests you will need to Setup integration tests with Admin level API and APP Keys.
-then you can run both commands below:
+By default, when invoking `tox`, [unit](#unit-tests), [style](#style-checks) and [integration](#integration-tests) that don't require admin credentials will all be run.
 
+##### Unit tests
+
+Unit tests are run with all the `pyXX` environments.
+
+For example, run the unit tests with Python 3.7 with:
 ```
-tox
+tox -e py37
+```
+
+##### Style checks
+
+Run flake8 validation with:
+```
+tox -e flake8
+```
+
+##### Integration tests
+
+Integration tests run against an actual Datadog account. You need to [provide credentials](#setup-integration-tests) for them to run.
+For this reason, it is **highly recommended** to avoid providing credentials for a production account.
+
+There are two kinds of integration tests:
+  - [Regular integration tests](#regular-integration-tests)
+  - [Admin integration tests](#admin-integration-tests)
+
+###### Regular integration tests
+
+Regular integration tests are tests that can work with credentials from a standard Datadog user, without admin privileges.
+They will create resources in Datadog such as dashboards or monitors, and clean up after themselves.
+
+Run them with
+```
+tox -e integration
+```
+
+###### Admin integration tests
+
+Admin integration tests are tests that either need admin privileges to run (e.g. manage users) or can destructive changes to your org (e.g. muting/unmuting of all monitors).
+They are not run by default when invoking `tox`, you have to run them explicitely with:
+```
 tox -e integration-admin
 ```
 
-If you don't want to use admin level API and APP keys, just run `tox`.
+##### Run specific tests methods/classes/folders
 
-If you want to run a subset of the tests, you can pass `pytest` arguments.
-For example, in the example below, we exclude all integrations tests using the `--ignore` arguments.
-As a consequence, we only execute unit and performance tests:
+`tox` invokes `pytest` to run the tests. You can pass `pytest` arguments in the `tox` command line for further filtering of the tests you want to run.
+
+For example, to exclude all integrations tests using the `--ignore-glob` argument.
 
 ```
-tox -- --ignore=tests/integration/api --ignore=tests/integration/dogshell
+tox -- --ignore-glob=tests/integration/*
 ```
 
-Another example below shows how you can run tests for a specific module/folder by using the `-k` argument from `pytest`. 
-In this command, we only run `dogstatsd` tests.
+Another example below shows how to run test classes or test methods matching a given string by using the `-k` argument from `pytest`. 
+With this command, only run classes and methods matching `dogstatsd` are run.
 
 ```
 tox -- -k dogstatsd
+```
+
+To run the entire `dogstatsd` folder, use:
+
+```
+tox -- tests/unit/dogstatsd
 ```
 
 ## Submit Your Changes
