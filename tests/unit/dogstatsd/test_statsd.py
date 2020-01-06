@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+
+# Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
+# This product includes software developed at Datadog (https://www.datadoghq.com/).
+# Copyright 2015-Present Datadog, Inc
 """
 Tests for dogstatsd.py
 """
@@ -121,7 +125,7 @@ class TestDogStatsd(unittest.TestCase):
         assert_equal(statsd.socket_path, options['statsd_socket_path'])
         assert_equal(statsd.host, None)
         assert_equal(statsd.port, None)
-    
+
     def test_dogstatsd_initialization_with_env_vars(self):
         """
         Dogstatsd can retrieve its config from env vars when
@@ -617,7 +621,7 @@ class TestDogStatsd(unittest.TestCase):
         statsd.socket = FakeSocket()
         statsd.gauge('gt', 123.4)
         assert_equal('gt:123.4|g|#country:canada,red,dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d', statsd.socket.recv())
-    
+
     def test_entity_tag_and_tags_from_environment_and_constant(self):
         with preserve_environment_variable('DATADOG_TAGS'):
             os.environ['DATADOG_TAGS'] = 'country:china,age:45,blue'

@@ -1,3 +1,7 @@
+# Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
+# This product includes software developed at Datadog (https://www.datadoghq.com/).
+# Copyright 2015-Present Datadog, Inc.
+
 # -*- coding: utf-8 -*-
 #
 # Datadog API documentation build configuration file, created by
@@ -41,7 +45,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Datadog Python Client'
-copyright = u'2015, Datadog, Inc.'
+copyright = u'2015-Present Datadog, Inc.'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
