@@ -102,7 +102,7 @@ This section lists the labels we use to help us track and manage issues and pull
 | `severity/minor`              | Issue Only               | Minor severity issue.
 | `severity/normal`             | Issue Only               | Normal severity issue.
 | `stale`                       | Issues and Pull Requests | Stale - Bot reminder.
-
+| `stale/exempt`                | Issues and Pull Requests | Exempt from being marked as stale.
 
 [1]: https://github.com/DataDog/datadogpy/issues
 [2]: https://github.com/DataDog/datadogpy/issues/new
