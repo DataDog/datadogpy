@@ -390,7 +390,7 @@ def main():
 
     if options.submit_mode == 'all' or returncode != 0:
         if options.send_metric:
-            event_name_tag = "event_name{}".format(options.name)
+            event_name_tag = "event_name:{}".format(options.name)
             if tags:
                 duration_tags = tags + [event_name_tag]
             else:
