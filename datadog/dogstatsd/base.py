@@ -316,7 +316,7 @@ class DogStatsd(object):
         if self.socket:
             try:
                 self.socket.close()
-            except Exception as e:
+            except OSError as e:
                 log.error("Unexpected error: %s", str(e))
             self.socket = None
 
