@@ -314,7 +314,10 @@ class DogStatsd(object):
         Closes connected socket if connected.
         """
         if self.socket:
-            self.socket.close()
+            try:
+                self.socket.close()
+            except OSError as e:
+                log.error("Unexpected error: %s", str(e))
             self.socket = None
 
     def _serialize_metric(self, metric, metric_type, value, tags, sample_rate=1):
