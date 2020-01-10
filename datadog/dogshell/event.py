@@ -76,7 +76,8 @@ class EventClient(object):
                                  " when the event occurred. if unset defaults to the current time.")
         post_parser.add_argument('--handle', help="user to post as. if unset, submits "
                                  "as the generic API user.")
-        post_parser.add_argument('--priority', help='"normal" or "low". defaults to "normal"')
+        post_parser.add_argument('--priority', help='"normal" or "low". defaults to "normal"',
+                                 default='normal')
         post_parser.add_argument('--related_event_id', help="event to post as a child of."
                                  " if unset, posts a top-level event")
         post_parser.add_argument('--tags', help="comma separated list of tags")
