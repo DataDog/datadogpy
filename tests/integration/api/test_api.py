@@ -555,6 +555,25 @@ class TestDatadog:
             "deleted_monitor_id": monitor["id"]
         }
 
+    def test_monitor_can_delete(self):
+        # Create a monitor-based SLO.
+        name = "test SLO {}".format(time.time())
+        thresholds = [{"timeframe": "7d", "target": 90}]
+        slo = dog.ServiceLevelObjective.create(
+            type="monitor",
+            monitor_ids=monitor_ids,
+            thresholds=thresholds,
+            name=name,
+        )["data"][0]
+
+        # Check if you can delete the monitor.
+        options = {"force": True}
+        monitor_ids = [monitor["id"]]
+        assert dog.Monitor.can_delete(monitor_ids=monitor_ids, options=options) == {
+            "data": {"ok": monitor_ids},
+            "errors": None,
+        }
+
     def test_service_level_objective_crud(self):
         numerator = "sum:my.custom.metric{type:good}.as_count()"
         denominator = "sum:my.custom.metric{*}.as_count()"
