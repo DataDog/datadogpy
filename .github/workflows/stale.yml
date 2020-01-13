@@ -3,7 +3,7 @@
 name: "Stale issues and pull requests"
 on:
   schedule:
-  - cron: "0 0 * * *"
+  - cron: "0 5 * * *"
 
 jobs:
   stale:
