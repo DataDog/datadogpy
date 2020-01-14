@@ -555,7 +555,16 @@ class TestDatadog:
             "deleted_monitor_id": monitor["id"]
         }
 
-    def test_monitor_can_delete(self):
+    def test_monitor_can_delete_with_force(self):
+        # Create a monitor.
+        query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
+        options = {
+            "silenced": {"*": int(time.time()) + 60 * 60},
+            "notify_no_data": False,
+        }
+        monitor = dog.Monitor.create(type="metric alert", query=query, options=options)
+        monitor_ids = [monitor["id"]]
+
         # Create a monitor-based SLO.
         name = "test SLO {}".format(time.time())
         thresholds = [{"timeframe": "7d", "target": 90}]
@@ -568,10 +577,8 @@ class TestDatadog:
 
         # Check if you can delete the monitor.
         options = {"force": True}
-        monitor_ids = [monitor["id"]]
-        assert dog.Monitor.can_delete(monitor_ids=monitor_ids, options=options) == {
-            "data": {"ok": monitor_ids},
-            "errors": None,
+        assert dog.Monitor.delete([monitor["id"]], options=options) == {
+            "deleted_monitor_id": monitor["id"]
         }
 
     def test_service_level_objective_crud(self):
