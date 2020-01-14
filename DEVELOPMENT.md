@@ -114,6 +114,7 @@ To setup integration tests you will need to export the following environment var
 ```
 # !!!WARNING!!! The integration tests will use these keys to do destructive changes.
 # Never use keys for an organization that contains anything important.
+# The client test data isn't sent to staging by default, use a different environment apart from staging
 export DD_TEST_CLIENT_API_KEY=<api_key_for_a_testing_org>
 export DD_TEST_CLIENT_APP_KEY=<app_key_for_a_testing_org>
 export DD_TEST_CLIENT_USER=<user_handle_for_testing_comments_api>

@@ -575,9 +575,9 @@ class TestDatadog:
             name=name,
         )["data"][0]
 
-        # Check if you can delete the monitor.
+        # Check if you can delete the monitor with force option
         options = {"force": True}
-        assert dog.Monitor.delete([monitor["id"]], options=options) == {
+        assert dog.Monitor.delete(monitor["id"], options=options) == {
             "deleted_monitor_id": monitor["id"]
         }
 
