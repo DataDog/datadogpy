@@ -66,6 +66,14 @@ class BrokenSocket(FakeSocket):
         raise socket.error("Socket error")
 
 
+class OverflownSocket(FakeSocket):
+
+    def send(self, payload):
+        error = socker.error("Socker error")
+        error.errno = 11
+        raise error
+
+
 def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped=0, packets_sent=0, packets_dropped=0, transport="udp", tags="", namespace=""):
     version = get_version()
     if tags:
@@ -336,6 +344,11 @@ class TestDogStatsd(unittest.TestCase):
 
     def test_socket_error(self):
         self.statsd.socket = BrokenSocket()
+        self.statsd.gauge('no error', 1)
+        assert True, 'success'
+
+    def test_socket_overflown(self):
+        self.statsd.socket = OverflownSocket()
         self.statsd.gauge('no error', 1)
         assert True, 'success'
 
