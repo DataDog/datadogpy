@@ -10,6 +10,7 @@ Tests for dogstatsd.py
 from collections import deque
 import os
 import socket
+import errno
 import time
 import unittest
 
@@ -70,7 +71,7 @@ class OverflownSocket(FakeSocket):
 
     def send(self, payload):
         error = socker.error("Socker error")
-        error.errno = 11
+        error.errno = errno.EAGAIN
         raise error
 
 
