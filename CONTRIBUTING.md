@@ -18,7 +18,7 @@ This document provides some basic guidelines for contributing to this repository
 
 Have you fixed an issue? Many thanks!
 
-Read the [development guide][/DEVELOPMENT.md] for more information on how to get started.
+Read the [development guide](/DEVELOPMENT.md) for more information on how to get started.
 
 In order to ease/speed up our review, here are some items you can check/improve when submitting your PR:
 * **Ensure an [Issue has been created](#reporting)**. 
@@ -103,6 +103,10 @@ This section lists the labels we use to help us track and manage issues and pull
 | `severity/normal`             | Issue Only               | Normal severity issue.
 | `stale`                       | Issues and Pull Requests | Stale - Bot reminder.
 | `stale/exempt`                | Issues and Pull Requests | Exempt from being marked as stale.
+| `resource/api`                | Issues and Pull Requests | API Client related issue or changes.
+| `resource/dogshell`           | Issues and Pull Requests | Dogshell related issue or changes.
+| `resource/dogstatsd`          | Issues and Pull Requests | DogStatsD related issue or changes.
+| `resource/threadstats`        | Issues and Pull Requests | Threadstats related issue or changes.
 
 [1]: https://github.com/DataDog/datadogpy/issues
 [2]: https://github.com/DataDog/datadogpy/issues/new
