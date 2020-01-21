@@ -212,6 +212,10 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.histogram('histo', 123.4)
         assert_equal_telemetry('histo:123.4|h', self.recv())
 
+    def test_pipe_in_tags(self):
+        self.statsd.gauge('gt', 123.4, tags=['pipe|in:tag', 'red'])
+        assert_equal_telemetry('gt:123.4|g|#pipe?in:tag,red', self.recv())
+
     def test_tagged_gauge(self):
         self.statsd.gauge('gt', 123.4, tags=['country:china', 'age:45', 'blue'])
         assert_equal_telemetry('gt:123.4|g|#country:china,age:45,blue', self.recv())
