@@ -40,7 +40,7 @@ class TestDatadog:
         for uuid in cls.cleanup_role_uuids:
             dog.Roles.delete(uuid)
 
-    def test_tags(self):
+    def test_tags(self, dog):
         hostname = "test.tags.host" + str(time.time())
         # post a metric to make sure the test host context exists
         dog.Metric.send(metric="test.tag.metric", points=1, host=hostname)
