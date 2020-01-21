@@ -1,9 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
-from datadog import api as dog
-from datadog import initialize
-from tests.integration.api.constants import API_KEY, APP_KEY, API_HOST
+
+import pytest
 
 
 class TestAzureIntegration:
@@ -15,20 +14,18 @@ class TestAzureIntegration:
     test_new_client_id = "abcd1234-5678-1234-5678-1234abcd5678"
     not_yet_installed_error = 'Azure Integration not yet installed.'
 
-    @classmethod
-    def setup_class(cls):
-        initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
-
-    @classmethod
-    def teardown_class(cls):
+    @pytest.fixture(autouse=True)  # TODO , scope="class"
+    def azure_integration(self, dog):
+        """Prepare Azure Integration."""
+        yield
         # Should be deleted as part of the test
         # but cleanup here if test fails
         dog.AzureIntegration.delete(
-            tenant_name=cls.test_new_tenant_name,
-            client_id=cls.test_new_client_id
+            tenant_name=self.test_new_tenant_name,
+            client_id=self.test_new_client_id
         )
 
-    def test_azure_crud(self):
+    def test_azure_crud(self, dog):
         # Test Create
         create_output = dog.AzureIntegration.create(
             tenant_name=self.test_tenant_name,

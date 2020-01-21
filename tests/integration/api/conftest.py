@@ -4,14 +4,14 @@
 """Record HTTP requests to avoid hiting Datadog API from CI."""
 
 import os
+from datetime import datetime
 
 import betamax
 import pytest
 
+from tests.integration.api.constants import API_KEY, APP_KEY, API_HOST
+
 TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
-API_KEY = os.environ.get("DD_TEST_CLIENT_API_KEY", "a" * 32)
-APP_KEY = os.environ.get("DD_TEST_CLIENT_APP_KEY", "a" * 40)
-API_HOST = os.environ.get("DATADOG_HOST")
 FAKE_PROXY = {"https": "http://user:pass@10.10.1.10:3128/"}
 
 RECORD_MODE = os.environ.get("DD_TEST_CLIENT_RECORD_MODE", "none")
@@ -21,25 +21,24 @@ from betamax_serializers import pretty_json
 
 betamax.Betamax.register_serializer(pretty_json.PrettyJSONSerializer)
 
+
 def _placeholders(config, **kwargs):
     """Configure placeholders."""
     for key, value in kwargs.items():
-        config.define_cassette_placeholder("<{0}>".format(key.upper()), value)
+        config.define_cassette_placeholder(key.upper(), value)
+
 
 with betamax.Betamax.configure() as config:
-    config.cassette_library_dir = os.path.join(
-        os.path.dirname(__file__), "cassettes"
-    )
-    matchers = ["method", "uri", "headers", "body"]
+    config.cassette_library_dir = os.path.join(os.path.dirname(__file__), "cassettes")
+    matchers = ["method", "path", "body"]
     serialize_with = "prettyjson"
 
     config.default_cassette_options["record_mode"] = RECORD_MODE
-    # betamax_config.default_cassette_options['match_requests_on'] = matchers
+    config.default_cassette_options['match_requests_on'] = matchers
     config.default_cassette_options["serialize_with"] = serialize_with
+    config.default_cassette_options['allow_playback_repeats'] = False
 
-    _placeholders(
-        config, api_key=API_KEY, app_key=APP_KEY
-    )
+    _placeholders(config, api_key=API_KEY, app_key=APP_KEY)
 
 
 @pytest.fixture
@@ -66,17 +65,46 @@ def recorder(api_session):
 
 @pytest.fixture
 def cassette(request, recorder):
+    from freezegun import freeze_time
     from betamax.fixtures.pytest import _casette_name
 
-    recorder.use_cassette(_casette_name(request, True))
+    cassette_name = _casette_name(request, True)
+    recorder.use_cassette(cassette_name)
+
+    if recorder.current_cassette.is_recording():
+        freeze_at = datetime.now().isoformat()
+        with open(
+            os.path.join(
+                recorder.config.cassette_library_dir, cassette_name + ".frozen"
+            ),
+            "w",
+        ) as f:
+            f.write(freeze_at)
+    else:
+        with open(
+            os.path.join(
+                recorder.config.cassette_library_dir, cassette_name + ".frozen"
+            ),
+            "r",
+        ) as f:
+            freeze_at = f.readline().strip()
+
+    freezer = freeze_time(freeze_at, tick=True)
+    freezer.start()
 
     yield recorder.session
 
+    freezer.stop()
+
 
 @pytest.fixture
-def dog(cassette):
+def dog(recorder, cassette):
     """Initialize Datadog API client."""
     from datadog import api, initialize
-    initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
+
+    if recorder.current_cassette.is_recording():
+        initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
+    else:
+        initialize(api_key='API_KEY', app_key='APP_KEY', api_host=API_HOST)
     yield api
 
