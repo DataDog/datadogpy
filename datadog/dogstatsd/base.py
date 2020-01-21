@@ -11,6 +11,7 @@ from random import random
 import logging
 import os
 import socket
+import errno
 from threading import Lock
 
 # datadog
@@ -398,9 +399,15 @@ class DogStatsd(object):
         except socket.timeout:
             # dogstatsd is overflowing, drop the packets (mimicks the UDP behaviour)
             pass
-        except (socket.error, socket.herror, socket.gaierror) as se:
+        except (socket.herror, socket.gaierror) as se:
             log.warning("Error submitting packet: {}, dropping the packet and closing the socket".format(se))
             self.close_socket()
+        except socket.error as se:
+            if se.errno == errno.EAGAIN:
+                log.warning("Socket send would block: {}, dropping the packet".format(se))
+            else:
+                log.warning("Error submitting packet: {}, dropping the packet and closing the socket".format(se))
+                self.close_socket()
         except Exception as e:
             log.error("Unexpected error: %s", str(e))
 
