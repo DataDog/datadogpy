@@ -14,6 +14,7 @@ without hindering performance.
 import logging
 import os
 import os.path
+import sys
 
 # datadog
 from datadog import api
@@ -26,8 +27,46 @@ from datadog.util.hostname import get_hostname
 
 __version__ = get_version()
 
+
+def _replace_secrets(msg):
+    for secret in [api._api_key, api._application_key]:
+        if secret is not None:
+            msg = msg.replace(secret, "<SECRET>")
+    return msg
+
+
+class WrapSecretFormatter(object):
+
+    def __init__(self, formatter):
+        self.formatter = formatter
+
+    def format(self, record):
+        return _replace_secrets(self.formatter.format(record))
+
+    def __getattr__(self, attr):
+        return getattr(self.formatter, attr)
+
+
+class SecretFormatter(logging.Formatter):
+
+    def format(self, record):
+        return _replace_secrets(super(SecretFormatter, self).format(record))
+
+
+_root_logger = logging.getLogger()
+for h in _root_logger.handlers:
+    h.setFormatter(WrapSecretFormatter(h.formatter))
+
+for logger in logging.Logger.manager.loggerDict.values():
+    for h in getattr(logger, 'handlers', []):
+        h.setFormatter(WrapSecretFormatter(h.formatter))
+
+_secret_handler = logging.StreamHandler(stream=sys.stderr)
+_secret_handler.setFormatter(SecretFormatter('%(levelname)s: %(message)s'))
+
 # Loggers
 logging.getLogger('datadog.api').addHandler(NullHandler())
+logging.getLogger("datadog.dogshell").addHandler(_secret_handler)
 logging.getLogger('datadog.dogstatsd').addHandler(NullHandler())
 logging.getLogger('datadog.threadstats').addHandler(NullHandler())
 

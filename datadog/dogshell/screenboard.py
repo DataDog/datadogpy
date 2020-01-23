@@ -13,7 +13,7 @@ from datadog.util.format import pretty_json
 
 # datadog
 from datadog import api
-from datadog.dogshell.common import report_errors, report_warnings, print_err
+from datadog.dogshell.common import log, report_errors, report_warnings
 from datetime import datetime
 
 
@@ -126,7 +126,7 @@ class ScreenboardClient(object):
                 res = api.Screenboard.create(**screen_obj)
 
             if 'errors' in res:
-                print_err('Upload of screenboard {0} from file {1} failed.'
+                log.error('Upload of screenboard {0} from file {1} failed.'
                           .format(screen_obj["id"], f.name))
 
             report_warnings(res)

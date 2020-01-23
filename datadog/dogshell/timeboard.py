@@ -13,7 +13,7 @@ import argparse
 
 # datadog
 from datadog import api
-from datadog.dogshell.common import report_errors, report_warnings, print_err
+from datadog.dogshell.common import log, report_errors, report_warnings
 from datadog.util.format import pretty_json
 from datetime import datetime
 
@@ -213,7 +213,7 @@ class TimeboardClient(object):
                                            graphs=dash_obj["graphs"], template_variables=tpl_vars)
 
             if 'errors' in res:
-                print_err('Upload of dashboard {0} from file {1} failed.'
+                log.error('Upload of dashboard {0} from file {1} failed.'
                           .format(dash_obj["id"], f.name))
 
             report_warnings(res)

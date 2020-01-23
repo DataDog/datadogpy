@@ -5,17 +5,19 @@
 from __future__ import print_function
 import os
 import sys
+import logging
+import warnings
 
 # datadog
-from datadog.util.compat import is_p3k, configparser, IterableUserDict,\
+from datadog.util.compat import configparser, IterableUserDict,\
     get_input
+
+log = logging.getLogger("datadog.dogshell")
 
 
 def print_err(msg):
-    if is_p3k():
-        print(msg + '\n', file=sys.stderr)
-    else:
-        sys.stderr.write(msg + '\n')
+    warnings.warn("Use datadog.dogshell logger directly", warnings.DeprecationWarning, stacklevel=2)
+    log.error(msg)
 
 
 def report_errors(res):
@@ -23,9 +25,9 @@ def report_errors(res):
         errors = res['errors']
         if isinstance(errors, list):
             for error in errors:
-                print_err("ERROR: {}".format(error))
+                log.error(error)
         else:
-            print_err("ERROR: {}".format(errors))
+            log.error(errors)
         sys.exit(1)
     return False
 
@@ -35,9 +37,9 @@ def report_warnings(res):
         warnings = res['warnings']
         if isinstance(warnings, list):
             for warning in warnings:
-                print_err("WARNING: {}".format(warning))
+                log.warning(warning)
         else:
-            print_err("WARNING: {}".format(warnings))
+            log.warning(warnings)
         return True
     return False
 
@@ -79,11 +81,11 @@ class DogshellConfig(IterableUserDict):
                             print('Wrote %s' % config_file)
                         elif response.strip().lower() == 'n':
                             # Abort
-                            print_err('Exiting\n')
+                            log.info('Exiting')
                             sys.exit(1)
                 except KeyboardInterrupt:
                     # Abort
-                    print_err('\nExiting')
+                    log.info('Exiting')
                     sys.exit(1)
 
             self['api_key'] = config.get('Connection', 'apikey')
