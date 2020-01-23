@@ -29,7 +29,7 @@ This project does not have a strict release schedule. However, we would make a r
 ## Release
 
 Our team will trigger the release pipeline.
-- Checkout the [tag release](#commends).
+- Checkout the [tag release](#commands).
 - Run `ddev release build .` and `ddev release upload --sdist`.
   - _Prerequisites_: setup PyPi Tooling. 
   - Make sure that both an `sdist` and a [universal wheel](https://packaging.python.org/guides/distributing-packages-using-setuptools/#universal-wheels) have been uploaded to [PyPI](https://pypi.python.org/pypi/datadog/).
