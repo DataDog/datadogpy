@@ -2,7 +2,24 @@
 # Rules are matched bottom-to-top, so one team can own subdirectories
 # and another team can own the rest of the directory.
 
-# All your base
+# API
+/datadog/api/           @DataDog/integrations-tools-and-libraries
+/tests/integration/api/ @DataDog/integrations-tools-and-libraries
+/tests/unit/api/        @DataDog/integrations-tools-and-libraries
+
+# Dogshell
+/datadog/dogshell/      @DataDog/integrations-tools-and-libraries
+/tests/integration/dogshell/ @DataDog/integrations-tools-and-libraries
+
+# Dogstatd
+/datadog/dogstatsd/     @DataDog/agent-core
+/tests/unit/dogstatsd/  @DataDog/agent-core
+
+# Threadstats
+/datadog/threadstats/   @DataDog/agent-core
+/tests/unit/threadstats/ @DataDog/agent-core
+
+# All the rest
 *                       @DataDog/integrations-tools-and-libraries
 
 # Documentation
