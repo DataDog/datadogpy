@@ -12,12 +12,12 @@
 /tests/integration/dogshell/ @DataDog/integrations-tools-and-libraries
 
 # Dogstatd
-/datadog/dogstatsd/     @DataDog/agent-core
-/tests/unit/dogstatsd/  @DataDog/agent-core
+/datadog/dogstatsd/     @DataDog/integrations-tools-and-libraries @DataDog/agent-core
+/tests/unit/dogstatsd/  @DataDog/integrations-tools-and-libraries @DataDog/agent-core
 
 # Threadstats
-/datadog/threadstats/   @DataDog/agent-core
-/tests/unit/threadstats/ @DataDog/agent-core
+/datadog/threadstats/   @DataDog/integrations-tools-and-libraries @DataDog/agent-core
+/tests/unit/threadstats/ @DataDog/integrations-tools-and-libraries @DataDog/agent-core
 
 # All the rest
 *                       @DataDog/integrations-tools-and-libraries
