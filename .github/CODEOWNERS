@@ -3,25 +3,25 @@
 # and another team can own the rest of the directory.
 
 # API
-/datadog/api/           @DataDog/integrations-tools-and-libraries
-/tests/integration/api/ @DataDog/integrations-tools-and-libraries
-/tests/unit/api/        @DataDog/integrations-tools-and-libraries
+/datadog/api/                  @DataDog/integrations-tools-and-libraries
+/tests/integration/api/        @DataDog/integrations-tools-and-libraries
+/tests/unit/api/               @DataDog/integrations-tools-and-libraries
 
 # Dogshell
-/datadog/dogshell/      @DataDog/integrations-tools-and-libraries
-/tests/integration/dogshell/ @DataDog/integrations-tools-and-libraries
+/datadog/dogshell/             @DataDog/integrations-tools-and-libraries
+/tests/integration/dogshell/   @DataDog/integrations-tools-and-libraries
 
 # Dogstatd
-/datadog/dogstatsd/     @DataDog/integrations-tools-and-libraries @DataDog/agent-core
-/tests/unit/dogstatsd/  @DataDog/integrations-tools-and-libraries @DataDog/agent-core
+/datadog/dogstatsd/            @DataDog/integrations-tools-and-libraries @DataDog/agent-core
+/tests/unit/dogstatsd/         @DataDog/integrations-tools-and-libraries @DataDog/agent-core
 
 # Threadstats
-/datadog/threadstats/   @DataDog/integrations-tools-and-libraries @DataDog/agent-core
-/tests/unit/threadstats/ @DataDog/integrations-tools-and-libraries @DataDog/agent-core
+/datadog/threadstats/          @DataDog/integrations-tools-and-libraries @DataDog/agent-core
+/tests/unit/threadstats/       @DataDog/integrations-tools-and-libraries @DataDog/agent-core
 
 # All the rest
-*                       @DataDog/integrations-tools-and-libraries
+*                              @DataDog/integrations-tools-and-libraries
 
 # Documentation
-*.md                    @DataDog/baklava @DataDog/integrations-tools-and-libraries
-LICENSE                 @DataDog/baklava @DataDog/integrations-tools-and-libraries
+*.md                           @DataDog/baklava @DataDog/integrations-tools-and-libraries
+LICENSE                        @DataDog/baklava @DataDog/integrations-tools-and-libraries
