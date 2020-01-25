@@ -28,6 +28,7 @@ import subprocess
 import sys
 import threading
 import time
+import warnings
 
 # datadog
 from datadog import initialize, api
@@ -405,4 +406,6 @@ def main():
 
 
 if __name__ == '__main__':
+    if sys.argv[0].endswith("dogwrap"):
+        warnings.warn("dogwrap is pending deprecation. Please use dogshellwrap instead.", PendingDeprecationWarning)
     main()

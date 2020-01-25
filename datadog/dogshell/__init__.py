@@ -3,6 +3,8 @@
 # Copyright 2015-Present Datadog, Inc
 # stdlib
 import os
+import warnings
+import sys
 
 # 3p
 import argparse
@@ -28,6 +30,9 @@ from datadog.util.config import get_version
 
 
 def main():
+    if sys.argv[0].endswith("dog"):
+        warnings.warn("dog is pending deprecation. Please use dogshell instead.", PendingDeprecationWarning)
+
     parser = argparse.ArgumentParser(description="Interact with the Datadog API",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--config', help="location of your dogrc file (default ~/.dogrc)",
