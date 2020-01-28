@@ -528,16 +528,11 @@ class TestDatadog:
 
         # Check if you can delete the monitor.
         monitor_ids = [monitor["id"]]
-        assert dog.Monitor.can_delete(monitor_ids=monitor_ids) == {
-            "data": {"ok": []},
-            "errors": {
-                str(monitor["id"]): [
-                    MONITOR_REFERENCED_IN_SLO_MESSAGE.format(
-                        monitor["id"], slo["id"]
-                    )
-                ]
-            },
-        }
+        resp = dog.Monitor.can_delete(monitor_ids=monitor_ids)
+        assert "errors" in resp
+        assert str(monitor["id"]) in resp["errors"]
+        assert len(resp["errors"][str(monitor["id"])])
+        assert "is referenced in slos" in resp["errors"][str(monitor["id"])][0]
 
         # Delete the SLO.
         dog.ServiceLevelObjective.delete(slo["id"])
