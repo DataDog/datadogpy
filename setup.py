@@ -39,7 +39,14 @@ setup(
         "Documentation": "https://datadogpy.readthedocs.io/en/latest/",
         "Source Code": "https://github.com/DataDog/datadogpy",
     },
-    entry_points={"console_scripts": ["dog = datadog.dogshell:main", "dogwrap = datadog.dogshell.wrap:main"]},
+    entry_points={
+        "console_scripts": [
+            "dog = datadog.dogshell:main",
+            "dogwrap = datadog.dogshell.wrap:main"
+            "dogshell = datadog.dogshell:main",
+            "dogshellwrap = datadog.dogshell.wrap:main"
+        ]
+    },
     test_suite="tests",
     classifiers=[
         "License :: OSI Approved :: BSD License",
