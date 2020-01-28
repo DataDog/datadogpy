@@ -40,7 +40,6 @@ class TestDatadog:
         for uuid in cls.cleanup_role_uuids:
             dog.Roles.delete(uuid)
 
-
     def test_tags(self):
         hostname = "test.tags.host" + str(time.time())
         # post a metric to make sure the test host context exists
@@ -576,8 +575,7 @@ class TestDatadog:
         )["data"][0]
 
         # Check if you can delete the monitor with force option
-        options = {"force": True}
-        assert dog.Monitor.delete(monitor["id"], options=options) == {
+        assert dog.Monitor.delete(monitor["id"], force=True) == {
             "deleted_monitor_id": monitor["id"]
         }
 
