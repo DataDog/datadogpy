@@ -40,7 +40,6 @@ class TestDatadog:
         for uuid in cls.cleanup_role_uuids:
             dog.Roles.delete(uuid)
 
-
     def test_tags(self):
         hostname = "test.tags.host" + str(time.time())
         # post a metric to make sure the test host context exists
@@ -529,16 +528,11 @@ class TestDatadog:
 
         # Check if you can delete the monitor.
         monitor_ids = [monitor["id"]]
-        assert dog.Monitor.can_delete(monitor_ids=monitor_ids) == {
-            "data": {"ok": []},
-            "errors": {
-                str(monitor["id"]): [
-                    MONITOR_REFERENCED_IN_SLO_MESSAGE.format(
-                        monitor["id"], slo["id"]
-                    )
-                ]
-            },
-        }
+        resp = dog.Monitor.can_delete(monitor_ids=monitor_ids)
+        assert "errors" in resp
+        assert str(monitor["id"]) in resp["errors"]
+        assert len(resp["errors"][str(monitor["id"])])
+        assert "is referenced in slos" in resp["errors"][str(monitor["id"])][0]
 
         # Delete the SLO.
         dog.ServiceLevelObjective.delete(slo["id"])
@@ -552,6 +546,31 @@ class TestDatadog:
 
         # Delete the monitor to clean up the test.
         assert dog.Monitor.delete(monitor["id"]) == {
+            "deleted_monitor_id": monitor["id"]
+        }
+
+    def test_monitor_can_delete_with_force(self):
+        # Create a monitor.
+        query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
+        options = {
+            "silenced": {"*": int(time.time()) + 60 * 60},
+            "notify_no_data": False,
+        }
+        monitor = dog.Monitor.create(type="metric alert", query=query, options=options)
+        monitor_ids = [monitor["id"]]
+
+        # Create a monitor-based SLO.
+        name = "test SLO {}".format(time.time())
+        thresholds = [{"timeframe": "7d", "target": 90}]
+        slo = dog.ServiceLevelObjective.create(
+            type="monitor",
+            monitor_ids=monitor_ids,
+            thresholds=thresholds,
+            name=name,
+        )["data"][0]
+
+        # Check if you can delete the monitor with force option
+        assert dog.Monitor.delete(monitor["id"], force=True) == {
             "deleted_monitor_id": monitor["id"]
         }
 
