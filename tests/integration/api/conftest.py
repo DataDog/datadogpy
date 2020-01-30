@@ -147,6 +147,7 @@ def get_with_retry(recorder, dog):
             resource = getattr(getattr(dog, resource_type), operation)(resource_id, **kwargs)
         retry_counter = 0
         while retry_condition(resource) and retry_counter < retry_limit:
+            time.sleep(WAIT_TIME)
 
             if cassette.is_recording():
                 # remove failed interactions
@@ -157,7 +158,7 @@ def get_with_retry(recorder, dog):
             else:
                 resource = getattr(getattr(dog, resource_type), operation)(resource_id, **kwargs)
             retry_counter += 1
-            time.sleep(WAIT_TIME)
+
         if retry_condition(resource):
             raise Exception(
                 "Retry limit reached performing `{}` on resource {}, ID {}".format(operation, resource_type, resource_id)
