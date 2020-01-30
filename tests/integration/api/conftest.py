@@ -4,6 +4,7 @@
 """Record HTTP requests to avoid hiting Datadog API from CI."""
 
 import os
+import time
 from datetime import datetime
 
 import betamax
@@ -11,6 +12,7 @@ import pytest
 
 from tests.integration.api.constants import API_KEY, APP_KEY, API_HOST
 
+WAIT_TIME = 10
 TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
 FAKE_PROXY = {"https": "http://user:pass@10.10.1.10:3128/"}
 
@@ -22,20 +24,33 @@ from betamax_serializers import pretty_json
 betamax.Betamax.register_serializer(pretty_json.PrettyJSONSerializer)
 
 
+class RecordAllMatcher(betamax.BaseMatcher):
+    """Works well with allow_playback_repeats=False."""
+
+    name = 'record-all'
+
+    def match(self, request, recorded_request):
+        return False
+
+betamax.Betamax.register_request_matcher(RecordAllMatcher)
+
+
 def _placeholders(config, **kwargs):
     """Configure placeholders."""
     for key, value in kwargs.items():
         config.define_cassette_placeholder(key.upper(), value)
 
 
+MATCHERS = ["method", "path", "body"]
+SERIALIZE_WITH = "prettyjson"
+
+
 with betamax.Betamax.configure() as config:
     config.cassette_library_dir = os.path.join(os.path.dirname(__file__), "cassettes")
-    matchers = ["method", "path", "body"]
-    serialize_with = "prettyjson"
 
     config.default_cassette_options["record_mode"] = RECORD_MODE
-    config.default_cassette_options['match_requests_on'] = matchers
-    config.default_cassette_options["serialize_with"] = serialize_with
+    config.default_cassette_options['match_requests_on'] = MATCHERS
+    config.default_cassette_options["serialize_with"] = SERIALIZE_WITH
     config.default_cassette_options['allow_playback_repeats'] = False
 
     _placeholders(config, api_key=API_KEY, app_key=APP_KEY)
@@ -72,6 +87,8 @@ def cassette(request, recorder):
     recorder.use_cassette(cassette_name)
 
     if recorder.current_cassette.is_recording():
+        recorder.current_cassette.match_options = {RecordAllMatcher.name}
+
         freeze_at = datetime.now().isoformat()
         with open(
             os.path.join(
@@ -108,3 +125,42 @@ def dog(recorder, cassette):
         initialize(api_key='API_KEY', app_key='APP_KEY', api_host=API_HOST)
     yield api
 
+
+@pytest.fixture
+def get_with_retry(recorder, dog):
+    """Return a retry factory that correctly handles the request recording."""
+
+    def retry(
+            resource_type,
+            resource_id=None,
+            operation="get",
+            retry_limit=10,
+            retry_condition=lambda r: r.get("errors"),
+            **kwargs
+    ):
+        cassette = recorder.current_cassette
+        number_of_interactions = len(cassette.interactions) if cassette.is_recording() else -1
+
+        if resource_id is None:
+            resource = getattr(getattr(dog, resource_type), operation)(**kwargs)
+        else:
+            resource = getattr(getattr(dog, resource_type), operation)(resource_id, **kwargs)
+        retry_counter = 0
+        while retry_condition(resource) and retry_counter < retry_limit:
+
+            if cassette.is_recording():
+                # remove failed interactions
+                cassette.interactions = cassette.interactions[:number_of_interactions]
+
+            if resource_id is None:
+                resource = getattr(getattr(dog, resource_type), operation)(**kwargs)
+            else:
+                resource = getattr(getattr(dog, resource_type), operation)(resource_id, **kwargs)
+            retry_counter += 1
+            time.sleep(WAIT_TIME)
+        if retry_condition(resource):
+            raise Exception(
+                "Retry limit reached performing `{}` on resource {}, ID {}".format(operation, resource_type, resource_id)
+            )
+        return resource
+    return retry

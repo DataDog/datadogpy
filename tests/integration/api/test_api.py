@@ -14,7 +14,6 @@ import pytest
 from datadog import initialize
 
 from .constants import MONITOR_REFERENCED_IN_SLO_MESSAGE
-from .utils import get_with_retry
 
 TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
 WAIT_TIME = 10
@@ -22,16 +21,20 @@ WAIT_TIME = 10
 
 class TestDatadog:
     host_name = "test.host.integration"
-    cleanup_role_uuids = []
 
-    @classmethod
-    def teardown_class(cls):
+    @pytest.fixture(autouse=True)  # TODO , scope="class"
+    def cleanup_roles(self, dog):
+        """Prepare Azure Integration."""
+        self.cleanup_role_uuids = []
+
+        yield
+
         # Ensure we cleanup any resources we created during tests
         # These should be removed during tests, but here as well in case of test failures
-        for uuid in cls.cleanup_role_uuids:
+        for uuid in self.cleanup_role_uuids:
             dog.Roles.delete(uuid)
 
-    def test_tags(self, dog):
+    def test_tags(self, dog, get_with_retry):
         hostname = "test.tags.host" + str(time.time())
         # post a metric to make sure the test host context exists
         dog.Metric.send(metric="test.tag.metric", points=1, host=hostname)
@@ -66,7 +69,7 @@ class TestDatadog:
             dog.Tag.delete(hostname, source="datadog") is None
         )  # Expect no response body on success
 
-    def test_events(self, dog):
+    def test_events(self, dog, get_with_retry):
         now = datetime.datetime.now()
 
         now_ts = int(time.mktime(now.timetuple()))
@@ -127,7 +130,7 @@ class TestDatadog:
         assert events["events"], "No events found in stream"
         assert event_id in [event["id"] for event in events["events"]]
 
-    def test_comments(self, dog):
+    def test_comments(self, dog, get_with_retry):
         assert (
             TEST_USER is not None
         ), "You must set DD_TEST_CLIENT_USER environment to run comment tests"
@@ -150,7 +153,7 @@ class TestDatadog:
         )
         assert reply["comment"]["message"] == message + " reply"
 
-    def test_timeboard(self, dog):
+    def test_timeboard(self, dog, get_with_retry):
         graph = {
             "title": "test metric graph",
             "definition": {
@@ -202,7 +205,7 @@ class TestDatadog:
         assert len(results["results"]["hosts"]) > 0
         assert len(results["results"]["metrics"]) > 0
 
-    def test_metrics(self, dog):
+    def test_metrics(self, dog, get_with_retry):
         now = datetime.datetime.now()
         now_ts = int(time.mktime(now.timetuple()))
         metric_name_single = "test.metric_single." + str(now_ts)
@@ -304,7 +307,7 @@ class TestDatadog:
         # FIXME: Query and verify the test metric result. Currently, it takes
         # too long for a new distribution metric to become available for query.
 
-    def test_graph_snapshot(self, dog):
+    def test_graph_snapshot(self, dog, get_with_retry):
         metric_query = "system.load.1{*}"
         event_query = "*"
         end = int(time.time())
@@ -354,7 +357,7 @@ class TestDatadog:
             retry_limit=20,
         )
 
-    def test_screenboard(self, dog):
+    def test_screenboard(self, dog, get_with_retry):
         def _compare_screenboard(apiBoard, expectedBoard):
             compare_keys = ["board_title", "height", "width", "widgets"]
             for key in compare_keys:
@@ -433,7 +436,7 @@ class TestDatadog:
         delete_res = dog.Screenboard.delete(update_res["id"])
         assert delete_res["id"] == update_res["id"]
 
-    def test_monitor_crud(self, dog):
+    def test_monitor_crud(self, dog, get_with_retry):
         # Metric alerts
         query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
 
@@ -472,7 +475,7 @@ class TestDatadog:
             "deleted_monitor_id": monitor["id"]
         }
 
-    def test_monitor_validate(self, dog):
+    def test_monitor_validate(self, dog, get_with_retry):
         monitor_type = "metric alert"
         valid_options = {"thresholds": {"critical": 200.0}}
         invalid_options = {"thresholds": {"critical": 90.0}}
@@ -603,7 +606,7 @@ class TestDatadog:
         dog.ServiceLevelObjective.delete(slo["id"])
 
     @pytest.mark.admin_needed
-    def test_monitor_muting(self, dog):
+    def test_monitor_muting(self, dog, get_with_retry):
         query1 = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
         query2 = "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100"
         monitor1 = dog.Monitor.create(type="metric alert", query=query1)
@@ -632,7 +635,7 @@ class TestDatadog:
         dog.Monitor.delete(monitor1["id"])
         dog.Monitor.delete(monitor2["id"])
 
-    def test_downtime(self, dog):
+    def test_downtime(self, dog, get_with_retry):
         start = int(time.time())
         end = start + 1000
 
@@ -662,7 +665,7 @@ class TestDatadog:
             "Downtime", downtime["id"], retry_condition=lambda r: r["disabled"] is False
         )
 
-    def test_downtime_cancel_by_scope(self, dog):
+    def test_downtime_cancel_by_scope(self, dog, get_with_retry):
         scope_one = "test:integration_one"
         scope_two = "test:integration_two"
         start = int(time.time())
@@ -717,7 +720,7 @@ class TestDatadog:
             tags=["db:prod_data"],
         ) == {"status": "ok"}
 
-    def test_host_muting(self, dog):
+    def test_host_muting(self, dog, get_with_retry):
         end = int(time.time()) + 60 * 60
         hostname = "my.test.host" + str(end)
         message = "Muting this host for a test."
@@ -758,7 +761,7 @@ class TestDatadog:
         # Check all embeds is a valid response
         assert "embedded_graphs" in all_embeds
 
-    def test_embed_crud(self, dog):
+    def test_embed_crud(self, dog, get_with_retry):
         # Initialize a graph definition
         graph_def = {
             "viz": "toplist",
@@ -807,7 +810,7 @@ class TestDatadog:
         assert "success" in dog.Embed.revoke(embed["embed_id"])
 
     @pytest.mark.admin_needed
-    def test_user_crud(self, dog):
+    def test_user_crud(self, dog, get_with_retry):
         now = int(time.time())
         handle = "user{}@test.com".format(now)
         name = "Test User"
