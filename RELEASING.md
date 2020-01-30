@@ -19,7 +19,6 @@ This project does not have a strict release schedule. However, we would make a r
 * Make sure documentation is up-to-date and building correctly.
 * Build the package locally (e.g. `python3 setup.py sdist`), install it into a fresh virtualenv and try playing around with it for a bit.
 * [Update changelog](#update-changelog)
-  - Create a distinct pull request.
 
 ## Update Changelog
 
@@ -31,6 +30,7 @@ This project does not have a strict release schedule. However, we would make a r
 
 - See changes ready for release by running `ddev release show changes .` at the root of this project. Add any missing labels to PRs if needed.
 - Run `ddev release changelog . <NEW_VERSION>` to update the `CHANGELOG.md` file at the root of this repository
+  - Set CHANGELOG release date. [Example](https://github.com/DataDog/datadogpy/commit/e89b19c0bc1e5ea2ec026e14b11d05b980062ffb)
 - Commit the changes to the repository in a release branch and get it approved/merged.
 
 ## Release Process
@@ -46,8 +46,7 @@ See our internal documentation for more details.
 
 ### Release
 
-1. Tag the release on GitHub. [Example](https://github.com/DataDog/datadogpy/releases/tag/v0.10.0)
-2. Checkout the [tag release](#commands).
-3. Run `ddev release build .` and `ddev release upload --sdist`.
+1. Create the release on GitHub. [Example](https://github.com/DataDog/datadogpy/releases/tag/v0.33.0)
+2. Checkout the tag created at the previous step.
+3. Run `ddev release build .` and `ddev release upload --sdist . `.
   - Make sure that both an `sdist` and a [universal wheel](https://packaging.python.org/guides/distributing-packages-using-setuptools/#universal-wheels) have been uploaded to [PyPI](https://pypi.python.org/pypi/datadog/).
-4. Set CHANGELOG release date. [Example](https://github.com/DataDog/datadogpy/commit/e89b19c0bc1e5ea2ec026e14b11d05b980062ffb)
