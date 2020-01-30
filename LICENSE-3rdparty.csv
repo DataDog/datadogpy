@@ -1,0 +1,4 @@
+Component,Origin,License,Copyright
+setup.py,decorator,BSD-2-Clause,Copyright (c) 2005-2018, Michele Simionato
+setup.py,requests,Apache-2.0,Copyright 2019 Kenneth Reitz
+setup.py,argparse,Python-2.0,2006-2009 Steven J. Bethard <steven.bethard@gmail.com>
