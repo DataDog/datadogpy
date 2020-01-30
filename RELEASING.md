@@ -18,7 +18,6 @@ This project does not have a strict release schedule. However, we would make a r
   - Locally and in the continuous integration system.
 * Make sure documentation is up-to-date and building correctly.
 * Build the package locally (e.g. `python3 setup.py sdist`), install it into a fresh virtualenv and try playing around with it for a bit.
-* [Update changelog](#update-changelog)
 
 ## Update Changelog
 
@@ -30,7 +29,6 @@ This project does not have a strict release schedule. However, we would make a r
 
 - See changes ready for release by running `ddev release show changes .` at the root of this project. Add any missing labels to PRs if needed.
 - Run `ddev release changelog . <NEW_VERSION>` to update the `CHANGELOG.md` file at the root of this repository
-  - Set CHANGELOG release date. [Example](https://github.com/DataDog/datadogpy/commit/e89b19c0bc1e5ea2ec026e14b11d05b980062ffb)
 - Commit the changes to the repository in a release branch and get it approved/merged.
 
 ## Release Process
