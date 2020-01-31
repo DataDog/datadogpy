@@ -28,7 +28,6 @@ def api():
 @pytest.fixture(scope='module')
 def vcr_config():
     return dict(
-        match_on=('method', 'scheme', 'host', 'port', 'path', 'query', 'body'),
         filter_headers=('DD-API-KEY', 'DD-APPLICATION-KEY'),
         filter_query_parameters=('api_key', 'application_key'),
     )

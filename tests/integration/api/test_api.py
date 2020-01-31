@@ -71,7 +71,11 @@ class TestDatadog:
             dog.Tag.delete(hostname, source="datadog") is None
         )  # Expect no response body on success
 
-    def test_events(self, dog, get_with_retry, freezer):
+    def test_events(self, vcr_cassette, dog, get_with_retry, freezer):
+        # needs a match by body
+        from vcr.matchers import method, scheme, host, port, path, query, body
+        vcr_cassette._match_on = (method, scheme, host, port, path, query, body)
+
         with freezer:
             now = datetime.datetime.now()
             now_ts = int(time.mktime(now.timetuple()))
