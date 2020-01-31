@@ -34,8 +34,10 @@ class TestDatadog:
         for uuid in self.cleanup_role_uuids:
             dog.Roles.delete(uuid)
 
-    def test_tags(self, dog, get_with_retry):
-        hostname = "test.tags.host" + str(time.time())
+    def test_tags(self, freezer, dog, get_with_retry):
+        with freezer:
+            hostname = "test.tags.host" + str(time.time_ns())
+
         # post a metric to make sure the test host context exists
         dog.Metric.send(metric="test.tag.metric", points=1, host=hostname)
         # Wait for host to appear

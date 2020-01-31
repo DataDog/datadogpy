@@ -7,8 +7,8 @@ import os
 import time
 from datetime import datetime
 
-import betamax
 import pytest
+from vcr import VCR
 
 from tests.integration.api.constants import API_KEY, APP_KEY, API_HOST
 
@@ -18,42 +18,6 @@ FAKE_PROXY = {"https": "http://user:pass@10.10.1.10:3128/"}
 
 RECORD_MODE = os.environ.get("DD_TEST_CLIENT_RECORD_MODE", "none")
 """Allow re-recording of HTTP responses when value 'once' is provided."""
-
-from betamax_serializers import pretty_json
-
-betamax.Betamax.register_serializer(pretty_json.PrettyJSONSerializer)
-
-
-class RecordAllMatcher(betamax.BaseMatcher):
-    """Works well with allow_playback_repeats=False."""
-
-    name = 'record-all'
-
-    def match(self, request, recorded_request):
-        return False
-
-betamax.Betamax.register_request_matcher(RecordAllMatcher)
-
-
-def _placeholders(config, **kwargs):
-    """Configure placeholders."""
-    for key, value in kwargs.items():
-        config.define_cassette_placeholder(key.upper(), value)
-
-
-MATCHERS = ["method", "path", "body"]
-SERIALIZE_WITH = "prettyjson"
-
-
-with betamax.Betamax.configure() as config:
-    config.cassette_library_dir = os.path.join(os.path.dirname(__file__), "cassettes")
-
-    config.default_cassette_options["record_mode"] = RECORD_MODE
-    config.default_cassette_options['match_requests_on'] = MATCHERS
-    config.default_cassette_options["serialize_with"] = SERIALIZE_WITH
-    config.default_cassette_options['allow_playback_repeats'] = False
-
-    _placeholders(config, api_key=API_KEY, app_key=APP_KEY)
 
 
 @pytest.fixture
@@ -72,27 +36,26 @@ def api_session():
     APIClient._http_client = None
 
 
-@pytest.fixture
-def recorder(api_session):
-    with betamax.Betamax(api_session) as vrc:
-        yield vrc
+@pytest.fixture(scope='module')
+def vcr_config():
+    return dict(
+        # record_mode=RECORD_MODE,
+        filter_headers=('DD-API-KEY', 'DD-APPLICATION-KEY'),
+        filter_query_parameters=('api_key', 'application_key'),
+        # cassette_library_dir=os.path.join(os.path.dirname(__file__), "cassettes"),
+    )
 
 
 @pytest.fixture
-def cassette(request, recorder):
+def freezer(vcr_cassette_name, vcr_cassette, vcr):
     from freezegun import freeze_time
-    from betamax.fixtures.pytest import _casette_name
 
-    cassette_name = _casette_name(request, True)
-    recorder.use_cassette(cassette_name)
-
-    if recorder.current_cassette.is_recording():
-        recorder.current_cassette.match_options = {RecordAllMatcher.name}
-
+    if vcr_cassette.record_mode != "none":
+        # ecorder.current_cassette.match_options = {RecordAllMatcher.name}
         freeze_at = datetime.now().isoformat()
         with open(
             os.path.join(
-                recorder.config.cassette_library_dir, cassette_name + ".frozen"
+                vcr.cassette_library_dir, vcr_cassette_name + ".frozen"
             ),
             "w",
         ) as f:
@@ -100,34 +63,29 @@ def cassette(request, recorder):
     else:
         with open(
             os.path.join(
-                recorder.config.cassette_library_dir, cassette_name + ".frozen"
+                vcr.cassette_library_dir, vcr_cassette_name + ".frozen"
             ),
             "r",
         ) as f:
             freeze_at = f.readline().strip()
 
-    freezer = freeze_time(freeze_at, tick=True)
-    freezer.start()
-
-    yield recorder.session
-
-    freezer.stop()
+    return freeze_time(freeze_at)  #, tick=True)
 
 
-@pytest.fixture
-def dog(recorder, cassette):
+@pytest.fixture()
+def dog(vcr_cassette):
     """Initialize Datadog API client."""
     from datadog import api, initialize
 
-    if recorder.current_cassette.is_recording():
-        initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
-    else:
-        initialize(api_key='API_KEY', app_key='APP_KEY', api_host=API_HOST)
+    # if not cassette.write_protected:
+    initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
+    # else:
+    #     initialize(api_key='API_KEY', app_key='APP_KEY', api_host=API_HOST)
     yield api
 
 
 @pytest.fixture
-def get_with_retry(recorder, dog):
+def get_with_retry(vcr_cassette, dog):
     """Return a retry factory that correctly handles the request recording."""
 
     def retry(
@@ -138,8 +96,7 @@ def get_with_retry(recorder, dog):
             retry_condition=lambda r: r.get("errors"),
             **kwargs
     ):
-        cassette = recorder.current_cassette
-        number_of_interactions = len(cassette.interactions) if cassette.is_recording() else -1
+        number_of_interactions = len(vcr_cassette.data) if vcr_cassette.record_mode != "none" else -1
 
         if resource_id is None:
             resource = getattr(getattr(dog, resource_type), operation)(**kwargs)
@@ -149,9 +106,9 @@ def get_with_retry(recorder, dog):
         while retry_condition(resource) and retry_counter < retry_limit:
             time.sleep(WAIT_TIME)
 
-            if cassette.is_recording():
+            if vcr_cassette.record_mode != "none":
                 # remove failed interactions
-                cassette.interactions = cassette.interactions[:number_of_interactions]
+                vcr_cassette.data = vcr_cassette.data[:number_of_interactions]
 
             if resource_id is None:
                 resource = getattr(getattr(dog, resource_type), operation)(**kwargs)
