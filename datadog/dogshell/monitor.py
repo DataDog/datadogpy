@@ -4,13 +4,14 @@
 # stdlib
 import argparse
 import json
+import warnings
 
 # 3p
 from datadog.util.format import pretty_json
 
 # datadog
 from datadog import api
-from datadog.dogshell.common import report_errors, report_warnings, print_err
+from datadog.dogshell.common import log, report_errors, report_warnings
 
 
 class MonitorClient(object):
@@ -185,19 +186,17 @@ class MonitorClient(object):
         if args.type:
             if args.type_opt:
                 msg = 'Duplicate arguments for `type`. Using optional value --type'
-                print_err("WARNING: {}".format(msg))
+                log.warning(msg)
             else:
                 to_update['type'] = args.type
-            msg = "[DEPRECATION] `type` is no longer required to `update` and may be omitted"
-            print_err("WARNING: {}".format(msg))
+            warnings.warn("`type` is no longer required to `update` and may be omitted", warnings.DeprecationWarning)
         if args.query:
             if args.query_opt:
                 msg = 'Duplicate arguments for `query`. Using optional value --query'
-                print_err("WARNING: {}".format(msg))
+                log.warning(msg)
             else:
                 to_update['query'] = args.query
-            msg = "[DEPRECATION] `query` is no longer required to `update` and may be omitted"
-            print_err("WARNING: {}".format(msg))
+            warnings.warn("`query` is no longer required to `update` and may be omitted", warnings.DeprecationWarning)
         if args.name:
             to_update['name'] = args.name
         if args.message:
