@@ -120,16 +120,14 @@ class TestDatadog:
         assert "test_tag:1" in event["event"]["tags"]
         assert "test_tag:2" in event["event"]["tags"]
 
-        with freezer as dt:
-            dt.tick()
-            now_ts = int(time.mktime(datetime.datetime.now().timetuple()))
-
-        event_id = dog.Event.create(
+        event = dog.Event.create(
             title="test source",
             text="test source",
             source_type_name="vsphere",
             priority="low",
-        )["event"]["id"]
+        )
+        event_id = event["event"]["id"]
+        now_ts = event["event"]["date_happened"]
         get_with_retry("Event", event_id)
         events = dog.Event.query(
             start=now_ts - 100, end=now_ts + 100, priority="low", sources="vsphere"
@@ -217,8 +215,8 @@ class TestDatadog:
     def test_metrics(self, dog, get_with_retry, freezer):
         with freezer:
             now = datetime.datetime.now()
+            now_ts = int(time.mktime(now.timetuple()))
 
-        now_ts = int(time.mktime(now.timetuple()))
         metric_name_single = "test.metric_single." + str(now_ts)
         metric_name_list = "test.metric_list." + str(now_ts)
         metric_name_tuple = "test.metric_tuple." + str(now_ts)
@@ -257,8 +255,8 @@ class TestDatadog:
             operation="query",
             retry_condition=retry_condition,
             retry_limit=20,
-            start=now_ts - 600,
-            end=now_ts + 600,
+            start=now_ts - 60000,
+            end=now_ts + 60000,
             query="{}{{host:{}}}".format(metric_name_single, host_name),
         )
         metric_query_list = get_with_retry(
@@ -266,8 +264,8 @@ class TestDatadog:
             operation="query",
             retry_condition=retry_condition,
             retry_limit=20,
-            start=now_ts - 600,
-            end=now_ts + 600,
+            start=now_ts - 60000,
+            end=now_ts + 60000,
             query="{}{{host:{}}}".format(metric_name_list, host_name),
         )
         metric_query_tuple = get_with_retry(
@@ -275,8 +273,8 @@ class TestDatadog:
             operation="query",
             retry_condition=retry_condition,
             retry_limit=20,
-            start=now_ts - 600,
-            end=now_ts + 600,
+            start=now_ts - 60000,
+            end=now_ts + 60000,
             query="{}{{host:{}}}".format(metric_name_tuple, host_name),
         )
 
@@ -289,9 +287,9 @@ class TestDatadog:
         assert len(metric_query_list["series"]) == 1
         assert metric_query_list["series"][0]["metric"] == metric_name_list
         assert metric_query_list["series"][0]["scope"] == "host:{}".format(host_name)
-        assert len(metric_query_list["series"][0]["pointlist"]) == 2
-        assert metric_query_list["series"][0]["pointlist"][0][1] == 1
-        assert metric_query_list["series"][0]["pointlist"][1][1] == 2
+        assert len(metric_query_list["series"][0]["pointlist"]) == 1
+        assert metric_query_list["series"][0]["pointlist"][0][1] == 1.5
+        # assert metric_query_list["series"][0]["pointlist"][1][1] == 2
 
         assert len(metric_query_tuple["series"]) == 1
         assert metric_query_tuple["series"][0]["metric"] == metric_name_tuple
@@ -371,7 +369,7 @@ class TestDatadog:
             retry_limit=20,
         )
 
-    def test_screenboard(self, dog, get_with_retry):
+    def test_screenboard(self, vcr_cassette, dog, get_with_retry):
         def _compare_screenboard(apiBoard, expectedBoard):
             compare_keys = ["board_title", "height", "width", "widgets"]
             for key in compare_keys:
@@ -438,12 +436,14 @@ class TestDatadog:
         assert share_res["board_id"] == get_res["id"]
         public_url = share_res["public_url"]
 
-        time.sleep(WAIT_TIME)
+        if vcr_cassette.record_mode != "none":
+            time.sleep(WAIT_TIME)
         response = requests.get(public_url)
         assert response.status_code == 200
 
         dog.Screenboard.revoke(get_res["id"])
-        time.sleep(WAIT_TIME)
+        if vcr_cassette.record_mode != "none":
+            time.sleep(WAIT_TIME)
         response = requests.get(public_url)
         assert response.status_code == 404
 

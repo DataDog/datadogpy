@@ -5,7 +5,7 @@
 
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from vcr import VCR
@@ -15,9 +15,6 @@ from tests.integration.api.constants import API_KEY, APP_KEY, API_HOST
 WAIT_TIME = 10
 TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
 FAKE_PROXY = {"https": "http://user:pass@10.10.1.10:3128/"}
-
-RECORD_MODE = os.environ.get("DD_TEST_CLIENT_RECORD_MODE", "none")
-"""Allow re-recording of HTTP responses when value 'once' is provided."""
 
 
 @pytest.fixture(scope="module")
@@ -31,6 +28,7 @@ def api():
 @pytest.fixture(scope='module')
 def vcr_config():
     return dict(
+        match_on=('method', 'scheme', 'host', 'port', 'path', 'query', 'body'),
         filter_headers=('DD-API-KEY', 'DD-APPLICATION-KEY'),
         filter_query_parameters=('api_key', 'application_key'),
     )
@@ -41,7 +39,8 @@ def freezer(vcr_cassette_name, vcr_cassette, vcr):
     from freezegun import freeze_time
 
     if vcr_cassette.record_mode == "all":
-        freeze_at = datetime.utcnow().isoformat()
+        tzinfo = datetime.now().astimezone().tzinfo
+        freeze_at = datetime.now().replace(tzinfo=tzinfo).isoformat()
         with open(
             os.path.join(
                 vcr.cassette_library_dir, vcr_cassette_name + ".frozen"
