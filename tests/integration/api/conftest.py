@@ -20,29 +20,19 @@ RECORD_MODE = os.environ.get("DD_TEST_CLIENT_RECORD_MODE", "none")
 """Allow re-recording of HTTP responses when value 'once' is provided."""
 
 
-@pytest.fixture
-def api_session():
-    """Yield fresh API session."""
-    import requests
-    from datadog.api.api_client import APIClient
-
-    http_client = APIClient._get_http_client()
-    http_client._session = requests.Session()
-    http_adapter = requests.adapters.HTTPAdapter(max_retries=10)
-    http_client._session.mount("https://", http_adapter)
-
-    yield http_client._session
-
-    APIClient._http_client = None
+@pytest.fixture(scope="module")
+def api():
+    """Initialize Datadog API client."""
+    from datadog import api, initialize
+    initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
+    return api
 
 
 @pytest.fixture(scope='module')
 def vcr_config():
     return dict(
-        # record_mode=RECORD_MODE,
         filter_headers=('DD-API-KEY', 'DD-APPLICATION-KEY'),
         filter_query_parameters=('api_key', 'application_key'),
-        # cassette_library_dir=os.path.join(os.path.dirname(__file__), "cassettes"),
     )
 
 
@@ -50,9 +40,8 @@ def vcr_config():
 def freezer(vcr_cassette_name, vcr_cassette, vcr):
     from freezegun import freeze_time
 
-    if vcr_cassette.record_mode != "none":
-        # ecorder.current_cassette.match_options = {RecordAllMatcher.name}
-        freeze_at = datetime.now().isoformat()
+    if vcr_cassette.record_mode == "all":
+        freeze_at = datetime.utcnow().isoformat()
         with open(
             os.path.join(
                 vcr.cassette_library_dir, vcr_cassette_name + ".frozen"
@@ -69,18 +58,12 @@ def freezer(vcr_cassette_name, vcr_cassette, vcr):
         ) as f:
             freeze_at = f.readline().strip()
 
-    return freeze_time(freeze_at)  #, tick=True)
+    return freeze_time(freeze_at)
 
 
-@pytest.fixture()
-def dog(vcr_cassette):
-    """Initialize Datadog API client."""
-    from datadog import api, initialize
-
-    # if not cassette.write_protected:
-    initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
-    # else:
-    #     initialize(api_key='API_KEY', app_key='APP_KEY', api_host=API_HOST)
+@pytest.fixture
+def dog(api, vcr_cassette):
+    """Record communication with Datadog API."""
     yield api
 
 
@@ -96,7 +79,7 @@ def get_with_retry(vcr_cassette, dog):
             retry_condition=lambda r: r.get("errors"),
             **kwargs
     ):
-        number_of_interactions = len(vcr_cassette.data) if vcr_cassette.record_mode != "none" else -1
+        number_of_interactions = len(vcr_cassette.data) if vcr_cassette.record_mode == "all" else -1
 
         if resource_id is None:
             resource = getattr(getattr(dog, resource_type), operation)(**kwargs)
@@ -106,7 +89,7 @@ def get_with_retry(vcr_cassette, dog):
         while retry_condition(resource) and retry_counter < retry_limit:
             time.sleep(WAIT_TIME)
 
-            if vcr_cassette.record_mode != "none":
+            if vcr_cassette.record_mode == "all":
                 # remove failed interactions
                 vcr_cassette.data = vcr_cassette.data[:number_of_interactions]
 

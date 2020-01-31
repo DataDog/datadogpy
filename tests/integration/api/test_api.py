@@ -34,9 +34,9 @@ class TestDatadog:
         for uuid in self.cleanup_role_uuids:
             dog.Roles.delete(uuid)
 
-    def test_tags(self, freezer, dog, get_with_retry):
+    def test_tags(self, dog, get_with_retry, freezer):
         with freezer:
-            hostname = "test.tags.host" + str(time.time_ns())
+            hostname = "test.tags.host" + str(time.time())
 
         # post a metric to make sure the test host context exists
         dog.Metric.send(metric="test.tag.metric", points=1, host=hostname)
@@ -71,16 +71,18 @@ class TestDatadog:
             dog.Tag.delete(hostname, source="datadog") is None
         )  # Expect no response body on success
 
-    def test_events(self, dog, get_with_retry):
-        now = datetime.datetime.now()
+    def test_events(self, dog, get_with_retry, freezer):
+        with freezer:
+            now = datetime.datetime.now()
+            now_ts = int(time.mktime(now.timetuple()))
+            before_ts = int(time.mktime((now - datetime.timedelta(minutes=5)).timetuple()))
 
-        now_ts = int(time.mktime(now.timetuple()))
         now_title = "end test title " + str(now_ts)
         now_message = "test message " + str(now_ts)
 
-        before_ts = int(time.mktime((now - datetime.timedelta(minutes=5)).timetuple()))
         before_title = "start test title " + str(before_ts)
         before_message = "test message " + str(before_ts)
+
         now_event = dog.Event.create(
             title=now_title, text=now_message, date_happened=now_ts
         )
@@ -118,7 +120,10 @@ class TestDatadog:
         assert "test_tag:1" in event["event"]["tags"]
         assert "test_tag:2" in event["event"]["tags"]
 
-        now_ts = int(time.mktime(datetime.datetime.now().timetuple()))
+        with freezer as dt:
+            dt.tick()
+            now_ts = int(time.mktime(datetime.datetime.now().timetuple()))
+
         event_id = dog.Event.create(
             title="test source",
             text="test source",
@@ -132,12 +137,14 @@ class TestDatadog:
         assert events["events"], "No events found in stream"
         assert event_id in [event["id"] for event in events["events"]]
 
-    def test_comments(self, dog, get_with_retry):
+    def test_comments(self, dog, get_with_retry, freezer):
         assert (
             TEST_USER is not None
         ), "You must set DD_TEST_CLIENT_USER environment to run comment tests"
 
-        now = datetime.datetime.now()
+        with freezer:
+            now = datetime.datetime.now()
+
         now_ts = int(time.mktime(now.timetuple()))
         message = "test message " + str(now_ts)
 
@@ -207,8 +214,10 @@ class TestDatadog:
         assert len(results["results"]["hosts"]) > 0
         assert len(results["results"]["metrics"]) > 0
 
-    def test_metrics(self, dog, get_with_retry):
-        now = datetime.datetime.now()
+    def test_metrics(self, dog, get_with_retry, freezer):
+        with freezer:
+            now = datetime.datetime.now()
+
         now_ts = int(time.mktime(now.timetuple()))
         metric_name_single = "test.metric_single." + str(now_ts)
         metric_name_list = "test.metric_list." + str(now_ts)
@@ -290,8 +299,10 @@ class TestDatadog:
         assert len(metric_query_tuple["series"][0]["pointlist"]) == 1
         assert metric_query_tuple["series"][0]["pointlist"][0][1] == 1
 
-    def test_distribution_metrics(self, dog):
-        now = datetime.datetime.now()
+    def test_distribution_metrics(self, dog, freezer):
+        with freezer:
+            now = datetime.datetime.now()
+
         now_ts = int(time.mktime(now.timetuple()))
         metric_name = "test.distribution_metric." + str(now_ts)
         host_name = "test.host." + str(now_ts)
@@ -309,11 +320,12 @@ class TestDatadog:
         # FIXME: Query and verify the test metric result. Currently, it takes
         # too long for a new distribution metric to become available for query.
 
-    def test_graph_snapshot(self, dog, get_with_retry):
+    def test_graph_snapshot(self, dog, get_with_retry, freezer):
         metric_query = "system.load.1{*}"
         event_query = "*"
-        end = int(time.time())
-        start = end - 60 * 60  # go back 1 hour
+        with freezer:
+            end = int(time.time())
+            start = end - 60 * 60  # go back 1 hour
 
         # Test without an event query
         snap = dog.Graph.create(metric_query=metric_query, start=start, end=end)
@@ -438,14 +450,15 @@ class TestDatadog:
         delete_res = dog.Screenboard.delete(update_res["id"])
         assert delete_res["id"] == update_res["id"]
 
-    def test_monitor_crud(self, dog, get_with_retry):
+    def test_monitor_crud(self, dog, get_with_retry, freezer):
         # Metric alerts
         query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
 
-        options = {
-            "silenced": {"*": int(time.time()) + 60 * 60},
-            "notify_no_data": False,
-        }
+        with freezer:
+            options = {
+                "silenced": {"*": int(time.time()) + 60 * 60},
+                "notify_no_data": False,
+            }
         monitor = dog.Monitor.create(type="metric alert", query=query, options=options)
         assert monitor["query"] == query
         assert monitor["options"]["notify_no_data"] == options["notify_no_data"]
@@ -496,13 +509,14 @@ class TestDatadog:
         res = dog.Monitor.validate(type=monitor_type, query=valid_query, options=valid_options)
         assert res == {}
 
-    def test_monitor_can_delete(self, dog):
+    def test_monitor_can_delete(self, dog, freezer):
         # Create a monitor.
         query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
-        options = {
-            "silenced": {"*": int(time.time()) + 60 * 60},
-            "notify_no_data": False,
-        }
+        with freezer:
+            options = {
+                "silenced": {"*": int(time.time()) + 60 * 60},
+                "notify_no_data": False,
+            }
         monitor = dog.Monitor.create(type="metric alert", query=query, options=options)
 
         # Check if you can delete the monitor.
@@ -513,7 +527,9 @@ class TestDatadog:
         }
 
         # Create a monitor-based SLO.
-        name = "test SLO {}".format(time.time())
+        with freezer as dt:
+            name = "test SLO {}".format(time.time())
+
         thresholds = [{"timeframe": "7d", "target": 90}]
         slo = dog.ServiceLevelObjective.create(
             type="monitor",
@@ -545,18 +561,20 @@ class TestDatadog:
             "deleted_monitor_id": monitor["id"]
         }
 
-    def test_monitor_can_delete_with_force(self, dog):
+    def test_monitor_can_delete_with_force(self, dog, freezer):
         # Create a monitor.
         query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
-        options = {
-            "silenced": {"*": int(time.time()) + 60 * 60},
-            "notify_no_data": False,
-        }
+        with freezer:
+            options = {
+                "silenced": {"*": int(time.time()) + 60 * 60},
+                "notify_no_data": False,
+            }
         monitor = dog.Monitor.create(type="metric alert", query=query, options=options)
         monitor_ids = [monitor["id"]]
 
         # Create a monitor-based SLO.
-        name = "test SLO {}".format(time.time())
+        with freezer:
+            name = "test SLO {}".format(time.time())
         thresholds = [{"timeframe": "7d", "target": 90}]
         slo = dog.ServiceLevelObjective.create(
             type="monitor",
@@ -570,12 +588,13 @@ class TestDatadog:
             "deleted_monitor_id": monitor["id"]
         }
 
-    def test_service_level_objective_crud(self, dog):
+    def test_service_level_objective_crud(self, dog, freezer):
         numerator = "sum:my.custom.metric{type:good}.as_count()"
         denominator = "sum:my.custom.metric{*}.as_count()"
         query = {"numerator": numerator, "denominator": denominator}
         thresholds = [{"timeframe": "7d", "target": 90}]
-        name = "test SLO {}".format(time.time())
+        with freezer:
+            name = "test SLO {}".format(time.time())
         slo = dog.ServiceLevelObjective.create(
             type="metric",
             query=query,
@@ -637,9 +656,10 @@ class TestDatadog:
         dog.Monitor.delete(monitor1["id"])
         dog.Monitor.delete(monitor2["id"])
 
-    def test_downtime(self, dog, get_with_retry):
-        start = int(time.time())
-        end = start + 1000
+    def test_downtime(self, dog, get_with_retry, freezer):
+        with freezer:
+            start = int(time.time())
+            end = start + 1000
 
         # Create downtime
         downtime = dog.Downtime.create(scope="test_tag:1", start=start, end=end)
@@ -652,7 +672,10 @@ class TestDatadog:
 
         # Update downtime
         message = "Doing some testing on staging."
-        end = int(time.time()) + 60000
+        with freezer as dt:
+            dt.tick()
+            end = int(time.time()) + 60000
+
         downtime = dog.Downtime.update(
             downtime["id"], scope="test_tag:2", end=end, message=message
         )
@@ -667,10 +690,11 @@ class TestDatadog:
             "Downtime", downtime["id"], retry_condition=lambda r: r["disabled"] is False
         )
 
-    def test_downtime_cancel_by_scope(self, dog, get_with_retry):
+    def test_downtime_cancel_by_scope(self, dog, get_with_retry, freezer):
         scope_one = "test:integration_one"
         scope_two = "test:integration_two"
-        start = int(time.time())
+        with freezer:
+            start = int(time.time())
 
         # Create downtime with scope_one
         end = start + 1000
@@ -679,12 +703,16 @@ class TestDatadog:
         assert downtime_one["disabled"] is False
 
         # Create downtime with scope_one
-        end = int(time.time()) + 60000
+        with freezer as dt:
+            dt.tick()
+            end = int(time.time()) + 60000
         downtime_two = dog.Downtime.create(scope=scope_one, start=start, end=end)
         assert downtime_two["scope"] == [scope_one]
         assert downtime_two["disabled"] is False
 
-        end = int(time.time()) + 120000
+        with freezer as dt:
+            dt.tick()
+            end = int(time.time()) + 120000
         downtime_three = dog.Downtime.create(scope=scope_two, start=start, end=end)
         assert downtime_three["scope"] == [scope_two]
         assert downtime_three["disabled"] is False
@@ -722,8 +750,9 @@ class TestDatadog:
             tags=["db:prod_data"],
         ) == {"status": "ok"}
 
-    def test_host_muting(self, dog, get_with_retry):
-        end = int(time.time()) + 60 * 60
+    def test_host_muting(self, dog, get_with_retry, freezer):
+        with freezer:
+            end = int(time.time()) + 60 * 60
         hostname = "my.test.host" + str(end)
         message = "Muting this host for a test."
 
@@ -812,8 +841,9 @@ class TestDatadog:
         assert "success" in dog.Embed.revoke(embed["embed_id"])
 
     @pytest.mark.admin_needed
-    def test_user_crud(self, dog, get_with_retry):
-        now = int(time.time())
+    def test_user_crud(self, dog, get_with_retry, freezer):
+        with freezer:
+            now = int(time.time())
         handle = "user{}@test.com".format(now)
         name = "Test User"
         alternate_name = "Test User Alt"
