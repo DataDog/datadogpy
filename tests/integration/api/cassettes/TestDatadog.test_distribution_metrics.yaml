@@ -1,7 +1,7 @@
 interactions:
 - request:
-    body: '{"series": [{"metric": "test.distribution_metric.1580479129", "points":
-      [[1580479069, [1.0]]], "type": "distribution", "host": "test.host.1580479129"}]}'
+    body: '{"series": [{"metric": "test.distribution_metric.1580514494", "points":
+      [[1580514434, [1.0]]], "type": "distribution", "host": "test.host.1580514494"}]}'
     headers:
       Accept:
       - '*/*'
@@ -34,7 +34,7 @@ interactions:
       DD-POOL:
       - propjoe
       Date:
-      - Fri, 31 Jan 2020 14:58:50 GMT
+      - Sat, 01 Feb 2020 00:48:14 GMT
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:

@@ -32,11 +32,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Fri, 31 Jan 2020 14:59:51 GMT
+      - Sat, 01 Feb 2020 00:49:45 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Fri, 07-Feb-2020 14:59:51 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:49:45 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -47,9 +47,9 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - gVnECQ7ifaEfJ6BNPsXSglLjlU41ay4U8jXHC6V3+oC4U6gHkBb20H5zrSJj1zee
+      - og1WGdy+2nV+rkkclmd3Cf2I26XhV3/6yjBeQCP8aHbH2k2cKwC+X9WmhIghcJ94
       X-DD-VERSION:
-      - '35.2127796'
+      - '35.2129440'
       X-Frame-Options:
       - SAMEORIGIN
     status:

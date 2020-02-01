@@ -1,7 +1,7 @@
 interactions:
 - request:
     body: '{"type": "metric alert", "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0}
-      > 100", "options": {"silenced": {"*": 1580486370}, "notify_no_data": false}}'
+      > 100", "options": {"silenced": {"*": 1580521750}, "notify_no_data": false}}'
     headers:
       Accept:
       - '*/*'
@@ -22,14 +22,14 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA41STW/cIBD9K4hT6zoW2PvJoeoh1+TUW1UhCrM2KoYE8EaWtf+9w66jqFKkxAfL
-        zDzPvPd4C42QcrQ6g5ExOEhU+Mm5mmbV4/ev3zU14ADbr43nCeJMBVXn/otTKUs+fBVpGkWaU4ax
-        8ZCbP3OGJKM+m2UIKYvyYhfynXDGaE1HSEn1gEPwYHEy3+7Yjh232JpctlSclEtQU6/Ggqqqd2dX
-        FQlniKSq3pZg7UUlLF13NaxgPFEIw4XETNH6nuQBEFHIEz5UVYMsdAR1FUlb1rI7xu86/pNvxPYo
-        OtZsebthu2+MiSv/FSxVLtQPbHNo93uGz9oKkYrlJqzbHw+c13RQ3riixVs9BFzdjBMkPfwwKisT
-        +uG50WHE2avkxxVGHq4wbMCorPtwwKWmIfaymNq1/MA7tDQYe7Kf1VYcVc7JlNEP+fbvLRX/dZHM
-        YyD3KADp5fmpyBuhpIkoBzFjNTxlGzwGaaE+ZHuapZqMRdvWC3ZB/y3M1mOyDrwuhYVWr97uuj1D
-        WdZrNxmQt2DmOJV8wIssdy8xowpD2ZUrWBf5IIu36+zL5R/p/xPE6wIAAA==
+        H4sIAAAAAAAAA41STWvcMBD9K0Kn1nGMZK+zGx9CDr02p95CEao0a4vKUqKPDcbsf+9o1yUUCsnF
+        SDPPM+89vZUGiCkYlUCL4C1EOrhsbU2THPH8/LOmGixg+2/jNUNY6EDlafxiZUyCT1+HmOchLjHB
+        3DhIza8lQRRBnfQ6+ZiG8mFn8kA4Y7SmM8QoR8AheDE4mfd3fMf2HFvZJkOHo7QRaurkXFBV9d/Z
+        VUX8CQKpqvclWHuTEUuXXQ0rGEckwnAh0TkYN5I0ASIKecKnqmqQhQogLyJpy1p2y9pbxn8wNuzu
+        B86bbsfYvr/B+4X/BhYyFeoH1vMD73Ed21o+0GG9Cuv29weOuibptC1anFGTx9XNnCGq6VHLJLUf
+        p9dG+Rlnb5KfNhj5foFhA2Zp7IcDzjX1YRTF1K5FWh1a6rU5ms9qK45Ka0VM6Id4//eain+6SObJ
+        k28oAOml5aXIm6GkiUgLIWHVvyTjHQZppc4nc1yEzNqgbdsDW69+F2bbNRoLTpXCSqvN25bve4ay
+        jFM2axDXYKaQSz7gTZS3F5hRiaHsyhNsi5wXxdtt9vn8BzKTJc/rAgAA
     headers:
       Cache-Control:
       - no-cache
@@ -44,11 +44,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Fri, 31 Jan 2020 14:59:30 GMT
+      - Sat, 01 Feb 2020 00:49:12 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Fri, 07-Feb-2020 14:59:30 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:49:11 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -59,9 +59,9 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - j0VNx9cZdAj+uuO7pabHlao4Ioc5q8ovvp4Ja/NYzbHA51zSBYXNvtO+8cOYbE0B
+      - nL/U8Nu7782wU68M7elx8MY/T+2opB0U5/flvjGsH/qXfYEORYWxwdDpQFq78Mxt
       X-DD-VERSION:
-      - '35.2127796'
+      - '35.2129440'
       X-Frame-Options:
       - SAMEORIGIN
       X-RateLimit-Limit:
@@ -71,13 +71,13 @@ interactions:
       X-RateLimit-Remaining:
       - '499'
       X-RateLimit-Reset:
-      - '10'
+      - '9'
     status:
       code: 200
       message: OK
 - request:
-    body: '{"type": "monitor", "monitor_ids": [15606095], "thresholds": [{"timeframe":
-      "7d", "target": 90}], "name": "test SLO 1580482770.105484"}'
+    body: '{"type": "monitor", "monitor_ids": [15614071], "thresholds": [{"timeframe":
+      "7d", "target": 90}], "name": "test SLO 1580518150.748102"}'
     headers:
       Accept:
       - '*/*'
@@ -98,12 +98,12 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4VRy26FIBT8FXPWxuADfKz6AX0sumwaQ+SoJCIWuIsb47/3YL3ppklXhDNzZoZh
-        ByWDhO5jB4V+cHoL2q7QrbdlScHYVQfr+iAnT5zPFAaHkibQ7TDLVS0IHax6mO0ifWZuJDE/RUVl
-        p/krG6yBFFZpIu31oiUvJ40ANFIv/wocKYTZoScPFVPsEKSbMEDXsowReN56pf22yDvJxTEj+aAN
-        ju7HvFZwUPxw37DXCjraiweIcixlySohCuR1nbctF20jWpYPODaFIJlHCfp0z7lggrWcxK53BfQh
-        eX9+S3LesKop6pplOeNVU9Hy2ReqXlLcXzyGfjRqrNKj/otCWSnhZX/GR+di9/Fzjm9Y8rQLugEA
-        AA==
+        H4sIAAAAAAAAA4VRu26EMBD8FbQ1QjYHB0eVD8ijSBlFaPGawxLGxPiKE+LfsyZcqkipLO/MzozH
+        KxAGhOZjBdKL8mYOxk3QTLdxTMG6yQTn24DXhTmfKSivkSfQrDDgRKOGBiajBjfiktkbSwxPUZHc
+        dfjKlLOQwoQ20l4PWvKy0xjQFs34r8CWQhi8XtiDYooVAvqrDtBcRCYY3G8tmWUe8c5ycSxYPhir
+        e/9jXhFsHD/cZ90agob34gEXdSFxqrtTVZ9L7PK6yCV2Ku91T9SrgmUeJZjdXZZnWYhKstjxrqCX
+        kLw/vyWyrEUpa1mKrCpqKXJe3vvS1CLH/cXzGPrRqHVkevMXhbNywsN+j6+9j93Hz9m+AclLpOu6
+        AQAA
     headers:
       Cache-Control:
       - no-cache
@@ -118,11 +118,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Fri, 31 Jan 2020 14:59:30 GMT
+      - Sat, 01 Feb 2020 00:49:12 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Fri, 07-Feb-2020 14:59:30 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:49:12 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -133,9 +133,9 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - NclXS5F5t+kukUaODU4jY2oSI1KBdPHFdFhJZNfbXLWDOThxbCLlKKmYvikjdDSg
+      - 69kiClanS8NcBSsdd51HHifvhQSGoRbJJjhU9l40yqxQHVNrndFN9zVtFJW1OcSf
       X-DD-VERSION:
-      - '35.2127796'
+      - '35.2129440'
       X-Frame-Options:
       - SAMEORIGIN
     status:
@@ -157,11 +157,11 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: DELETE
-    uri: https://api.datadoghq.com/api/v1/monitor/15606095?force=True
+    uri: https://api.datadoghq.com/api/v1/monitor/15614071?force=True
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA6tWSknNSS1JTYnPzc/LLMkvis9MUbIyNDUzMDOwNK0FALt4b4QfAAAA
+        H4sIAAAAAAAAA6tWSknNSS1JTYnPzc/LLMkvis9MUbIyNDUzNDEwN6wFAHAQAVsfAAAA
     headers:
       Cache-Control:
       - no-cache
@@ -176,11 +176,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Fri, 31 Jan 2020 14:59:30 GMT
+      - Sat, 01 Feb 2020 00:49:12 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Fri, 07-Feb-2020 14:59:30 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:49:12 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -191,9 +191,9 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - OGWvqyuIWnbl6WkXpkkRXBvKLURJhdDx+xXZ6vxnnyjZzYdefkAlNGOfG85GcOUu
+      - em3KoJu1XYdqq1w4EpLi4L54svjYBxZahEDJ8c5gcdIOxnNafHMdF5LLysPLuNcH
       X-DD-VERSION:
-      - '35.2127796'
+      - '35.2129440'
       X-Frame-Options:
       - SAMEORIGIN
     status:
