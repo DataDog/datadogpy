@@ -15,7 +15,7 @@ import pytest
 import requests
 
 from datadog.util.compat import is_p3k, ConfigParser
-from ..api.constants import MONITOR_REFERENCED_IN_SLO_MESSAGE
+from ..api.constants import API_KEY, APP_KEY, MONITOR_REFERENCED_IN_SLO_MESSAGE
 
 
 TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
@@ -36,8 +36,8 @@ def get_temp_file():
 def dogshell_config():
     config = ConfigParser()
     config.add_section("Connection")
-    config.set("Connection", "apikey", os.environ["DD_TEST_CLIENT_API_KEY"])
-    config.set("Connection", "appkey", os.environ["DD_TEST_CLIENT_APP_KEY"])
+    config.set("Connection", "apikey", API_KEY)
+    config.set("Connection", "appkey", APP_KEY)
     config.set("Connection", "api_host", os.environ.get("DATADOG_HOST", "https://api.datadoghq.com"))
     return config
 
