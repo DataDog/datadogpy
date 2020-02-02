@@ -136,7 +136,6 @@ class TestDatadog:
         assert events["events"], "No events found in stream"
         assert event_id in [event["id"] for event in events["events"]]
 
-    # @pytest.mark.skip
     def test_comments(self, dog, get_with_retry, freezer):
         assert (
             TEST_USER is not None
@@ -213,7 +212,7 @@ class TestDatadog:
         assert len(results["results"]["hosts"]) > 0
         assert len(results["results"]["metrics"]) > 0
 
-    # @pytest.mark.skip
+    @pytest.mark.skip
     def test_metrics(self, dog, get_with_retry, freezer):
         with freezer:
             now = datetime.datetime.now()
@@ -257,8 +256,8 @@ class TestDatadog:
             operation="query",
             retry_condition=retry_condition,
             retry_limit=20,
-            start=now_ts - 60000,
-            end=now_ts + 60000,
+            start=now_ts - 6000,
+            end=now_ts + 6000,
             query="{}{{host:{}}}".format(metric_name_single, host_name),
         )
         metric_query_list = get_with_retry(
@@ -266,8 +265,8 @@ class TestDatadog:
             operation="query",
             retry_condition=retry_condition,
             retry_limit=20,
-            start=now_ts - 60000,
-            end=now_ts + 60000,
+            start=now_ts - 6000,
+            end=now_ts + 6000,
             query="{}{{host:{}}}".format(metric_name_list, host_name),
         )
         metric_query_tuple = get_with_retry(
@@ -275,8 +274,8 @@ class TestDatadog:
             operation="query",
             retry_condition=retry_condition,
             retry_limit=20,
-            start=now_ts - 60000,
-            end=now_ts + 60000,
+            start=now_ts - 6000,
+            end=now_ts + 6000,
             query="{}{{host:{}}}".format(metric_name_tuple, host_name),
         )
 
