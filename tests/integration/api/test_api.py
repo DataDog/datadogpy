@@ -359,7 +359,7 @@ class TestDatadog:
                 }
             ],
         }
-        graph_def = json.dumps(graph_def)
+        graph_def = json.dumps(graph_def, sort_keys=True)
         snap = dog.Graph.create(graph_def=graph_def, start=start, end=end)
         assert "metric_query" not in snap
         assert "event_query" not in snap
@@ -818,7 +818,7 @@ class TestDatadog:
         legend = "no"
         title = "Custom titles!"
         # Dump the dictionary to a JSON string and make an API call
-        graph_json = json.dumps(graph_def)
+        graph_json = json.dumps(graph_def, sort_keys=True)
         embed = dog.Embed.create(
             graph_json=graph_json,
             timeframe=timeframe,

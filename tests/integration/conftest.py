@@ -22,6 +22,8 @@ FAKE_PROXY = {"https": "http://user:pass@10.10.1.10:3128/"}
 def api():
     """Initialize Datadog API client."""
     from datadog import api, initialize
+    from datadog.api.api_client import APIClient
+    APIClient._sort_keys = True
     initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
     return api
 

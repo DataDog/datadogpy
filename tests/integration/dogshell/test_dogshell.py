@@ -71,10 +71,10 @@ def dogshell(capsys, config_file, dog):
             sys.argv = orig
 
     def run(args, stdin=None, check_return_code=True, use_cl_args=False):
-        cmd = ["dog", "--config", config_file] + args
+        cmd = ["dogshell", "--config", config_file] + args
         if use_cl_args:
             cmd = [
-                "dog",
+                "dogshell",
                 "--api-key={0}".format(dog._api_key),
                 "--application-key={0}".format(dog._application_key),
             ] + args
