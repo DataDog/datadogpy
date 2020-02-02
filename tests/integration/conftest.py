@@ -5,7 +5,7 @@
 
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 
 import pytest
 from vcr import VCR
