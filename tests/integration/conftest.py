@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 import pytest
 from vcr import VCR
+from dateutil import parser
 
 from tests.integration.api.constants import API_KEY, APP_KEY, API_HOST
 
@@ -55,6 +56,12 @@ def freezer(vcr_cassette_name, vcr_cassette, vcr):
             "r",
         ) as f:
             freeze_at = f.readline().strip()
+            dt = parser.isoparse(freeze_at)
+            tz_minutes = dt.tzinfo.utcoffset(dt).seconds / 60
+            os.environ['TZ'] =  "UTC%+03d:%02d" % (
+                int( tz_minutes / 60), tz_minutes % 60
+            )
+            time.tzset()
 
     return freeze_time(freeze_at)
 
