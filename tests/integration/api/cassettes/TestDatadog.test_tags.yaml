@@ -1,7 +1,7 @@
 interactions:
 - request:
-    body: '{"series": [{"metric": "test.tag.metric", "points": [[1580517956.351725,
-      1.0]], "host": "test.tags.host1580517956.292371"}]}'
+    body: '{"series": [{"host": "test.tags.host1580681128.795736", "metric": "test.tag.metric",
+      "points": [[1580681128.804605, 1.0]]}]}'
     headers:
       Accept:
       - '*/*'
@@ -32,7 +32,7 @@ interactions:
       DD-POOL:
       - propjoe
       Date:
-      - Sat, 01 Feb 2020 00:45:56 GMT
+      - Sun, 02 Feb 2020 22:05:29 GMT
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:
@@ -54,7 +54,100 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: GET
-    uri: https://api.datadoghq.com/api/v1/tags/hosts/test.tags.host1580517956.292371
+    uri: https://api.datadoghq.com/api/v1/tags/hosts/test.tags.host1580681128.795736
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA6tWSi0qyi8qVrJSiFbyy1fIyC8uUchNLEnOSC1WKMlILAGLxGemKMXWAgDvQvub
+        LAAAAA==
+    headers:
+      Cache-Control:
+      - no-cache
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Security-Policy:
+      - frame-ancestors 'self'; report-uri https://api.datadoghq.com/csp-report
+      Content-Type:
+      - application/json
+      DD-POOL:
+      - dogweb
+      Date:
+      - Sun, 02 Feb 2020 22:05:29 GMT
+      Pragma:
+      - no-cache
+      Strict-Transport-Security:
+      - max-age=15724800;
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Accept-Encoding
+      X-Content-Type-Options:
+      - nosniff
+      X-DD-VERSION:
+      - '35.2129440'
+      X-Frame-Options:
+      - SAMEORIGIN
+    status:
+      code: 404
+      message: Not Found
+- request:
+    body: '{"series": [{"host": "test.tags.host1580682004.155186", "metric": "test.tag.metric",
+      "points": [[1580682004.1632152, 1.0]]}]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '125'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.22.0
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/series
+  response:
+    body:
+      string: '{"status": "ok"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '16'
+      Content-Security-Policy:
+      - frame-ancestors 'self'; report-uri https://api.datadoghq.com/csp-report
+      Content-Type:
+      - text/json
+      DD-POOL:
+      - propjoe
+      Date:
+      - Sun, 02 Feb 2020 22:20:05 GMT
+      Strict-Transport-Security:
+      - max-age=15724800;
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+    status:
+      code: 202
+      message: Accepted
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - python-requests/2.22.0
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/tags/hosts/test.tags.host1580682004.155186
   response:
     body:
       string: '{"tags":[]}'
@@ -72,18 +165,18 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:46:17 GMT
+      - Sun, 02 Feb 2020 22:20:16 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:46:17 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:20:16 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - mGJe6qmS66N9ddKWdHwHEzQK9VHuaMNr7+EsVTKliCkGq+ayJZmadUyCSwID4him
+      - SaHvyR/hQzhMjBxXmmuM76vwlwfocpgL0LhX3u6R0CFONYqUGm7Xe/7/HyTliTFX
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -92,7 +185,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"tags": ["test_tag:1", "test_tag:2"], "source": "datadog"}'
+    body: '{"source": "datadog", "tags": ["test_tag:1", "test_tag:2"]}'
     headers:
       Accept:
       - '*/*'
@@ -109,10 +202,10 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: POST
-    uri: https://api.datadoghq.com/api/v1/tags/hosts/test.tags.host1580517956.292371?source=datadog
+    uri: https://api.datadoghq.com/api/v1/tags/hosts/test.tags.host1580682004.155186?source=datadog
   response:
     body:
-      string: '{"host":"test.tags.host1580517956.292371","tags":["test_tag:1","test_tag:2"]}'
+      string: '{"host":"test.tags.host1580682004.155186","tags":["test_tag:1","test_tag:2"]}'
     headers:
       Cache-Control:
       - no-cache
@@ -127,18 +220,18 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:46:17 GMT
+      - Sun, 02 Feb 2020 22:20:16 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:46:17 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:20:16 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - wNaVyRyNliLxKeX4pqFHOJTBG1dRCwo1/ihrnAf0GXtGNGahc1XK8Xzj/ssA3R20
+      - /Ib6MMQTHlX0/jTb6tlEMzSZs2crLqjkGjYkoQ/zb0RHtMaXT744DZRFpy23W0oi
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -160,7 +253,7 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: GET
-    uri: https://api.datadoghq.com/api/v1/tags/hosts/test.tags.host1580517956.292371?source=datadog
+    uri: https://api.datadoghq.com/api/v1/tags/hosts/test.tags.host1580682004.155186?source=datadog
   response:
     body:
       string: !!binary |
@@ -179,11 +272,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:46:17 GMT
+      - Sun, 02 Feb 2020 22:20:16 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:46:17 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:20:16 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -194,7 +287,7 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - o8MFmk+4Ge4vq85ax+5C1nfQs0lbtaPPYZrpqzeG6IsYGNLGMu/G7PbJElpjPS5i
+      - ldNaA6dSEPDapjFoBolZNm9KKT/3iEJM/Q1IyMe2D0P7l2S/rGI4bTGzxgP0/9Zs
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -203,7 +296,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"tags": ["test_tag:3"], "source": "datadog"}'
+    body: '{"source": "datadog", "tags": ["test_tag:3"]}'
     headers:
       Accept:
       - '*/*'
@@ -220,10 +313,10 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: PUT
-    uri: https://api.datadoghq.com/api/v1/tags/hosts/test.tags.host1580517956.292371?source=datadog
+    uri: https://api.datadoghq.com/api/v1/tags/hosts/test.tags.host1580682004.155186?source=datadog
   response:
     body:
-      string: '{"host":"test.tags.host1580517956.292371","tags":["test_tag:3"]}'
+      string: '{"host":"test.tags.host1580682004.155186","tags":["test_tag:3"]}'
     headers:
       Cache-Control:
       - no-cache
@@ -238,18 +331,18 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:46:17 GMT
+      - Sun, 02 Feb 2020 22:20:16 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:46:17 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:20:16 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - BQaWiIhDCyK3JbvyPZudxtMuoedbvOKE6tb5GJMfo6GT4EOQ8qx9lqgA4UCxp88q
+      - wB7h0Rt2IYxDUBLtoJ4y0ZOq10ZaMdDZiRuFZ3d/FUUtC7gfBEZWTs0Y6dZhoLZS
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -271,7 +364,7 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: GET
-    uri: https://api.datadoghq.com/api/v1/tags/hosts/test.tags.host1580517956.292371?source=datadog
+    uri: https://api.datadoghq.com/api/v1/tags/hosts/test.tags.host1580682004.155186?source=datadog
   response:
     body:
       string: !!binary |
@@ -290,11 +383,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:46:18 GMT
+      - Sun, 02 Feb 2020 22:20:16 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:46:17 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:20:16 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -305,7 +398,7 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - F11u7JCZTPrHz8VfzL5YeXThxcQSR6CdLGgk2tF52+EbYWhXciN8nv9vA8oQ9C9A
+      - BQaWiIhDCyK3JbvyPZudxtMuoedbvOKE6tb5GJMfo6GT4EOQ8qx9lqgA4UCxp88q
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -331,21 +424,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA61XYXPiIBD9L34uERJICH/l5iZDAG06CplAerWd/vfbmOp5sWiqjjOaOOyy+x5v
-        d/lYBLn2C/GxaGwwnZUb9Ox8sHJrxOsW6cIoqnOOFNMGUcIwYpwzxPNUwoMqFc0SlWgZpHZrNPhY
-        dzI0znq0kXVycLoQvxbPZrNxaNPY/g0pY4PzCC9+Py1kHw5/75dM1/Z1b0MPa5+iLvbhnvofbZaZ
-        yaiiMkcrplJElWSo1inkkOeY1koWkuPodhBa7fxz1Vht3kR8XTys84ynm53isN9Mm3bjdluARzwA
-        F9UZGYyuZBAphrwxQWkWSCEYFpi/T6OZgXRjfZBWGdRokbKUlhynBc9LxjjNcBr1CGA2rSA4GT5p
-        fnHdYYuwa41QvQ9ui4A9XMbN4hxMAs4oyfKs4BktclywM1ZPCVEb1+uV663udtGAr+9crTvXt98c
-        z6jP48nTQgOq5UpjOLeaIiprimpZM2QYk0YXEpflxRyC8aEaTlJnNkZ6I/zOB7NFbedqk8T5iqfV
-        e9NVg+BFBU+v8CKqQX/wM7NgVJ1ZNz50OzAxVrcOqgQ8iuUSvnClrf9yefRP8jJJGU2+fqfAnano
-        xdU/xLtFg/ymjmcIQjedUQCvuNnDWF/uJfrdWSNM37nWoD9AOkH1DdmAqu8N5LwMR+M4nPMpXSOf
-        U7NTlm+vyZDhQ7qCfL8f7WmFRz9rGGddb0RoeS+DbrtG1qGmnTIwQw5jx3wQxnM7xrjpv/ZSTAM/
-        KxAR6C7ZQcV8AaWL2KwztZ0Blu23pmtU9eW6grNJSM5xxgnl7JZuN1XSGEQ0NBDg1OK69h47opxw
-        fJG2UfEPke4Z+ddRCvsmOzTTZBiPExh2/SBWxlPCSiVpptK0UKu0zDTJOK0x8FcXMh8G3EDuMN6f
-        bal1Z7yfNz99a3ER2/2QAPcAkR0DHW4F+1QJ45jmPB9GNw4zHhkyGnsdurN+XZ4kCqJ4wThBpiar
-        YXbPEdXwKleS0VKzlVLZwyeJo2ghyYvZXT8y396n5iR1y33qNO4IOdEiEB/1DrPzNxPs9TIRCeO/
-        HncNxc/PvxSMMEagDgAA
+        H4sIAAAAAAAAA61Xf2+jMAz9Lv17bgMkEPJVTicUErfjRBNEwm7dtO9+6Vh3HV1o11aV+FHFjv2e
+        /RxeF15u3EK8LhrjsTeyhUfrvJFbFE9b0AUqqnMOimkEmjACjHMGPE9leFClotlSLbX0UtsN7H1s
+        eukbaxy0sl4enC7Er8Ujtq2FtjHDMyg03jogi98PCzn4w9/vS6Zrh3owfghrH6Iu3sM99j/arDLM
+        qKIyhzVTKVAlGdQ6DTnkOaG1koXkJLpdCK227rFqjMZnEV8XD+s04+lmxzi8b6axa+1uG+ARd8BF
+        9Sg96kp6kZKQN0kgzXxSCEYE4S/TaC5AujHOS6MQGi1SltKSk7TgeckYpxlJox4DmE0nErLc/9J8
+        dt1hC7/rUKjBebuFwB4p42ZxDiYBZzTJ8qzgGS1yUrATVo8JOZhWm94O3Tf1NZfFWDpa6ABLudYk
+        FJ6mQGVNoZY1A2RMoi4kKcvZIDw6X+1LoccWpUPhds7jFrre1riMAx5HZHDYV/uOFVV4egovoto3
+        ULhd2PFVj5vG+X4XTNDozoY2D49itQoXUmnjPlx++k/ycpkyuvy4T4E7aYM/tv4h3h3sEZ86vqCi
+        ddOjCvCKqz2MAnEr0S/WoMChtx3C30B6AvUV2YS2vDWQUx2NxnGQyCldI59Ts6+9da2ohgzvIuvy
+        5Xa0pxINP1P8k7E1IrS6lUG73YCx0HRTBi5oh4Nu3QXjSyV/3PT/fCimgZ8IRAS6OTszbLFvVBWU
+        80/o+CoUUpLknGQ8oZxdM1umZT/CO43hE/TQLVOL841y3wPBESGzGI+SdpcaOGHqPEqqtYNe28Ho
+        fhdFMz7gPggWsVPpFS7fC1Rq3aNzl51ivrWYxXycP3CjpsxP9yJRvGA8AayT9f5AnAPV4VWuJaOl
+        ZmulsrtP9+MGmM3ufGV8+5FySVLXfKQcxx0h54pSmjlVnleDSBhf5s45FN/e/gH+BM0/9Q0AAA==
     headers:
       Cache-Control:
       - no-cache
@@ -360,11 +451,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:46:18 GMT
+      - Sun, 02 Feb 2020 22:20:17 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:46:18 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:20:16 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -375,7 +466,7 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - /Lq4EjXKMzRKp9qa/TaJTTVqSY3uTwQpdi8SFIU3firYrLG0qdPC+ksTJBROerQS
+      - 2VXDwI2pcuhRZeQ6xt/fJh1koMYSfGcgQg5wAzgLqeh10Zf5/W946U7T5w6SEIhy
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -399,7 +490,7 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: DELETE
-    uri: https://api.datadoghq.com/api/v1/tags/hosts/test.tags.host1580517956.292371?source=datadog
+    uri: https://api.datadoghq.com/api/v1/tags/hosts/test.tags.host1580682004.155186?source=datadog
   response:
     body:
       string: ''
@@ -417,18 +508,18 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:46:18 GMT
+      - Sun, 02 Feb 2020 22:20:17 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:46:18 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:20:17 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - OxP+mFpjAbASiVhNf+t4MttAs95ZlMiGosIRnYJJGFoApNgv2oxtdzpnmNlMOki6
+      - 3OCRM/4FZbkllI4iloi1acHDABD1SJi2aj2fysEPLLsOVOk5Ki6mi6IOsVG7JIay
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:

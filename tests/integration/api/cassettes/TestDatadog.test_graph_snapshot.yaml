@@ -13,14 +13,14 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: GET
-    uri: https://api.datadoghq.com/api/v1/graph/snapshot?end=1580518095&metric_query=system.load.1%7B%2A%7D&start=1580514495
+    uri: https://api.datadoghq.com/api/v1/graph/snapshot?end=1580682125&metric_query=system.load.1%7B%2A%7D&start=1580678525
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA12Oyw6CMBREf8XcpZG+wKr8ihhSuRcwAVvaoiGEf7cu3LibmZxMzgqdN66vkVoo
-        Ya3A0zRTiKGCcndNffqGCsISIo1ssAaZXPdbBdttgwOEp3Ght7Ge/ZAO+hhdKDl3DE00aLt+Yo0d
-        +Q/jrwe9OWL2G0LmvEVufVfnSp5lzpVQIhMqE5JTcVKqUULkGqWmQt51rk8ai8Iczblt6GKOCWiZ
-        e3bJZaToH02d/P2SXP6VYfsABclUnu0AAAA=
+        H4sIAAAAAAAAA12OTQ6CMBSEr2Le0kj/sAhcRQwpfQVMwJa2agjh7taFG5NZzEwmk2+DwSs3tmh6
+        qGFrwJvlaUIMDdSHa8rL1zQQ1hDNTCarkPDtuDew33Y4QXgoF0Yb26ef0sEYows1pY6gigrtMC5E
+        25n+ZvR1N2+KmP2KkDlvkVo/tLngJc+pYIJlTCRRrKSUvCgldhyx1H0uLqxS5y4vKq20KPuLLFAy
+        4h5DYplN9HfdJn6/JpZ/ZNg/yymKTu0AAAA=
     headers:
       Cache-Control:
       - no-cache
@@ -35,11 +35,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:48:15 GMT
+      - Sun, 02 Feb 2020 22:22:05 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:48:15 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:22:05 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -50,7 +50,7 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - fFk0sZgwwse+ZeEmqVGZPgcNG+SDXdM7Y74n6iOGuvoZenvaYEqZOvpOSMu1XDXx
+      - ucJMu0SEwqvJ36fqkYRsP+glKObktTtdBf6X17lKXJ4+xOn7nFKnx11beu1ycofn
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -62,7 +62,7 @@ interactions:
       X-RateLimit-Remaining:
       - '59'
       X-RateLimit-Reset:
-      - '705'
+      - '2275'
     status:
       code: 200
       message: OK
@@ -80,14 +80,14 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: GET
-    uri: https://api.datadoghq.com/api/v1/graph/snapshot?end=1580518095&event_query=%2A&metric_query=system.load.1%7B%2A%7D&start=1580514495
+    uri: https://api.datadoghq.com/api/v1/graph/snapshot?end=1580682125&event_query=%2A&metric_query=system.load.1%7B%2A%7D&start=1580678525
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA12PS47CMBBErzLqJSL+Zcb5XIWgqLGbBInEjm1AKMrdMQtYzK7rqVR6vcIQ0I+9
-        pTO0sHYQaLlRTLGD9ueQ8/I+OojPmGhiV4eWyXW3dbAdN9hDnNHH0aX+Fq55YEzJx5ZzzywmtG4Y
-        F2bcxD81fr/Qg1tbfEAsfHCWuzD0pZK1LLkSShRCFULyP6TaNLVq8FeVJy0rgQax1kbJc6P0qSqt
-        0bqSzM9DdqE7zanP+uGZVXaZTJTCxXzR/ydgewFEzd3j/wAAAA==
+        H4sIAAAAAAAAA12Py47CMAxFfwV5iWheFBL6K3RUZWK3RaJNmgQQqvrvk1kwi5G8uD6yro5XGKIN
+        Y4fUQwNrC5GWB6WcWmh217Ivv6GF9E6ZJnb3Fplc91sL29cGB0izDWn0uXvEeykYcw6p4TwwtNmi
+        H8aFOT/xzxl/3ujFEasPSFWIHrmPQ3dU0sgjV0KJSqgyXBj5bYQQrj9rJ2tJur6oGk9Kk7pI3aMW
+        zp6MYWEeigs9ac5d0Y/vorIvZKIcb+4P/X8Cth8n8KlQ/wAAAA==
     headers:
       Cache-Control:
       - no-cache
@@ -102,11 +102,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:48:15 GMT
+      - Sun, 02 Feb 2020 22:22:06 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:48:15 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:22:06 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -114,138 +114,6 @@ interactions:
       - chunked
       Vary:
       - Accept-Encoding
-      X-Content-Type-Options:
-      - nosniff
-      X-DD-Debug:
-      - vwiIwb5QepaQFIQrmPfIwwVWkQ/z0inFQwNEDjqDDy4v3CsF5qbv9dnyfb7UGzLf
-      X-DD-VERSION:
-      - '35.2129440'
-      X-Frame-Options:
-      - SAMEORIGIN
-      X-RateLimit-Limit:
-      - '60'
-      X-RateLimit-Period:
-      - '3600'
-      X-RateLimit-Remaining:
-      - '58'
-      X-RateLimit-Reset:
-      - '705'
-    status:
-      code: 200
-      message: OK
-- request:
-    body: null
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Cookie:
-      - DD-PSHARD=233
-      User-Agent:
-      - python-requests/2.22.0
-    method: GET
-    uri: https://api.datadoghq.com/api/v1/graph/snapshot?end=1580518095&graph_def=%7B%22viz%22%3A+%22toplist%22%2C+%22requests%22%3A+%5B%7B%22q%22%3A+%22top%28system.disk.free%7B%2A%7D+by+%7Bdevice%7D%2C+10%2C+%27mean%27%2C+%27desc%27%29%22%2C+%22style%22%3A+%7B%22palette%22%3A+%22dog_classic%22%7D%2C+%22conditional_formats%22%3A+%5B%7B%22palette%22%3A+%22red%22%2C+%22comparator%22%3A+%22%3E%22%2C+%22value%22%3A+50000000000%7D%2C+%7B%22palette%22%3A+%22green%22%2C+%22comparator%22%3A+%22%3E%22%2C+%22value%22%3A+30000000000%7D%5D%7D%5D%7D&start=1580514495
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA42Q226DMAyGXwXlptsEJBy6Qy/2IqNCTmIgGpA0SZk6xLsvLWp3uFpuLNt/Pv/2
-        TFoLpqslNmRH5opM6rMiu6giXpteOV+ROCQWD0d03p1bb0F1uGnu3Ml5HFKp3HvaWMT5YYn4KZol
-        TkrgEkcZi6PNgDBuQpToxOZ+hTp/6vEMCkADPXp/ySoidVuLHpxToiKBUBGhR6m80iP0daPtAN9W
-        fv20KFe20IMBC17bFfm6lifoj5chW3Z7YcBfA23YY/wfqPgB2i/7hcTEjWBcp319tH04aue9cTtK
-        TSrBQ9itO6TBHr3K6KTwg0qZXAsuMVZLqm1bF3n2nBU0ZzlLWJ6wjOZS8Izz8umRlfm2gAwQGhAl
-        iIZjhpwXL0yIkqdmbMnyBeqj23LfAQAA
-    headers:
-      Cache-Control:
-      - no-cache
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Security-Policy:
-      - frame-ancestors 'self'; report-uri https://api.datadoghq.com/csp-report
-      Content-Type:
-      - application/json
-      DD-POOL:
-      - dogweb
-      Date:
-      - Sat, 01 Feb 2020 00:48:15 GMT
-      Pragma:
-      - no-cache
-      Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:48:15 GMT;
-        secure; HttpOnly
-      Strict-Transport-Security:
-      - max-age=15724800;
-      Transfer-Encoding:
-      - chunked
-      Vary:
-      - Accept-Encoding
-      X-Content-Type-Options:
-      - nosniff
-      X-DD-Debug:
-      - o1rjyOSbDnvYaQgtO33vwWSNsIwHafzLqam2amG/PbTP69SVY965ZpWutdoYJB30
-      X-DD-VERSION:
-      - '35.2129440'
-      X-Frame-Options:
-      - SAMEORIGIN
-      X-RateLimit-Limit:
-      - '60'
-      X-RateLimit-Period:
-      - '3600'
-      X-RateLimit-Remaining:
-      - '57'
-      X-RateLimit-Reset:
-      - '705'
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{}'
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/json
-      Cookie:
-      - DD-PSHARD=233
-      User-Agent:
-      - python-requests/2.22.0
-    method: GET
-    uri: https://api.datadoghq.com/api/v1/graph/snapshot_status/dd-snapshots-prod/org_321813/2020-02-01/2dcb1bb47604253a1aeafac4acfbe1ebb390cc4b
-  response:
-    body:
-      string: '{"status_code":200}'
-    headers:
-      Cache-Control:
-      - no-cache
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '19'
-      Content-Security-Policy:
-      - frame-ancestors 'self'; report-uri https://api.datadoghq.com/csp-report
-      Content-Type:
-      - application/json
-      DD-POOL:
-      - dogweb
-      Date:
-      - Sat, 01 Feb 2020 00:48:26 GMT
-      Pragma:
-      - no-cache
-      Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:48:26 GMT;
-        secure; HttpOnly
-      Strict-Transport-Security:
-      - max-age=15724800;
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
@@ -254,130 +122,6 @@ interactions:
       - '35.2129440'
       X-Frame-Options:
       - SAMEORIGIN
-    status:
-      code: 200
-      message: OK
-- request:
-    body: null
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      User-Agent:
-      - python-requests/2.22.0
-    method: GET
-    uri: https://api.datadoghq.com/api/v1/graph/snapshot?end=1580679081&metric_query=system.load.1%7B%2A%7D&start=1580675481
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA12OQQqDMBREr1L+stTEmKZVr1KLxOSrBTUxiS0i3r3pwk1hFjPDMLwNOidtX2ts
-        oYStAofzgj74CsrTI+b5Zyrwqw84ksFITdh23ivYnztcwE/S+t6EenFDPOhDsL6k1BItg9Sm62ei
-        zEiPGX2/8EO1To7CJ9YZTY3rap6xnHGapVmapFkUVdg0ggudX3khBOYtvxeyaG9CxWWDQokYkHFi
-        py6yjBjcS9WR362R5R8Z9i+Lj/aa7QAAAA==
-    headers:
-      Cache-Control:
-      - no-cache
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Security-Policy:
-      - frame-ancestors 'self'; report-uri https://api.datadoghq.com/csp-report
-      Content-Type:
-      - application/json
-      DD-POOL:
-      - dogweb
-      Date:
-      - Sun, 02 Feb 2020 21:31:22 GMT
-      Pragma:
-      - no-cache
-      Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 21:31:22 GMT;
-        secure; HttpOnly
-      Strict-Transport-Security:
-      - max-age=15724800;
-      Transfer-Encoding:
-      - chunked
-      Vary:
-      - Accept-Encoding
-      X-Content-Type-Options:
-      - nosniff
-      X-DD-Debug:
-      - ldNaA6dSEPDapjFoBolZNm9KKT/3iEJM/Q1IyMe2D0P7l2S/rGI4bTGzxgP0/9Zs
-      X-DD-VERSION:
-      - '35.2129440'
-      X-Frame-Options:
-      - SAMEORIGIN
-      X-RateLimit-Limit:
-      - '60'
-      X-RateLimit-Period:
-      - '3600'
-      X-RateLimit-Remaining:
-      - '59'
-      X-RateLimit-Reset:
-      - '1718'
-    status:
-      code: 200
-      message: OK
-- request:
-    body: null
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Cookie:
-      - DD-PSHARD=233
-      User-Agent:
-      - python-requests/2.22.0
-    method: GET
-    uri: https://api.datadoghq.com/api/v1/graph/snapshot?end=1580679081&event_query=%2A&metric_query=system.load.1%7B%2A%7D&start=1580675481
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA12Pyw6CMBBFf8XM0khfqBR+RQwpzAgmQktbNYbw79aFLkxmcedkcnNmgd4bNzRI
-        F6hgqcHTfKcQQw3V5pT2+RNqCK8QaWQ3a5DJZbvWsJ5X2EGYjAuDjc3d31LBEKMLFeeOoYkGbT/M
-        rLMj/57xx5WeHDH7gpA5b5Fb3ze5klrmXAklMqHScFkeqOgE5WKvymOhurYt9RG1xJbag9aKCqMk
-        SeamPrnQg6bYJH3/SirbREaK/tr90P8TsL4BaYmAkf8AAAA=
-    headers:
-      Cache-Control:
-      - no-cache
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Security-Policy:
-      - frame-ancestors 'self'; report-uri https://api.datadoghq.com/csp-report
-      Content-Type:
-      - application/json
-      DD-POOL:
-      - dogweb
-      Date:
-      - Sun, 02 Feb 2020 21:31:22 GMT
-      Pragma:
-      - no-cache
-      Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 21:31:22 GMT;
-        secure; HttpOnly
-      Strict-Transport-Security:
-      - max-age=15724800;
-      Transfer-Encoding:
-      - chunked
-      Vary:
-      - Accept-Encoding
-      X-Content-Type-Options:
-      - nosniff
-      X-DD-Debug:
-      - MZCX71FNdAUQ6AMWRBKW1fkNpiPTypOoXE57zLYE3lG5gigqB2nroYJ/8uMn9muy
-      X-DD-VERSION:
-      - '35.2129440'
-      X-Frame-Options:
-      - SAMEORIGIN
       X-RateLimit-Limit:
       - '60'
       X-RateLimit-Period:
@@ -385,7 +129,7 @@ interactions:
       X-RateLimit-Remaining:
       - '58'
       X-RateLimit-Reset:
-      - '1718'
+      - '2274'
     status:
       code: 200
       message: OK
@@ -403,16 +147,16 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: GET
-    uri: https://api.datadoghq.com/api/v1/graph/snapshot?end=1580679081&graph_def=%7B%22requests%22%3A+%5B%7B%22conditional_formats%22%3A+%5B%7B%22comparator%22%3A+%22%3E%22%2C+%22palette%22%3A+%22red%22%2C+%22value%22%3A+50000000000%7D%2C+%7B%22comparator%22%3A+%22%3E%22%2C+%22palette%22%3A+%22green%22%2C+%22value%22%3A+30000000000%7D%5D%2C+%22q%22%3A+%22top%28system.disk.free%7B%2A%7D+by+%7Bdevice%7D%2C+10%2C+%27mean%27%2C+%27desc%27%29%22%2C+%22style%22%3A+%7B%22palette%22%3A+%22dog_classic%22%7D%7D%5D%2C+%22viz%22%3A+%22toplist%22%7D&start=1580675481
+    uri: https://api.datadoghq.com/api/v1/graph/snapshot?end=1580682125&graph_def=%7B%22requests%22%3A+%5B%7B%22conditional_formats%22%3A+%5B%7B%22comparator%22%3A+%22%3E%22%2C+%22palette%22%3A+%22red%22%2C+%22value%22%3A+50000000000%7D%2C+%7B%22comparator%22%3A+%22%3E%22%2C+%22palette%22%3A+%22green%22%2C+%22value%22%3A+30000000000%7D%5D%2C+%22q%22%3A+%22top%28system.disk.free%7B%2A%7D+by+%7Bdevice%7D%2C+10%2C+%27mean%27%2C+%27desc%27%29%22%2C+%22style%22%3A+%7B%22palette%22%3A+%22dog_classic%22%7D%7D%5D%2C+%22viz%22%3A+%22toplist%22%7D&start=1580678525
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4WQ0W6DMAxFfwXlpdtESYCitX3Yj4wJhcRAtEDSOGXqEP++FNSq28uiSFau7Xvs
-        TKR13HaVhIYcyVQSB6czoMeSHKP38BZmkMorM3BdNcb1/DHVW+64N+5aXJK3ksQhWK7Be1g1B3JV
-        R67Pi1aw+5njaCH8b9M6gOGPUf5g9HEFn1akN/YJL+ihT6TCz6QJvdPLHNWXaJIwKgGBm7I42vTA
-        h02IElBsnld79Be9zBkm+7WJNG0lNEdUoiTzvBBH9X1naoU+JEhMcOAWO+Ors9PhUzvvLR4ptYnk
-        ngeb7pSEnemtjI4KvqiU25uAW+uMpMa1VZ6l+zSnGcvYlmXh0iaXQjBIX5u6hv2uPhQCdqJhwFgB
-        u4OQORTApUjs0JL5B9w7Q67fAQAA
+        H4sIAAAAAAAAA4WQ0W6DMAxFfwXlpdtECaSipX3Yj4wJmcRAtEDSJGXqEP++FNRq28uiSFau7Xvs
+        TKS1YLpKYENOZCqJxfMFnXclOUVv4c31IKSXegBVNdr28DPVG7Dgtb0Vl+S1JHEIBhR6j6tmUazq
+        COqyaHn6OHMcLYT/bVqLOPwx2v0wer+BzyvSa/Pkrs5jnwjpPpIm9E4vc1Rfo0ngKDkGbpbG0aZH
+        GDYhCnR887zaO39Vy5xhsl+bCN1WXIFzkpdknhfiKL8eTCWdDwkSEzeAcZ321cWq8Kmd98adKDWJ
+        AA/BpjsnYWd6L6OjxE8qxPYuuK2xWlBt22rHsiLbUZaydJuycClieszzeg+85gXwwz7DnLGmwPrQ
+        HAUvEDJ+SNkxMUNL5m/AsJPz3wEAAA==
     headers:
       Cache-Control:
       - no-cache
@@ -427,11 +171,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sun, 02 Feb 2020 21:31:22 GMT
+      - Sun, 02 Feb 2020 22:22:06 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 21:31:22 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:22:06 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -442,7 +186,7 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - BQaWiIhDCyK3JbvyPZudxtMuoedbvOKE6tb5GJMfo6GT4EOQ8qx9lqgA4UCxp88q
+      - Wn01ZjXucAfzJfwvKAkpy0yFfNtHyWu4ZB2aA4ZDwwhXkyLHirYeUNsx208dZz9p
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -454,208 +198,7 @@ interactions:
       X-RateLimit-Remaining:
       - '57'
       X-RateLimit-Reset:
-      - '1718'
-    status:
-      code: 200
-      message: OK
-- request:
-    body: null
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      User-Agent:
-      - python-requests/2.22.0
-    method: GET
-    uri: https://api.datadoghq.com/api/v1/graph/snapshot?end=1580679105&metric_query=system.load.1%7B%2A%7D&start=1580675505
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA12OTQ6CMBSEr2Le0kj/EASuIqZ50BZIwJa2agzh7taFG5NZzEwmk2+DwaMbpdIG
-        Gtha8Hp96BBDC83hmvL6NS2Ed4h6IbNFRfh23FvYbzucINzRhdFG+fBzOhhjdKGh1BGFEZUdxpX0
-        dqG/GX1O+kWVyn5FyJy3ilo/yFzwiudUMMEyJpJoVQrGOlZ03bmuL7lBIXLOsUdjSo3lpVCmKk1t
-        iLsPiWXR0U+9TPz+nVj+kWH/AMyO5S/tAAAA
-    headers:
-      Cache-Control:
-      - no-cache
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Security-Policy:
-      - frame-ancestors 'self'; report-uri https://api.datadoghq.com/csp-report
-      Content-Type:
-      - application/json
-      DD-POOL:
-      - dogweb
-      Date:
-      - Sun, 02 Feb 2020 21:31:46 GMT
-      Pragma:
-      - no-cache
-      Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 21:31:46 GMT;
-        secure; HttpOnly
-      Strict-Transport-Security:
-      - max-age=15724800;
-      Transfer-Encoding:
-      - chunked
-      Vary:
-      - Accept-Encoding
-      X-Content-Type-Options:
-      - nosniff
-      X-DD-Debug:
-      - fGPsEOteKPqWrypJlOWIRpMZD2l0VjpTiFY5o5e56+jFb+ShdPzcenDH6s8Ah62s
-      X-DD-VERSION:
-      - '35.2129440'
-      X-Frame-Options:
-      - SAMEORIGIN
-      X-RateLimit-Limit:
-      - '60'
-      X-RateLimit-Period:
-      - '3600'
-      X-RateLimit-Remaining:
-      - '56'
-      X-RateLimit-Reset:
-      - '1694'
-    status:
-      code: 200
-      message: OK
-- request:
-    body: null
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Cookie:
-      - DD-PSHARD=233
-      User-Agent:
-      - python-requests/2.22.0
-    method: GET
-    uri: https://api.datadoghq.com/api/v1/graph/snapshot?end=1580679105&event_query=%2A&metric_query=system.load.1%7B%2A%7D&start=1580675505
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA12PQQ6CMBBFr2JmSaQtUApyFTGk0AFMhJa2agjh7tYFLkxm8edl8vNmg8FKMzYK
-        e6hgq8Hi8kTnXQ3V6Rr25RtqcKvzOJGHlookW7TXsN92OIObpXGj9s3TPkLB6L1xFaWGKOml0sO4
-        kE5P9Dijrzu+qVLxAVxsrFZU26HJ0qRMMpqylMUsDUMFyySqXgrORXlhXcdEwdu8YL3k+aUv2lww
-        niUlMfMQXPCFs2+Cvl2DShTIhN7eux/6fwL2D68xYfv/AAAA
-    headers:
-      Cache-Control:
-      - no-cache
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Security-Policy:
-      - frame-ancestors 'self'; report-uri https://api.datadoghq.com/csp-report
-      Content-Type:
-      - application/json
-      DD-POOL:
-      - dogweb
-      Date:
-      - Sun, 02 Feb 2020 21:31:46 GMT
-      Pragma:
-      - no-cache
-      Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 21:31:46 GMT;
-        secure; HttpOnly
-      Strict-Transport-Security:
-      - max-age=15724800;
-      Transfer-Encoding:
-      - chunked
-      Vary:
-      - Accept-Encoding
-      X-Content-Type-Options:
-      - nosniff
-      X-DD-Debug:
-      - OdMYjD4Lcx2EOYJ2NSqLNRIyMqxNYyUQxCcT6zY9ZmZ+zl9yipXz0nuLjH5hVxTY
-      X-DD-VERSION:
-      - '35.2129440'
-      X-Frame-Options:
-      - SAMEORIGIN
-      X-RateLimit-Limit:
-      - '60'
-      X-RateLimit-Period:
-      - '3600'
-      X-RateLimit-Remaining:
-      - '55'
-      X-RateLimit-Reset:
-      - '1694'
-    status:
-      code: 200
-      message: OK
-- request:
-    body: null
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Cookie:
-      - DD-PSHARD=233
-      User-Agent:
-      - python-requests/2.22.0
-    method: GET
-    uri: https://api.datadoghq.com/api/v1/graph/snapshot?end=1580679105&graph_def=%7B%22requests%22%3A+%5B%7B%22conditional_formats%22%3A+%5B%7B%22comparator%22%3A+%22%3E%22%2C+%22palette%22%3A+%22red%22%2C+%22value%22%3A+50000000000%7D%2C+%7B%22comparator%22%3A+%22%3E%22%2C+%22palette%22%3A+%22green%22%2C+%22value%22%3A+30000000000%7D%5D%2C+%22q%22%3A+%22top%28system.disk.free%7B%2A%7D+by+%7Bdevice%7D%2C+10%2C+%27mean%27%2C+%27desc%27%29%22%2C+%22style%22%3A+%7B%22palette%22%3A+%22dog_classic%22%7D%7D%5D%2C+%22viz%22%3A+%22toplist%22%7D&start=1580675505
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA4WQ0W6DMAxFfwXlpdtESQiraPuwHxkTMsRAtEDSJGXqEP++FNSq28uiSFau7Xvs
-        TKS1YLpSYEOOZCqIxdMZnXcFOUbv4V3rQUgv9QCqbLTt4THVG7Dgtb0WF+StIHEIBhR6j6tmUazq
-        COq8aDt2P3McLYT/bVqLOPwxyh6MPq7g04r02jy5i/PYJ0K6z6QJvdPLHFWXaBI4yhoDN2VxtOkR
-        hk2IAl29eV7tnb+oZc4w2a9NhG7LWoFzsi7IPC/EUX7fmUo6HxIkJm4A4zrty7NV4VM77407UmoS
-        AR6CTXdKws70VkZHiV9UiO1NcFtjtaDatmXG032aUc442zIeLkWsci5YxWGPLM32jL9Cioe8wQrE
-        IW3Sg2A8b3aJGVoy/wAzK/F93wEAAA==
-    headers:
-      Cache-Control:
-      - no-cache
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Security-Policy:
-      - frame-ancestors 'self'; report-uri https://api.datadoghq.com/csp-report
-      Content-Type:
-      - application/json
-      DD-POOL:
-      - dogweb
-      Date:
-      - Sun, 02 Feb 2020 21:31:46 GMT
-      Pragma:
-      - no-cache
-      Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 21:31:46 GMT;
-        secure; HttpOnly
-      Strict-Transport-Security:
-      - max-age=15724800;
-      Transfer-Encoding:
-      - chunked
-      Vary:
-      - Accept-Encoding
-      X-Content-Type-Options:
-      - nosniff
-      X-DD-Debug:
-      - vlc9b/rJPByGsV/acj3ScS7B1lo9nEAbSgYCfkl0GH3egry4iXeiGBP0WX8DpJ/T
-      X-DD-VERSION:
-      - '35.2129440'
-      X-Frame-Options:
-      - SAMEORIGIN
-      X-RateLimit-Limit:
-      - '60'
-      X-RateLimit-Period:
-      - '3600'
-      X-RateLimit-Remaining:
-      - '54'
-      X-RateLimit-Reset:
-      - '1694'
+      - '2274'
     status:
       code: 200
       message: OK
@@ -677,7 +220,7 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: GET
-    uri: https://api.datadoghq.com/api/v1/graph/snapshot_status/dd-snapshots-prod/org_321813/2020-02-02/eeb72d0b2a8e0138024a1e97febad91f19d027f5
+    uri: https://api.datadoghq.com/api/v1/graph/snapshot_status/dd-snapshots-prod/org_321813/2020-02-02/ee0955b6acbc8ac761e522f8eb7f9dc8ea1c7029
   response:
     body:
       string: '{"status_code":200}'
@@ -695,18 +238,18 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sun, 02 Feb 2020 21:31:56 GMT
+      - Sun, 02 Feb 2020 22:22:16 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 21:31:56 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:22:16 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - 2VXDwI2pcuhRZeQ6xt/fJh1koMYSfGcgQg5wAzgLqeh10Zf5/W946U7T5w6SEIhy
+      - zgs4/R8U39Dx88K274ycCG8gmotK2r1yjyecTfeITqBuGEc/zW9V1MMOyMl9URns
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:

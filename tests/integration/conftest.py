@@ -58,12 +58,8 @@ def freezer(vcr_cassette_name, vcr_cassette, vcr):
             "r",
         ) as f:
             freeze_at = f.readline().strip()
-            dt = parser.isoparse(freeze_at)
-            tz_minutes = dt.tzinfo.utcoffset(dt).seconds / 60
-            os.environ['TZ'] =  "UTC%+03d:%02d" % (
-                int( tz_minutes / 60), tz_minutes % 60
-            )
-            time.tzset()
+            # parse as timezone aware format
+            freeze_at = parser.isoparse(freeze_at)
 
     return freeze_time(freeze_at)
 
@@ -71,7 +67,16 @@ def freezer(vcr_cassette_name, vcr_cassette, vcr):
 @pytest.fixture
 def dog(api, vcr_cassette):
     """Record communication with Datadog API."""
+    from datadog.util.compat import is_p3k
+    if not is_p3k() and vcr_cassette.record_mode != "all":
+        pytest.skip("Can not replay responses on Python 2")
+
+    old_host_name = api._host_name
+    api._host_name = "test.host"
+
     yield api
+
+    api._host_name = old_host_name
 
 
 @pytest.fixture

@@ -1,7 +1,7 @@
 interactions:
 - request:
-    body: '{"check": "check_pg", "host_name": "host0", "status": 1, "message": "PG
-      is WARNING", "tags": ["db:prod_data"]}'
+    body: '{"check": "check_pg", "host_name": "host0", "message": "PG is WARNING",
+      "status": 1, "tags": ["db:prod_data"]}'
     headers:
       Accept:
       - '*/*'
@@ -34,7 +34,7 @@ interactions:
       DD-POOL:
       - propjoe
       Date:
-      - Sat, 01 Feb 2020 00:49:23 GMT
+      - Sun, 02 Feb 2020 22:22:53 GMT
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:

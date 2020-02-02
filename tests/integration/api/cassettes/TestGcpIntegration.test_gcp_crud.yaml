@@ -1,10 +1,10 @@
 interactions:
 - request:
-    body: '{"type": "service_account", "project_id": "datadog-apitest", "private_key_id":
-      "fake_private_key_id", "private_key": "fake_key", "client_email": "api-dev@datadog-sandbox.iam.gserviceaccount.com",
-      "client_id": "123456712345671234567", "auth_uri": "fake_uri", "token_uri": "fake_uri",
-      "auth_provider_x509_cert_url": "fake_url", "client_x509_cert_url": "fake_url",
-      "host_filters": "api:test"}'
+    body: '{"auth_provider_x509_cert_url": "fake_url", "auth_uri": "fake_uri", "client_email":
+      "api-dev@datadog-sandbox.iam.gserviceaccount.com", "client_id": "123456712345671234567",
+      "client_x509_cert_url": "fake_url", "host_filters": "api:test", "private_key":
+      "fake_key", "private_key_id": "fake_private_key_id", "project_id": "datadog-apitest",
+      "token_uri": "fake_uri", "type": "service_account"}'
     headers:
       Accept:
       - '*/*'
@@ -39,18 +39,18 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:51:26 GMT
+      - Sun, 02 Feb 2020 22:24:54 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:51:26 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:24:54 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - v8lEj/pYmsavh1I0Db6FT/BAvLdOdAv91ctM9ImcmfZ/KHrCACXEdhuskTCPihd+
+      - RbevWUvO2oQYYDnX/G1lndTh/kTt+ebFIvajU6/3Ivb5c6aUQf49/uD1ICaXyx52
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -59,8 +59,8 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"project_id": "datadog-apitest", "client_email": "api-dev@datadog-sandbox.iam.gserviceaccount.com",
-      "host_filters": "api:test2", "automute": true}'
+    body: '{"automute": true, "client_email": "api-dev@datadog-sandbox.iam.gserviceaccount.com",
+      "host_filters": "api:test2", "project_id": "datadog-apitest"}'
     headers:
       Accept:
       - '*/*'
@@ -95,18 +95,18 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:51:26 GMT
+      - Sun, 02 Feb 2020 22:24:55 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:51:26 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:24:54 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - FkKIRCzyOlcTfevOWu/Pn0jzNwYGEOKsDSSLLIk1UH0umdv3B3q8BoRMqfK8ce37
+      - btzHvL7Rg/f/n1wMP2CFVXsuErrwOO9p2hvsBofLQbxzRkmZbfvXcB18pURNtIOI
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -149,69 +149,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:51:27 GMT
+      - Sun, 02 Feb 2020 22:24:55 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:51:26 GMT;
-        secure; HttpOnly
-      Strict-Transport-Security:
-      - max-age=15724800;
-      Transfer-Encoding:
-      - chunked
-      Vary:
-      - Accept-Encoding
-      X-Content-Type-Options:
-      - nosniff
-      X-DD-Debug:
-      - Z91NUpPIZnIQ9h7lBFWBkEPGVUEsn4/i71imPPwrChu4RPI5uNM5HGuodISK1HBR
-      X-DD-VERSION:
-      - '35.2129440'
-      X-Frame-Options:
-      - SAMEORIGIN
-    status:
-      code: 200
-      message: OK
-- request:
-    body: null
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Cookie:
-      - DD-PSHARD=233
-      User-Agent:
-      - python-requests/2.22.0
-    method: GET
-    uri: https://api.datadoghq.com/api/v1/integration/gcp
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAAzWNMQ7DIAxF7+KZMHRk6j2iCLngpq4AR2CiSlHvXhi6/vf0/noBdpXclcBp7WTg
-        qPKmoJ4jOIioGGVf8GClpmAgJKainjJyGsIAS6Tz/hcblviQj2XMdm9UTw6EIUgvaoPkEaBapTZw
-        62bgJU39k5PSXGbMzZsbfLcfG/EYy5oAAAA=
-    headers:
-      Cache-Control:
-      - no-cache
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Security-Policy:
-      - frame-ancestors 'self'; report-uri https://api.datadoghq.com/csp-report
-      Content-Type:
-      - application/json
-      DD-POOL:
-      - dogweb
-      Date:
-      - Sat, 01 Feb 2020 00:51:28 GMT
-      Pragma:
-      - no-cache
-      Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:51:27 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:24:55 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -231,7 +173,66 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"project_id": "datadog-apitest", "client_email": "api-dev@datadog-sandbox.iam.gserviceaccount.com"}'
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Cookie:
+      - DD-PSHARD=233
+      User-Agent:
+      - python-requests/2.22.0
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/integration/gcp
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAzWNMQ7DIAxF7+KZMHRk6j2iCLngpq4AR2CiSlHvXhi6/vf0/noBdpXclcBp7WTg
+        qPKmoJ4jOIioGGVf8GClpmAgJKainjJyGsIAS6Tz/hcblviQj2XMdm9UTw6EIUgvaoPkEaBapTZw
+        62bgJU39k5PSXGbMzZsbfLcfG/EYy5oAAAA=
+    headers:
+      Cache-Control:
+      - no-cache
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Security-Policy:
+      - frame-ancestors 'self'; report-uri https://api.datadoghq.com/csp-report
+      Content-Type:
+      - application/json
+      DD-POOL:
+      - dogweb
+      Date:
+      - Sun, 02 Feb 2020 22:24:56 GMT
+      Pragma:
+      - no-cache
+      Set-Cookie:
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:24:56 GMT;
+        secure; HttpOnly
+      Strict-Transport-Security:
+      - max-age=15724800;
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Accept-Encoding
+      X-Content-Type-Options:
+      - nosniff
+      X-DD-Debug:
+      - oQ/oy4ezTZ+/WzL4afBMlDjLd5w62e5H15hF5BJChw1Gte+Sq8B8tB7i6vlTiLL0
+      X-DD-VERSION:
+      - '35.2129440'
+      X-Frame-Options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"client_email": "api-dev@datadog-sandbox.iam.gserviceaccount.com", "project_id":
+      "datadog-apitest"}'
     headers:
       Accept:
       - '*/*'
@@ -266,11 +267,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:51:28 GMT
+      - Sun, 02 Feb 2020 22:24:56 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:51:28 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:24:56 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -286,7 +287,8 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"project_id": "datadog-apitest", "client_email": "api-dev@datadog-sandbox.iam.gserviceaccount.com"}'
+    body: '{"client_email": "api-dev@datadog-sandbox.iam.gserviceaccount.com", "project_id":
+      "datadog-apitest"}'
     headers:
       Accept:
       - '*/*'
@@ -321,18 +323,18 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:51:28 GMT
+      - Sun, 02 Feb 2020 22:24:57 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:51:28 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:24:57 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - ErnxdXQi+pjNvJU00qnaaPgTN904IR+BI4NeCvSijs0uGcTaVMOpPOuObFW+gkC6
+      - tp1qdVxoUmtlsVp6hgBWraWfL5vEbA116VZkaWKWIZtgPr5Ima8zysCBv+o2WoZ/
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:

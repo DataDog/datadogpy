@@ -1,7 +1,7 @@
 interactions:
 - request:
-    body: '{"type": "metric alert", "query": "THIS IS A BAD QUERY", "options": {"thresholds":
-      {"critical": 200.0}}}'
+    body: '{"options": {"thresholds": {"critical": 200.0}}, "query": "THIS IS A BAD
+      QUERY", "type": "metric alert"}'
     headers:
       Accept:
       - '*/*'
@@ -36,7 +36,7 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:49:08 GMT
+      - Sun, 02 Feb 2020 22:22:43 GMT
       Pragma:
       - no-cache
       Strict-Transport-Security:
@@ -51,8 +51,8 @@ interactions:
       code: 400
       message: Bad Request
 - request:
-    body: '{"type": "metric alert", "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0}
-      > 200", "options": {"thresholds": {"critical": 90.0}}}'
+    body: '{"options": {"thresholds": {"critical": 90.0}}, "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0}
+      > 200", "type": "metric alert"}'
     headers:
       Accept:
       - '*/*'
@@ -88,7 +88,7 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:49:08 GMT
+      - Sun, 02 Feb 2020 22:22:43 GMT
       Pragma:
       - no-cache
       Strict-Transport-Security:
@@ -103,8 +103,8 @@ interactions:
       code: 400
       message: Bad Request
 - request:
-    body: '{"type": "metric alert", "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0}
-      > 200", "options": {"thresholds": {"critical": 200.0}}}'
+    body: '{"options": {"thresholds": {"critical": 200.0}}, "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0}
+      > 200", "type": "metric alert"}'
     headers:
       Accept:
       - '*/*'
@@ -139,18 +139,18 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:49:09 GMT
+      - Sun, 02 Feb 2020 22:22:43 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:49:08 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:22:43 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - wB7h0Rt2IYxDUBLtoJ4y0ZOq10ZaMdDZiRuFZ3d/FUUtC7gfBEZWTs0Y6dZhoLZS
+      - HtltRxB6FWULKbr8JD/35HKWhI+dqAFQg/rNpMbjeMOPUq5j5iWk+nIs8OwDOqUR
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:

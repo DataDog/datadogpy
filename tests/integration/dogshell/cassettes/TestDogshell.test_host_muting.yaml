@@ -1,8 +1,8 @@
 interactions:
 - request:
-    body: '{"series": [{"metric": "metric", "points": [[1580518370.687697, 1.0]],
-      "host": "my.test.hostd813dbe516fc02f04e7be8cbb19ed411", "device": null, "tags":
-      null, "type": null}]}'
+    body: '{"series": [{"device": null, "host": "my.test.hoste3095bdb84894af6cdd92cb7d9839658",
+      "metric": "metric", "points": [[1580682393.422749, 1.0]], "tags": null, "type":
+      null}]}'
     headers:
       Accept:
       - '*/*'
@@ -35,7 +35,7 @@ interactions:
       DD-POOL:
       - propjoe
       Date:
-      - Sat, 01 Feb 2020 00:52:51 GMT
+      - Sun, 02 Feb 2020 22:26:33 GMT
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:
@@ -59,7 +59,7 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: GET
-    uri: https://api.datadoghq.com/api/v1/tags/hosts/my.test.hostd813dbe516fc02f04e7be8cbb19ed411
+    uri: https://api.datadoghq.com/api/v1/tags/hosts/my.test.hoste3095bdb84894af6cdd92cb7d9839658
   response:
     body:
       string: '{"tags":[]}'
@@ -77,18 +77,18 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:53:11 GMT
+      - Sun, 02 Feb 2020 22:26:45 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:53:11 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:26:45 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - pEDVi2191MvoIMwusdL+COAxndBmcRhJtxAtWxDDnECWDI8Z99hIoBZbpR57tJKz
+      - bJj7D3RvHsKo+7eO3lrtPpPG0z8SsAwLw7bNfLb4htD+N9Ub8bD3AFgh45XaVsFM
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -97,7 +97,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"end": "1580521970", "message": "Muting this host for a test.", "override":
+    body: '{"end": "1580685993", "message": "Muting this host for a test.", "override":
       false}'
     headers:
       Accept:
@@ -115,13 +115,13 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: POST
-    uri: https://api.datadoghq.com/api/v1/host/my.test.hostd813dbe516fc02f04e7be8cbb19ed411/mute
+    uri: https://api.datadoghq.com/api/v1/host/my.test.hoste3095bdb84894af6cdd92cb7d9839658/mute
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAx3NWwrDIBCF4a3IPIfgmJiY7KFrKF4miQ8q1CmllO692tfDz3c+YD3HkmGH25Mp
-        wAChvDLHRPcYYF/VMikp0QxwlcrZJmppeo9Mlcc+BYNTcKRxObxUh5xpdWS8c7hRmBGbSLlJqI3U
-        CrdVDpCoVnt2qZ3GfAq+YhVdE0d5CCv+Onx/W+Jsd54AAAA=
+        H4sIAAAAAAAAAx3NQQqDMBCF4auEWYvY6iQZ79AzlOiMmkUSaKaUUnr3xm4fP9/7QFg1lgwz3J4q
+        DB1weWWNSe6RYXZXhxadxQ6OUjWHJC1N716lan9OMg6ECy9+8jSFza7MdF0Xx+RHsuibKLlJF/SD
+        9Ug0dpCk1rCfUjuNeTd6xGpOzWzlYYL56/D9AZNK0tWeAAAA
     headers:
       Cache-Control:
       - no-cache
@@ -136,11 +136,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:53:12 GMT
+      - Sun, 02 Feb 2020 22:26:45 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:53:11 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:26:45 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -151,7 +151,7 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - B/LXPck0nGNX0RSV/Gw7cnZ0oe92FUOfg1ec7WcU0kSvw/UBT+IXTFTD87Snvz2v
+      - QpzDmIoaO5Hufx014PqM5BuLw+G9k75nLqy12TEr4Iab1Fl7hIFT5DrERoBer8OF
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -160,7 +160,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"end": "1580522870", "message": null, "override": false}'
+    body: '{"end": "1580686893", "message": null, "override": false}'
     headers:
       Accept:
       - '*/*'
@@ -177,10 +177,10 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: POST
-    uri: https://api.datadoghq.com/api/v1/host/my.test.hostd813dbe516fc02f04e7be8cbb19ed411/mute
+    uri: https://api.datadoghq.com/api/v1/host/my.test.hoste3095bdb84894af6cdd92cb7d9839658/mute
   response:
     body:
-      string: '{"errors": ["host:my.test.hostd813dbe516fc02f04e7be8cbb19ed411 is already
+      string: '{"errors": ["host:my.test.hoste3095bdb84894af6cdd92cb7d9839658 is already
         muted. To mute this host with a different end timestamp,                             add
         ?override=true to your request."]}'
     headers:
@@ -197,7 +197,7 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:53:12 GMT
+      - Sun, 02 Feb 2020 22:26:46 GMT
       Pragma:
       - no-cache
       Strict-Transport-Security:
@@ -212,7 +212,7 @@ interactions:
       code: 400
       message: Bad Request
 - request:
-    body: '{"end": "1580522870", "message": null, "override": true}'
+    body: '{"end": "1580686893", "message": null, "override": true}'
     headers:
       Accept:
       - '*/*'
@@ -229,13 +229,13 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: POST
-    uri: https://api.datadoghq.com/api/v1/host/my.test.hostd813dbe516fc02f04e7be8cbb19ed411/mute
+    uri: https://api.datadoghq.com/api/v1/host/my.test.hoste3095bdb84894af6cdd92cb7d9839658/mute
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAxXMMQ6DMAxA0bt4Rsg2hATu0DNUJDZqhiQDRhWqevem69fX+8CeLLcKGzwuU4EB
-        pL2r5aLPLLB5XiZGZBzg1U6re9G+lns0PW38Jwk0SVRHy5GQD5zVRw0pRlpVZqIuau0SuYCOOXj8
-        /gByQTmSdQAAAA==
+        H4sIAAAAAAAAAxXMMQ7DIAxA0bt4jqI0BGPnDj1DBdhVGYAhrqqq6t1D1q+v94OYrfQGO9zfpgIT
+        SP80K1UfRWAPa/DoA+IEr35Yi1XHWr+z6WHzldQt7JMk2oi3+MQswmtOQZgco6chahvSzdOChMTu
+        fwKWurIqdQAAAA==
     headers:
       Cache-Control:
       - no-cache
@@ -250,11 +250,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:53:12 GMT
+      - Sun, 02 Feb 2020 22:26:46 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:53:12 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:26:46 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -265,7 +265,7 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - EE74ncTR989SomsonUvABJWdGDkXBs7Emqj3HVDpp6NYddpvHp95kXsnHux1Es9E
+      - j9H0Mt41m875GBjR2i9r831ZILGOU6+Jata5+JJkOQgIsO+SrMkmgWN80SCun0Sk
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -291,12 +291,12 @@ interactions:
       User-Agent:
       - python-requests/2.22.0
     method: POST
-    uri: https://api.datadoghq.com/api/v1/host/my.test.hostd813dbe516fc02f04e7be8cbb19ed411/unmute
+    uri: https://api.datadoghq.com/api/v1/host/my.test.hoste3095bdb84894af6cdd92cb7d9839658/unmute
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAxXKOw6AIAwA0Lt0NqTFP/dwNkJrZAAGa4wx3l1dX94NS9BYMjiYcjpUGCrgcmaN
-        SebI4Hrb1RbRYgVb2TUvSb6cLqOyq/mJB6rZS0vdGtCu2EjvZQje0yjcEMHzAuBW3h9mAAAA
+        H4sIAAAAAAAAAxXKMQ6AIAwAwL90NsaoFOo/nA3QGhmAwRpjjH9X18vd4KOmWmCCueRDhaEBrmfR
+        lGVJDJPtrUFjERvY6q7FZ/lyvlqVXdufZOjIBA5udDT6FSMz9TFYJjcQGgfPCy9QYjpmAAAA
     headers:
       Cache-Control:
       - no-cache
@@ -311,11 +311,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:53:13 GMT
+      - Sun, 02 Feb 2020 22:26:47 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:53:12 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:26:46 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -326,7 +326,7 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - Wn01ZjXucAfzJfwvKAkpy0yFfNtHyWu4ZB2aA4ZDwwhXkyLHirYeUNsx208dZz9p
+      - f5hY0MW4w2fhZz0SAfv1+LF9me92dJz6mowUerU7gZ8k/CpuQLqOWzykixb5WZaX
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:

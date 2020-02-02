@@ -7,4 +7,4 @@ import datetime
 
 def test_freezer(freezer):
     with freezer:
-        assert datetime.datetime.now().isoformat() == "2020-02-02T16:41:09.421981"
+        assert datetime.datetime.now() == freezer.time_to_freeze

@@ -1,7 +1,7 @@
 interactions:
 - request:
-    body: '{"check": "check_pg", "host_name": "host0", "status": 1, "timestamp": null,
-      "message": null, "tags": null}'
+    body: '{"check": "check_pg", "host_name": "host0", "message": null, "status":
+      1, "tags": null, "timestamp": null}'
     headers:
       Accept:
       - '*/*'
@@ -34,7 +34,7 @@ interactions:
       DD-POOL:
       - propjoe
       Date:
-      - Sat, 01 Feb 2020 00:53:16 GMT
+      - Sun, 02 Feb 2020 22:26:50 GMT
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:

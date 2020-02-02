@@ -9,6 +9,7 @@ import time
 
 import requests
 import pytest
+from vcr.matchers import method, scheme, host, port, path, query, body
 
 # datadog
 from datadog import initialize
@@ -71,12 +72,8 @@ class TestDatadog:
             dog.Tag.delete(hostname, source="datadog") is None
         )  # Expect no response body on success
 
-    @pytest.mark.skip
-    def test_events(self, vcr_cassette, dog, get_with_retry, freezer):
-        # needs a match by body
-        from vcr.matchers import method, scheme, host, port, path, query, body
-        vcr_cassette._match_on = (method, scheme, host, port, path, query, body)
-
+    @pytest.mark.vcr(match_on=("method", "scheme", "host", "port", "path", "body"))
+    def test_events(self, dog, get_with_retry, freezer):
         with freezer:
             now = datetime.datetime.now()
             now_ts = int(time.mktime(now.timetuple()))
@@ -140,7 +137,7 @@ class TestDatadog:
         assert events["events"], "No events found in stream"
         assert event_id in [event["id"] for event in events["events"]]
 
-    @pytest.mark.skip
+    # @pytest.mark.skip
     def test_comments(self, dog, get_with_retry, freezer):
         assert (
             TEST_USER is not None
@@ -217,7 +214,7 @@ class TestDatadog:
         assert len(results["results"]["hosts"]) > 0
         assert len(results["results"]["metrics"]) > 0
 
-    @pytest.mark.skip
+    # @pytest.mark.skip
     def test_metrics(self, dog, get_with_retry, freezer):
         with freezer:
             now = datetime.datetime.now()

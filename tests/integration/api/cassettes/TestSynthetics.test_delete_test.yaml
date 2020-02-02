@@ -1,9 +1,9 @@
 interactions:
 - request:
-    body: '{"config": {"assertions": [{"operator": "is", "type": "statusCode", "target":
-      200}], "request": {"method": "GET", "url": "https://example.com", "timeout":
-      300}}, "locations": ["aws:us-east-2"], "message": "Test API", "options": {"tick_every":
-      300}, "tags": ["test:synthetics_api"], "type": "api", "name": "Test with API"}'
+    body: '{"config": {"assertions": [{"operator": "is", "target": 200, "type": "statusCode"}],
+      "request": {"method": "GET", "timeout": 300, "url": "https://example.com"}},
+      "locations": ["aws:us-east-2"], "message": "Test API", "name": "Test with API",
+      "options": {"tick_every": 300}, "tags": ["test:synthetics_api"], "type": "api"}'
     headers:
       Accept:
       - '*/*'
@@ -24,12 +24,12 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA42RQU/DMAyF/wrKlXakKR0iN4QQ4sZhNzRVWeu1EWlTYmdjTPvvOFvHmVsSf+89
-        2zkKJEMRhRbO7kBkYoobZ5vatvyEmypXP7t8X5VcIdMx9yEIkDQeRuqBbIO1maxYZ8L5xpD145kx
-        e9QRczBIuUrVARBNB2y6YvnN0/sbO7bggKCtDQk9RucyMZrhj9lb6mdw8KMlH85dFdWyuC+k4oYO
-        U4JTfiaaAObqJZRUMpcql8VKSl0VunxYlGX1uFS3fJeS+cG3dmvn8P8IMG7mwJ5oSol+3NpO6KMI
-        8BV5qnSMwXFLiUB9dwffZpgcLBo/pEig3qe9vr6s0j7tAD6yqpTylAmDCOG6wKPwEwTDMzNuMdGX
-        YS/f9ezb9FdkQgdsoNhgzRZ+mvVHNm8+a9hBOFz8T79CLD5H6gEAAA==
+        H4sIAAAAAAAAA42RT0/DMAzFvwrKlXbLMjpBbgghxI3DbmiqstZrI9Kmi539UbXvjrN1nJFyiOLf
+        e892RoFkKKLQwtkDiEwMcetsVdqan5Zxl+O+yU9FzxUyDXPfggBJ47mnFshWWJrBik0mnK8MWd9f
+        GXNEHTEHg5SrVO0A0TTApmuWP7x+fbJjDQ4I6tKQ0H10LhO96f6Yo6V2AjvfW/Lh2tWiWKmnZ1Vw
+        Q+chwSk/E1UAc/cSSiqZS8VnrZRWhZar2UKy7uVRSi0l852v7c5O4f8RYNxOgS3RkBJ9v7ON0KMI
+        sI88VbrG4LilRKCez+FkusHBrPJdigRqfdrrx/s67dN24COrllJeMmEQIdwXOAo/QDA8M+MWE30b
+        9vZdb75Of0UmNMAGig02bOGHST+yefVTwgHC+eZ/+QWdVc/T6gEAAA==
     headers:
       Cache-Control:
       - no-cache
@@ -44,11 +44,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:51:37 GMT
+      - Sun, 02 Feb 2020 22:25:06 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:51:37 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:25:05 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -59,7 +59,7 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - x4m73yTAj65OpCjnvpw3RBJyiFQpkDOBZ7rE/UM6Q4o0837nUb4ZsWFNJUD0Xh0e
+      - e8t0cvW5uVKXk1zUsTcAcDpqv28dgy+lCs/R2sCfbKW6stomFiq2a4ijzxRdPBn5
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -68,11 +68,11 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"config": {"assertions": [{"operator": "is", "type": "statusCode", "target":
-      200}], "request": {"method": "GET", "url": "https://example.com", "timeout":
-      300}}, "locations": ["aws:us-east-2"], "message": "Test Browser", "options":
-      {"device_ids": ["laptop_large"], "tick_every": 900}, "tags": ["test:synthetics_browser"],
-      "type": "browser", "name": "Test with Browser"}'
+    body: '{"config": {"assertions": [{"operator": "is", "target": 200, "type": "statusCode"}],
+      "request": {"method": "GET", "timeout": 300, "url": "https://example.com"}},
+      "locations": ["aws:us-east-2"], "message": "Test Browser", "name": "Test with
+      Browser", "options": {"device_ids": ["laptop_large"], "tick_every": 900}, "tags":
+      ["test:synthetics_browser"], "type": "browser"}'
     headers:
       Accept:
       - '*/*'
@@ -93,12 +93,12 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA41Ry07DMBD8FbRXkuKkT3wEIX6gN1RFbrJNLJzY2OuGquq/s05bxJGb7Z0Zz86c
-        IZCiGECCUzFgAxm4uDe6rnTDj5t4zP16kY96xRNSLSM/gDCQDKeBOiRdh2rv7RjQwy4DY2tF2g4T
-        To1BxpCjCpSXadpjCKpFFt6yxMPLjZdBgwYJm0oRyCEak8Gg+l/cqKn7A+7toMn6yWGxXBWLQszZ
-        3Mklwt1LBrVHddeEUpQiF2Uuiq0QclnI+Xq2EuvNZvnIdyF4u942+qBvJv5DqO1w0C3IM3j8irxQ
-        OkZv2EVH5IJ8esJv1TuDs9r26QekzqZY39+2KU7do43MmgtxyUAFzvCe3RmsQ694TYbrkNDX/a59
-        vdoGp0J8iyxQssCOJay78c+c6FHXyBlNTRjlyLrKJHwqgmv7rPCI/gTymcmXHy82xe8JAgAA
+        H4sIAAAAAAAAA41Ry07DMBD8FbRXkmJMH9RHEOIHekNV5CbbxMWJjb1pqKL+O+u0RRyRfLC8M+PZ
+        mREiaeojKPC6j1hBBr7fWVMWpuLHAef54XDKD23HE9I1Iz+AMJKKp44aJFPGYhfcEDHANgPrSk3G
+        dRNOD1H1MUcdKZdp2mKMukYW3rDE3cuVl0GFFgmrQhOorrc2g063v7jBUPMH3LrOkAuTw8fFUs6f
+        5ZLNnXwi3LxkUAbUN02QQopcSD4bKZVcKLGczeVqtRb3QigheLvWVWZvrib+Qyhdtzc1qBECfvW8
+        ULr2wbKLhshH9fCA37r1Fmela9MPSI1Lsb6/bVKcpkXXM+tJiHMGOnKGt+xGcB6D5jUZbmJCX/a7
+        9PXqKpwKCTWygGSBLUs4f+WPnOjRlMgZTU1Y7cn5wiZ8KoJr+yzwiOEEas3k8w+bOFq1CQIAAA==
     headers:
       Cache-Control:
       - no-cache
@@ -113,11 +113,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:51:37 GMT
+      - Sun, 02 Feb 2020 22:25:06 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:51:37 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:25:06 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -128,7 +128,7 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - IWbeot5NPPjwzkLRJwJSrhKxooUYWPiItYmeOu7MvfpEU9kI8879nM2EukYnEnom
+      - L5yd3v29mZzDtdpTLB/OLdaP/nm856X8oKVK7IsHIbLmKRYkqq5Jv7+SBx/bs1VS
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -137,7 +137,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"public_ids": ["sb5-2zv-w53"]}'
+    body: '{"public_ids": ["3uf-sqg-x5n"]}'
     headers:
       Accept:
       - '*/*'
@@ -158,8 +158,8 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA6tWSknNSS1JTYkvSS0uKVayiq6GiySWKFkpGRkYGegaGOkaGIYYGFiZGloZm+tZ
-        GFkYmxtpA/kGBko6SgWlSTmZyfGZKUDlxUmmukZVZbrlpsZKtbG1AAxzHqpfAAAA
+        H4sIAAAAAAAAA6tWSknNSS1JTYkvSS0uKVayiq6GiySWKFkpGRkYGegaGAFRiJGRlZGplYGZnpmp
+        saWxqbaBgZWBgZKOUkFpUk5mcnxmClC5cWmabnFhum6FaZ5SbWwtAOUEBEZfAAAA
     headers:
       Cache-Control:
       - no-cache
@@ -174,11 +174,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:51:38 GMT
+      - Sun, 02 Feb 2020 22:25:06 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:51:37 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:25:06 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -189,7 +189,7 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - 2AZOmbSnS2o4jaTO55IoEgDi10r3ewUAnpo5XLuAFAThAxt0uvbRy8dZoSIDmBYA
+      - F11u7JCZTPrHz8VfzL5YeXThxcQSR6CdLGgk2tF52+EbYWhXciN8nv9vA8oQ9C9A
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -215,12 +215,12 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA5WRz07DMAzGXwX5Srul3b+SIwjxAruhqcpar41om5A4K1PFu+N0G+LKzbH9+2x/
-        mYDQkwf5PoEnRYFDsCp4rCEBG46drkpdc7II59Tt1umot1wh1URopqW/DNQi6cqXR2dGjw4OCXSm
-        UqTNMPep0cvgU1Se0jxWe/ReNcjCe5Z4eL5xCQyq/82Omto/pd4Mmoyb98k222ydiRWvcrERuE9O
-        oHKoCOtSEadzkYtU5KnI9kLITSZXu8VW7Ipi88hvIfiW3tT6pP8BVGY46QbkBA4/A68fw+A6HtcS
-        WS+XS/xSve1wUZk+TkBqTTTx7XUfzdM9msDUSojvBJRnx+5OTWAsOsVncrv2sft63/V3XkyNs/2u
-        QRbIWeDAEsbe+AlqPOsK2aPZ905ZMrbsYn+0nT/po8QzugvIJ4aZ/gHfovgFAwIAAA==
+        H4sIAAAAAAAAA5WRz07DMAzGXwX5SruFsD8sRxDiBXZDU5W1XpvRNCFxV6aKd8fpNsQVKQfL9u+z
+        /WUEwkgR1PsIkTT1HILXfcQKMvD9vjVlYSpODrjIj8dzfrQdV0jXCZpoFc8dNUimjMU+uCFigF0G
+        rSs1GddNfXqIqo856ki5TFWLMeoaWXjLEnfPVy6DTtvf7GCo+VOyrjPkwrTPw3IlF09yxaucfQJu
+        kzMoA2rCqtDEaSmkyIXkt5VSyaUSq9lCrtcbcS+EEoJvsa4yB/MPoHTdwdSgRgj42fP6KexDy+Ma
+        Ih/VfI5f2voWZ6WzaQJS45KJb6/bZJ6x6HqmHoX4zkBHduzm1AjOY9B8JrebmLov911+58VVONkf
+        amQByQI7lnD+yo9Q4cmUyB5Nvrfak/NFm/qT7fxJHwWeMJxBbRhm+gcjvC0bAwIAAA==
     headers:
       Cache-Control:
       - no-cache
@@ -235,11 +235,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:51:38 GMT
+      - Sun, 02 Feb 2020 22:25:07 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:51:38 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:25:06 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -250,7 +250,7 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - rpB/2GMZHvzTHZxhwmnNa1XnSQuif7FV+gIndoDc8IvUeRNb65r4x+P7Djp1119C
+      - 8jOW1djIgkdkj4STw+0pQ3G+kGKfu548DWINvnE6phacY0k9vgC3cU1LaI38XIYk
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
@@ -259,7 +259,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"public_ids": ["8uv-r74-wi6"]}'
+    body: '{"public_ids": ["we4-jjy-jmn"]}'
     headers:
       Accept:
       - '*/*'
@@ -280,8 +280,8 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA6tWSknNSS1JTYkvSS0uKVayiq6GiySWKFkpGRkYGegaGOkaGIYYGFiZGloZW+iZ
-        mhiZGZtrA/kGBko6SgWlSTmZyfGZKUDlFqVlukXmJrrlmWZKtbG1AAusdKZfAAAA
+        H4sIAAAAAAAAA6tWSknNSS1JTYkvSS0uKVayiq6GiySWKFkpGRkYGegaGAFRiJGRlZGplYG5npGB
+        hbGZhbaBgZWBgZKOUkFpUk5mcnxmClB5eaqJblZWpW5Wbp5SbWwtAAXYQXpfAAAA
     headers:
       Cache-Control:
       - no-cache
@@ -296,11 +296,11 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sat, 01 Feb 2020 00:51:38 GMT
+      - Sun, 02 Feb 2020 22:25:07 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sat, 08-Feb-2020 00:51:38 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:25:07 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
@@ -311,7 +311,7 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - jety+2H6BA1H4x31+wzy5BjqI2NDwh54fgbjSYyrLU0p2tWQPCCTKspX7sHO7u1n
+      - u2B27rQjtu8TuEjzrroc8ae3xeJMLmsxU6SiAszW1tH+EI3X0cOP819eGNRqlxzl
       X-DD-VERSION:
       - '35.2129440'
       X-Frame-Options:
