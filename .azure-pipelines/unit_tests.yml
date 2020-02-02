@@ -51,8 +51,8 @@ jobs:
   - script: tox -e integration -- --vcr-record=none
     displayName: Run integration tests on cassettes
     env:
-      DD_TEST_CLIENT_USER: $(datadogTestUser)
+      DD_TEST_CLIENT_USER: frog@datadoghq.com
   - script: tox -e integration-admin -- --vcr-record=none
     displayName: Run admin integration tests on cassettes
     env:
-      DD_TEST_CLIENT_USER: $(datadogTestUser)
+      DD_TEST_CLIENT_USER: frog@datadoghq.com

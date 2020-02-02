@@ -9,7 +9,6 @@ import time
 
 import requests
 import pytest
-from vcr.matchers import method, scheme, host, port, path, query, body
 
 # datadog
 from datadog import initialize
@@ -72,7 +71,7 @@ class TestDatadog:
             dog.Tag.delete(hostname, source="datadog") is None
         )  # Expect no response body on success
 
-    @pytest.mark.vcr(match_on=("method", "scheme", "host", "port", "path", "body"))
+    @pytest.mark.vcr(match_on=("method", "scheme", "host", "port", "path", "query", "body"))
     def test_events(self, dog, get_with_retry, freezer):
         with freezer:
             now = datetime.datetime.now()
