@@ -73,9 +73,8 @@ class TestDatadog:
     @pytest.mark.vcr(match_on=("method", "scheme", "host", "port", "path", "query", "body"))
     def test_events(self, dog, get_with_retry, freezer):
         with freezer:
-            now = datetime.datetime.utcnow()
-            now_ts = int(time.mktime(now.timetuple()))
-            before_ts = int(time.mktime((now - datetime.timedelta(minutes=5)).timetuple()))
+            now_ts = time.time()
+            before_ts = now_ts - datetime.timedelta(minutes=5).total_seconds()
 
         now_title = "end test title " + str(now_ts)
         now_message = "test message " + str(now_ts)
@@ -137,8 +136,7 @@ class TestDatadog:
 
     def test_comments(self, dog, get_with_retry, freezer, user_handle):
         with freezer:
-            now = datetime.datetime.utcnow()
-            now_ts = int(time.mktime(now.timetuple()))
+            now_ts = time.time()
 
         message = "test message " + str(now_ts)
 
@@ -208,25 +206,24 @@ class TestDatadog:
         assert len(results["results"]["hosts"]) > 0
         assert len(results["results"]["metrics"]) > 0
 
-    @pytest.mark.skip
     def test_metrics_simple(self, dog, get_with_retry, freezer):
         with freezer:
-            now = datetime.datetime.utcnow()
-            now_ts = int(time.mktime(now.timetuple()))
+            now_ts = time.time()
 
-        metric_name_single = "test.metric_single." + str(now_ts)
-        host_name = "test.host." + str(now_ts)
+            metric_name_single = "test.metric_single." + str(now_ts)
+            host_name = "test.host." + str(now_ts)
 
-        def retry_condition(r):
-            return not r["series"]
+            def retry_condition(r):
+                return not r["series"]
 
-        # Send metrics with single and multi points, and with compression
-        assert (
-            dog.Metric.send(metric=metric_name_single, points=1, host=host_name)[
-                "status"
-            ]
-            == "ok"
-        )
+            # Send metrics with single and multi points, and with compression
+            assert (
+                dog.Metric.send(metric=metric_name_single, points=1, host=host_name)[
+                    "status"
+                ]
+                == "ok"
+            )
+
         metric_query_single = get_with_retry(
             "Metric",
             operation="query",
@@ -244,8 +241,8 @@ class TestDatadog:
 
     def test_metrics_list(self, dog, get_with_retry, freezer):
         with freezer:
-            now = datetime.datetime.utcnow()
-            now_ts = int(time.mktime(now.timetuple()))
+
+            now_ts = time.time()
 
         metric_name_list = "test.metric_list." + str(now_ts)
         host_name = "test.host." + str(now_ts)
@@ -278,8 +275,8 @@ class TestDatadog:
 
     def test_metrics_tuple(self, dog, get_with_retry, freezer):
         with freezer:
-            now = datetime.datetime.utcnow()
-            now_ts = int(time.mktime(now.timetuple()))
+
+            now_ts = time.time()
 
         metric_name_tuple = "test.metric_tuple." + str(now_ts)
         host_name = "test.host." + str(now_ts)
@@ -314,9 +311,8 @@ class TestDatadog:
 
     def test_distribution_metrics(self, dog, freezer):
         with freezer:
-            now = datetime.datetime.now()
+            now_ts = time.time()
 
-        now_ts = int(time.mktime(now.timetuple()))
         metric_name = "test.distribution_metric." + str(now_ts)
         host_name = "test.host." + str(now_ts)
 
