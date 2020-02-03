@@ -36,7 +36,7 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sun, 02 Feb 2020 22:22:43 GMT
+      - Mon, 03 Feb 2020 16:20:29 GMT
       Pragma:
       - no-cache
       Strict-Transport-Security:
@@ -44,7 +44,7 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-VERSION:
-      - '35.2129440'
+      - '35.2134903'
       X-Frame-Options:
       - SAMEORIGIN
     status:
@@ -88,7 +88,7 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sun, 02 Feb 2020 22:22:43 GMT
+      - Mon, 03 Feb 2020 16:20:29 GMT
       Pragma:
       - no-cache
       Strict-Transport-Security:
@@ -96,7 +96,7 @@ interactions:
       X-Content-Type-Options:
       - nosniff
       X-DD-VERSION:
-      - '35.2129440'
+      - '35.2134903'
       X-Frame-Options:
       - SAMEORIGIN
     status:
@@ -139,20 +139,20 @@ interactions:
       DD-POOL:
       - dogweb
       Date:
-      - Sun, 02 Feb 2020 22:22:43 GMT
+      - Mon, 03 Feb 2020 16:20:29 GMT
       Pragma:
       - no-cache
       Set-Cookie:
-      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Sun, 09-Feb-2020 22:22:43 GMT;
+      - DD-PSHARD=233; Max-Age=604800; Path=/; expires=Mon, 10-Feb-2020 16:20:29 GMT;
         secure; HttpOnly
       Strict-Transport-Security:
       - max-age=15724800;
       X-Content-Type-Options:
       - nosniff
       X-DD-Debug:
-      - HtltRxB6FWULKbr8JD/35HKWhI+dqAFQg/rNpMbjeMOPUq5j5iWk+nIs8OwDOqUR
+      - PcnVfOcEtqolY6fi98GEVSGXOZZkwQSBbl/twLr2TucYRfYyGCLXvKm6pTUNQt1l
       X-DD-VERSION:
-      - '35.2129440'
+      - '35.2134903'
       X-Frame-Options:
       - SAMEORIGIN
     status:
