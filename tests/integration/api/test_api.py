@@ -35,7 +35,7 @@ class TestDatadog:
 
     def test_tags(self, dog, get_with_retry, freezer):
         with freezer:
-            hostname = "test.tags.host" + str(time.time())
+            hostname = "test.tags.host" + str(int(time.time()))
 
         # post a metric to make sure the test host context exists
         dog.Metric.send(metric="test.tag.metric", points=1, host=hostname)
@@ -73,7 +73,7 @@ class TestDatadog:
     @pytest.mark.vcr(match_on=("method", "scheme", "host", "port", "path", "query", "body"))
     def test_events(self, dog, get_with_retry, freezer):
         with freezer:
-            now_ts = time.time()
+            now_ts = int(time.time())
             before_ts = now_ts - datetime.timedelta(minutes=5).total_seconds()
 
         now_title = "end test title " + str(now_ts)
@@ -136,7 +136,7 @@ class TestDatadog:
 
     def test_comments(self, dog, get_with_retry, freezer, user_handle):
         with freezer:
-            now_ts = time.time()
+            now_ts = int(time.time())
 
         message = "test message " + str(now_ts)
 
@@ -208,7 +208,7 @@ class TestDatadog:
 
     def test_metrics_simple(self, dog, get_with_retry, freezer):
         with freezer:
-            now_ts = time.time()
+            now_ts = int(time.time())
 
             metric_name_single = "test.metric_single." + str(now_ts)
             host_name = "test.host." + str(now_ts)
@@ -241,8 +241,7 @@ class TestDatadog:
 
     def test_metrics_list(self, dog, get_with_retry, freezer):
         with freezer:
-
-            now_ts = time.time()
+            now_ts = int(time.time())
 
         metric_name_list = "test.metric_list." + str(now_ts)
         host_name = "test.host." + str(now_ts)
@@ -275,8 +274,7 @@ class TestDatadog:
 
     def test_metrics_tuple(self, dog, get_with_retry, freezer):
         with freezer:
-
-            now_ts = time.time()
+            now_ts = int(time.time())
 
         metric_name_tuple = "test.metric_tuple." + str(now_ts)
         host_name = "test.host." + str(now_ts)
@@ -311,7 +309,7 @@ class TestDatadog:
 
     def test_distribution_metrics(self, dog, freezer):
         with freezer:
-            now_ts = time.time()
+            now_ts = int(time.time())
 
         metric_name = "test.distribution_metric." + str(now_ts)
         host_name = "test.host." + str(now_ts)
@@ -539,7 +537,7 @@ class TestDatadog:
 
         # Create a monitor-based SLO.
         with freezer as dt:
-            name = "test SLO {}".format(time.time())
+            name = "test SLO {}".format(int(time.time()))
 
         thresholds = [{"timeframe": "7d", "target": 90}]
         slo = dog.ServiceLevelObjective.create(
@@ -585,7 +583,7 @@ class TestDatadog:
 
         # Create a monitor-based SLO.
         with freezer:
-            name = "test SLO {}".format(time.time())
+            name = "test SLO {}".format(int(time.time()))
         thresholds = [{"timeframe": "7d", "target": 90}]
         slo = dog.ServiceLevelObjective.create(
             type="monitor",
@@ -605,7 +603,7 @@ class TestDatadog:
         query = {"numerator": numerator, "denominator": denominator}
         thresholds = [{"timeframe": "7d", "target": 90}]
         with freezer:
-            name = "test SLO {}".format(time.time())
+            name = "test SLO {}".format(int(time.time()))
         slo = dog.ServiceLevelObjective.create(
             type="metric",
             query=query,

@@ -71,7 +71,16 @@ def freezer(vcr_cassette_name, vcr_cassette, vcr):
         ) as f:
             freeze_at = f.readline().strip()
 
-    return freeze_time(parser.isoparse(freeze_at))
+    freeze_at = parser.isoparse(freeze_at)
+
+    # dt = parser.isoparse(freeze_at)
+    # tz_offset = dt.tzinfo.utcoffset(dt).seconds / 60
+    # os.environ['TZ'] =  "UTC%+03d:%02d" % (
+    #     int( tz_offset / 60), tz_offset % 60
+    # )
+    # time.tzset()
+
+    return freeze_time(freeze_at)
 
 
 @pytest.fixture
