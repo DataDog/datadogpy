@@ -208,14 +208,12 @@ class TestDatadog:
         assert len(results["results"]["metrics"]) > 0
 
     @pytest.mark.skip
-    def test_metrics(self, dog, get_with_retry, freezer):
+    def test_metrics_simple(self, dog, get_with_retry, freezer):
         with freezer:
-            now = datetime.datetime.now()
+            now = datetime.datetime.utcnow()
             now_ts = int(time.mktime(now.timetuple()))
 
         metric_name_single = "test.metric_single." + str(now_ts)
-        metric_name_list = "test.metric_list." + str(now_ts)
-        metric_name_tuple = "test.metric_tuple." + str(now_ts)
         host_name = "test.host." + str(now_ts)
 
         def retry_condition(r):
@@ -228,24 +226,6 @@ class TestDatadog:
             ]
             == "ok"
         )
-        points = [(now_ts - 60, 1), (now_ts, 2)]
-        assert (
-            dog.Metric.send(metric=metric_name_list, points=points, host=host_name)[
-                "status"
-            ]
-            == "ok"
-        )
-        points = (now_ts - 60, 1)
-        assert (
-            dog.Metric.send(
-                metric=metric_name_tuple,
-                points=points,
-                host=host_name,
-                compress_payload=True,
-            )["status"]
-            == "ok"
-        )
-
         metric_query_single = get_with_retry(
             "Metric",
             operation="query",
@@ -254,6 +234,30 @@ class TestDatadog:
             start=now_ts - 600,
             end=now_ts + 600,
             query="{}{{host:{}}}".format(metric_name_single, host_name),
+        )
+        assert len(metric_query_single["series"]) == 1
+        assert metric_query_single["series"][0]["metric"] == metric_name_single
+        assert metric_query_single["series"][0]["scope"] == "host:{}".format(host_name)
+        assert len(metric_query_single["series"][0]["pointlist"]) == 1
+        assert metric_query_single["series"][0]["pointlist"][0][1] == 1
+
+    def test_metrics_list(self, dog, get_with_retry, freezer):
+        with freezer:
+            now = datetime.datetime.utcnow()
+            now_ts = int(time.mktime(now.timetuple()))
+
+        metric_name_list = "test.metric_list." + str(now_ts)
+        host_name = "test.host." + str(now_ts)
+
+        def retry_condition(r):
+            return not r["series"]
+
+        points = [(now_ts - 60, 1), (now_ts, 2)]
+        assert (
+            dog.Metric.send(metric=metric_name_list, points=points, host=host_name)[
+                "status"
+            ]
+            == "ok"
         )
         metric_query_list = get_with_retry(
             "Metric",
@@ -264,6 +268,34 @@ class TestDatadog:
             end=now_ts + 600,
             query="{}{{host:{}}}".format(metric_name_list, host_name),
         )
+        assert len(metric_query_list["series"]) == 1
+        assert metric_query_list["series"][0]["metric"] == metric_name_list
+        assert metric_query_list["series"][0]["scope"] == "host:{}".format(host_name)
+        assert len(metric_query_list["series"][0]["pointlist"]) == 2
+        assert metric_query_list["series"][0]["pointlist"][0][1] == 1
+        assert metric_query_list["series"][0]["pointlist"][1][1] == 2
+
+    def test_metrics_tuple(self, dog, get_with_retry, freezer):
+        with freezer:
+            now = datetime.datetime.utcnow()
+            now_ts = int(time.mktime(now.timetuple()))
+
+        metric_name_tuple = "test.metric_tuple." + str(now_ts)
+        host_name = "test.host." + str(now_ts)
+
+        def retry_condition(r):
+            return not r["series"]
+
+        points = (now_ts - 60, 1)
+        assert (
+            dog.Metric.send(
+                metric=metric_name_tuple,
+                points=points,
+                host=host_name,
+                compress_payload=False,
+            )["status"]
+            == "ok"
+        )
         metric_query_tuple = get_with_retry(
             "Metric",
             operation="query",
@@ -273,20 +305,6 @@ class TestDatadog:
             end=now_ts + 600,
             query="{}{{host:{}}}".format(metric_name_tuple, host_name),
         )
-
-        assert len(metric_query_single["series"]) == 1
-        assert metric_query_single["series"][0]["metric"] == metric_name_single
-        assert metric_query_single["series"][0]["scope"] == "host:{}".format(host_name)
-        assert len(metric_query_single["series"][0]["pointlist"]) == 1
-        assert metric_query_single["series"][0]["pointlist"][0][1] == 1
-
-        assert len(metric_query_list["series"]) == 1
-        assert metric_query_list["series"][0]["metric"] == metric_name_list
-        assert metric_query_list["series"][0]["scope"] == "host:{}".format(host_name)
-        assert len(metric_query_list["series"][0]["pointlist"]) == 2
-        assert metric_query_list["series"][0]["pointlist"][0][1] == 1
-        assert metric_query_list["series"][0]["pointlist"][1][1] == 2
-
         assert len(metric_query_tuple["series"]) == 1
         assert metric_query_tuple["series"][0]["metric"] == metric_name_tuple
         assert metric_query_tuple["series"][0]["scope"] == "host:{}".format(host_name)
