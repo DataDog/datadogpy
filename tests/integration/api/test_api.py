@@ -212,6 +212,7 @@ class TestDatadog:
         assert len(results["results"]["hosts"]) > 0
         assert len(results["results"]["metrics"]) > 0
 
+    @pytest.mark.skip
     def test_metrics(self, dog, get_with_retry, freezer):
         with freezer:
             now = datetime.datetime.now()
