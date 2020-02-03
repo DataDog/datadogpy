@@ -11,10 +11,9 @@ import pytest
 from vcr import VCR
 from dateutil import parser
 
-from tests.integration.api.constants import API_KEY, APP_KEY, API_HOST
+from tests.integration.api.constants import API_KEY, APP_KEY, API_HOST, TEST_USER
 
 WAIT_TIME = 10
-TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
 FAKE_PROXY = {"https": "http://user:pass@10.10.1.10:3128/"}
 
 
@@ -67,6 +66,30 @@ def freezer(vcr_cassette_name, vcr_cassette, vcr):
     time.tzset()
 
     return freeze_time(freeze_at)
+
+
+@pytest.fixture
+def user_handle(vcr_cassette_name, vcr_cassette, vcr):
+    if vcr_cassette.record_mode == "all":
+        assert TEST_USER is not None, "You must set DD_TEST_CLIENT_USER environment variable to run comment tests"
+        handle = TEST_USER
+        with open(
+            os.path.join(
+                vcr.cassette_library_dir, vcr_cassette_name + ".handle"
+            ),
+            "w",
+        ) as f:
+            f.write(handle)
+    else:
+        with open(
+            os.path.join(
+                vcr.cassette_library_dir, vcr_cassette_name + ".handle"
+            ),
+            "r",
+        ) as f:
+            handle = f.readline().strip()
+
+    return handle
 
 
 @pytest.fixture

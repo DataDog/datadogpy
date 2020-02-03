@@ -17,8 +17,6 @@ import requests
 from datadog.util.compat import is_p3k, ConfigParser
 from ..api.constants import API_KEY, APP_KEY, MONITOR_REFERENCED_IN_SLO_MESSAGE
 
-
-TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
 WAIT_TIME = 10
 
 
@@ -154,11 +152,9 @@ class TestDogshell:
         out, err, return_code = dogshell(["--help"], use_cl_args=True)
         assert 0 == return_code
 
-    def test_comment(self, dogshell, dogshell_with_retry):
-        assert TEST_USER is not None, "You must set DD_TEST_CLIENT_USER environment variable to run comment tests"
-
+    def test_comment(self, dogshell, dogshell_with_retry, user_handle):
         # Post a new comment
-        cmd = ["comment", "post", TEST_USER]
+        cmd = ["comment", "post", user_handle]
         comment_msg = "yo dudes"
         post_data = {}
         out, _, _ = dogshell(cmd, stdin=comment_msg)
@@ -174,7 +170,7 @@ class TestDogshell:
         assert comment_msg in show_data["message"]
 
         # Update the comment
-        cmd = ["comment", "update", post_data["id"], TEST_USER]
+        cmd = ["comment", "update", post_data["id"], user_handle]
         new_comment = "nothing much"
         out, _, _ = dogshell(cmd, stdin=new_comment)
         update_data = self.parse_response(out)

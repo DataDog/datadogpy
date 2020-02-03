@@ -15,7 +15,6 @@ from datadog import initialize
 
 from .constants import MONITOR_REFERENCED_IN_SLO_MESSAGE
 
-TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
 WAIT_TIME = 10
 
 
@@ -136,27 +135,23 @@ class TestDatadog:
         assert events["events"], "No events found in stream"
         assert event_id in [event["id"] for event in events["events"]]
 
-    def test_comments(self, dog, get_with_retry, freezer):
-        assert (
-            TEST_USER is not None
-        ), "You must set DD_TEST_CLIENT_USER environment to run comment tests"
-
+    def test_comments(self, dog, get_with_retry, freezer, user_handle):
         with freezer:
             now = datetime.datetime.now()
             now_ts = int(time.mktime(now.timetuple()))
             message = "test message " + str(now_ts)
 
-        comment = dog.Comment.create(handle=TEST_USER, message=message)
+        comment = dog.Comment.create(handle=user_handle, message=message)
         comment_id = comment["comment"]["id"]
         assert comment["comment"]["message"] == message
 
         get_with_retry("Event", comment_id)
         comment = dog.Comment.update(
-            comment_id, handle=TEST_USER, message=message + " updated"
+            comment_id, handle=user_handle, message=message + " updated"
         )
         assert comment["comment"]["message"] == message + " updated"
         reply = dog.Comment.create(
-            handle=TEST_USER, message=message + " reply", related_event_id=comment_id
+            handle=user_handle, message=message + " reply", related_event_id=comment_id
         )
         assert reply["comment"]["message"] == message + " reply"
 
