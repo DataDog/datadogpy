@@ -212,7 +212,6 @@ class TestDatadog:
         assert len(results["results"]["hosts"]) > 0
         assert len(results["results"]["metrics"]) > 0
 
-    @pytest.mark.skip
     def test_metrics(self, dog, get_with_retry, freezer):
         with freezer:
             now = datetime.datetime.now()
@@ -255,27 +254,27 @@ class TestDatadog:
             "Metric",
             operation="query",
             retry_condition=retry_condition,
-            retry_limit=20,
-            start=now_ts - 6000,
-            end=now_ts + 6000,
+            retry_limit=60,
+            start=now_ts - 600,
+            end=now_ts + 600,
             query="{}{{host:{}}}".format(metric_name_single, host_name),
         )
         metric_query_list = get_with_retry(
             "Metric",
             operation="query",
             retry_condition=retry_condition,
-            retry_limit=20,
-            start=now_ts - 6000,
-            end=now_ts + 6000,
+            retry_limit=60,
+            start=now_ts - 600,
+            end=now_ts + 600,
             query="{}{{host:{}}}".format(metric_name_list, host_name),
         )
         metric_query_tuple = get_with_retry(
             "Metric",
             operation="query",
             retry_condition=retry_condition,
-            retry_limit=20,
-            start=now_ts - 6000,
-            end=now_ts + 6000,
+            retry_limit=60,
+            start=now_ts - 600,
+            end=now_ts + 600,
             query="{}{{host:{}}}".format(metric_name_tuple, host_name),
         )
 
@@ -288,9 +287,9 @@ class TestDatadog:
         assert len(metric_query_list["series"]) == 1
         assert metric_query_list["series"][0]["metric"] == metric_name_list
         assert metric_query_list["series"][0]["scope"] == "host:{}".format(host_name)
-        assert len(metric_query_list["series"][0]["pointlist"]) == 1
-        assert metric_query_list["series"][0]["pointlist"][0][1] == 1.5
-        # assert metric_query_list["series"][0]["pointlist"][1][1] == 2
+        assert len(metric_query_list["series"][0]["pointlist"]) == 2
+        assert metric_query_list["series"][0]["pointlist"][0][1] == 1
+        assert metric_query_list["series"][0]["pointlist"][1][1] == 2
 
         assert len(metric_query_tuple["series"]) == 1
         assert metric_query_tuple["series"][0]["metric"] == metric_name_tuple
