@@ -3,6 +3,7 @@
 # Copyright 2015-Present Datadog, Inc
 """Record HTTP requests to avoid hiting Datadog API from CI."""
 
+import logging
 import os
 import time
 from datetime import datetime
@@ -16,6 +17,10 @@ from tests.integration.api.constants import API_KEY, APP_KEY, API_HOST, TEST_USE
 WAIT_TIME = 10
 FAKE_PROXY = {"https": "http://user:pass@10.10.1.10:3128/"}
 
+logging.basicConfig()
+vcr_log = logging.getLogger("vcr")
+vcr_log.setLevel(logging.INFO)
+
 
 @pytest.fixture(scope="module")
 def api():
@@ -24,6 +29,14 @@ def api():
     from datadog.api.api_client import APIClient
     APIClient._sort_keys = True
     initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
+
+    http_client = APIClient._get_http_client()
+    try:
+        assert http_client._session is None
+        http_client.request(None, None, None, None, None, None, None, None, max_retries=10)
+    except Exception as e:
+        assert http_client._session is not None
+
     return api
 
 
@@ -58,14 +71,7 @@ def freezer(vcr_cassette_name, vcr_cassette, vcr):
         ) as f:
             freeze_at = f.readline().strip()
 
-    dt = parser.isoparse(freeze_at)
-    tz_offset = dt.tzinfo.utcoffset(dt).seconds / 60
-    os.environ['TZ'] =  "UTC%+03d:%02d" % (
-        int( tz_offset / 60), tz_offset % 60
-    )
-    time.tzset()
-
-    return freeze_time(freeze_at)
+    return freeze_time(parser.isoparse(freeze_at))
 
 
 @pytest.fixture

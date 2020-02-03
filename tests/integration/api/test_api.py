@@ -73,7 +73,7 @@ class TestDatadog:
     @pytest.mark.vcr(match_on=("method", "scheme", "host", "port", "path", "query", "body"))
     def test_events(self, dog, get_with_retry, freezer):
         with freezer:
-            now = datetime.datetime.now()
+            now = datetime.datetime.utcnow()
             now_ts = int(time.mktime(now.timetuple()))
             before_ts = int(time.mktime((now - datetime.timedelta(minutes=5)).timetuple()))
 
@@ -137,9 +137,10 @@ class TestDatadog:
 
     def test_comments(self, dog, get_with_retry, freezer, user_handle):
         with freezer:
-            now = datetime.datetime.now()
+            now = datetime.datetime.utcnow()
             now_ts = int(time.mktime(now.timetuple()))
-            message = "test message " + str(now_ts)
+
+        message = "test message " + str(now_ts)
 
         comment = dog.Comment.create(handle=user_handle, message=message)
         comment_id = comment["comment"]["id"]
