@@ -2,7 +2,7 @@ CHANGELOG
 =========
 ## 0.34.0 / 2020-02-04
 
-* [Deprecated] Alias `dog` script names as `dogshell`. See [#305](https://github.com/DataDog/datadogpy/pull/305). Thanks [dwminer](https://github.com/dwminer).
+* [Deprecated] Alias `dog` script names as `dogshell`. Please start using `dogshell` instead of `dog` command. See [#305](https://github.com/DataDog/datadogpy/pull/305). Thanks [dwminer](https://github.com/dwminer).
 * [Fixed] Handle EAGAIN socket error when dropping packets. See [#515](https://github.com/DataDog/datadogpy/pull/515). Thanks [mrknmc](https://github.com/mrknmc).
 * [Fixed] [dogshell] Enforce the default 'normal' event priority client side. See [#511](https://github.com/DataDog/datadogpy/pull/511).
 * [Fixed] Handle OSError on socket.close on Python 3.6+. See [#510](https://github.com/DataDog/datadogpy/pull/510). Thanks [charettes](https://github.com/charettes).
