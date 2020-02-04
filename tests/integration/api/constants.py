@@ -7,3 +7,4 @@ API_KEY = os.environ.get("DD_TEST_CLIENT_API_KEY", "a" * 32)
 APP_KEY = os.environ.get("DD_TEST_CLIENT_APP_KEY", "a" * 40)
 API_HOST = os.environ.get("DATADOG_HOST")
 MONITOR_REFERENCED_IN_SLO_MESSAGE = "monitor {} is referenced in slos: {}"
+TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
