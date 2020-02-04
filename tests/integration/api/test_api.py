@@ -11,37 +11,32 @@ import requests
 import pytest
 
 # datadog
-from datadog import api as dog
 from datadog import initialize
 
 from .constants import MONITOR_REFERENCED_IN_SLO_MESSAGE
-from .utils import get_with_retry
 
-TEST_USER = os.environ.get("DD_TEST_CLIENT_USER")
-API_KEY = os.environ.get("DD_TEST_CLIENT_API_KEY", "a" * 32)
-APP_KEY = os.environ.get("DD_TEST_CLIENT_APP_KEY", "a" * 40)
-API_HOST = os.environ.get("DATADOG_HOST")
-FAKE_PROXY = {"https": "http://user:pass@10.10.1.10:3128/"}
 WAIT_TIME = 10
 
 
 class TestDatadog:
     host_name = "test.host.integration"
-    cleanup_role_uuids = []
 
-    @classmethod
-    def setup_class(cls):
-        initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
+    @pytest.fixture(autouse=True)  # TODO , scope="class"
+    def cleanup_roles(self, dog):
+        """Prepare Azure Integration."""
+        self.cleanup_role_uuids = []
 
-    @classmethod
-    def teardown_class(cls):
+        yield
+
         # Ensure we cleanup any resources we created during tests
         # These should be removed during tests, but here as well in case of test failures
-        for uuid in cls.cleanup_role_uuids:
+        for uuid in self.cleanup_role_uuids:
             dog.Roles.delete(uuid)
 
-    def test_tags(self):
-        hostname = "test.tags.host" + str(time.time())
+    def test_tags(self, dog, get_with_retry, freezer):
+        with freezer:
+            hostname = "test.tags.host" + str(int(time.time()))
+
         # post a metric to make sure the test host context exists
         dog.Metric.send(metric="test.tag.metric", points=1, host=hostname)
         # Wait for host to appear
@@ -75,16 +70,18 @@ class TestDatadog:
             dog.Tag.delete(hostname, source="datadog") is None
         )  # Expect no response body on success
 
-    def test_events(self):
-        now = datetime.datetime.now()
+    @pytest.mark.vcr(match_on=("method", "scheme", "host", "port", "path", "query", "body"))
+    def test_events(self, dog, get_with_retry, freezer):
+        with freezer:
+            now_ts = int(time.time())
+            before_ts = now_ts - datetime.timedelta(minutes=5).total_seconds()
 
-        now_ts = int(time.mktime(now.timetuple()))
         now_title = "end test title " + str(now_ts)
         now_message = "test message " + str(now_ts)
 
-        before_ts = int(time.mktime((now - datetime.timedelta(minutes=5)).timetuple()))
         before_title = "start test title " + str(before_ts)
         before_message = "test message " + str(before_ts)
+
         now_event = dog.Event.create(
             title=now_title, text=now_message, date_happened=now_ts
         )
@@ -122,13 +119,14 @@ class TestDatadog:
         assert "test_tag:1" in event["event"]["tags"]
         assert "test_tag:2" in event["event"]["tags"]
 
-        now_ts = int(time.mktime(datetime.datetime.now().timetuple()))
-        event_id = dog.Event.create(
+        event = dog.Event.create(
             title="test source",
             text="test source",
             source_type_name="vsphere",
             priority="low",
-        )["event"]["id"]
+        )
+        event_id = event["event"]["id"]
+        now_ts = event["event"]["date_happened"]
         get_with_retry("Event", event_id)
         events = dog.Event.query(
             start=now_ts - 100, end=now_ts + 100, priority="low", sources="vsphere"
@@ -136,30 +134,27 @@ class TestDatadog:
         assert events["events"], "No events found in stream"
         assert event_id in [event["id"] for event in events["events"]]
 
-    def test_comments(self):
-        assert (
-            TEST_USER is not None
-        ), "You must set DD_TEST_CLIENT_USER environment to run comment tests"
+    def test_comments(self, dog, get_with_retry, freezer, user_handle):
+        with freezer:
+            now_ts = int(time.time())
 
-        now = datetime.datetime.now()
-        now_ts = int(time.mktime(now.timetuple()))
         message = "test message " + str(now_ts)
 
-        comment = dog.Comment.create(handle=TEST_USER, message=message)
+        comment = dog.Comment.create(handle=user_handle, message=message)
         comment_id = comment["comment"]["id"]
         assert comment["comment"]["message"] == message
 
         get_with_retry("Event", comment_id)
         comment = dog.Comment.update(
-            comment_id, handle=TEST_USER, message=message + " updated"
+            comment_id, handle=user_handle, message=message + " updated"
         )
         assert comment["comment"]["message"] == message + " updated"
         reply = dog.Comment.create(
-            handle=TEST_USER, message=message + " reply", related_event_id=comment_id
+            handle=user_handle, message=message + " reply", related_event_id=comment_id
         )
         assert reply["comment"]["message"] == message + " reply"
 
-    def test_timeboard(self):
+    def test_timeboard(self, dog, get_with_retry):
         graph = {
             "title": "test metric graph",
             "definition": {
@@ -206,29 +201,54 @@ class TestDatadog:
 
         assert dog.Timeboard.delete(timeboard["dash"]["id"]) is None
 
-    def test_search(self):
+    def test_search(self, dog):
         results = dog.Infrastructure.search(q="")
         assert len(results["results"]["hosts"]) > 0
         assert len(results["results"]["metrics"]) > 0
 
-    def test_metrics(self):
-        now = datetime.datetime.now()
-        now_ts = int(time.mktime(now.timetuple()))
-        metric_name_single = "test.metric_single." + str(now_ts)
+    def test_metrics_simple(self, dog, get_with_retry, freezer):
+        with freezer:
+            now_ts = int(time.time())
+
+            metric_name_single = "test.metric_single." + str(now_ts)
+            host_name = "test.host." + str(now_ts)
+
+            def retry_condition(r):
+                return not r["series"]
+
+            # Send metrics with single and multi points, and with compression
+            assert (
+                dog.Metric.send(metric=metric_name_single, points=1, host=host_name)[
+                    "status"
+                ]
+                == "ok"
+            )
+
+        metric_query_single = get_with_retry(
+            "Metric",
+            operation="query",
+            retry_condition=retry_condition,
+            retry_limit=60,
+            start=now_ts - 600,
+            end=now_ts + 600,
+            query="{}{{host:{}}}".format(metric_name_single, host_name),
+        )
+        assert len(metric_query_single["series"]) == 1
+        assert metric_query_single["series"][0]["metric"] == metric_name_single
+        assert metric_query_single["series"][0]["scope"] == "host:{}".format(host_name)
+        assert len(metric_query_single["series"][0]["pointlist"]) == 1
+        assert metric_query_single["series"][0]["pointlist"][0][1] == 1
+
+    def test_metrics_list(self, dog, get_with_retry, freezer):
+        with freezer:
+            now_ts = int(time.time())
+
         metric_name_list = "test.metric_list." + str(now_ts)
-        metric_name_tuple = "test.metric_tuple." + str(now_ts)
         host_name = "test.host." + str(now_ts)
 
         def retry_condition(r):
             return not r["series"]
 
-        # Send metrics with single and multi points, and with compression
-        assert (
-            dog.Metric.send(metric=metric_name_single, points=1, host=host_name)[
-                "status"
-            ]
-            == "ok"
-        )
         points = [(now_ts - 60, 1), (now_ts, 2)]
         assert (
             dog.Metric.send(metric=metric_name_list, points=points, host=host_name)[
@@ -236,51 +256,15 @@ class TestDatadog:
             ]
             == "ok"
         )
-        points = (now_ts - 60, 1)
-        assert (
-            dog.Metric.send(
-                metric=metric_name_tuple,
-                points=points,
-                host=host_name,
-                compress_payload=True,
-            )["status"]
-            == "ok"
-        )
-
-        metric_query_single = get_with_retry(
-            "Metric",
-            operation="query",
-            retry_condition=retry_condition,
-            retry_limit=20,
-            start=now_ts - 600,
-            end=now_ts + 600,
-            query="{}{{host:{}}}".format(metric_name_single, host_name),
-        )
         metric_query_list = get_with_retry(
             "Metric",
             operation="query",
             retry_condition=retry_condition,
-            retry_limit=20,
+            retry_limit=60,
             start=now_ts - 600,
             end=now_ts + 600,
             query="{}{{host:{}}}".format(metric_name_list, host_name),
         )
-        metric_query_tuple = get_with_retry(
-            "Metric",
-            operation="query",
-            retry_condition=retry_condition,
-            retry_limit=20,
-            start=now_ts - 600,
-            end=now_ts + 600,
-            query="{}{{host:{}}}".format(metric_name_tuple, host_name),
-        )
-
-        assert len(metric_query_single["series"]) == 1
-        assert metric_query_single["series"][0]["metric"] == metric_name_single
-        assert metric_query_single["series"][0]["scope"] == "host:{}".format(host_name)
-        assert len(metric_query_single["series"][0]["pointlist"]) == 1
-        assert metric_query_single["series"][0]["pointlist"][0][1] == 1
-
         assert len(metric_query_list["series"]) == 1
         assert metric_query_list["series"][0]["metric"] == metric_name_list
         assert metric_query_list["series"][0]["scope"] == "host:{}".format(host_name)
@@ -288,15 +272,45 @@ class TestDatadog:
         assert metric_query_list["series"][0]["pointlist"][0][1] == 1
         assert metric_query_list["series"][0]["pointlist"][1][1] == 2
 
+    def test_metrics_tuple(self, dog, get_with_retry, freezer):
+        with freezer:
+            now_ts = int(time.time())
+
+        metric_name_tuple = "test.metric_tuple." + str(now_ts)
+        host_name = "test.host." + str(now_ts)
+
+        def retry_condition(r):
+            return not r["series"]
+
+        points = (now_ts - 60, 1)
+        assert (
+            dog.Metric.send(
+                metric=metric_name_tuple,
+                points=points,
+                host=host_name,
+                compress_payload=False,
+            )["status"]
+            == "ok"
+        )
+        metric_query_tuple = get_with_retry(
+            "Metric",
+            operation="query",
+            retry_condition=retry_condition,
+            retry_limit=60,
+            start=now_ts - 600,
+            end=now_ts + 600,
+            query="{}{{host:{}}}".format(metric_name_tuple, host_name),
+        )
         assert len(metric_query_tuple["series"]) == 1
         assert metric_query_tuple["series"][0]["metric"] == metric_name_tuple
         assert metric_query_tuple["series"][0]["scope"] == "host:{}".format(host_name)
         assert len(metric_query_tuple["series"][0]["pointlist"]) == 1
         assert metric_query_tuple["series"][0]["pointlist"][0][1] == 1
 
-    def test_distribution_metrics(self):
-        now = datetime.datetime.now()
-        now_ts = int(time.mktime(now.timetuple()))
+    def test_distribution_metrics(self, dog, freezer):
+        with freezer:
+            now_ts = int(time.time())
+
         metric_name = "test.distribution_metric." + str(now_ts)
         host_name = "test.host." + str(now_ts)
 
@@ -313,11 +327,12 @@ class TestDatadog:
         # FIXME: Query and verify the test metric result. Currently, it takes
         # too long for a new distribution metric to become available for query.
 
-    def test_graph_snapshot(self):
+    def test_graph_snapshot(self, dog, get_with_retry, freezer):
         metric_query = "system.load.1{*}"
         event_query = "*"
-        end = int(time.time())
-        start = end - 60 * 60  # go back 1 hour
+        with freezer:
+            end = int(time.time())
+            start = end - 60 * 60  # go back 1 hour
 
         # Test without an event query
         snap = dog.Graph.create(metric_query=metric_query, start=start, end=end)
@@ -347,7 +362,7 @@ class TestDatadog:
                 }
             ],
         }
-        graph_def = json.dumps(graph_def)
+        graph_def = json.dumps(graph_def, sort_keys=True)
         snap = dog.Graph.create(graph_def=graph_def, start=start, end=end)
         assert "metric_query" not in snap
         assert "event_query" not in snap
@@ -363,7 +378,7 @@ class TestDatadog:
             retry_limit=20,
         )
 
-    def test_screenboard(self):
+    def test_screenboard(self, vcr_cassette, dog, get_with_retry):
         def _compare_screenboard(apiBoard, expectedBoard):
             compare_keys = ["board_title", "height", "width", "widgets"]
             for key in compare_keys:
@@ -430,26 +445,29 @@ class TestDatadog:
         assert share_res["board_id"] == get_res["id"]
         public_url = share_res["public_url"]
 
-        time.sleep(WAIT_TIME)
+        if vcr_cassette.record_mode != "none":
+            time.sleep(WAIT_TIME)
         response = requests.get(public_url)
         assert response.status_code == 200
 
         dog.Screenboard.revoke(get_res["id"])
-        time.sleep(WAIT_TIME)
+        if vcr_cassette.record_mode != "none":
+            time.sleep(WAIT_TIME)
         response = requests.get(public_url)
         assert response.status_code == 404
 
         delete_res = dog.Screenboard.delete(update_res["id"])
         assert delete_res["id"] == update_res["id"]
 
-    def test_monitor_crud(self):
+    def test_monitor_crud(self, dog, get_with_retry, freezer):
         # Metric alerts
         query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
 
-        options = {
-            "silenced": {"*": int(time.time()) + 60 * 60},
-            "notify_no_data": False,
-        }
+        with freezer:
+            options = {
+                "silenced": {"*": int(time.time()) + 60 * 60},
+                "notify_no_data": False,
+            }
         monitor = dog.Monitor.create(type="metric alert", query=query, options=options)
         assert monitor["query"] == query
         assert monitor["options"]["notify_no_data"] == options["notify_no_data"]
@@ -481,7 +499,7 @@ class TestDatadog:
             "deleted_monitor_id": monitor["id"]
         }
 
-    def test_monitor_validate(self):
+    def test_monitor_validate(self, dog, get_with_retry):
         monitor_type = "metric alert"
         valid_options = {"thresholds": {"critical": 200.0}}
         invalid_options = {"thresholds": {"critical": 90.0}}
@@ -500,13 +518,14 @@ class TestDatadog:
         res = dog.Monitor.validate(type=monitor_type, query=valid_query, options=valid_options)
         assert res == {}
 
-    def test_monitor_can_delete(self):
+    def test_monitor_can_delete(self, dog, freezer):
         # Create a monitor.
         query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
-        options = {
-            "silenced": {"*": int(time.time()) + 60 * 60},
-            "notify_no_data": False,
-        }
+        with freezer:
+            options = {
+                "silenced": {"*": int(time.time()) + 60 * 60},
+                "notify_no_data": False,
+            }
         monitor = dog.Monitor.create(type="metric alert", query=query, options=options)
 
         # Check if you can delete the monitor.
@@ -517,7 +536,9 @@ class TestDatadog:
         }
 
         # Create a monitor-based SLO.
-        name = "test SLO {}".format(time.time())
+        with freezer as dt:
+            name = "test SLO {}".format(int(time.time()))
+
         thresholds = [{"timeframe": "7d", "target": 90}]
         slo = dog.ServiceLevelObjective.create(
             type="monitor",
@@ -549,18 +570,20 @@ class TestDatadog:
             "deleted_monitor_id": monitor["id"]
         }
 
-    def test_monitor_can_delete_with_force(self):
+    def test_monitor_can_delete_with_force(self, dog, freezer):
         # Create a monitor.
         query = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
-        options = {
-            "silenced": {"*": int(time.time()) + 60 * 60},
-            "notify_no_data": False,
-        }
+        with freezer:
+            options = {
+                "silenced": {"*": int(time.time()) + 60 * 60},
+                "notify_no_data": False,
+            }
         monitor = dog.Monitor.create(type="metric alert", query=query, options=options)
         monitor_ids = [monitor["id"]]
 
         # Create a monitor-based SLO.
-        name = "test SLO {}".format(time.time())
+        with freezer:
+            name = "test SLO {}".format(int(time.time()))
         thresholds = [{"timeframe": "7d", "target": 90}]
         slo = dog.ServiceLevelObjective.create(
             type="monitor",
@@ -574,12 +597,13 @@ class TestDatadog:
             "deleted_monitor_id": monitor["id"]
         }
 
-    def test_service_level_objective_crud(self):
+    def test_service_level_objective_crud(self, dog, freezer):
         numerator = "sum:my.custom.metric{type:good}.as_count()"
         denominator = "sum:my.custom.metric{*}.as_count()"
         query = {"numerator": numerator, "denominator": denominator}
         thresholds = [{"timeframe": "7d", "target": 90}]
-        name = "test SLO {}".format(time.time())
+        with freezer:
+            name = "test SLO {}".format(int(time.time()))
         slo = dog.ServiceLevelObjective.create(
             type="metric",
             query=query,
@@ -612,7 +636,7 @@ class TestDatadog:
         dog.ServiceLevelObjective.delete(slo["id"])
 
     @pytest.mark.admin_needed
-    def test_monitor_muting(self):
+    def test_monitor_muting(self, dog, get_with_retry):
         query1 = "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 100"
         query2 = "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100"
         monitor1 = dog.Monitor.create(type="metric alert", query=query1)
@@ -641,9 +665,10 @@ class TestDatadog:
         dog.Monitor.delete(monitor1["id"])
         dog.Monitor.delete(monitor2["id"])
 
-    def test_downtime(self):
-        start = int(time.time())
-        end = start + 1000
+    def test_downtime(self, dog, get_with_retry, freezer):
+        with freezer:
+            start = int(time.time())
+            end = start + 1000
 
         # Create downtime
         downtime = dog.Downtime.create(scope="test_tag:1", start=start, end=end)
@@ -656,7 +681,10 @@ class TestDatadog:
 
         # Update downtime
         message = "Doing some testing on staging."
-        end = int(time.time()) + 60000
+        with freezer as dt:
+            dt.tick()
+            end = int(time.time()) + 60000
+
         downtime = dog.Downtime.update(
             downtime["id"], scope="test_tag:2", end=end, message=message
         )
@@ -671,10 +699,11 @@ class TestDatadog:
             "Downtime", downtime["id"], retry_condition=lambda r: r["disabled"] is False
         )
 
-    def test_downtime_cancel_by_scope(self):
+    def test_downtime_cancel_by_scope(self, dog, get_with_retry, freezer):
         scope_one = "test:integration_one"
         scope_two = "test:integration_two"
-        start = int(time.time())
+        with freezer:
+            start = int(time.time())
 
         # Create downtime with scope_one
         end = start + 1000
@@ -683,12 +712,16 @@ class TestDatadog:
         assert downtime_one["disabled"] is False
 
         # Create downtime with scope_one
-        end = int(time.time()) + 60000
+        with freezer as dt:
+            dt.tick()
+            end = int(time.time()) + 60000
         downtime_two = dog.Downtime.create(scope=scope_one, start=start, end=end)
         assert downtime_two["scope"] == [scope_one]
         assert downtime_two["disabled"] is False
 
-        end = int(time.time()) + 120000
+        with freezer as dt:
+            dt.tick()
+            end = int(time.time()) + 120000
         downtime_three = dog.Downtime.create(scope=scope_two, start=start, end=end)
         assert downtime_three["scope"] == [scope_two]
         assert downtime_three["disabled"] is False
@@ -717,7 +750,7 @@ class TestDatadog:
                 "Downtime", downtime["id"], retry_condition=lambda r: r["disabled"] is False
             )
 
-    def test_service_check(self):
+    def test_service_check(self, dog):
         assert dog.ServiceCheck.check(
             check="check_pg",
             host_name="host0",
@@ -726,8 +759,9 @@ class TestDatadog:
             tags=["db:prod_data"],
         ) == {"status": "ok"}
 
-    def test_host_muting(self):
-        end = int(time.time()) + 60 * 60
+    def test_host_muting(self, dog, get_with_retry, freezer):
+        with freezer:
+            end = int(time.time()) + 60 * 60
         hostname = "my.test.host" + str(end)
         message = "Muting this host for a test."
 
@@ -762,12 +796,12 @@ class TestDatadog:
         assert unmute["hostname"] == hostname
         assert unmute["action"] == "Unmuted"
 
-    def test_get_all_embeds(self):
+    def test_get_all_embeds(self, dog):
         all_embeds = dog.Embed.get_all()
         # Check all embeds is a valid response
         assert "embedded_graphs" in all_embeds
 
-    def test_embed_crud(self):
+    def test_embed_crud(self, dog, get_with_retry):
         # Initialize a graph definition
         graph_def = {
             "viz": "toplist",
@@ -787,7 +821,7 @@ class TestDatadog:
         legend = "no"
         title = "Custom titles!"
         # Dump the dictionary to a JSON string and make an API call
-        graph_json = json.dumps(graph_def)
+        graph_json = json.dumps(graph_def, sort_keys=True)
         embed = dog.Embed.create(
             graph_json=graph_json,
             timeframe=timeframe,
@@ -816,8 +850,9 @@ class TestDatadog:
         assert "success" in dog.Embed.revoke(embed["embed_id"])
 
     @pytest.mark.admin_needed
-    def test_user_crud(self):
-        now = int(time.time())
+    def test_user_crud(self, dog, get_with_retry, freezer):
+        with freezer:
+            now = int(time.time())
         handle = "user{}@test.com".format(now)
         name = "Test User"
         alternate_name = "Test User Alt"
@@ -855,7 +890,7 @@ class TestDatadog:
         assert len(u["users"]) >= 1
 
     @pytest.mark.admin_needed
-    def test_roles_crud(self):
+    def test_roles_crud(self, dog):
         role_name = "test_role"
 
         data = {

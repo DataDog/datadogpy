@@ -1,9 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
-from datadog import api as dog
-from datadog import initialize
-from tests.integration.api.constants import API_KEY, APP_KEY, API_HOST
+
+import pytest
 
 
 class TestGcpIntegration:
@@ -11,20 +10,18 @@ class TestGcpIntegration:
     test_project_id = "datadog-apitest"
     test_client_email = "api-dev@datadog-sandbox.iam.gserviceaccount.com"
 
-    @classmethod
-    def setup_class(cls):
-        initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
-
-    @classmethod
-    def teardown_class(cls):
+    @pytest.fixture(autouse=True)  # TODO , scope="class"
+    def gcp_integration(self, dog):
+        """Prepare GCP Integration."""
+        yield
         # Should be deleted as part of the test
         # but cleanup here if test fails
         dog.GcpIntegration.delete(
-            project_id=cls.test_project_id,
-            client_email=cls.test_client_email
+            project_id=self.test_project_id,
+            client_email=self.test_client_email
         )
 
-    def test_gcp_crud(self):
+    def test_gcp_crud(self, dog):
         # Test Create
         create_output = dog.GcpIntegration.create(
             type="service_account",
