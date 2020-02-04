@@ -1,5 +1,20 @@
 CHANGELOG
 =========
+## 0.34.0 / 2020-02-04
+
+* [Deprecated] Alias `dog` script names as `dogshell`. Please start using `dogshell` instead of `dog` command. See [#305](https://github.com/DataDog/datadogpy/pull/305). Thanks [dwminer](https://github.com/dwminer).
+* [Fixed] [dogshell] Enforce the default 'normal' event priority client side. See [#511](https://github.com/DataDog/datadogpy/pull/511).
+* [Fixed] [dogstatsd] Handle EAGAIN socket error when dropping packets. See [#515](https://github.com/DataDog/datadogpy/pull/515). Thanks [mrknmc](https://github.com/mrknmc).
+* [Fixed] [dogstatsd] Handle OSError on socket.close on Python 3.6+. See [#510](https://github.com/DataDog/datadogpy/pull/510). Thanks [charettes](https://github.com/charettes).
+* [Added] [dogstatsd] Add `statsd_constant_tags` kwarg to datadog.initialize(). See [#494](https://github.com/DataDog/datadogpy/pull/494). Thanks [kainswor](https://github.com/kainswor).
+* [Added] [dogstatsd] Adding telemetry to dogstatsd. See [#505](https://github.com/DataDog/datadogpy/pull/505).
+* [Added] [dogwrap] Add duration as metric. See [#506](https://github.com/DataDog/datadogpy/pull/506).
+* [Added] [dogwrap] Add option to send to EU endpoint. See [#502](https://github.com/DataDog/datadogpy/pull/502).
+* [Added] [dogwrap] Add warning option for dogwrap based on exit codes. See [#471](https://github.com/DataDog/datadogpy/pull/471). Thanks [dabcoder](https://github.com/dabcoder).
+* [Added] Include LICENSE in MANIFEST.in. See [#500](https://github.com/DataDog/datadogpy/pull/500). Thanks [jjhelmus](https://github.com/jjhelmus).
+* [Added] Add base class for all exceptions. See [#496](https://github.com/DataDog/datadogpy/pull/496). Thanks [hakamadare](https://github.com/hakamadare).
+* [Added] Tag normalization. See [#489](https://github.com/DataDog/datadogpy/pull/489).
+
 
 # 0.33.0 / 2019-12-12
 
