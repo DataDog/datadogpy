@@ -17,7 +17,7 @@ This project does not have a strict release schedule. However, we would make a r
 * Make sure tests are passing.
   - Locally and in the continuous integration system.
 * Make sure documentation is up-to-date and building correctly.
-* Build the package locally (e.g. `python3 setup.py sdist`), install it into a fresh virtualenv and try playing around with it for a bit.
+* Build the package locally (e.g. `python3 setup.py sdist`), install it into a fresh virtualenv and test the changes that have been made since the last release.
 
 ## Update Changelog
 

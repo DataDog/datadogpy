@@ -42,7 +42,7 @@ setup(
     entry_points={
         "console_scripts": [
             "dog = datadog.dogshell:main",
-            "dogwrap = datadog.dogshell.wrap:main"
+            "dogwrap = datadog.dogshell.wrap:main",
             "dogshell = datadog.dogshell:main",
             "dogshellwrap = datadog.dogshell.wrap:main"
         ]
