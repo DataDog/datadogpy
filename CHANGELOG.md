@@ -1,5 +1,10 @@
 CHANGELOG
 =========
+## 0.34.1 / 2020-02-10
+
+* [Fixed] Revert dogstatsd telemetry. See [#530](https://github.com/DataDog/datadogpy/pull/530).
+* [Fixed] Fix ServiceLevelObjective.get_all limit default in docstring. See [#527](https://github.com/DataDog/datadogpy/pull/527). Thanks [taylor-chen](https://github.com/taylor-chen).
+
 ## 0.34.0 / 2020-02-04
 
 * [Deprecated] Alias `dog` script names as `dogshell`. Please start using `dogshell` instead of `dog` command. See [#305](https://github.com/DataDog/datadogpy/pull/305). Thanks [dwminer](https://github.com/dwminer).
