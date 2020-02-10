@@ -75,18 +75,18 @@ class OverflownSocket(FakeSocket):
         raise error
 
 
-def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped=0, packets_sent=0, packets_dropped=0, transport="udp", tags="", namespace=""):
+def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped=0, packets_sent=0, packets_dropped=0, transport="udp", tags=""):
     version = get_version()
     if tags:
         tags = "," + tags
 
-    return "\n{}datadog.dogstatsd.client.metrics:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(namespace, metrics, version, transport, tags) \
-        + "{}datadog.dogstatsd.client.events:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(namespace, events, version, transport, tags) \
-        + "{}datadog.dogstatsd.client.service_checks:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(namespace, service_checks, version, transport, tags) \
-        + "{}datadog.dogstatsd.client.bytes_sent:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(namespace, bytes_sent, version, transport, tags) \
-        + "{}datadog.dogstatsd.client.bytes_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(namespace, bytes_dropped, version, transport, tags) \
-        + "{}datadog.dogstatsd.client.packets_sent:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(namespace, packets_sent, version, transport, tags) \
-        + "{}datadog.dogstatsd.client.packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(namespace, packets_dropped, version, transport, tags)
+    return "\ndatadog.dogstatsd.client.metrics:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(metrics, version, transport, tags) \
+        + "datadog.dogstatsd.client.events:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(events, version, transport, tags) \
+        + "datadog.dogstatsd.client.service_checks:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(service_checks, version, transport, tags) \
+        + "datadog.dogstatsd.client.bytes_sent:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(bytes_sent, version, transport, tags) \
+        + "datadog.dogstatsd.client.bytes_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(bytes_dropped, version, transport, tags) \
+        + "datadog.dogstatsd.client.packets_sent:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(packets_sent, version, transport, tags) \
+        + "datadog.dogstatsd.client.packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped, version, transport, tags)
 
 def assert_equal_telemetry(expected_payload, actual_payload, telemetry=None):
     if telemetry is None:
@@ -313,7 +313,7 @@ class TestDogStatsd(unittest.TestCase):
         """
         self.statsd.namespace = "foo"
         self.statsd.gauge('gauge', 123.4)
-        assert_equal_telemetry('foo.gauge:123.4|g', self.recv(), telemetry=telemetry_metrics(namespace="foo."))
+        assert_equal_telemetry('foo.gauge:123.4|g', self.recv())
 
     # Test Client level contant tags
     def test_gauge_constant_tags(self):

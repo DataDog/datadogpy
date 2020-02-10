@@ -321,10 +321,10 @@ class DogStatsd(object):
                 log.error("Unexpected error: %s", str(e))
             self.socket = None
 
-    def _serialize_metric(self, metric, metric_type, value, tags, sample_rate=1):
+    def _serialize_metric(self, metric, metric_type, value, tags, sample_rate=1, ignore_namespace=False):
         # Create/format the metric packet
         return "%s%s:%s|%s%s%s" % (
-            (self.namespace + ".") if self.namespace else "",
+            (self.namespace + ".") if not ignore_namespace and self.namespace else "",
             metric,
             value,
             metric_type,
@@ -370,19 +370,19 @@ class DogStatsd(object):
         telemetry_tags = self._add_constant_tags(self._client_tags)
         return "\n%s\n%s\n%s\n%s\n%s\n%s\n%s" % (
                 self._serialize_metric("datadog.dogstatsd.client.metrics",
-                                       "c", self.metrics_count, telemetry_tags),
+                                       "c", self.metrics_count, telemetry_tags, ignore_namespace=True),
                 self._serialize_metric("datadog.dogstatsd.client.events",
-                                       "c", self.events_count, telemetry_tags),
+                                       "c", self.events_count, telemetry_tags, ignore_namespace=True),
                 self._serialize_metric("datadog.dogstatsd.client.service_checks",
-                                       "c", self.service_checks_count, telemetry_tags),
+                                       "c", self.service_checks_count, telemetry_tags, ignore_namespace=True),
                 self._serialize_metric("datadog.dogstatsd.client.bytes_sent",
-                                       "c", self.bytes_sent, telemetry_tags),
+                                       "c", self.bytes_sent, telemetry_tags, ignore_namespace=True),
                 self._serialize_metric("datadog.dogstatsd.client.bytes_dropped",
-                                       "c", self.bytes_dropped, telemetry_tags),
+                                       "c", self.bytes_dropped, telemetry_tags, ignore_namespace=True),
                 self._serialize_metric("datadog.dogstatsd.client.packets_sent",
-                                       "c", self.packets_sent, telemetry_tags),
+                                       "c", self.packets_sent, telemetry_tags, ignore_namespace=True),
                 self._serialize_metric("datadog.dogstatsd.client.packets_dropped",
-                                       "c", self.packets_dropped, telemetry_tags),
+                                       "c", self.packets_dropped, telemetry_tags, ignore_namespace=True),
                 )
 
     def _send_to_server(self, packet):
