@@ -35,7 +35,7 @@ def is_valid_hostname(hostname):
     return True
 
 
-def get_hostname():
+def get_hostname(hostname_from_config):
     """
     Get the canonical host name this agent should identify as. This is
     the authoritative source of the host name for the agent.
@@ -46,18 +46,21 @@ def get_hostname():
       * 'hostname -f' (on unix)
       * socket.gethostname()
     """
-
     hostname = None
     config = None
 
     # first, try the config
     try:
-        config = get_config()
-        config_hostname = config.get('hostname')
-        if config_hostname and is_valid_hostname(config_hostname):
-            return config_hostname
+        if hostname_from_config:
+            config = get_config()
+            config_hostname = config.get('hostname')
+            if config_hostname and is_valid_hostname(config_hostname):
+                log.warning("Hostname lookup from agent configuration will be deprecated "
+                            "in an upcoming version of datadogpy. Set hostname_from_config to False "
+                            "to get rid of this warning")
+                return config_hostname
     except CfgNotFound:
-        log.info("No agent or invalid configuration file found")
+        log.warning("No agent or invalid configuration file found")
 
     # Try to get GCE instance name
     if hostname is None:
@@ -199,7 +202,7 @@ class EC2(object):
         try:
             iam_role = url_lib.urlopen(EC2.URL + "/iam/security-credentials").read().strip()
             iam_params = json.loads(url_lib.urlopen(EC2.URL + "/iam/security-credentials" + "/" +
-                                    str(iam_role)).read().strip())
+                                                    str(iam_role)).read().strip())
             from boto.ec2.connection import EC2Connection
             connection = EC2Connection(aws_access_key_id=iam_params['AccessKeyId'],
                                        aws_secret_access_key=iam_params['SecretAccessKey'],
