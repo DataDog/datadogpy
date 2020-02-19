@@ -12,12 +12,14 @@ import logging
 import os
 import socket
 import errno
+import time
 from threading import Lock
 
 # datadog
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.dogstatsd.route import get_default_route
 from datadog.util.compat import text
+from datadog.util.config import get_pkg_version
 
 # Logging
 log = logging.getLogger('datadog.dogstatsd')
@@ -29,13 +31,17 @@ DEFAULT_PORT = 8125
 # Tag name of entity_id
 ENTITY_ID_TAG_NAME = "dd.internal.entity_id"
 
+# Telemetry minimum flush interval in seconds
+DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL = 10
+
 
 class DogStatsd(object):
     OK, WARNING, CRITICAL, UNKNOWN = (0, 1, 2, 3)
 
     def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, max_buffer_size=50, namespace=None,
                  constant_tags=None, use_ms=False, use_default_route=False,
-                 socket_path=None, default_sample_rate=1):
+                 socket_path=None, default_sample_rate=1, disable_telemetry=False,
+                 telemetry_min_flush_interval=DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL):
         """
         Initialize a DogStatsd object.
 
@@ -106,10 +112,12 @@ class DogStatsd(object):
             self.socket_path = socket_path
             self.host = None
             self.port = None
+            transport = "uds"
         else:
             self.socket_path = None
             self.host = self.resolve_host(host, use_default_route)
             self.port = int(port)
+            transport = "udp"
 
         # Socket
         self.socket = None
@@ -131,6 +139,26 @@ class DogStatsd(object):
         self.namespace = namespace
         self.use_ms = use_ms
         self.default_sample_rate = default_sample_rate
+
+        # init telemetry version
+        try:
+            client_version = get_pkg_version()
+        except Exception:
+            client_version = u"unknown"
+        self._client_tags = [
+                "client:py",
+                "client_version:{}".format(client_version),
+                "client_transport:{}".format(transport),
+                ]
+        self._reset_telementry()
+        self._telemetry_flush_interval = telemetry_min_flush_interval
+        self._telemetry = not disable_telemetry
+
+    def disable_telemetry(self):
+        self._telemetry = False
+
+    def enable_telemetry(self):
+        self._telemetry = True
 
     def __enter__(self):
         self.open_buffer(self.max_buffer_size)
@@ -303,6 +331,17 @@ class DogStatsd(object):
                 log.error("Unexpected error: %s", str(e))
             self.socket = None
 
+    def _serialize_metric(self, metric, metric_type, value, tags, sample_rate=1):
+        # Create/format the metric packet
+        return "%s%s:%s|%s%s%s" % (
+            (self.namespace + ".") if self.namespace else "",
+            metric,
+            value,
+            metric_type,
+            ("|@" + text(sample_rate)) if sample_rate != 1 else "",
+            ("|#" + ",".join(tags)) if tags else "",
+        )
+
     def _report(self, metric, metric_type, value, tags, sample_rate):
         """
         Create a metric packet and send it.
@@ -312,6 +351,9 @@ class DogStatsd(object):
         if value is None:
             return
 
+        if self._telemetry:
+            self.metrics_count += 1
+
         if sample_rate is None:
             sample_rate = self.default_sample_rate
 
@@ -320,27 +362,56 @@ class DogStatsd(object):
 
         # Resolve the full tag list
         tags = self._add_constant_tags(tags)
-
-        # Create/format the metric packet
-        payload = "%s%s:%s|%s%s%s" % (
-            (self.namespace + ".") if self.namespace else "",
-            metric,
-            value,
-            metric_type,
-            ("|@" + text(sample_rate)) if sample_rate != 1 else "",
-            ("|#" + ",".join(tags)) if tags else "",
-        )
+        payload = self._serialize_metric(metric, metric_type, value, tags, sample_rate)
 
         # Send it
         self._send(payload)
 
+    def _reset_telementry(self):
+        self.metrics_count = 0
+        self.events_count = 0
+        self.service_checks_count = 0
+        self.bytes_sent = 0
+        self.bytes_dropped = 0
+        self.packets_sent = 0
+        self.packets_dropped = 0
+        self._last_flush_time = time.time()
+
+    def _flush_telemetry(self):
+        telemetry_tags = ",".join(self._add_constant_tags(self._client_tags))
+        return "\n".join((
+            "datadog.dogstatsd.client.metrics:%s|c|#%s" % (self.metrics_count, telemetry_tags),
+            "datadog.dogstatsd.client.events:%s|c|#%s" % (self.events_count, telemetry_tags),
+            "datadog.dogstatsd.client.service_checks:%s|c|#%s" % (self.service_checks_count, telemetry_tags),
+            "datadog.dogstatsd.client.bytes_sent:%s|c|#%s" % (self.bytes_sent, telemetry_tags),
+            "datadog.dogstatsd.client.bytes_dropped:%s|c|#%s" % (self.bytes_dropped, telemetry_tags),
+            "datadog.dogstatsd.client.packets_sent:%s|c|#%s" % (self.packets_sent, telemetry_tags),
+            "datadog.dogstatsd.client.packets_dropped:%s|c|#%s" % (self.packets_dropped, telemetry_tags),
+        ))
+
+    def _is_telemetry_flush_time(self):
+        if self._telemetry \
+           and self._last_flush_time + self._telemetry_flush_interval < time.time():
+            return True
+        return False
+
     def _send_to_server(self, packet):
+        flush_telemetry = self._is_telemetry_flush_time()
+        if flush_telemetry:
+            packet += "\n"+self._flush_telemetry()
+
         try:
             # If set, use socket directly
             (self.socket or self.get_socket()).send(packet.encode(self.encoding))
+            if self._telemetry:
+                if flush_telemetry:
+                    self._reset_telementry()
+                self.packets_sent += 1
+                self.bytes_sent += len(packet)
+            return
         except socket.timeout:
             # dogstatsd is overflowing, drop the packets (mimicks the UDP behaviour)
-            return
+            pass
         except (socket.herror, socket.gaierror) as se:
             log.warning("Error submitting packet: {}, dropping the packet and closing the socket".format(se))
             self.close_socket()
@@ -352,7 +423,10 @@ class DogStatsd(object):
                 self.close_socket()
         except Exception as e:
             log.error("Unexpected error: %s", str(e))
-            return
+
+        if self._telemetry:
+            self.bytes_dropped += len(packet)
+            self.packets_dropped += 1
 
     def _send_to_buffer(self, packet):
         self.buffer.append(packet)
@@ -405,6 +479,8 @@ class DogStatsd(object):
             raise Exception(u'Event "%s" payload is too big (more than 8KB), '
                             'event discarded' % title)
 
+        if self._telemetry:
+            self.events_count += 1
         self._send(string)
 
     def service_check(self, check_name, status, tags=None, timestamp=None,
@@ -430,6 +506,8 @@ class DogStatsd(object):
         if message:
             string = u'{0}|m:{1}'.format(string, message)
 
+        if self._telemetry:
+            self.service_checks_count += 1
         self._send(string)
 
     def _add_constant_tags(self, tags):
