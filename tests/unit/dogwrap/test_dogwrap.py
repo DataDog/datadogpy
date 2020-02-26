@@ -4,11 +4,11 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
 import unittest
+import mock
 import os
-import sys
 import tempfile
 
-from datadog.dogshell.wrap import OutputReader, build_event_body, parse_options
+from datadog.dogshell.wrap import OutputReader, build_event_body, parse_options, execute, Timeout, poll_proc
 from datadog.util.compat import is_p3k
 
 
@@ -93,3 +93,153 @@ class TestDogwrap(unittest.TestCase):
 
         with self.assertRaises(SystemExit):
             parse_options(['--proc_poll_interval', 'invalid'])
+
+    def test_poll_proc(self):
+        mock_proc = mock.Mock()
+        mock_proc.poll.side_effect = [None, 0]
+
+        return_value = poll_proc(mock_proc, 0.1, 1)
+        self.assertEqual(return_value, 0)
+        self.assertEqual(mock_proc.poll.call_count, 2)
+
+    def test_poll_timeout(self):
+        mock_proc = mock.Mock()
+        mock_proc.poll.side_effect = [None, None, None]
+
+        with self.assertRaises(Timeout):
+            poll_proc(mock_proc, 0.1, 0.2)
+
+    @mock.patch('datadog.dogshell.wrap.poll_proc')
+    @mock.patch('subprocess.Popen')
+    def test_execute(self, mock_popen, mock_poll):
+        mock_proc = mock.Mock()
+        mock_proc.stdout.readline.side_effect = [b'out1\n', b'']
+        mock_proc.stderr.readline.side_effect = [b'err1\n', b'']
+        mock_popen.return_value = mock_proc
+        mock_poll.return_value = 0
+
+        return_code, stdout, stderr, duration = execute('foo', 10, 20, 30, 1, False)
+        self.assertEqual(return_code, 0)
+        self.assertEqual(stdout, b'out1\n')
+        self.assertEqual(stderr, b'err1\n')
+
+        mock_popen.assert_called_once()
+        mock_poll.assert_called_once_with(mock_proc, 1, 10)
+        mock_proc.terminate.assert_not_called()
+        mock_proc.kill.assert_not_called()
+
+    @mock.patch('datadog.dogshell.wrap.poll_proc')
+    @mock.patch('subprocess.Popen')
+    def test_execute_exit_code(self, mock_popen, mock_poll):
+        mock_proc = mock.Mock()
+        mock_proc.stdout.readline.side_effect = [b'out1\n', b'out2\n', '']
+        mock_proc.stderr.readline.side_effect = [b'err1\n', b'']
+        mock_popen.return_value = mock_proc
+        mock_poll.return_value = 14
+
+        return_code, stdout, stderr, duration = execute('foo', 10, 20, 30, 1, False)
+        self.assertEqual(return_code, 14)
+        self.assertEqual(stdout, b'out1\nout2\n')
+        self.assertEqual(stderr, b'err1\n')
+
+        mock_popen.assert_called_once()
+        mock_poll.assert_called_once_with(mock_proc, 1, 10)
+        mock_proc.terminate.assert_not_called()
+        mock_proc.kill.assert_not_called()
+
+    @mock.patch('datadog.dogshell.wrap.poll_proc')
+    @mock.patch('subprocess.Popen')
+    def test_execute_cmd_timeout(self, mock_popen, mock_poll):
+        mock_proc = mock.Mock()
+        mock_proc.stdout.readline.side_effect = [b'out1\n', b'out2\n', '']
+        mock_proc.stderr.readline.side_effect = [b'err1\n', b'']
+        mock_popen.return_value = mock_proc
+        mock_poll.side_effect = [Timeout, 1]
+
+        return_code, stdout, stderr, duration = execute('foo', 10, 20, 30, 1, False)
+        self.assertEqual(return_code, Timeout)
+        self.assertEqual(stdout, b'out1\nout2\n')
+        self.assertEqual(stderr, b'err1\n')
+
+        mock_popen.assert_called_once()
+        mock_poll.assert_has_calls([
+            mock.call(mock_proc, 1, 10),
+            mock.call(mock_proc, 1, 20)
+        ])
+        mock_proc.terminate.assert_called_once()
+        mock_proc.kill.assert_not_called()
+
+    @mock.patch('datadog.dogshell.wrap.poll_proc')
+    @mock.patch('subprocess.Popen')
+    def test_execute_sigterm_timeout(self, mock_popen, mock_poll):
+        mock_proc = mock.Mock()
+        mock_proc.stdout.readline.side_effect = [b'out1\n', b'out2\n', '']
+        mock_proc.stderr.readline.side_effect = [b'err1\n', b'']
+        mock_popen.return_value = mock_proc
+        mock_poll.side_effect = [Timeout, Timeout, 2]
+
+        return_code, stdout, stderr, duration = execute('foo', 10, 20, 30, 1, False)
+        self.assertEqual(return_code, Timeout)
+        self.assertEqual(stdout, b'out1\nout2\n')
+        self.assertEqual(stderr, b'err1\n')
+
+        mock_popen.assert_called_once()
+        mock_poll.assert_has_calls([
+            mock.call(mock_proc, 1, 10),
+            mock.call(mock_proc, 1, 20),
+            mock.call(mock_proc, 1, 30)
+        ])
+        mock_proc.terminate.assert_called_once()
+        mock_proc.kill.assert_called_once()
+
+    @mock.patch('datadog.dogshell.wrap.poll_proc')
+    @mock.patch('subprocess.Popen')
+    def test_execute_sigkill_timeout(self, mock_popen, mock_poll):
+        mock_proc = mock.Mock()
+        mock_proc.stdout.readline.side_effect = [b'out1\n', b'out2\n', '']
+        mock_proc.stderr.readline.side_effect = [b'err1\n', b'']
+        mock_popen.return_value = mock_proc
+        mock_poll.side_effect = [Timeout, Timeout, Timeout]
+
+        return_code, stdout, stderr, duration = execute('foo', 10, 20, 30, 1, False)
+        self.assertEqual(return_code, Timeout)
+        self.assertEqual(stdout, b'out1\nout2\n')
+        self.assertEqual(stderr, b'err1\n')
+
+        mock_popen.assert_called_once()
+        mock_poll.assert_has_calls([
+            mock.call(mock_proc, 1, 10),
+            mock.call(mock_proc, 1, 20),
+            mock.call(mock_proc, 1, 30)
+        ])
+        mock_proc.terminate.assert_called_once()
+        mock_proc.kill.assert_called_once()
+
+    @mock.patch('datadog.dogshell.wrap.poll_proc')
+    @mock.patch('subprocess.Popen')
+    def test_execute_oserror(self, mock_popen, mock_poll):
+        mock_proc = mock.Mock()
+        mock_proc.stdout.readline.side_effect = [b'out1\n', b'out2\n', '']
+        mock_proc.stderr.readline.side_effect = [b'err1\n', b'']
+        mock_popen.return_value = mock_proc
+        mock_poll.side_effect = [Timeout, Timeout]
+        mock_proc.kill.side_effect = OSError(3, 'No process')
+        return_code, stdout, stderr, duration = execute('foo', 10, 20, 30, 1, False)
+        self.assertEqual(return_code, Timeout)
+        self.assertEqual(stdout, b'out1\nout2\n')
+        self.assertEqual(stderr, b'err1\n')
+
+        mock_popen.assert_called_once()
+        mock_poll.assert_has_calls([
+            mock.call(mock_proc, 1, 10),
+            mock.call(mock_proc, 1, 20)
+        ])
+        mock_proc.terminate.assert_called_once()
+        mock_proc.kill.assert_called_once()
+
+    @mock.patch('subprocess.Popen')
+    def test_execute_popen_fail(self, mock_popen):
+        mock_popen.side_effect = ValueError('Bad things')
+
+        with self.assertRaises(ValueError):
+            execute('sleep 1', 10, 1, 1, 1, False)
