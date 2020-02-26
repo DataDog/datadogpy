@@ -142,13 +142,11 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout,
             proc.terminate()
             sigterm_start = time.time()
             try:
-                print("Command timed out after %.2fs, killing with SIGTERM", file=sys.stderr) \
-                    % (time.time() - start_time)
+                print("Command timed out after %.2fs, killing with SIGTERM" % (time.time() - start_time), file=sys.stderr)
                 poll_proc(proc, proc_poll_interval, sigterm_timeout)
                 returncode = Timeout
             except Timeout:
-                print("SIGTERM timeout failed after %.2fs, killing with SIGKILL", file=sys.stderr) \
-                    % (time.time() - sigterm_start)
+                print("SIGTERM timeout failed after %.2fs, killing with SIGKILL" % (time.time() - sigterm_start), file=sys.stderr)
                 proc.kill()
                 poll_proc(proc, proc_poll_interval, sigkill_timeout)
                 returncode = Timeout
