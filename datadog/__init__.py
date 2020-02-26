@@ -62,11 +62,11 @@ def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
     :type statsd_port: port
 
     :param statsd_use_default_route: Dynamically set the statsd host to the default route
-    (Useful when running the client in a container)
+                                     (Useful when running the client in a container)
     :type statsd_use_default_route: boolean
 
     :param statsd_socket_path: path to the DogStatsd UNIX socket. Supersedes statsd_host
-    and stats_port if provided.
+                               and stats_port if provided.
 
     :param statsd_constant_tags: A list of tags to be applied to all metrics ("tag", "tag:value")
     :type statsd_constant_tags: list of string
