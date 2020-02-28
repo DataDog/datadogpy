@@ -48,3 +48,7 @@ jobs:
     displayName: Install tox
   - script: tox
     displayName: Run unit tests
+  - script: tox -e integration -- --vcr-record=none
+    displayName: Run integration tests on cassettes
+  - script: tox -e integration-admin -- --vcr-record=none
+    displayName: Run admin integration tests on cassettes

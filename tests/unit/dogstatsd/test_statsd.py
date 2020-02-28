@@ -70,23 +70,22 @@ class BrokenSocket(FakeSocket):
 class OverflownSocket(FakeSocket):
 
     def send(self, payload):
-        error = socker.error("Socker error")
+        error = socket.error("Socket error")
         error.errno = errno.EAGAIN
         raise error
 
 
-def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped=0, packets_sent=0, packets_dropped=0, transport="udp", tags="", namespace=""):
+def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped=0, packets_sent=0, packets_dropped=0, transport="udp", tags=""):
     version = get_version()
-    if tags:
-        tags = "," + tags
+    tags = "," + tags if tags else ""
 
-    return "\n{}datadog.dogstatsd.client.metrics:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(namespace, metrics, version, transport, tags) \
-        + "{}datadog.dogstatsd.client.events:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(namespace, events, version, transport, tags) \
-        + "{}datadog.dogstatsd.client.service_checks:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(namespace, service_checks, version, transport, tags) \
-        + "{}datadog.dogstatsd.client.bytes_sent:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(namespace, bytes_sent, version, transport, tags) \
-        + "{}datadog.dogstatsd.client.bytes_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(namespace, bytes_dropped, version, transport, tags) \
-        + "{}datadog.dogstatsd.client.packets_sent:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(namespace, packets_sent, version, transport, tags) \
-        + "{}datadog.dogstatsd.client.packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(namespace, packets_dropped, version, transport, tags)
+    return "\ndatadog.dogstatsd.client.metrics:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(metrics, version, transport, tags) \
+        + "datadog.dogstatsd.client.events:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(events, version, transport, tags) \
+        + "datadog.dogstatsd.client.service_checks:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(service_checks, version, transport, tags) \
+        + "datadog.dogstatsd.client.bytes_sent:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(bytes_sent, version, transport, tags) \
+        + "datadog.dogstatsd.client.bytes_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(bytes_dropped, version, transport, tags) \
+        + "datadog.dogstatsd.client.packets_sent:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(packets_sent, version, transport, tags) \
+        + "datadog.dogstatsd.client.packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped, version, transport, tags)
 
 def assert_equal_telemetry(expected_payload, actual_payload, telemetry=None):
     if telemetry is None:
@@ -101,7 +100,7 @@ class TestDogStatsd(unittest.TestCase):
         Set up a default Dogstatsd instance and mock the proc filesystem.
         """
         #
-        self.statsd = DogStatsd()
+        self.statsd = DogStatsd(telemetry_min_flush_interval=0)
         self.statsd.socket = FakeSocket()
 
         # Mock the proc filesystem
@@ -317,7 +316,7 @@ class TestDogStatsd(unittest.TestCase):
         """
         self.statsd.namespace = "foo"
         self.statsd.gauge('gauge', 123.4)
-        assert_equal_telemetry('foo.gauge:123.4|g', self.recv(), telemetry=telemetry_metrics(namespace="foo."))
+        assert_equal_telemetry('foo.gauge:123.4|g', self.recv())
 
     # Test Client level contant tags
     def test_gauge_constant_tags(self):
@@ -632,9 +631,49 @@ class TestDogStatsd(unittest.TestCase):
         assert_equal(1, self.statsd.packets_sent)
         assert_equal(0, self.statsd.packets_dropped)
 
+    def test_telemetry_flush_interval(self):
+        statsd = DogStatsd()
+        fake_socket = FakeSocket()
+        statsd.socket = fake_socket
+
+        # set the last flush time in the future to be sure we won't flush
+        statsd._last_flush_time = time.time() + statsd._telemetry_flush_interval
+        statsd.gauge('gauge', 123.4)
+
+        assert_equal('gauge:123.4|g', fake_socket.recv())
+
+        t1 = time.time()
+        # setting the last flush time in the past to trigger a telemetry flush
+        statsd._last_flush_time = t1 - statsd._telemetry_flush_interval -1
+        statsd.gauge('gauge', 123.4)
+
+        assert_equal_telemetry('gauge:123.4|g', fake_socket.recv(), telemetry=telemetry_metrics(metrics=2, bytes_sent=13, packets_sent=1))
+        # assert that _last_flush_time has been updated
+        assert t1 < statsd._last_flush_time
+
+    def test_telemetry_flush_interval_batch(self):
+        statsd = DogStatsd()
+
+        fake_socket = FakeSocket()
+        statsd.socket = fake_socket
+
+        statsd.open_buffer()
+        statsd.gauge('gauge1', 1)
+        statsd.gauge('gauge2', 2)
+
+        t1 = time.time()
+        # setting the last flush time in the past to trigger a telemetry flush
+        statsd._last_flush_time = t1 - statsd._telemetry_flush_interval -1
+
+        statsd.close_buffer()
+
+        assert_equal_telemetry('gauge1:1|g\ngauge2:2|g', fake_socket.recv(), telemetry=telemetry_metrics(metrics=2))
+        # assert that _last_flush_time has been updated
+        assert t1 < statsd._last_flush_time
+
     def test_context_manager(self):
         fake_socket = FakeSocket()
-        with DogStatsd() as statsd:
+        with DogStatsd(telemetry_min_flush_interval=0) as statsd:
             statsd.socket = fake_socket
             statsd.gauge('page.views', 123)
             statsd.timing('timer', 123)
@@ -644,7 +683,7 @@ class TestDogStatsd(unittest.TestCase):
     def test_batched_buffer_autoflush(self):
         fake_socket = FakeSocket()
         bytes_sent = 0
-        with DogStatsd() as statsd:
+        with DogStatsd(telemetry_min_flush_interval=0) as statsd:
             statsd.socket = fake_socket
             for i in range(51):
                 statsd.increment('mycounter')
@@ -681,7 +720,7 @@ class TestDogStatsd(unittest.TestCase):
     def test_tags_from_environment(self):
         with preserve_environment_variable('DATADOG_TAGS'):
             os.environ['DATADOG_TAGS'] = 'country:china,age:45,blue'
-            statsd = DogStatsd()
+            statsd = DogStatsd(telemetry_min_flush_interval=0)
         statsd.socket = FakeSocket()
         statsd.gauge('gt', 123.4)
         assert_equal_telemetry('gt:123.4|g|#country:china,age:45,blue',
@@ -691,7 +730,7 @@ class TestDogStatsd(unittest.TestCase):
     def test_tags_from_environment_and_constant(self):
         with preserve_environment_variable('DATADOG_TAGS'):
            os.environ['DATADOG_TAGS'] = 'country:china,age:45,blue'
-           statsd = DogStatsd(constant_tags=['country:canada', 'red'])
+           statsd = DogStatsd(constant_tags=['country:canada', 'red'], telemetry_min_flush_interval=0)
         statsd.socket = FakeSocket()
         statsd.gauge('gt', 123.4)
         tags="country:canada,red,country:china,age:45,blue"
@@ -700,7 +739,7 @@ class TestDogStatsd(unittest.TestCase):
     def test_entity_tag_from_environment(self):
         with preserve_environment_variable('DD_ENTITY_ID'):
             os.environ['DD_ENTITY_ID'] = '04652bb7-19b7-11e9-9cc6-42010a9c016d'
-            statsd = DogStatsd()
+            statsd = DogStatsd(telemetry_min_flush_interval=0)
         statsd.socket = FakeSocket()
         statsd.gauge('gt', 123.4)
         assert_equal_telemetry('gt:123.4|g|#dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d',
@@ -710,7 +749,7 @@ class TestDogStatsd(unittest.TestCase):
     def test_entity_tag_from_environment_and_constant(self):
         with preserve_environment_variable('DD_ENTITY_ID'):
             os.environ['DD_ENTITY_ID'] = '04652bb7-19b7-11e9-9cc6-42010a9c016d'
-            statsd = DogStatsd(constant_tags=['country:canada', 'red'])
+            statsd = DogStatsd(constant_tags=['country:canada', 'red'], telemetry_min_flush_interval=0)
         statsd.socket = FakeSocket()
         statsd.gauge('gt', 123.4)
         assert_equal_telemetry('gt:123.4|g|#country:canada,red,dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d',
@@ -722,7 +761,7 @@ class TestDogStatsd(unittest.TestCase):
             os.environ['DATADOG_TAGS'] = 'country:china,age:45,blue'
             with preserve_environment_variable('DD_ENTITY_ID'):
                 os.environ['DD_ENTITY_ID'] = '04652bb7-19b7-11e9-9cc6-42010a9c016d'
-                statsd = DogStatsd(constant_tags=['country:canada', 'red'])
+                statsd = DogStatsd(constant_tags=['country:canada', 'red'], telemetry_min_flush_interval=0)
         statsd.socket = FakeSocket()
         statsd.gauge('gt', 123.4)
         tags = "country:canada,red,country:china,age:45,blue,dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d"

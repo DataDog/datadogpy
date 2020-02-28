@@ -65,7 +65,7 @@ class ServiceLevelObjective(
         :param offset: offset of results to use (default 0)
         :type offset: int
 
-        :param limit: limit of results to return (default: 1000)
+        :param limit: limit of results to return (default: 100)
         :type limit: int
 
         :returns: SLOs matching the query

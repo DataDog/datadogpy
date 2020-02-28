@@ -28,6 +28,7 @@ import subprocess
 import sys
 import threading
 import time
+import warnings
 
 # datadog
 from datadog import initialize, api
@@ -116,45 +117,49 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout,
     try:
         # Let's that the threads collecting the output from the command in the
         # background
-        stdout = sys.stdout.buffer if is_p3k() else sys.stdout
-        stderr = sys.stderr.buffer if is_p3k() else sys.stderr
-        out_reader = OutputReader(proc.stdout, stdout if not buffer_outs else None)
-        err_reader = OutputReader(proc.stderr, stderr if not buffer_outs else None)
+        stdout_buffer = sys.stdout.buffer if is_p3k() else sys.stdout
+        stderr_buffer = sys.stderr.buffer if is_p3k() else sys.stderr
+        out_reader = OutputReader(proc.stdout, stdout_buffer if not buffer_outs else None)
+        err_reader = OutputReader(proc.stderr, stderr_buffer if not buffer_outs else None)
         out_reader.start()
         err_reader.start()
 
-        # Let's quietly wait from the program's completion here et get the exit
+        # Let's quietly wait from the program's completion here to get the exit
         # code when it finishes
         returncode = poll_proc(proc, proc_poll_interval, cmd_timeout)
-
-        # Let's harvest the outputs collected by our background threads
-        # after making sure they're done reading it.
-        out_reader.join()
-        err_reader.join()
-        stdout = out_reader.content
-        stderr = err_reader.content
-
-        duration = time.time() - start_time
     except Timeout:
-        duration = time.time() - start_time
+        returncode = Timeout
+        sigterm_start = time.time()
+        print("Command timed out after %.2fs, killing with SIGTERM" % (time.time() - start_time),
+              file=sys.stderr)
         try:
             proc.terminate()
-            sigterm_start = time.time()
             try:
-                print("Command timed out after %.2fs, killing with SIGTERM", file=sys.stderr) \
-                    % (time.time() - start_time)
                 poll_proc(proc, proc_poll_interval, sigterm_timeout)
-                returncode = Timeout
             except Timeout:
-                print("SIGTERM timeout failed after %.2fs, killing with SIGKILL", file=sys.stderr) \
-                    % (time.time() - sigterm_start)
+                print("SIGTERM timeout failed after %.2fs, killing with SIGKILL" % (time.time() - sigterm_start),
+                      file=sys.stderr)
+                sigkill_start = time.time()
                 proc.kill()
-                poll_proc(proc, proc_poll_interval, sigkill_timeout)
-                returncode = Timeout
+                try:
+                    poll_proc(proc, proc_poll_interval, sigkill_timeout)
+                except Timeout:
+                    print("SIGKILL timeout failed after %.2fs, exiting" % (time.time() - sigkill_start),
+                          file=sys.stderr)
         except OSError as e:
             # Ignore OSError 3: no process found.
             if e.errno != 3:
                 raise
+
+    # Let's harvest the outputs collected by our background threads
+    # after making sure they're done reading it.
+    out_reader.join()
+    err_reader.join()
+    stdout = out_reader.content
+    stderr = err_reader.content
+
+    duration = time.time() - start_time
+
     return returncode, stdout, stderr, duration
 
 
@@ -405,4 +410,6 @@ def main():
 
 
 if __name__ == '__main__':
+    if sys.argv[0].endswith("dogwrap"):
+        warnings.warn("dogwrap is pending deprecation. Please use dogshellwrap instead.", PendingDeprecationWarning)
     main()

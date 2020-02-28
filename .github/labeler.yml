@@ -1,3 +1,20 @@
 # Configuration for labeler - https://github.com/actions/labeler
 
 documentation: "**/*.md"
+
+resource-api:
+  - /datadog/api/**/*
+  - /tests/integration/api/**/*
+  - /tests/unit/api/**/*
+
+resource-dogshell:
+  - /datadog/dogshell/**/*
+  - /tests/integration/dogshell/**/*
+
+resource-dogstatd:
+  - /datadog/dogstatsd/**/*
+  - /tests/unit/dogstatsd/**/*
+
+resource-threadstats:
+  - /datadog/threadstats/**/*
+  - /tests/unit/threadstats/**/*

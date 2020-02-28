@@ -1,11 +1,10 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
-from datadog import api as dog
-from datadog import initialize
-from tests.integration.api.constants import API_KEY, APP_KEY, API_HOST
 
 from itertools import product
+
+import pytest
 
 TEST_ACCOUNT_ID_1 = "123456789101"
 TEST_ACCOUNT_ID_2 = "123456789102"
@@ -20,25 +19,14 @@ AVAILABLE_NAMESPACES = 76
 
 class TestAwsIntegration:
 
-    # List of dictionaries representing the AWS Accounts to cleanup between tests
-    # Ex: [{"account_id": "1234", "role_name": "R1"}, {"account_id": "5678", "role_name": "r2"}]
-    accounts_to_cleanup = []
+    @pytest.fixture(autouse=True)  # TODO , scope="class"
+    def aws_integration(self, dog):
+        """Remove pending AWS Integrations."""
+        yield
+        for account_id, role_name in product(ACCOUNT_IDS, ROLE_NAMES):
+            dog.AwsIntegration.delete(account_id=account_id, role_name=role_name)
 
-    @classmethod
-    def setup_class(cls):
-        """ setup any state tied to the execution of the class. called at class
-        level before and after all test methods of the class are called.
-        """
-        initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
-
-        for acc in product(ACCOUNT_IDS, ROLE_NAMES):
-            cls.accounts_to_cleanup.append({'account_id': acc[0], 'role_name': acc[1]})
-
-    def teardown_method(self, method):
-        for account in self.accounts_to_cleanup:
-            dog.AwsIntegration.delete(account_id=account['account_id'], role_name=account.get('role_name'))
-
-    def test_create(self):
+    def test_create(self, dog):
         output = dog.AwsIntegration.create(
             account_id=TEST_ACCOUNT_ID_3,
             role_name=TEST_ROLE_NAME,
@@ -48,7 +36,7 @@ class TestAwsIntegration:
         )
         assert "external_id" in output
 
-    def test_list(self):
+    def test_list(self, dog):
         dog.AwsIntegration.create(
             account_id=TEST_ACCOUNT_ID_1,
             role_name=TEST_ROLE_NAME
@@ -71,7 +59,7 @@ class TestAwsIntegration:
         ]
         assert all(k in output['accounts'][0].keys() for k in expected_fields)
 
-    def test_delete(self):
+    def test_delete(self, dog):
         dog.AwsIntegration.create(
             account_id=TEST_ACCOUNT_ID_1,
             role_name=TEST_ROLE_NAME
@@ -79,7 +67,7 @@ class TestAwsIntegration:
         output = dog.AwsIntegration.delete(account_id=TEST_ACCOUNT_ID_1, role_name=TEST_ROLE_NAME)
         assert output == {}
 
-    def test_generate_new_external_id(self):
+    def test_generate_new_external_id(self, dog):
         dog.AwsIntegration.create(
             account_id=TEST_ACCOUNT_ID_2,
             role_name=TEST_ROLE_NAME
@@ -91,7 +79,7 @@ class TestAwsIntegration:
 
         assert "external_id" in output
 
-    def test_list_namespace_rules(self):
+    def test_list_namespace_rules(self, dog):
         dog.AwsIntegration.create(
             account_id=TEST_ACCOUNT_ID_2,
             role_name=TEST_ROLE_NAME
@@ -102,7 +90,7 @@ class TestAwsIntegration:
         )
         assert len(output) >= AVAILABLE_NAMESPACES
 
-    def test_update(self):
+    def test_update(self, dog):
         dog.AwsIntegration.create(
             account_id=TEST_ACCOUNT_ID_2,
             role_name=TEST_ROLE_NAME

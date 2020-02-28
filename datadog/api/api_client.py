@@ -34,6 +34,7 @@ class APIClient(object):
     _max_timeouts = _max_timeouts
     _backoff_timestamp = None
     _timeout_counter = 0
+    _sort_keys = False
 
     # Plugged HTTP client
     _http_client = None
@@ -145,7 +146,7 @@ class APIClient(object):
 
             # Process the body, if necessary
             if isinstance(body, dict):
-                body = json.dumps(body)
+                body = json.dumps(body, sort_keys=cls._sort_keys)
                 headers['Content-Type'] = 'application/json'
 
             if compress_payload:

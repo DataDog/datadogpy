@@ -22,7 +22,7 @@ if [sys.version_info[0], sys.version_info[1]] < [2, 7]:
 
 setup(
     name="datadog",
-    version="0.33.0",
+    version="0.35.0.dev",
     install_requires=install_reqs,
     tests_require=["pytest", "mock", "freezegun"],
     packages=["datadog", "datadog.api", "datadog.dogstatsd", "datadog.threadstats", "datadog.util", "datadog.dogshell"],
@@ -39,7 +39,14 @@ setup(
         "Documentation": "https://datadogpy.readthedocs.io/en/latest/",
         "Source Code": "https://github.com/DataDog/datadogpy",
     },
-    entry_points={"console_scripts": ["dog = datadog.dogshell:main", "dogwrap = datadog.dogshell.wrap:main"]},
+    entry_points={
+        "console_scripts": [
+            "dog = datadog.dogshell:main",
+            "dogwrap = datadog.dogshell.wrap:main",
+            "dogshell = datadog.dogshell:main",
+            "dogshellwrap = datadog.dogshell.wrap:main"
+        ]
+    },
     test_suite="tests",
     classifiers=[
         "License :: OSI Approved :: BSD License",

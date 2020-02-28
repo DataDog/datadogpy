@@ -16,6 +16,7 @@ def print_err(msg):
         print(msg + '\n', file=sys.stderr)
     else:
         sys.stderr.write(msg + '\n')
+    sys.stderr.flush()
 
 
 def report_errors(res):
