@@ -5,6 +5,10 @@
 import calendar
 import datetime
 import json
+import re
+
+TAG_INVALID_CHARS_RE = re.compile(r"[^\w\d_\-:/\.]")
+TAG_INVALID_CHARS_SUBS = "_"
 
 
 def pretty_json(obj):
@@ -26,4 +30,4 @@ def force_to_epoch_seconds(epoch_sec_or_dt):
 
 
 def normalize_tags(tag_list):
-    return [tag.replace(',', '_') for tag in tag_list]
+    return [re.sub(TAG_INVALID_CHARS_RE, TAG_INVALID_CHARS_SUBS, tag, re.UNICODE) for tag in tag_list]
