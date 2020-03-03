@@ -20,6 +20,7 @@ from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.dogstatsd.route import get_default_route
 from datadog.util.compat import text
 from datadog.util.config import get_pkg_version
+from datadog.util.format import normalize_tags
 
 # Logging
 log = logging.getLogger('datadog.dogstatsd')
@@ -339,7 +340,7 @@ class DogStatsd(object):
             value,
             metric_type,
             ("|@" + text(sample_rate)) if sample_rate != 1 else "",
-            ("|#" + ",".join(tags)) if tags else "",
+            ("|#" + ",".join(normalize_tags(tags))) if tags else "",
         )
 
     def _report(self, metric, metric_type, value, tags, sample_rate):
