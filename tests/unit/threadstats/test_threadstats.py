@@ -458,11 +458,11 @@ class TestUnitThreadStats(unittest.TestCase):
         # Post the same metric with different tags.
         dog.gauge('gauge', 10, timestamp=100.0)
         dog.gauge('gauge', 15, timestamp=100.0, tags=['env:production', 'db'])
-        dog.gauge('gauge', 20, timestamp=100.0, tags=['env:staging'])
+        dog.gauge('gauge', 20, timestamp=100.0, tags=iter(['env:staging']))
 
         dog.increment('counter', timestamp=100.0)
         dog.increment('counter', timestamp=100.0, tags=['env:production', 'db'])
-        dog.increment('counter', timestamp=100.0, tags=['env:staging'])
+        dog.increment('counter', timestamp=100.0, tags=set(['env:staging']))
 
         dog.flush(200.0)
 
@@ -497,11 +497,11 @@ class TestUnitThreadStats(unittest.TestCase):
         # Post the same metric with different tags.
         dog.gauge("gauge", 10, timestamp=100.0)
         dog.gauge("gauge", 15, timestamp=100.0, tags=["env:production", 'db'])
-        dog.gauge("gauge", 20, timestamp=100.0, tags=["env:staging"])
+        dog.gauge("gauge", 20, timestamp=100.0, tags=iter(["env:staging"]))
 
         dog.increment("counter", timestamp=100.0)
         dog.increment("counter", timestamp=100.0, tags=["env:production", 'db'])
-        dog.increment("counter", timestamp=100.0, tags=["env:staging"])
+        dog.increment("counter", timestamp=100.0, tags=set(["env:staging"]))
 
         dog.flush(200.0)
 
