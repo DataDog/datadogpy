@@ -7,7 +7,10 @@ import logging
 import time
 import zlib
 
-from collections.abc import Iterable
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 
 # datadog
 from datadog.api import _api_version, _max_timeouts, _backoff_period
