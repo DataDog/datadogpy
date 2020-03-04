@@ -146,7 +146,7 @@ class APIClient(object):
                 params['tags'] = ','.join(tag_list)
 
             # If set, make sure tags are a list and not any other iterable.
-            if body and "tags" in body:
+            if body and isinstance(body.get("tags", None), Iterable):
                 body["tags"] = list(body["tags"])
 
             # If defined, make sure monitor_ids are defined as a comma-separated string
