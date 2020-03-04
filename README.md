@@ -126,6 +126,13 @@ After the client is created, you can start sending events to your Datadog Event 
 
 After the client is created, you can start sending Service Checks to Datadog. See the dedicated [Service Check Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/service_checks/dogstatsd_service_checks_submission/?tab=python) to see how to submit a Service Check to Datadog.
 
+### Monitoring this client
+
+This client automatically injects telemetry about itself in the DogStatsD stream.
+Those metrics will not be counted as custom and will not be billed. This feature can be disabled using the `statsd.disable_telemetry()` method.
+
+See [Telemetry documentation](https://docs.datadoghq.com/developers/dogstatsd/high_throughput/?tab=python#client-side-telemetry) to learn more about it.
+
 ## Thread Safety
 
 `DogStatsD` and `ThreadStats` are thread-safe.

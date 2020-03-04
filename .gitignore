@@ -42,3 +42,4 @@ pip-log.txt
 .eggs/
 .env/
 .idea/
+*.swp

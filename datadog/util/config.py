@@ -132,25 +132,29 @@ def get_config(cfg_path=None, options=None):
     return agentConfig
 
 
+def get_pkg_version():
+    """
+    Resolve `datadog` package version.
+    """
+    if not pkg:
+        return u"unknown"
+
+    dist = pkg.get_distribution("datadog")
+    # Normalize case for Windows systems
+    dist_loc = os.path.normcase(dist.location)
+    here = os.path.normcase(__file__)
+    if not here.startswith(dist_loc):
+        # not installed, but there is another version that *is*
+        raise pkg.DistributionNotFound
+
+    return dist.version
+
+
 def get_version():
     """
     Resolve `datadog` package version.
     """
-    version = u"unknown"
-
-    if not pkg:
-        return version
-
     try:
-        dist = pkg.get_distribution("datadog")
-        # Normalize case for Windows systems
-        dist_loc = os.path.normcase(dist.location)
-        here = os.path.normcase(__file__)
-        if not here.startswith(dist_loc):
-            # not installed, but there is another version that *is*
-            raise pkg.DistributionNotFound
-        version = dist.version
+        return get_pkg_version()
     except pkg.DistributionNotFound:
-        version = u"Please install `datadog` with setup.py"
-
-    return version
+        return u"Please install `datadog` with setup.py"

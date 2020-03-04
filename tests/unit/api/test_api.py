@@ -141,7 +141,7 @@ class TestInitialization(DatadogAPINoInitialization):
     def test_normalize_tags(self):
         tag_list_test = ["tag1, tag2", "tag3 ,tag4", "tag5,tag6"]
         tag_list_final = normalize_tags(tag_list_test)
-        assert tag_list_final == ["tag1_ tag2", "tag3 _tag4", "tag5_tag6"]
+        assert tag_list_final == ["tag1__tag2", "tag3__tag4", "tag5_tag6"]
 
     def test_errors_suppressed(self):
         """
