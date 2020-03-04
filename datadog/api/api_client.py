@@ -145,6 +145,10 @@ class APIClient(object):
                 tag_list = normalize_tags(params['tags'])
                 params['tags'] = ','.join(tag_list)
 
+            # If set, make sure tags are a list and not any other iterable.
+            if body and "tags" in body:
+                body["tags"] = list(body["tags"])
+
             # If defined, make sure monitor_ids are defined as a comma-separated string
             if 'monitor_ids' in params and isinstance(params['monitor_ids'], list):
                 params['monitor_ids'] = ','.join(str(i) for i in params['monitor_ids'])
