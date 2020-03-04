@@ -433,12 +433,16 @@ class DogStatsd(object):
         self._send(string)
 
     def _add_constant_tags(self, tags):
+        result = []
+
+        if tags:
+            result.extend(tags)
+
         if self.constant_tags:
-            if tags:
-                return tags + self.constant_tags
-            else:
-                return self.constant_tags
-        return tags
+            result.extend(self.constant_tags)
+
+        return result
+
 
 
 statsd = DogStatsd()
