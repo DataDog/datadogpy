@@ -22,6 +22,8 @@ dogwrap -n test-job -k $API_KEY --timeout=1 "sleep 3"
 '''
 # stdlib
 from __future__ import print_function
+
+import os
 from copy import copy
 import optparse
 import subprocess
@@ -260,7 +262,7 @@ the order they were sent.", version="%prog {0}".format(get_version()), option_cl
     parser.add_option('-n', '--name', action='store', type='string', help="the name of the event \
 as it should appear on your Datadog stream")
     parser.add_option('-k', '--api_key', action='store', type='string',
-                      help="your DataDog API Key")
+                      help="your DataDog API Key", default=os.environ.get("DD_API_KEY"))
     parser.add_option('-s', '--site', action='store', type='choice', default='datadoghq.com', choices=['datadoghq.com', 'us', 'datadoghq.eu', 'eu'], help="The site \
 to send data, US (datadoghq.com) or EU (datadoghq.eu), default: US")
     parser.add_option('-m', '--submit_mode', action='store', type='choice',
