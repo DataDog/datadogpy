@@ -1,6 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
+from collections.abc import Iterable
+
 from datadog.api.exceptions import ApiError
 from datadog.api.resources import (
     CreateableAPIResource,
@@ -55,7 +57,7 @@ class Synthetics(
         """
 
         for p in ["locations", "tags"]:
-            if p in params and isinstance(params[p], list):
+            if p in params and isinstance(params[p], Iterable):
                 params[p] = ",".join(params[p])
 
         # API path = "synthetics/tests"

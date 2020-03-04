@@ -1,6 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
+from collections.abc import Iterable
+
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
     UpdatableAPIResource, ListableAPIResource, DeletableAPIResource, \
     ActionAPIResource
@@ -54,7 +56,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
         :returns: Dictionary representing the API's JSON response
         """
         for p in ['group_states', 'tags', 'monitor_tags']:
-            if p in params and isinstance(params[p], list):
+            if p in params and isinstance(params[p], Iterable):
                 params[p] = ','.join(params[p])
 
         return super(Monitor, cls).get_all(**params)

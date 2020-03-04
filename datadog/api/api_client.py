@@ -7,6 +7,8 @@ import logging
 import time
 import zlib
 
+from collections.abc import Iterable
+
 # datadog
 from datadog.api import _api_version, _max_timeouts, _backoff_period
 from datadog.api.exceptions import (
@@ -136,7 +138,7 @@ class APIClient(object):
                         body['host'] = _host_name
 
             # If defined, make sure tags are defined as a comma-separated string
-            if 'tags' in params and isinstance(params['tags'], list):
+            if 'tags' in params and isinstance(params['tags'], Iterable):
                 tag_list = normalize_tags(params['tags'])
                 params['tags'] = ','.join(tag_list)
 
