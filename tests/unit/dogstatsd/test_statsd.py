@@ -346,7 +346,7 @@ class TestDogStatsd(unittest.TestCase):
         metric_level_tag = iter(('foo:bar',))
         self.statsd.constant_tags = ['bar:baz']
         self.statsd.gauge('gauge', 123.4, tags=metric_level_tag)
-        assert self.recv() == 'gauge:123.4|g|#foo:bar,bar:baz'
+        assert_equal_telemetry('gauge:123.4|g|#foo:bar,bar:baz', self.recv(), telemetry=telemetry_metrics(tags="bar:baz"))
 
     @staticmethod
     def assert_almost_equal(a, b, delta):
