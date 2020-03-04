@@ -115,7 +115,8 @@ class TestDatadog:
         assert event["event"]["alert_type"] == "success"
 
         event = dog.Event.create(
-            title="test tags", text="test tags", tags=set(["test_tag:1", "test_tag:2"])
+            title="test tags", text="test tags",
+            tags=frozenset(["test_tag:1", "test_tag:2"])
         )
         assert "test_tag:1" in event["event"]["tags"]
         assert "test_tag:2" in event["event"]["tags"]
