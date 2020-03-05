@@ -41,6 +41,30 @@ def api():
 
 
 @pytest.fixture(scope='module')
+def vcr(vcr):
+    """Override VCR matcher."""
+    from vcr.matchers import _get_transformer, _identity, read_body
+
+    def normalize(obj, sort=False):
+        if isinstance(obj, dict):
+            return {k: normalize(v, k == "tags") for k, v in obj.items()}
+        if isinstance(obj, list):
+            x = (normalize(x) for x in obj)
+            return sorted(x) if sort else list(x)
+        return obj
+
+    def body(r1, r2):
+        transformer = _get_transformer(r1)
+        r2_transformer = _get_transformer(r2)
+        if transformer != r2_transformer:
+            transformer = _identity
+        assert normalize(transformer(read_body(r1))) == normalize(transformer(read_body(r2)))
+
+    vcr.matchers["body"] = body
+    return vcr
+
+
+@pytest.fixture(scope='module')
 def vcr_config():
     return dict(
         filter_headers=('DD-API-KEY', 'DD-APPLICATION-KEY'),
