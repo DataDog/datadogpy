@@ -94,6 +94,10 @@ class TestDogwrap(unittest.TestCase):
         with self.assertRaises(SystemExit):
             parse_options(['--proc_poll_interval', 'invalid'])
 
+        with mock.patch.dict(os.environ, values={"DD_API_KEY": "the_key"}, clear=True):
+            options, _ = parse_options([])
+            self.assertEqual(options.api_key, "the_key")
+
     def test_poll_proc(self):
         mock_proc = mock.Mock()
         mock_proc.poll.side_effect = [None, 0]
