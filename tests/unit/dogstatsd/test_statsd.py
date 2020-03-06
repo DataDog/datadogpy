@@ -27,7 +27,7 @@ from datadog.dogstatsd.base import DogStatsd
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
 from datadog.util.config import get_version
-from tests.util.contextmanagers import preserve_environment_variable
+from tests.util.contextmanagers import preserve_environment_variable, EnvVars
 from tests.unit.dogstatsd.fixtures import load_fixtures
 
 
@@ -766,6 +766,62 @@ class TestDogStatsd(unittest.TestCase):
         statsd.gauge('gt', 123.4)
         tags = "country:canada,red,country:china,age:45,blue,dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d"
         assert_equal_telemetry('gt:123.4|g|#'+tags, statsd.socket.recv(), telemetry=telemetry_metrics(tags=tags))
+
+    def test_dogstatsd_initialization_with_dd_env_service_version(self):
+        """
+        Dogstatsd should automatically use DD_ENV, DD_SERVICE, and DD_VERSION (if present)
+        to set {env, service, version} as global tags for all metrics emitted.
+        """
+        cases = [
+            # Test various permutations of setting DD_* env vars, as well as other global tag configuration.
+            # An empty string signifies that the env var either isn't set or that it is explicitly set to empty string.
+            ('', '', '', '', [], []),
+            ('prod', '', '', '', [], ['env:prod']),
+            ('prod', 'dog', '', '', [], ['env:prod', 'service:dog']),
+            ('prod', 'dog', 'abc123', '', [], ['env:prod', 'service:dog', 'version:abc123']),
+            ('prod', 'dog', 'abc123', 'env:prod,type:app', [], ['env:prod', 'env:prod', 'service:dog', 'type:app', 'version:abc123']),
+            ('prod', 'dog', 'abc123', 'env:prod2,type:app', [], ['env:prod', 'env:prod2', 'service:dog', 'type:app', 'version:abc123']),
+            ('prod', 'dog', 'abc123', '', ['env:prod', 'type:app'], ['env:prod', 'env:prod', 'service:dog', 'type:app', 'version:abc123']),
+            ('prod', 'dog', 'abc123', '', ['env:prod2', 'type:app'], ['env:prod', 'env:prod2', 'service:dog', 'type:app', 'version:abc123']),
+            ('prod', 'dog', 'abc123', 'env:prod3,custom_tag:cat', ['env:prod2', 'type:app'], ['custom_tag:cat', 'env:prod', 'env:prod2', 'env:prod3', 'service:dog', 'type:app', 'version:abc123']),
+        ]
+        for c in cases:
+            dd_env, dd_service, dd_version, datadog_tags, constant_tags, global_tags = c
+            with EnvVars(
+                env_vars={
+                    'DATADOG_TAGS': datadog_tags,
+                    'DD_ENV': dd_env,
+                    'DD_SERVICE': dd_service,
+                    'DD_VERSION': dd_version,
+                }
+            ):
+                statsd = DogStatsd(constant_tags=constant_tags, telemetry_min_flush_interval=0)
+                statsd.socket = FakeSocket()
+
+            # Guarantee consistent ordering, regardless of insertion order.
+            statsd.constant_tags.sort()
+            assert global_tags == statsd.constant_tags
+
+            # Make call with no tags passed; only the globally configured tags will be used.
+            global_tags_str = ','.join([t for t in global_tags])
+            statsd.gauge('gt', 123.4)
+            assert_equal_telemetry(
+                # Protect against the no tags case.
+                'gt:123.4|g|#{}'.format(global_tags_str) if global_tags_str else 'gt:123.4|g',
+                statsd.socket.recv(),
+                telemetry=telemetry_metrics(tags=global_tags_str)
+            )
+            statsd._reset_telementry()
+
+            # Make another call with local tags passed.
+            passed_tags = ['env:prod', 'version:def456', 'custom_tag:toad']
+            all_tags_str = ','.join([t for t in passed_tags + global_tags])
+            statsd.gauge('gt', 123.4, tags=passed_tags)
+            assert_equal_telemetry(
+                'gt:123.4|g|#{}'.format(all_tags_str),
+                statsd.socket.recv(),
+                telemetry=telemetry_metrics(tags=global_tags_str)
+            )
 
     def test_gauge_doesnt_send_None(self):
         self.statsd.gauge('metric', None)
