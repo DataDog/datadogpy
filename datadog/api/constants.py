@@ -9,3 +9,15 @@ class CheckStatus(object):
     CRITICAL = 2
     UNKNOWN = 3
     ALL = (OK, WARNING, CRITICAL, UNKNOWN)
+
+
+class MonitorType(object):
+    # From https://docs.datadoghq.com/api/?lang=bash#create-a-monitor
+    QUERY_ALERT = "query alert"
+    COMPOSITE = "composite"
+    SERVICE_CHECK = "service check"
+    PROCESS_ALERT = "process alert"
+    LOG_ALERT = "log alert"
+    METRIC_ALERT = "metric alert"
+    RUM_ALERT = "rum alert"
+    EVENT_ALERT = "event alert"
