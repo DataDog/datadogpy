@@ -21,3 +21,5 @@ class MonitorType(object):
     METRIC_ALERT = "metric alert"
     RUM_ALERT = "rum alert"
     EVENT_ALERT = "event alert"
+    SYNTHETICS_ALERT = "synthetics alert"
+    TRACE_ANALYTICS = "trace-analytics alert"
