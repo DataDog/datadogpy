@@ -28,6 +28,25 @@ class Metric(object):
         raise NotImplementedError()
 
 
+class Set(Metric):
+    """ A gauge metric. """
+
+    stats_tag = 'g'
+
+    def __init__(self, name, tags, host):
+        self.name = name
+        self.tags = tags
+        self.host = host
+        self.set = set()
+
+    def add_point(self, value):
+        self.set.add(value)
+
+    def flush(self, timestamp, interval):
+        return [(timestamp, len(self.set), self.name, self.tags,
+                self.host, MetricType.Gauge, interval)]
+
+
 class Gauge(Metric):
     """ A gauge metric. """
 
