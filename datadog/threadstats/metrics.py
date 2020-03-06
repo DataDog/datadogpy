@@ -29,7 +29,7 @@ class Metric(object):
 
 
 class Set(Metric):
-    """ A gauge metric. """
+    """ A set metric. """
 
     stats_tag = 'g'
 
