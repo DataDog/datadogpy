@@ -7,20 +7,21 @@ performance. It collects metrics in the application thread with very little over
 and allows flushing metrics in process, in a thread or in a greenlet, depending
 on your application's needs.
 """
+import atexit
+import logging
+import os
 # stdlib
 from contextlib import contextmanager
 from functools import wraps
 from time import time
-import atexit
-import logging
-import os
 
 # datadog
 from datadog.api.exceptions import ApiNotInitialized
 from datadog.threadstats.constants import MetricType
 from datadog.threadstats.events import EventsAggregator
-from datadog.threadstats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing,\
-    Distribution
+from datadog.threadstats.metrics import (
+    MetricsAggregator, Counter, Gauge, Histogram, Timing, Distribution, Set
+)
 from datadog.threadstats.reporters import HttpReporter
 
 # Loggers
@@ -177,6 +178,18 @@ class ThreadStats(object):
             self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value, Gauge,
                                               sample_rate=sample_rate, host=host)
 
+    def set(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
+        """
+        Add ``value`` to the current set. The length of the set is
+        flushed as a gauge to Datadog. Optionally, specify a set of
+        tags to associate with the metric.
+
+        >>> stats.set('example_metric.set', "value_1", tags=['environement:dev'])
+        """
+        if not self._disabled:
+            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value, Set,
+                                              sample_rate=sample_rate, host=host)
+
     def increment(self, metric_name, value=1, timestamp=None, tags=None, sample_rate=1, host=None):
         """
         Increment the counter by the given ``value``. Optionally, specify a list of
@@ -285,13 +298,16 @@ class ThreadStats(object):
             finally:
                 stats.histogram('user.query.time', time.time() - start)
         """
+
         def wrapper(func):
             @wraps(func)
             def wrapped(*args, **kwargs):
                 with self.timer(metric_name, sample_rate, tags, host):
                     result = func(*args, **kwargs)
                     return result
+
             return wrapped
+
         return wrapper
 
     def flush(self, timestamp=None):
