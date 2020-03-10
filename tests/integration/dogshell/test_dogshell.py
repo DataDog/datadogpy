@@ -78,7 +78,7 @@ def dogshell(capsys, config_file, dog):
             ] + args
 
         with capsys.disabled():
-            result = runner.invoke(main, cmd, input=stdin, prog_name=cmd[0], mix_stderr=True)
+            result = runner.invoke(main, cmd, input=stdin, prog_name=cmd[0])
         return_code = result.exit_code
         out = result.stdout_bytes
         err = result.stderr_bytes
