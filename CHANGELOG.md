@@ -1,5 +1,14 @@
 CHANGELOG
 =========
+## 0.35.0 / 2020-03-09
+
+* [Added] Add `Set` metric type to threadstats. See [#545](https://github.com/DataDog/datadogpy/pull/545).
+* [Added] Add enum for monitor types. See [#544](https://github.com/DataDog/datadogpy/pull/544).
+* [Added] Support DD_API_KEY environment variable in dogwrap. See [#543](https://github.com/DataDog/datadogpy/pull/543).
+* [Added] Add back telemetry to Dogstatsd client. See [#533](https://github.com/DataDog/datadogpy/pull/533).
+* [Fixed] Remove illegal characters from tags. See [#517](https://github.com/DataDog/datadogpy/pull/517). Thanks [jirikuncar](https://github.com/jirikuncar).
+* [Fixed] Fix syntax error in dogwrap timeout handler and always collect output. See [#538](https://github.com/DataDog/datadogpy/pull/538). Thanks [Matt343](https://github.com/Matt343).
+
 ## 0.34.1 / 2020-02-10
 
 * [Fixed] Revert dogstatsd telemetry. See [#530](https://github.com/DataDog/datadogpy/pull/530).
