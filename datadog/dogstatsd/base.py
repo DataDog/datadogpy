@@ -32,6 +32,14 @@ DEFAULT_PORT = 8125
 # Tag name of entity_id
 ENTITY_ID_TAG_NAME = "dd.internal.entity_id"
 
+# Mapping of each "DD_" prefixed environment variable to a specific tag name
+DD_ENV_TAGS_MAPPING = {
+    'DD_ENTITY_ID': ENTITY_ID_TAG_NAME,
+    'DD_ENV': 'env',
+    'DD_SERVICE': 'service',
+    'DD_VERSION': 'version',
+}
+
 # Telemetry minimum flush interval in seconds
 DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL = 10
 
@@ -56,6 +64,24 @@ class DogStatsd(object):
         If set, it overrides default value.
         :type DD_DOGSTATSD_PORT: integer
 
+        :envvar DATADOG_TAGS: Tags to attach to every metric reported by dogstatsd client.
+        :type DATADOG_TAGS: comma-delimited string
+
+        :envvar DD_ENTITY_ID: Tag to identify the client entity.
+        :type DD_ENTITY_ID: string
+
+        :envvar DD_ENV: the env of the service running the dogstatsd client.
+        If set, it is appended to the constant (global) tags of the statsd client.
+        :type DD_ENV: string
+
+        :envvar DD_SERVICE: the name of the service running the dogstatsd client.
+        If set, it is appended to the constant (global) tags of the statsd client.
+        :type DD_SERVICE: string
+
+        :envvar DD_VERSION: the version of the service running the dogstatsd client.
+        If set, it is appended to the constant (global) tags of the statsd client.
+        :type DD_VERSION: string
+
         :param host: the host of the DogStatsd server.
         :type host: string
 
@@ -74,12 +100,6 @@ class DogStatsd(object):
 
         :param use_ms: Report timed values in milliseconds instead of seconds (default False)
         :type use_ms: boolean
-
-        :envvar DATADOG_TAGS: Tags to attach to every metric reported by dogstatsd client
-        :type DATADOG_TAGS: list of strings
-
-        :envvar DD_ENTITY_ID: Tag to identify the client entity.
-        :type DD_ENTITY_ID: string
 
         :param use_default_route: Dynamically set the DogStatsd host to the default route
         (Useful when running the client in a container) (Linux only)
@@ -128,13 +148,14 @@ class DogStatsd(object):
 
         # Options
         env_tags = [tag for tag in os.environ.get('DATADOG_TAGS', '').split(',') if tag]
+        # Inject values of DD_* environment variables as global tags.
+        for var, tag_name in DD_ENV_TAGS_MAPPING.items():
+            value = os.environ.get(var, '')
+            if value:
+                env_tags.append('{name}:{value}'.format(name=tag_name, value=value))
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
-        entity_id = os.environ.get('DD_ENTITY_ID')
-        if entity_id:
-            entity_tag = '{name}:{value}'.format(name=ENTITY_ID_TAG_NAME, value=entity_id)
-            self.constant_tags.append(entity_tag)
         if namespace is not None:
             namespace = text(namespace)
         self.namespace = namespace
