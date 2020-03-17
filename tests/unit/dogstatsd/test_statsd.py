@@ -11,6 +11,8 @@ from collections import deque
 import os
 import socket
 import errno
+
+import mock
 import time
 import unittest
 
@@ -348,13 +350,19 @@ class TestDogStatsd(unittest.TestCase):
 
     def test_socket_error(self):
         self.statsd.socket = BrokenSocket()
-        self.statsd.gauge('no error', 1)
-        assert True, 'success'
+        with mock.patch("datadog.dogstatsd.base.log") as mock_log:
+            self.statsd.gauge('no error', 1)
+            mock_log.error.assert_not_called()
+            mock_log.warning.assert_called_once_with(
+                "Error submitting packet: Socket error, dropping the packet and closing the socket"
+            )
 
     def test_socket_overflown(self):
         self.statsd.socket = OverflownSocket()
-        self.statsd.gauge('no error', 1)
-        assert True, 'success'
+        with mock.patch("datadog.dogstatsd.base.log") as mock_log:
+            self.statsd.gauge('no error', 1)
+            mock_log.error.assert_not_called()
+            mock_log.warning.assert_called_once_with("Socket send would block: Socket error, dropping the packet")
 
     def test_timed(self):
         """
