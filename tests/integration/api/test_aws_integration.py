@@ -108,6 +108,8 @@ class TestAwsIntegration:
         output = dog.AwsIntegration.list()
         tests_pass = False
         for i in output['accounts']:
+            print(i)
+            assert "excluded_regions" in i
             if i.get('account_id') == TEST_ACCOUNT_ID_4 and i.get('role_name') == TEST_ROLE_NAME_2 and i.get('excluded_regions') == ["us-east-1","us-west-1"]:
                 tests_pass = True
         assert tests_pass
