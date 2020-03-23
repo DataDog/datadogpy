@@ -64,6 +64,10 @@ class AwsIntegration(GetableAPIResource, CreateableAPIResource,
         /v1/integration/aws/available_namespace_rules endpoint.
         :type account_specific_namespace_rules: dictionary
 
+        :param excluded_regions: An array of AWS regions to exclude \
+        from metrics collection.
+        :type excluded_regions: list of strings
+
         :returns: Dictionary representing the API's JSON response
 
         >>> account_id = "<AWS_ACCOUNT_ID>"
@@ -72,10 +76,12 @@ class AwsIntegration(GetableAPIResource, CreateableAPIResource,
         >>> filter_tags = ["<KEY>:<VALUE>"]
         >>> host_tags = ["<KEY>:<VALUE>"]
         >>> account_specific_namespace_rules = {"namespace1":true/false, "namespace2":true/false}
+        >>> excluded_regions = ["us-east-1", "us-west-1"]
 
         >>> api.AwsIntegration.create(account_id=account_id, role_name=role_name, \
         filter_tags=filter_tags,host_tags=host_tags,\
-        account_specific_namespace_rules=account_specific_namespace_rules)
+        account_specific_namespace_rules=account_specific_namespace_rules \
+        excluded_regions=excluded_regions)
         """
         return super(AwsIntegration, cls).create(id=cls._resource_id, **params)
 
@@ -142,6 +148,10 @@ class AwsIntegration(GetableAPIResource, CreateableAPIResource,
         /v1/integration/aws/available_namespace_rules endpoint.
         :type account_specific_namespace_rules: dictionary
 
+        :param excluded_regions: An array of AWS regions to exclude \
+        from metrics collection.
+        :type excluded_regions: list of strings
+
         :returns: Dictionary representing the API's JSON response
 
         The following will depend on whether role delegation or access keys are being used.
@@ -166,11 +176,13 @@ class AwsIntegration(GetableAPIResource, CreateableAPIResource,
         >>> filter_tags = ["<KEY>:<VALUE>"]
         >>> host_tags = ["<KEY>:<VALUE>"]
         >>> account_specific_namespace_rules = {"namespace1":true/false, "namespace2":true/false}
+        >>> excluded_regions = ["us-east-1", "us-west-1"]
 
         >>> api.AwsIntegration.update(account_id=account_id, role_name=role_name, \
         new_account_id=new_account_id, new_role_name=new_role_name, \
         filter_tags=filter_tags,host_tags=host_tags,\
-        account_specific_namespace_rules=account_specific_namespace_rules)
+        account_specific_namespace_rules=account_specific_namespace_rules, \
+        excluded_regions=excluded_regions)
         """
         params = {}
         if body.get('account_id') and body.get('role_name'):
