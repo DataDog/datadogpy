@@ -47,6 +47,11 @@ class TestDogwrap(unittest.TestCase):
         event_body = build_event_body(cmd, returncode, stdout, stderr, notifications)
         self.assertEqual(expected_body, event_body)
 
+        # notifications can be unicode already in py3, make sure we don't try decoding
+        notifications = notifications.decode("utf-8", "replace")
+        event_body = build_event_body(cmd, returncode, stdout, stderr, notifications)
+        self.assertEqual(expected_body, event_body)
+
     def test_parse_options(self):
         options, cmd = parse_options([])
         self.assertEqual(cmd, '')

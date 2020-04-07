@@ -211,8 +211,9 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
         )
 
     if notifications:
+        notifications = notifications.decode("utf-8", "replace") if isinstance(notifications, bytes) else notifications
         fmt_notifications = u"**>>>> NOTIFICATIONS <<<<**\n\n {notifications}\n".format(
-            notifications=notifications.decode("utf-8", "replace")
+            notifications=notifications
         )
 
     return \
