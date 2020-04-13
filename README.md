@@ -73,9 +73,9 @@ api.Event.create(title=title, text=text, tags=tags)
 
 In order to use DogStatsD metrics, the Agent must be [running and available](https://docs.datadoghq.com/developers/dogstatsd/?tab=python).
 
-### Instantiate the DogStatsD client
+### Instantiate the DogStatsD client with UDP
 
-Once the Datadog Python Library is installed, instantiate the StatsD client in your code:
+Once the Datadog Python Library is installed, instantiate the StatsD client using UDP in your code:
 
 ```python
 from datadog import statsd
@@ -90,9 +90,23 @@ initialize(**options)
 
 See the full list of available [DogStatsD client instantiation parameters](https://docs.datadoghq.com/developers/dogstatsd/?tab=python#client-instantiation-parameters).
 
+#### Instantiate the DogStatsd client with UDS
+
+Once the Datadog Python Library is installed, instantiate the StatsD client using UDS in your code:
+```python
+
+from datadog import statsd
+
+options = {
+    'statsd_socket_path' : PATH_TO_SOCKET
+}
+
+initialize(**options)
+```
+
 #### Origin detection over UDP
 
-Origin detection is a method to detect which pod `DogStatsD` packets are coming from in order to add the pod's tags to the tag list.
+Origin detection is a method to detect which pod `DogStatsD` packets are coming from in order to add the pod's tags to the tag list. Enabling this is a required step for both UDS and UDP options
 The `DogStatsD` client attaches an internal tag, `entity_id`. The value of this tag is the content of the `DD_ENTITY_ID` environment variable if found, which is the pod's UID. The Datadog Agent uses this tag to add container tags to the metrics. To avoid overwriting this global tag, make sure to only `append` to the `constant_tags` list.
 
 To enable origin detection over UDP, add the following lines to your application manifest
