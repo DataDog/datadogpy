@@ -84,19 +84,26 @@ class OverflownSocket(FakeSocket):
 def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped=0, packets_sent=1, packets_dropped=0, transport="udp", tags=""):
     tags = "," + tags if tags else ""
 
-    return "datadog.dogstatsd.client.metrics:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(metrics, version, transport, tags) \
-        + "datadog.dogstatsd.client.events:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(events, version, transport, tags) \
-        + "datadog.dogstatsd.client.service_checks:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(service_checks, version, transport, tags) \
-        + "datadog.dogstatsd.client.bytes_sent:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(bytes_sent, version, transport, tags) \
-        + "datadog.dogstatsd.client.bytes_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(bytes_dropped, version, transport, tags) \
-        + "datadog.dogstatsd.client.packets_sent:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(packets_sent, version, transport, tags) \
-        + "datadog.dogstatsd.client.packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped, version, transport, tags)
+    return "\n".join([
+        "datadog.dogstatsd.client.metrics:{}|c|#client:py,client_version:{},client_transport:{}{}".format(metrics, version, transport, tags),
+        "datadog.dogstatsd.client.events:{}|c|#client:py,client_version:{},client_transport:{}{}".format(events, version, transport, tags),
+        "datadog.dogstatsd.client.service_checks:{}|c|#client:py,client_version:{},client_transport:{}{}".format(service_checks, version, transport, tags),
+        "datadog.dogstatsd.client.bytes_sent:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_sent, version, transport, tags),
+        "datadog.dogstatsd.client.bytes_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_dropped, version, transport, tags),
+        "datadog.dogstatsd.client.packets_sent:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_sent, version, transport, tags),
+        "datadog.dogstatsd.client.packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped, version, transport, tags)
+    ])
+
 
 def assert_equal_telemetry(expected_payload, actual_payload, telemetry=None):
     if telemetry is None:
         telemetry = telemetry_metrics(bytes_sent=len(expected_payload))
-    expected_payload += "\n"
-    expected_payload += telemetry
+
+    if expected_payload:
+        expected_payload = "\n".join([expected_payload, telemetry])
+    else:
+        expected_payload = telemetry
+
     return assert_equal(expected_payload, actual_payload)
 
 class TestDogStatsd(unittest.TestCase):
@@ -693,7 +700,7 @@ class TestDogStatsd(unittest.TestCase):
         assert_equal(0, self.statsd.metrics_count)
         assert_equal(0, self.statsd.events_count)
         assert_equal(0, self.statsd.service_checks_count)
-        assert_equal(len(telemetry), self.statsd.bytes_sent)
+        assert_equal(len(payload) + len(telemetry) + 1, self.statsd.bytes_sent)  # +1 for CR between telemetry and payload
         assert_equal(0, self.statsd.bytes_dropped)
         assert_equal(1, self.statsd.packets_sent)
         assert_equal(0, self.statsd.packets_dropped)
@@ -716,6 +723,33 @@ class TestDogStatsd(unittest.TestCase):
         statsd.gauge('gauge', 123.4)
         assert_equal_telemetry(metric, fake_socket.recv(2), telemetry=telemetry_metrics(metrics=2, bytes_sent=2*len(metric), packets_sent=2))
 
+        # assert that _last_flush_time has been updated
+        assert t1 < statsd._last_flush_time
+
+    def test_telemetry_flush_interval_alternate_destination(self):
+        statsd = DogStatsd(telemetry_host='foo')
+        fake_socket = FakeSocket()
+        statsd.socket = fake_socket
+        fake_telemetry_socket = FakeSocket()
+        statsd.telemetry_socket = fake_telemetry_socket
+
+        assert statsd.telemetry_host != None
+        assert statsd.telemetry_port != None
+        assert statsd.telemetry_destination
+
+        # set the last flush time in the future to be sure we won't flush
+        statsd._last_flush_time = time.time() + statsd._telemetry_flush_interval
+        statsd.gauge('gauge', 123.4)
+
+        assert_equal('gauge:123.4|g', fake_socket.recv())
+
+        t1 = time.time()
+        # setting the last flush time in the past to trigger a telemetry flush
+        statsd._last_flush_time = t1 - statsd._telemetry_flush_interval -1
+        statsd.gauge('gauge', 123.4)
+
+        assert_equal('gauge:123.4|g', fake_socket.recv())
+        assert_equal_telemetry('', fake_telemetry_socket.recv(), telemetry=telemetry_metrics(metrics=2, bytes_sent=13, packets_sent=1))
         # assert that _last_flush_time has been updated
         assert t1 < statsd._last_flush_time
 
@@ -761,7 +795,12 @@ class TestDogStatsd(unittest.TestCase):
             statsd.socket = fake_socket
             for i in range(metrics_per_packet + 1):
                 statsd.increment('mycounter')
+
             payload = '\n'.join([single_metric for i in range(metrics_per_packet)])
+            telemetry = telemetry_metrics(metrics=metrics_per_packet)
+            bytes_sent += len(payload) + len(telemetry) + 1  # +1 for CR between telemetry and payload
+
+            assert_equal_telemetry(payload, fake_socket.recv(), telemetry=telemetry)
 
             telemetry = telemetry_metrics(metrics=metrics_per_packet+1, bytes_sent=len(payload))
             bytes_sent += len(payload) + len(telemetry)
@@ -888,10 +927,12 @@ class TestDogStatsd(unittest.TestCase):
             # Make call with no tags passed; only the globally configured tags will be used.
             global_tags_str = ','.join([t for t in global_tags])
             statsd.gauge('gt', 123.4)
-            # Protect against the no tags case.
-            metric = 'gt:123.4|g|#{}'.format(global_tags_str) if global_tags_str else 'gt:123.4|g'
-            assert_equal(metric, statsd.socket.recv())
-            assert_equal(telemetry_metrics(tags=global_tags_str, bytes_sent=len(metric)), statsd.socket.recv())
+            assert_equal_telemetry(
+                # Protect against the no tags case.
+                'gt:123.4|g|#{}'.format(global_tags_str) if global_tags_str else 'gt:123.4|g',
+                statsd.socket.recv(),
+                telemetry=telemetry_metrics(tags=global_tags_str)
+            )
             statsd._reset_telemetry()
 
             # Make another call with local tags passed.
