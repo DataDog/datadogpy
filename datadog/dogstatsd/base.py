@@ -110,6 +110,14 @@ class DogStatsd(object):
         :envvar DD_DOGSTATSD_DISABLE: Disable any statsd metric collection (default False)
         :type DD_DOGSTATSD_DISABLE: boolean
 
+        :envvar DD_TELEMETRY_HOST: the host for the dogstatsd server we wish to submit
+        telemetry stats to. If set, it overrides default value.
+        :type DD_TELEMETRY_HOST: string
+
+        :envvar DD_TELEMETRY_PORT: the port for the dogstatsd server we wish to submit
+        telemetry stats to. If set, it overrides default value.
+        :type DD_TELEMETRY_HOST: string
+
         :param host: the host of the DogStatsd server.
         :type host: string
 
@@ -143,6 +151,26 @@ class DogStatsd(object):
         if sending metrics in batch. If not specified it will be adjusted to a optimal value
         depending on the connection type.
         :type max_buffer_len: integer
+
+        :param disable_telemetry: Should client telemetry be disabled
+        :type disable_telemetry: boolean
+
+        :param telemetry_min_flush_interval: Minimum flush interval for telemtry in seconds
+        :type telemetry_min_flush_interval: integer
+
+        :param telemetry_host: the host for the dogstatsd server we wish to submit
+        telemetry stats to. Optional. If telemetry is enabled and this is not specified
+        the default host will be used.
+        :type host: string
+
+        :param telemetry_port: the port for the dogstatsd server we wish to submit
+        telemetry stats to. Optional. If telemetry is enabled and this is not specified
+        the default host will be used.
+        :type port: integer
+
+        :param telemetry_socket_path: Submit client telemetry to dogstatsd through a UNIX
+        socket instead of UDP. If set, disables UDP transmission (Linux only)
+        :type telemetry_socket_path: string
         """
 
         self.lock = Lock()
