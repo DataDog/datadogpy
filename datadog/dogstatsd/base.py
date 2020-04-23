@@ -155,7 +155,7 @@ class DogStatsd(object):
         :param disable_telemetry: Should client telemetry be disabled
         :type disable_telemetry: boolean
 
-        :param telemetry_min_flush_interval: Minimum flush interval for telemtry in seconds
+        :param telemetry_min_flush_interval: Minimum flush interval for telemetry in seconds
         :type telemetry_min_flush_interval: integer
 
         :param telemetry_host: the host for the dogstatsd server we wish to submit
