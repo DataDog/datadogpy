@@ -13,7 +13,7 @@ import os
 import socket
 import errno
 import time
-from threading import Lock
+from threading import Lock, Timer
 
 # datadog
 from datadog.dogstatsd.context import TimedContextManagerDecorator
@@ -47,7 +47,7 @@ DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL = 10
 class DogStatsd(object):
     OK, WARNING, CRITICAL, UNKNOWN = (0, 1, 2, 3)
 
-    def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, max_buffer_size=50, namespace=None,
+    def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, max_buffer_size=1452, namespace=None,
                  constant_tags=None, use_ms=False, use_default_route=False,
                  socket_path=None, default_sample_rate=1, disable_telemetry=False,
                  telemetry_min_flush_interval=DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL):
@@ -140,10 +140,16 @@ class DogStatsd(object):
             self.port = int(port)
             transport = "udp"
 
+        # Buffer
+        self.buffer = []
+        self.max_buffer_size = max_buffer_size
+        self.max_buffer_entry = 500
+        self.buffer_size = 0
+        self.flush_time = 0.1
+
         # Socket
         self.socket = None
-        self.max_buffer_size = max_buffer_size
-        self._send = self._send_to_server
+        self._send = self._send_to_buffer
         self.encoding = 'utf-8'
 
         # Options
@@ -175,6 +181,8 @@ class DogStatsd(object):
         self._reset_telementry()
         self._telemetry_flush_interval = telemetry_min_flush_interval
         self._telemetry = not disable_telemetry
+
+        self._flushing_loop()
 
     def disable_telemetry(self):
         self._telemetry = False
@@ -450,14 +458,30 @@ class DogStatsd(object):
             self.bytes_dropped += len(packet)
             self.packets_dropped += 1
 
-    def _send_to_buffer(self, packet):
-        self.buffer.append(packet)
-        if len(self.buffer) >= self.max_buffer_size:
+    def _send_to_buffer(self, payload):
+        if self._should_flush(len(payload)):
             self._flush_buffer()
+        self.buffer_size += len(payload) + 1
+        self.buffer.append(payload)
+
+    def _should_flush(self, length):
+        if not self.buffer:
+            return False
+        if len(self.buffer) > self.max_buffer_entry:
+            return True
+        return self.buffer_size + length >= self.max_buffer_size
 
     def _flush_buffer(self):
         self._send_to_server("\n".join(self.buffer))
+        self.buffer_size = 0
         self.buffer = []
+
+    def _flushing_loop(self):
+        if self.buffer:
+            self._flush_buffer()
+        self.timer = Timer(self.flush_time, self._flushing_loop)
+        self.timer.setDaemon(True)
+        self.timer.start()
 
     def _escape_event_content(self, string):
         return string.replace('\n', '\\n')
