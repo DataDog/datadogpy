@@ -1,5 +1,12 @@
 CHANGELOG
 =========
+## v0.36.0 / 2020-05-05
+
+* [Added] Add excluded_regions to POST/PUT AWS lib. See [#552](https://github.com/DataDog/datadogpy/pull/552).
+* [Added] Add support for DD_ENV, DD_SERVICE, and DD_VERSION environment variables. See [#548](https://github.com/DataDog/datadogpy/pull/548).
+* [Fixed] Fix dogwrap help output case. See [#557](https://github.com/DataDog/datadogpy/pull/557). Thanks [deiga](https://github.com/deiga).
+* [Fixed] Fix decode attribute error with options for py3. See [#555](https://github.com/DataDog/datadogpy/pull/555).
+
 ## 0.35.0 / 2020-03-09
 
 * [Added] Add `Set` metric type to threadstats. See [#545](https://github.com/DataDog/datadogpy/pull/545).

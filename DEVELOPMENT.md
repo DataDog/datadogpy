@@ -103,8 +103,8 @@ We create 2 environments:
 - Default environments: they will run all Unit, Performance and Integration tests not marked as `admin_needed`.
   - Execute this with the `tox` command.
 - The explicit `integration-admin` environment: It will only run integration tests marked with the `admin_needed` marker.
-  - Tests marked as `admin-needed` need an API and APP Key with admin permissions. 
-  - __!!!WARNING!!!__ These tests will use these keys to do destructive changes on your Datadog account. 
+  - Tests marked as `admin-needed` need an API and APP Key with admin permissions.
+  - __!!!WARNING!!!__ These tests will use these keys to do destructive changes on your Datadog account.
     - __Never use keys for an organization that contains anything important!__.
 
 #### Setup Integration Tests
@@ -176,7 +176,7 @@ For example, to exclude all integrations tests using the `--ignore-glob` argumen
 tox -- --ignore-glob=tests/integration/*
 ```
 
-Another example below shows how to run test classes or test methods matching a given string by using the `-k` argument from `pytest`. 
+Another example below shows how to run test classes or test methods matching a given string by using the `-k` argument from `pytest`.
 With this command, only run classes and methods matching `dogstatsd` are run.
 
 ```
@@ -193,7 +193,7 @@ tox -- tests/unit/dogstatsd
 
 Make your change. Add tests for your change. Make the tests pass again.
 
-You can also install this project locally in editable mode to make changes and run any manual tests. 
+You can also install this project locally in editable mode to make changes and run any manual tests.
 This can be done by installing using the following pip command:
 
 ```
