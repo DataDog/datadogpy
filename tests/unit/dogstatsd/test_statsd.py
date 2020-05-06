@@ -735,7 +735,7 @@ class TestDogStatsd(unittest.TestCase):
 
         assert statsd.telemetry_host != None
         assert statsd.telemetry_port != None
-        assert statsd.telemetry_destination
+        assert statsd._dedicated_telemetry_destination()
 
         # set the last flush time in the future to be sure we won't flush
         statsd._last_flush_time = time.time() + statsd._telemetry_flush_interval
