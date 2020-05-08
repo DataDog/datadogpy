@@ -571,7 +571,7 @@ class DogStatsd(object):
         return self._telemetry and self._last_flush_time + self._telemetry_flush_interval < time.time()
 
     def _send_to_server(self, packet):
-        self._xmit_packet(packet, self._telemetry)
+        self._xmit_packet(packet, self._telemetry, False)
         if self._is_telemetry_flush_time():
             telemetry = self._flush_telemetry()
             if self._xmit_packet(telemetry, False):
@@ -586,7 +586,7 @@ class DogStatsd(object):
 
     def _xmit_packet(self, packet, account, is_telemetry):
         try:
-            if is_telemetry and self.telemetry_destination:
+            if is_telemetry and self._dedicated_telemetry_destination():
                 socket = (self.telemetry_socket or self.get_socket(telemetry=True))
             else:
                 # If set, use socket directly
