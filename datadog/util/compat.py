@@ -10,10 +10,71 @@ import logging
 import socket
 import sys
 
-try:
-    from urllib.parse import urljoin
-except ImportError:
-    from urlparse import urljoin
+# Note: using `sys.version_info` instead of the helper functions defined here
+# so that mypy detects version-specific code paths. Currently, mypy doesn't
+# support try/except imports for version-specific code paths either.
+#
+# https://mypy.readthedocs.io/en/stable/common_issues.html#python-version-and-system-platform-checks
+
+# Python 3.x
+if sys.version_info[0] >= 3:
+    import builtins
+    from collections import UserDict as IterableUserDict
+    import configparser
+    from configparser import ConfigParser
+    from io import StringIO
+    import pkg_resources as pkg
+    from urllib.parse import urljoin, urlparse
+    import urllib.request as url_lib, urllib.error, urllib.parse
+
+    imap = map
+    get_input = input
+    text = str
+
+    def iteritems(d):
+        return iter(d.items())
+
+    def iternext(iter):
+        return next(iter)
+# Python 2.x
+else:
+    import __builtin__ as builtins
+    import ConfigParser as configparser
+    from ConfigParser import ConfigParser
+    from cStringIO import StringIO
+    from itertools import imap
+    import urllib2 as url_lib
+    from urlparse import urljoin, urlparse
+    from UserDict import IterableUserDict
+
+    pkg = None
+    get_input = raw_input
+    text = unicode
+
+    def iteritems(d):
+        return d.iteritems()
+
+    def iternext(iter):
+        return iter.next()
+
+# Python >= 3.5
+if sys.version_info >= (3, 5):
+    from asyncio import iscoroutinefunction
+# Others
+else:
+    def iscoroutinefunction(*args, **kwargs):
+        return False
+
+# Python >= 2.7
+if sys.version_info >= (2, 7):
+    from logging import NullHandler
+# Python 2.6.x
+else:
+    from logging import Handler
+
+    class NullHandler(Handler):
+        def emit(self, record):
+            pass
 
 
 def _is_py_version_higher_than(major, minor=0):
@@ -42,81 +103,3 @@ def is_pypy():
     Assert that PyPy is being used (regardless of 2 or 3)
     """
     return '__pypy__' in sys.builtin_module_names
-
-
-get_input = input
-
-# Python 3.x
-if is_p3k():
-    from io import StringIO
-    import builtins
-    import configparser
-    import urllib.request as url_lib, urllib.error, urllib.parse
-
-    imap = map
-    text = str
-
-    def iteritems(d):
-        return iter(d.items())
-
-    def iternext(iter):
-        return next(iter)
-
-
-# Python 2.x
-else:
-    import __builtin__ as builtins
-    from cStringIO import StringIO
-    from itertools import imap
-    import ConfigParser as configparser
-    import urllib2 as url_lib
-
-    get_input = raw_input
-    text = unicode
-
-    def iteritems(d):
-        return d.iteritems()
-
-    def iternext(iter):
-        return iter.next()
-
-
-# Python > 3.5
-if is_higher_py35():
-    from asyncio import iscoroutinefunction
-
-# Others
-else:
-    def iscoroutinefunction(*args, **kwargs):
-        return False
-
-# Optional requirements
-try:
-    from UserDict import IterableUserDict
-except ImportError:
-    from collections import UserDict as IterableUserDict
-
-try:
-    from configparser import ConfigParser
-except ImportError:
-    from ConfigParser import ConfigParser
-
-try:
-    from urllib.parse import urlparse
-except ImportError:
-    from urlparse import urlparse
-
-try:
-    import pkg_resources as pkg
-except ImportError:
-    pkg = None
-
-#Python 2.6.x
-try:
-    from logging import NullHandler
-except ImportError:
-    from logging import Handler
-
-    class NullHandler(Handler):
-        def emit(self, record):
-            pass

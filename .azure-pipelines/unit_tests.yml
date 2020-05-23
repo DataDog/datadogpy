@@ -39,6 +39,9 @@ jobs:
       Lint:
         PYTHON_VERSION: "3.5"
         TOXENV: "flake8"
+      Mypy:
+        PYTHON_VERSION: "3.5"
+        TOXENV: "mypy"
   steps:
   - task: UsePythonVersion@0
     displayName: Use python $(PYTHON_VERSION)

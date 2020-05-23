@@ -8,6 +8,7 @@ import re
 import socket
 import subprocess
 import types
+from typing import Dict, Optional
 
 # datadog
 from datadog.util.compat import url_lib, is_p3k, iteritems
@@ -39,6 +40,7 @@ def is_valid_hostname(hostname):
 
 
 def get_hostname(hostname_from_config):
+    # type: (bool) -> Optional[str]
     """
     Get the canonical host name this agent should identify as. This is
     the authoritative source of the host name for the agent.
@@ -102,7 +104,7 @@ def get_hostname(hostname_from_config):
     # fall back on socket.gethostname(), socket.getfqdn() is too unreliable
     if hostname is None:
         try:
-            socket_hostname = socket.gethostname()
+            socket_hostname = socket.gethostname()  # type: Optional[str]
         except socket.error:
             socket_hostname = None
         if socket_hostname and is_valid_hostname(socket_hostname):
@@ -188,7 +190,7 @@ class EC2(object):
     """
     URL = "http://169.254.169.254/latest/meta-data"
     TIMEOUT = 0.1  # second
-    metadata = {}
+    metadata = {}  # type: Dict[str, str]
 
     @staticmethod
     def get_tags(agentConfig):

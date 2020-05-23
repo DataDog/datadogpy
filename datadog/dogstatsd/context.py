@@ -6,20 +6,8 @@ from functools import wraps
 from time import time
 
 # datadog
-from datadog.util.compat import (
-    is_higher_py35,
-    iscoroutinefunction,
-)
-
-
-if is_higher_py35():
-    from datadog.dogstatsd.context_async import _get_wrapped_co
-else:
-    def _get_wrapped_co(self, func):
-        raise NotImplementedError(
-            u"Decorator `timed` compatibility with coroutine functions"
-            u" requires Python 3.5 or higher."
-        )
+from datadog.dogstatsd.context_async import _get_wrapped_co
+from datadog.util.compat import iscoroutinefunction
 
 
 class TimedContextManagerDecorator(object):
