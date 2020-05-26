@@ -23,7 +23,6 @@ if sys.version_info[0] >= 3:
     import configparser
     from configparser import ConfigParser
     from io import StringIO
-    import pkg_resources as pkg
     from urllib.parse import urljoin, urlparse
     import urllib.request as url_lib, urllib.error, urllib.parse
 
@@ -40,14 +39,13 @@ if sys.version_info[0] >= 3:
 else:
     import __builtin__ as builtins
     import ConfigParser as configparser
-    from ConfigParser import ConfigParser
+    from configparser import ConfigParser
     from cStringIO import StringIO
     from itertools import imap
     import urllib2 as url_lib
     from urlparse import urljoin, urlparse
     from UserDict import IterableUserDict
 
-    pkg = None
     get_input = raw_input
     text = unicode
 
@@ -75,6 +73,11 @@ else:
     class NullHandler(Handler):
         def emit(self, record):
             pass
+
+try:
+    import pkg_resources as pkg
+except ImportError:
+    pkg = None  # type: ignore
 
 
 def _is_py_version_higher_than(major, minor=0):

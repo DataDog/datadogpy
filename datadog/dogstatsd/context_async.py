@@ -22,6 +22,7 @@ ASYNC_SOURCE = r'''
 from functools import wraps
 from time import time
 
+
 def _get_wrapped_co(self, func):
     """
     `timed` wrapper for coroutine methods.

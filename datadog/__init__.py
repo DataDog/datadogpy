@@ -60,6 +60,10 @@ def initialize(api_key=None,                    # type: Optional[str]
     :param host_name: Set a specific hostname
     :type host_name: string
 
+    :param proxies: Proxy to use to connect to Datadog API;
+                    for example, 'proxies': {'http': "http:<user>:<pass>@<ip>:<port>/"}
+    :type proxies: dictionary mapping protocol to the URL of the proxy.
+
     :param api_host: Datadog API endpoint
     :type api_host: url
 

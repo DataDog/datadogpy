@@ -29,6 +29,7 @@ setup(
     install_requires=install_reqs,
     tests_require=["pytest", "mock", "freezegun"],
     packages=["datadog", "datadog.api", "datadog.dogstatsd", "datadog.threadstats", "datadog.util", "datadog.dogshell"],
+    package_data={"datadog": ["py.typed"]},
     author="Datadog, Inc.",
     long_description=get_readme_md_contents(),
     long_description_content_type="text/markdown",
@@ -61,4 +62,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: Implementation :: PyPy",
     ],
+    # Required by Mypy when declaring PEP 561 compatibility with `py.typed`
+    # file.
+    zip_safe=False
 )
