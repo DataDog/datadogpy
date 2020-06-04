@@ -17,8 +17,11 @@ def get_readme_md_contents():
 
 install_reqs = ["decorator>=3.3.2", "requests>=2.6.0"]
 
-if [sys.version_info[0], sys.version_info[1]] < [2, 7]:
+if sys.version_info < (2, 7):
     install_reqs.append("argparse>=1.2")
+
+if sys.version_info < (3, 5):
+    install_reqs.append("typing")
 
 setup(
     name="datadog",
@@ -26,6 +29,7 @@ setup(
     install_requires=install_reqs,
     tests_require=["pytest", "mock", "freezegun"],
     packages=["datadog", "datadog.api", "datadog.dogstatsd", "datadog.threadstats", "datadog.util", "datadog.dogshell"],
+    package_data={"datadog": ["py.typed"]},
     author="Datadog, Inc.",
     long_description=get_readme_md_contents(),
     long_description_content_type="text/markdown",
@@ -58,4 +62,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: Implementation :: PyPy",
     ],
+    # Required by Mypy when declaring PEP 561 compatibility with `py.typed`
+    # file.
+    zip_safe=False
 )

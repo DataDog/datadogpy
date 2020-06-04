@@ -14,6 +14,7 @@ without hindering performance.
 import logging
 import os
 import os.path
+from typing import Any, List, Optional
 
 # datadog
 from datadog import api
@@ -32,10 +33,21 @@ logging.getLogger('datadog.dogstatsd').addHandler(NullHandler())
 logging.getLogger('datadog.threadstats').addHandler(NullHandler())
 
 
-def initialize(api_key=None, app_key=None, host_name=None, api_host=None,
-               statsd_host=None, statsd_port=None, statsd_use_default_route=False,
-               statsd_socket_path=None, statsd_namespace=None, statsd_constant_tags=None,
-               return_raw_response=False, hostname_from_config=True, **kwargs):
+def initialize(api_key=None,                    # type: Optional[str]
+               app_key=None,                    # type: Optional[str]
+               host_name=None,                  # type: Optional[str]
+               api_host=None,                   # type: Optional[str]
+               statsd_host=None,                # type: Optional[str]
+               statsd_port=None,                # type: Optional[int]
+               statsd_use_default_route=False,  # type: bool
+               statsd_socket_path=None,         # type: Optional[str]
+               statsd_namespace=None,           # type: Optional[str]
+               statsd_constant_tags=None,       # type: Optional[List[str]]
+               return_raw_response=False,       # type: bool
+               hostname_from_config=True,       # type: bool
+               **kwargs                         # type: Any
+               ):
+    # type: (...) -> None
     """
     Initialize and configure Datadog.api and Datadog.statsd modules
 

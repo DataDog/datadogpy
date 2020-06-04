@@ -18,7 +18,7 @@ try:
     import requests
     import requests.adapters
 except ImportError:
-    requests = None
+    requests = None  # type: ignore
 
 try:
     from google.appengine.api import urlfetch, urlfetch_errors
