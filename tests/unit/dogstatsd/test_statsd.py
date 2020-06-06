@@ -25,10 +25,10 @@ import pytest
 
 # datadog
 from datadog import initialize, statsd
+from datadog import __version__ as version
 from datadog.dogstatsd.base import DogStatsd
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
-from datadog.util.config import get_version
 from tests.util.contextmanagers import preserve_environment_variable, EnvVars
 from tests.unit.dogstatsd.fixtures import load_fixtures
 
@@ -78,7 +78,6 @@ class OverflownSocket(FakeSocket):
 
 
 def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped=0, packets_sent=0, packets_dropped=0, transport="udp", tags=""):
-    version = get_version()
     tags = "," + tags if tags else ""
 
     return "\ndatadog.dogstatsd.client.metrics:{}|c|#client:py,client_version:{},client_transport:{}{}\n".format(metrics, version, transport, tags) \

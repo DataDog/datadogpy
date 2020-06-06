@@ -19,8 +19,8 @@ from threading import Lock
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.dogstatsd.route import get_default_route
 from datadog.util.compat import text
-from datadog.util.config import get_pkg_version
 from datadog.util.format import normalize_tags
+from datadog.version import __version__
 
 # Logging
 log = logging.getLogger('datadog.dogstatsd')
@@ -163,13 +163,9 @@ class DogStatsd(object):
         self.default_sample_rate = default_sample_rate
 
         # init telemetry version
-        try:
-            client_version = get_pkg_version()
-        except Exception:
-            client_version = u"unknown"
         self._client_tags = [
                 "client:py",
-                "client_version:{}".format(client_version),
+                "client_version:{}".format(__version__),
                 "client_transport:{}".format(transport),
                 ]
         self._reset_telementry()

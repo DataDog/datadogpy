@@ -6,7 +6,8 @@ import string
 import sys
 
 # datadog
-from datadog.util.compat import configparser, StringIO, is_p3k, pkg
+from datadog.util.compat import configparser, StringIO, is_p3k
+from datadog.version import __version__
 
 # CONSTANTS
 DATADOG_CONF = "datadog.conf"
@@ -135,26 +136,16 @@ def get_config(cfg_path=None, options=None):
 def get_pkg_version():
     """
     Resolve `datadog` package version.
+
+    Deprecated: use `datadog.__version__` directly instead
     """
-    if not pkg:
-        return u"unknown"
-
-    dist = pkg.get_distribution("datadog")
-    # Normalize case for Windows systems
-    dist_loc = os.path.normcase(dist.location)
-    here = os.path.normcase(__file__)
-    if not here.startswith(dist_loc):
-        # not installed, but there is another version that *is*
-        raise pkg.DistributionNotFound
-
-    return dist.version
+    return __version__
 
 
 def get_version():
     """
     Resolve `datadog` package version.
+
+    Deprecated: use `datadog.__version__` directly instead
     """
-    try:
-        return get_pkg_version()
-    except pkg.DistributionNotFound:
-        return u"Please install `datadog` with setup.py"
+    return __version__
