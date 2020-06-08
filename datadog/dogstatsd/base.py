@@ -427,7 +427,7 @@ class DogStatsd(object):
         ))
 
     def _is_telemetry_flush_time(self):
-        return self._last_flush_time + self._telemetry_flush_interval < time.time()
+        return self._telemetry and self._last_flush_time + self._telemetry_flush_interval < time.time()
 
     def _send_to_server(self, packet):
         self._xmit_packet(packet, self._telemetry)
