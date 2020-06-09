@@ -33,8 +33,7 @@ import time
 import warnings
 
 # datadog
-from datadog import initialize, api
-from datadog.util.config import get_version
+from datadog import initialize, api, __version__
 from datadog.util.compat import is_p3k
 
 
@@ -258,7 +257,7 @@ def parse_options(raw_args=None):
 quotes to prevent python executing as soon as there is a space in your command. \n \nNOTICE: In \
 normal mode, the whole stderr is printed before stdout, in flush_live mode they will be mixed but \
 there is not guarantee that messages sent by the command on both stderr and stdout are printed in \
-the order they were sent.", version="%prog {0}".format(get_version()), option_class=DogwrapOption)
+the order they were sent.", version="%prog {0}".format(__version__), option_class=DogwrapOption)
 
     parser.add_option('-n', '--name', action='store', type='string', help="the name of the event \
 as it should appear on your Datadog stream")

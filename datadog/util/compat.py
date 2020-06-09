@@ -74,11 +74,6 @@ else:
         def emit(self, record):
             pass
 
-try:
-    import pkg_resources as pkg
-except ImportError:
-    pkg = None  # type: ignore
-
 
 def _is_py_version_higher_than(major, minor=0):
     """

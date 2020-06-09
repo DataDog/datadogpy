@@ -31,10 +31,10 @@ Our team will trigger the release pipeline.
 - Commit the changes to the repository in a release branch and open a PR. Do not merge yet.
 
 ### Release
-1. Bump the version in [`setup.py`](setup.py) and push it to your changelog PR. [Example](https://github.com/DataDog/datadogpy/pull/495/files#diff-2eeaed663bd0d25b7e608891384b7298)
+1. Bump the version in [`datadog/version.py`](datadog/version.py) and push it to your changelog PR. [Example](https://github.com/DataDog/datadogpy/pull/495/files#diff-2eeaed663bd0d25b7e608891384b7298)
 1. Merge the PR to master.
 1. Create the release on GitHub. [Example](https://github.com/DataDog/datadogpy/releases/tag/v0.33.0)
 1. Checkout the tag created at the previous step.
 1. Run `ddev release build .` and `ddev release upload --sdist . `.
    - Make sure that both an `sdist` and a [universal wheel](https://packaging.python.org/guides/distributing-packages-using-setuptools/#universal-wheels) have been uploaded to [PyPI](https://pypi.python.org/pypi/datadog/).
-1. Bump the version again in `setup.py` to a dev version (e.g. `0.34.0` -> `0.35.0.dev`), open a PR and merge it to master.
+1. Bump the version again in `datadog/version.py` to a dev version (e.g. `0.34.0` -> `0.35.0.dev`), open a PR and merge it to master.

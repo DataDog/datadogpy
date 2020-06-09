@@ -10,7 +10,7 @@ import sys
 import argparse
 
 # datadog
-from datadog import initialize
+from datadog import initialize, __version__
 from datadog.dogshell.comment import CommentClient
 from datadog.dogshell.common import DogshellConfig
 from datadog.dogshell.dashboard_list import DashboardListClient
@@ -26,7 +26,6 @@ from datadog.dogshell.service_level_objective import ServiceLevelObjectiveClient
 from datadog.dogshell.tag import TagClient
 from datadog.dogshell.timeboard import TimeboardClient
 from datadog.dogshell.dashboard import DashboardClient
-from datadog.util.config import get_version
 
 
 def main():
@@ -53,7 +52,7 @@ def main():
     parser.add_argument('--timeout', help="time to wait in seconds before timing"
                         " out an API call (default 10)", default=10, type=int)
     parser.add_argument('-v', '--version', help='Dog API version', action='version',
-                        version='%(prog)s {0}'.format(get_version()))
+                        version='%(prog)s {0}'.format(__version__))
 
     config = DogshellConfig()
 

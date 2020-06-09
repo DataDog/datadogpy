@@ -14,6 +14,9 @@ def get_readme_md_contents():
         long_description = f.read()
         return long_description
 
+version = {}
+with open("datadog/version.py") as fp:
+    exec(fp.read(), version)
 
 install_reqs = ["decorator>=3.3.2", "requests>=2.6.0"]
 
@@ -25,7 +28,7 @@ if sys.version_info < (3, 5):
 
 setup(
     name="datadog",
-    version="0.37.0.dev",
+    version=version["__version__"],
     install_requires=install_reqs,
     tests_require=["pytest", "mock", "freezegun"],
     packages=["datadog", "datadog.api", "datadog.dogstatsd", "datadog.threadstats", "datadog.util", "datadog.dogshell"],
