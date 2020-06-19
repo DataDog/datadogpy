@@ -27,7 +27,7 @@ import pytest
 # datadog
 from datadog import initialize, statsd
 from datadog import __version__ as version
-from datadog.dogstatsd.base import DogStatsd
+from datadog.dogstatsd.base import DogStatsd, UDP_OPTIMAL_PAYLOAD_LENGTH
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
 from tests.util.contextmanagers import preserve_environment_variable, EnvVars
@@ -706,12 +706,13 @@ class TestDogStatsd(unittest.TestCase):
         assert_equal(metric, fake_socket.recv())
         assert_equal(telemetry_metrics(metrics=2, bytes_sent=len(metric)), fake_socket.recv())
         # assert_equal_telemetry("page.views:123|g\ntimer:123|ms", fake_socket.recv(2), telemetry=telemetry_metrics(metrics=2))
+
     def test_batched_buffer_autoflush(self):
         fake_socket = FakeSocket()
         bytes_sent = 0
         with DogStatsd(telemetry_min_flush_interval=0) as statsd:
             single_metric = 'mycounter:1|c'
-            statsd._max_payload_size = 2048
+            assert_equal(statsd._max_payload_size, UDP_OPTIMAL_PAYLOAD_LENGTH)
             metrics_per_packet = statsd._max_payload_size // (len(single_metric) + 1)
             statsd.socket = fake_socket
             for i in range(metrics_per_packet + 1):

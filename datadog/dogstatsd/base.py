@@ -149,14 +149,14 @@ class DogStatsd(object):
             self.port = None
             transport = "uds"
             if not self._max_payload_size:
-                self._max_payload_size = UDP_OPTIMAL_PAYLOAD_LENGTH
+                self._max_payload_size = UDS_OPTIMAL_PAYLOAD_LENGTH
         else:
             self.socket_path = None
             self.host = self.resolve_host(host, use_default_route)
             self.port = int(port)
             transport = "udp"
             if not self._max_payload_size:
-                self._max_payload_size = UDS_OPTIMAL_PAYLOAD_LENGTH
+                self._max_payload_size = UDP_OPTIMAL_PAYLOAD_LENGTH
 
         # Socket
         self.socket = None
