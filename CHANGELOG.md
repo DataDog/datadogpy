@@ -1,5 +1,12 @@
 CHANGELOG
 =========
+## v0.37.0 / 2020-06-19
+
+* [Added] Add version as an importable variable and remove dependency on `pkg_resources`. See [#566](https://github.com/DataDog/datadogpy/pull/566). Thanks [sjhewitt](https://github.com/sjhewitt).
+* [Added] Initial support for Python type hints and Mypy type checking. See [#565](https://github.com/DataDog/datadogpy/pull/565). Thanks [jairideout](https://github.com/jairideout).
+* [Fixed] [dogstatsd] Correct inverted constants. See [#568](https://github.com/DataDog/datadogpy/pull/568).
+* [Changed] [dogstatsd] Size-based packetization for dogstatsd batched metrics . See [#562](https://github.com/DataDog/datadogpy/pull/562).
+
 ## v0.36.0 / 2020-05-05
 
 * [Added] Add excluded_regions to POST/PUT AWS lib. See [#552](https://github.com/DataDog/datadogpy/pull/552).
