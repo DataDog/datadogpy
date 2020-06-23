@@ -1,5 +1,9 @@
 CHANGELOG
 =========
+## v0.37.1 / 2020-06-23
+
+* [Fixed] Add `typing` and `configparser` dependencies for python versions that need it. See [#572](https://github.com/DataDog/datadogpy/pull/572). Thanks [jairideout](https://github.com/jairideout).
+
 ## v0.37.0 / 2020-06-19
 
 * [Added] Add version as an importable variable and remove dependency on `pkg_resources`. See [#566](https://github.com/DataDog/datadogpy/pull/566). Thanks [sjhewitt](https://github.com/sjhewitt).
