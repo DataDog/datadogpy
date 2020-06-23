@@ -18,13 +18,21 @@ version = {}
 with open("datadog/version.py") as fp:
     exec(fp.read(), version)
 
-install_reqs = ["decorator>=3.3.2", "requests>=2.6.0"]
+# `typing` package is only required for Python versions older than 3.5, but we include it here so
+# that a single wheel build can be used for all supported Python versions. Installing `typing` on
+# Python 3.5+ has no effect.
+#
+# `configparser` package is only required for Python versions older than 3 (it is included here for
+# the same reason as the `typing` package).
+install_reqs = [
+    "decorator>=3.3.2",
+    "requests>=2.6.0",
+    'typing;python_version<"3.5"',
+    'configparser;python_version<"3.0"',
+]
 
 if sys.version_info < (2, 7):
     install_reqs.append("argparse>=1.2")
-
-if sys.version_info < (3, 5):
-    install_reqs.append("typing")
 
 setup(
     name="datadog",
