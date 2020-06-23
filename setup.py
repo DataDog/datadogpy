@@ -24,7 +24,12 @@ with open("datadog/version.py") as fp:
 #
 # `configparser` package is only required for Python versions older than 3 (it is included here for
 # the same reason as the `typing` package).
-install_reqs = ["decorator>=3.3.2", "requests>=2.6.0", "typing", "configparser"]
+install_reqs = [
+    "decorator>=3.3.2",
+    "requests>=2.6.0",
+    'typing;python_version<"3.5"',
+    'configparser;python_version<"3.0"',
+]
 
 if sys.version_info < (2, 7):
     install_reqs.append("argparse>=1.2")
