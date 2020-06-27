@@ -17,6 +17,7 @@ class TimedContextManagerDecorator(object):
     """
     def __init__(self, statsd, metric=None, tags=None, sample_rate=1, use_ms=None):
         self.statsd = statsd
+        self.timing_func = statsd.timing
         self.metric = metric
         self.tags = tags
         self.sample_rate = sample_rate
@@ -60,7 +61,7 @@ class TimedContextManagerDecorator(object):
         elapsed = time() - start
         use_ms = self.use_ms if self.use_ms is not None else self.statsd.use_ms
         elapsed = int(round(1000 * elapsed)) if use_ms else elapsed
-        self.statsd.timing(self.metric, elapsed, self.tags, self.sample_rate)
+        self.timing_func(self.metric, elapsed, self.tags, self.sample_rate)
         self.elapsed = elapsed
 
     def start(self):
@@ -68,3 +69,13 @@ class TimedContextManagerDecorator(object):
 
     def stop(self):
         self.__exit__(None, None, None)
+
+
+class DistributedContextManagerDecorator(TimedContextManagerDecorator):
+    """
+    A context manager and a decorator which will report the elapsed time in
+    the context OR in a function call using the custom distribution metric.
+    """
+    def __init__(self, statsd, metric=None, tags=None, sample_rate=1, use_ms=None):
+        super(DistributedContextManagerDecorator, self).__init__(statsd, metric, tags, sample_rate, use_ms)
+        self.timing_func = statsd.distribution
