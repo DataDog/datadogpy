@@ -311,7 +311,7 @@ class TestDogshell:
             os.unlink(updated_file)
 
         # Delete the dash
-        dogshell(["timeboard", "delete", str(dash["id"])])
+        dogshell(["--timeout", "30", "timeboard", "delete", str(dash["id"])])
 
         # Verify that it's not on the server anymore
         out, _, return_code = dogshell(["dashboard", "show", str(dash["id"])], check_return_code=False)
@@ -387,7 +387,7 @@ class TestDogshell:
         assert response.status_code == 404
 
         # Delete the screenboard
-        dogshell(["screenboard", "delete", str(screenboard["id"])])
+        dogshell(["--timeout", "30", "screenboard", "delete", str(screenboard["id"])])
 
         # Verify that it's not on the server anymore
         _, _, return_code = dogshell(["screenboard", "show", str(screenboard["id"])], check_return_code=False)
