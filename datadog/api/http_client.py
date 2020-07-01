@@ -10,6 +10,7 @@ Priority:
 """
 # stdlib
 import logging
+import platform
 import urllib
 from threading import Lock
 
@@ -76,9 +77,17 @@ class RequestClient(HTTPClient):
 
             with cls._session_lock:
                 if cls._session is None:
+                    from datadog import version
                     cls._session = requests.Session()
                     http_adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
                     cls._session.mount('https://', http_adapter)
+                    user_agent = 'datadogpy/{version} (python {pyver}; os {os}; arch {arch})'.format(
+                            version=version.__version__,
+                            pyver=platform.python_version(),
+                            os=platform.system().lower(),
+                            arch=platform.machine().lower(),
+                    )
+                    cls._session.headers.update({'User-Agent': user_agent})
 
             result = cls._session.request(
                 method, url,
