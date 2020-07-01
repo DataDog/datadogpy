@@ -28,7 +28,7 @@ install_reqs = [
     "decorator>=3.3.2",
     "requests>=2.6.0",
     'typing;python_version<"3.5"',
-    'configparser;python_version<"3.0"',
+    'configparser<5;python_version<"3.0"',
 ]
 
 if sys.version_info < (2, 7):
