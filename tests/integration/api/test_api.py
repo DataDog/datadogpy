@@ -966,4 +966,3 @@ class TestDatadog:
     def test_user_agent(self, dog):
         _, resp = dog.api_client.APIClient.submit('GET', 'validate')
         assert re.match(r'^datadogpy\/[^\s]+ \(python [^\s]+; os [^\s]+; arch [^\s]+\)$', resp.request.headers['User-Agent'])
-        resp.request.headers['User-Agent']

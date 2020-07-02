@@ -9,6 +9,7 @@ Priority:
 2. `urlfetch` 3p module - Google App Engine only
 """
 # stdlib
+import copy
 import logging
 import platform
 import urllib
@@ -31,6 +32,16 @@ from datadog.api.exceptions import ProxyError, ClientError, HTTPError, HttpTimeo
 
 
 log = logging.getLogger('datadog.api')
+
+
+def _get_user_agent_header():
+    from datadog import version
+    return 'datadogpy/{version} (python {pyver}; os {os}; arch {arch})'.format(
+        version=version.__version__,
+        pyver=platform.python_version(),
+        os=platform.system().lower(),
+        arch=platform.machine().lower(),
+    )
 
 
 def _remove_context(exc):
@@ -77,17 +88,10 @@ class RequestClient(HTTPClient):
 
             with cls._session_lock:
                 if cls._session is None:
-                    from datadog import version
                     cls._session = requests.Session()
                     http_adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
                     cls._session.mount('https://', http_adapter)
-                    user_agent = 'datadogpy/{version} (python {pyver}; os {os}; arch {arch})'.format(
-                            version=version.__version__,
-                            pyver=platform.python_version(),
-                            os=platform.system().lower(),
-                            arch=platform.machine().lower(),
-                    )
-                    cls._session.headers.update({'User-Agent': user_agent})
+                    cls._session.headers.update({'User-Agent': _get_user_agent_header()})
 
             result = cls._session.request(
                 method, url,
@@ -139,12 +143,14 @@ class URLFetchClient(HTTPClient):
             url=url,
             params=urllib.urlencode(params)
         )
+        newheaders = copy.deepcopy(headers)
+        newheaders['User-Agent'] = _get_user_agent_header()
 
         try:
             result = urlfetch.fetch(
                 url=url_with_params,
                 method=method,
-                headers=headers,
+                headers=newheaders,
                 validate_certificate=validate_certificate,
                 deadline=timeout,
                 payload=data,
