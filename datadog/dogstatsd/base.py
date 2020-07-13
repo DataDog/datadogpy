@@ -246,6 +246,7 @@ class DogStatsd(object):
                     self.socket = sock
                 else:
                     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    sock.setblocking(0)
                     sock.connect((self.host, self.port))
                     self.socket = sock
 
