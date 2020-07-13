@@ -1,5 +1,11 @@
 CHANGELOG
 =========
+## 0.38.0 / 2020-07-02
+
+* [Added] Improve user-agent header to include telemetry information. See [#583](https://github.com/DataDog/datadogpy/pull/583).
+* [Fixed] Use Python 2 compatible configparser explicitly. See [#585](https://github.com/DataDog/datadogpy/pull/585). Thanks [Panfilwk](https://github.com/Panfilwk).
+* [Fixed] Fix error after creating `.dogrc` when not answering `y` or `n` at the prompt. See [#582](https://github.com/DataDog/datadogpy/pull/582). Thanks [NassimBounouas](https://github.com/NassimBounouas).
+
 ## v0.37.1 / 2020-06-23
 
 * [Fixed] Add `typing` and `configparser` dependencies for python versions that need it. See [#572](https://github.com/DataDog/datadogpy/pull/572). Thanks [jairideout](https://github.com/jairideout).
