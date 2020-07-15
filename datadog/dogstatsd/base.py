@@ -158,7 +158,7 @@ class DogStatsd(object):
                 %s, using %s as port number", dogstatsd_port, port)
 
         # Check enabled
-        if os.environ.get('DD_DOGSTATSD_ENABLE', 'True') == 'True':
+        if os.environ.get('DD_DOGSTATSD_ENABLE', 'True') in {'True', 'true', 'yes', '1'}:
             self._enabled = True
         else:
             self._enabled = False
