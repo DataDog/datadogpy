@@ -69,7 +69,7 @@ tags = ['version:1', 'application:web']
 api.Event.create(title=title, text=text, tags=tags)
 ```
 
-In development, you can disable any `statsd` metric collection using `DD_DOGSTATSD_ENABLE=False`.
+In development, you can disable any `statsd` metric collection using `DD_DOGSTATSD_DISABLE=True` (or any not-empty value).
 
 ## DogStatsD
 
