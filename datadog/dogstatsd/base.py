@@ -100,8 +100,8 @@ class DogStatsd(object):
         If set, it is appended to the constant (global) tags of the statsd client.
         :type DD_VERSION: string
 
-        :envvar DD_DOGSTATSD_ENABLE: Enable any statsd metric collection (default True)
-        :type DD_DOGSTATSD_ENABLE: boolean
+        :envvar DD_DOGSTATSD_DISABLE: Disable any statsd metric collection (default False)
+        :type DD_DOGSTATSD_DISABLE: boolean
 
         :param host: the host of the DogStatsd server.
         :type host: string
