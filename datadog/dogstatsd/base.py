@@ -421,7 +421,7 @@ class DogStatsd(object):
         """
         if value is None:
             return
-        
+
         if self._enabled is not True:
             return
 
