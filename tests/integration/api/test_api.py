@@ -4,7 +4,9 @@
 # python
 import datetime
 import json
+import mock
 import os
+import re
 import time
 
 import requests
@@ -597,6 +599,9 @@ class TestDatadog:
             "deleted_monitor_id": monitor["id"]
         }
 
+        # Delete the SLO.
+        dog.ServiceLevelObjective.delete(slo["id"])
+
     def test_service_level_objective_crud(self, dog, freezer):
         numerator = "sum:my.custom.metric{type:good}.as_count()"
         denominator = "sum:my.custom.metric{*}.as_count()"
@@ -956,3 +961,8 @@ class TestDatadog:
         # check if new role is deleted successfully
         res = dog.Roles.get(role_uuid)
         assert "errors" in res
+
+    @mock.patch('datadog.api._return_raw_response', True)
+    def test_user_agent(self, dog):
+        _, resp = dog.api_client.APIClient.submit('GET', 'validate')
+        assert re.match(r'^datadogpy\/[^\s]+ \(python [^\s]+; os [^\s]+; arch [^\s]+\)$', resp.request.headers['User-Agent'])

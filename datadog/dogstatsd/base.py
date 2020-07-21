@@ -24,6 +24,7 @@ from datadog.dogstatsd.route import get_default_route
 from datadog.util.compat import text
 from datadog.util.format import normalize_tags
 from datadog.version import __version__
+from typing import Optional, List, Text
 
 # Logging
 log = logging.getLogger('datadog.dogstatsd')
@@ -54,11 +55,23 @@ DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL = 10
 class DogStatsd(object):
     OK, WARNING, CRITICAL, UNKNOWN = (0, 1, 2, 3)
 
-    def __init__(self, host=DEFAULT_HOST, port=DEFAULT_PORT, max_buffer_size=None, namespace=None,
-                 constant_tags=None, use_ms=False, use_default_route=False,
-                 socket_path=None, default_sample_rate=1, disable_telemetry=False,
-                 telemetry_min_flush_interval=DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL,
-                 max_buffer_len=0):
+    def __init__(
+        self,
+        host=DEFAULT_HOST,              # type: Text
+        port=DEFAULT_PORT,              # type: int
+        max_buffer_size=None,           # type: None
+        namespace=None,                 # type: Optional[Text]
+        constant_tags=None,             # type: Optional[List[str]]
+        use_ms=False,                   # type: bool
+        use_default_route=False,        # type: bool
+        socket_path=None,               # type: Optional[Text]
+        default_sample_rate=1,          # type: float
+        disable_telemetry=False,        # type: bool
+        telemetry_min_flush_interval=(
+            DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL
+        ),                              # type: int
+        max_buffer_len=0                # type: int
+    ):  # type: (...) -> None
         """
         Initialize a DogStatsd object.
 
@@ -147,7 +160,7 @@ class DogStatsd(object):
         # Connection
         self._max_payload_size = max_buffer_len
         if socket_path is not None:
-            self.socket_path = socket_path
+            self.socket_path = socket_path  # type: Optional[text]
             self.host = None
             self.port = None
             transport = "uds"
@@ -267,7 +280,13 @@ class DogStatsd(object):
             # Only send packets if there are packets to send
             self._flush_buffer()
 
-    def gauge(self, metric, value, tags=None, sample_rate=None):
+    def gauge(
+        self,
+        metric,           # type: Text
+        value,            # type: float
+        tags=None,        # type: Optional[List[str]]
+        sample_rate=None  # type: Optional[float]
+    ):  # type(...) -> None
         """
         Record the value of a gauge, optionally setting a list of tags and a
         sample rate.
@@ -277,7 +296,13 @@ class DogStatsd(object):
         """
         return self._report(metric, 'g', value, tags, sample_rate)
 
-    def increment(self, metric, value=1, tags=None, sample_rate=None):
+    def increment(
+        self,
+        metric,             # type: Text
+        value=1,            # type: float
+        tags=None,          # type: Optional[List[str]]
+        sample_rate=None    # type: Optional[float]
+    ):  # type: (...) -> None
         """
         Increment a counter, optionally setting a value, tags and a sample
         rate.
