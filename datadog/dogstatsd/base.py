@@ -241,11 +241,12 @@ class DogStatsd(object):
             if not self.socket:
                 if self.socket_path is not None:
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-                    sock.connect(self.socket_path)
                     sock.setblocking(0)
+                    sock.connect(self.socket_path)
                     self.socket = sock
                 else:
                     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    sock.setblocking(0)
                     sock.connect((self.host, self.port))
                     self.socket = sock
 
