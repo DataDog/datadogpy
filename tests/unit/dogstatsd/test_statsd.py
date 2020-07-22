@@ -379,6 +379,50 @@ class TestDogStatsd(unittest.TestCase):
             c = [call("Socket send would block: Socket error, dropping the packet")]
             mock_log.warning.assert_has_calls(c * 2)
 
+    def test_distributed(self):
+        """
+        Measure the distribution of a function's run time using distribution custom metric.
+        """
+        # In seconds
+        @self.statsd.distributed('distributed.test')
+        def func(a, b, c=1, d=1):
+            """docstring"""
+            time.sleep(0.5)
+            return (a, b, c, d)
+
+        assert_equal('func', func.__name__)
+        assert_equal('docstring', func.__doc__)
+
+        result = func(1, 2, d=3)
+        # Assert it handles args and kwargs correctly.
+        assert_equal(result, (1, 2, 1, 3))
+
+        packet = self.recv(2).split("\n")[0] # ignore telemetry packet
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        assert_equal('d', type_)
+        assert_equal('distributed.test', name)
+        self.assert_almost_equal(0.5, float(value), 0.1)
+
+        # Repeat, force timer value in milliseconds
+        @self.statsd.distributed('distributed.test', use_ms=True)
+        def func(a, b, c=1, d=1):
+            """docstring"""
+            time.sleep(0.5)
+            return (a, b, c, d)
+
+        func(1, 2, d=3)
+
+        packet = self.recv(2).split("\n")[0] # ignore telemetry packet
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        assert_equal('d', type_)
+        assert_equal('distributed.test', name)
+        self.assert_almost_equal(500, float(value), 100)
+
+
     def test_timed(self):
         """
         Measure the distribution of a function's run time.
