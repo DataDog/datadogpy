@@ -16,7 +16,10 @@ import time
 from threading import Lock
 
 # datadog
-from datadog.dogstatsd.context import TimedContextManagerDecorator
+from datadog.dogstatsd.context import (
+    TimedContextManagerDecorator,
+    DistributedContextManagerDecorator,
+)
 from datadog.dogstatsd.route import get_default_route
 from datadog.util.compat import text
 from datadog.util.format import normalize_tags
@@ -250,11 +253,12 @@ class DogStatsd(object):
             if not self.socket:
                 if self.socket_path is not None:
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-                    sock.connect(self.socket_path)
                     sock.setblocking(0)
+                    sock.connect(self.socket_path)
                     self.socket = sock
                 else:
                     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    sock.setblocking(0)
                     sock.connect((self.host, self.port))
                     self.socket = sock
 
@@ -382,6 +386,34 @@ class DogStatsd(object):
                 statsd.timing('user.query.time', time.time() - start)
         """
         return TimedContextManagerDecorator(self, metric, tags, sample_rate, use_ms)
+
+    def distributed(self, metric=None, tags=None, sample_rate=None, use_ms=None):
+        """
+        A decorator or context manager that will measure the distribution of a
+        function's/context's run time using custom metric distribution.
+        Optionally specify a list of tags or a sample rate. If the metric is not
+        defined as a decorator, the module name and function name will be used.
+        The metric is required as a context manager.
+        ::
+
+            @statsd.distributed('user.query.time', sample_rate=0.5)
+            def get_user(user_id):
+                # Do what you need to ...
+                pass
+
+            # Is equivalent to ...
+            with statsd.distributed('user.query.time', sample_rate=0.5):
+                # Do what you need to ...
+                pass
+
+            # Is equivalent to ...
+            start = time.time()
+            try:
+                get_user(user_id)
+            finally:
+                statsd.distribution('user.query.time', time.time() - start)
+        """
+        return DistributedContextManagerDecorator(self, metric, tags, sample_rate, use_ms)
 
     def set(self, metric, value, tags=None, sample_rate=None):
         """
