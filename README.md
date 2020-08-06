@@ -69,6 +69,8 @@ tags = ['version:1', 'application:web']
 api.Event.create(title=title, text=text, tags=tags)
 ```
 
+In development, you can disable any `statsd` metric collection using `DD_DOGSTATSD_DISABLE=True` (or any not-empty value).
+
 ## DogStatsD
 
 In order to use DogStatsD metrics, the Agent must be [running and available](https://docs.datadoghq.com/developers/dogstatsd/?tab=python).

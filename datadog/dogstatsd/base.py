@@ -103,6 +103,9 @@ class DogStatsd(object):
         If set, it is appended to the constant (global) tags of the statsd client.
         :type DD_VERSION: string
 
+        :envvar DD_DOGSTATSD_DISABLE: Disable any statsd metric collection (default False)
+        :type DD_DOGSTATSD_DISABLE: boolean
+
         :param host: the host of the DogStatsd server.
         :type host: string
 
@@ -156,6 +159,12 @@ class DogStatsd(object):
             except ValueError:
                 log.warning("Port number provided in DD_DOGSTATSD_PORT env var is not an integer: \
                 %s, using %s as port number", dogstatsd_port, port)
+
+        # Check enabled
+        if os.environ.get('DD_DOGSTATSD_DISABLE') not in {'True', 'true', 'yes', '1'}:
+            self._enabled = True
+        else:
+            self._enabled = False
 
         # Connection
         self._max_payload_size = max_buffer_len
@@ -443,6 +452,9 @@ class DogStatsd(object):
         More information about the packets' format: http://docs.datadoghq.com/guides/dogstatsd/
         """
         if value is None:
+            return
+
+        if self._enabled is not True:
             return
 
         if self._telemetry:
