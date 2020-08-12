@@ -80,7 +80,7 @@ In order to use DogStatsD metrics, the Agent must be [running and available](htt
 Once the Datadog Python Library is installed, instantiate the StatsD client using UDP in your code:
 
 ```python
-from datadog import statsd
+from datadog import initialize, statsd
 
 options = {
     'statsd_host':'127.0.0.1',
@@ -97,7 +97,7 @@ See the full list of available [DogStatsD client instantiation parameters](https
 Once the Datadog Python Library is installed, instantiate the StatsD client using UDS in your code:
 ```python
 
-from datadog import statsd
+from datadog import initialize, statsd
 
 options = {
     'statsd_socket_path' : PATH_TO_SOCKET
