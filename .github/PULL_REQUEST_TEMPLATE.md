@@ -62,14 +62,14 @@ Describe the actions you performed (including scripts, commands you ran, etc.), 
 If the PR title is not enough to describe the changes in a single line that explains this improvement in
 terms that a user can understand. This text will be added in release notes.
 
-For example, you can provide additionnal notes about feature deprecation or backward incompatible changes.
+For example, you can provide additional notes about feature deprecation or backward incompatible changes.
 
 -->
 
 ### Review checklist (to be filled by reviewers)
 
 - [ ] Feature or bug fix MUST have appropriate tests (unit, integration, etc...)
-- [ ] PR title must be written as a CHANGELOG entry [(see why)](/CONTRIBUTING.md#pull-request-title)
+- [ ] PR title must be written as a CHANGELOG entry [(see why)](https://github.com/DataDog/datadogpy/blob/master/CONTRIBUTING.md#pull-request-title)
 - [ ] Files changes must correspond to the primary purpose of the PR as described in the title (small unrelated changes should have their own PR)
 - [ ] PR must have one `changelog/` label attached. If applicable it should have the `backward-incompatible` label attached.
 - [ ] PR should not have `do-not-merge/` label attached.
