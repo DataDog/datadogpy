@@ -1,6 +1,8 @@
 # Configuration for labeler - https://github.com/actions/labeler
 
-documentation: "**/*.md"
+documentation:
+  - "*.md"
+  - "**/*.md"
 
 resource-api:
   - /datadog/api/**/*
