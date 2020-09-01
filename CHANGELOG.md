@@ -1,5 +1,12 @@
 CHANGELOG
 =========
+## 0.39.0 / 2020-08-25
+
+* [Added] Add environment variable to disable statsd metric collection. See [#589](https://github.com/DataDog/datadogpy/pull/589). Thanks [dgzlopes](https://github.com/dgzlopes).
+* [Added] [dogstatsd] Add support for distribution context manager and decorator. See [#581](https://github.com/DataDog/datadogpy/pull/581). Thanks [dnlserrano](https://github.com/dnlserrano).
+* [Added] [dogstatsd] sock.setblocking(0) for UDP socket. See [#590](https://github.com/DataDog/datadogpy/pull/590).
+* [Added] [dogstatsd] Add type information to some dogstatsd methods. See [#579](https://github.com/DataDog/datadogpy/pull/579). Thanks [vishalkuo](https://github.com/vishalkuo).
+
 ## 0.38.0 / 2020-07-02
 
 * [Added] Improve user-agent header to include telemetry information. See [#583](https://github.com/DataDog/datadogpy/pull/583).
