@@ -37,4 +37,4 @@ Our team will trigger the release pipeline.
 1. Checkout the tag created at the previous step.
 1. Run `ddev release build .` and `ddev release upload --sdist . `.
    - Make sure that both an `sdist` and a [universal wheel](https://packaging.python.org/guides/distributing-packages-using-setuptools/#universal-wheels) have been uploaded to [PyPI](https://pypi.python.org/pypi/datadog/).
-1. Bump the version again in `datadog/version.py` to a dev version (e.g. `0.34.0` -> `0.35.0.dev`), open a PR and merge it to master.
+1. Bump the version again in `datadog/version.py` to a dev version (e.g. `0.34.0` -> `0.34.1.dev`), open a PR and merge it to master.
