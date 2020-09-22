@@ -552,8 +552,10 @@ class DogStatsd(object):
         return False
 
     def _flush_buffer(self):
-        to_send, self.buffer = self.buffer, []
-        self._current_buffer_total_size = 0
+        with Lock():
+            to_send, self.buffer = self.buffer, []
+            self._current_buffer_total_size = 0
+
         self._send_to_server("\n".join(to_send))
 
     def _escape_event_content(self, string):
