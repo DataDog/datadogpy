@@ -12,7 +12,7 @@ The Datadog Python Library is a collection of tools suitable for inclusion in ex
 - HTTP API Documentation: https://docs.datadoghq.com/api/
 - DatadogHQ: https://datadoghq.com
 
-See [CHANGELOG.md](CHANGELOG.md) for changes.
+See [CHANGELOG.md](https://github.com/DataDog/datadogpy/blob/master/CHANGELOG.md) for changes.
 
 ## Installation
 
