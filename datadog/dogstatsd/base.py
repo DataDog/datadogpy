@@ -552,7 +552,7 @@ class DogStatsd(object):
         return False
 
     def _flush_buffer(self):
-        with Lock():
+        with self.lock:
             to_send, self.buffer = self.buffer, []
             self._current_buffer_total_size = 0
 
