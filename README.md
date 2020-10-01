@@ -1,4 +1,4 @@
-# The Datadog Python library, which can be added into your existing python project 
+# The Datadog Python library
 
 [![Unit Tests](https://dev.azure.com/datadoghq/datadogpy/_apis/build/status/DataDog.datadogpy.unit?branchName=master)](https://dev.azure.com/datadoghq/datadogpy/_build/latest?definitionId=10&branchName=master)
 [![Integration Tests](https://dev.azure.com/datadoghq/datadogpy/_apis/build/status/DataDog.datadogpy.integration?branchName=master)](https://dev.azure.com/datadoghq/datadogpy/_build/latest?definitionId=13&branchName=master)
@@ -6,7 +6,7 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/datadog.svg)](https://pypi.org/project/datadog)
 [![PyPI - Downloads](https://pepy.tech/badge/datadog)](https://pepy.tech/project/datadog)
 
-The Datadog Python Library is a collection of tools suitable for inclusion in existing Python projects or for the development of standalone scripts. It provides an abstraction on top of Datadog's raw HTTP interface and the Agent's DogStatsD metrics aggregation server, to interact with Datadog and efficiently report events and metrics.
+The Datadog Python Library is a collection of tools suitable for inclusion in existing Python projects or for the development of standalone scripts. It provides an abstraction on top of Datadog's raw HTTP interface and the Agent's DogStatsD metrics aggregation server, to interact with Datadog and efficiently report events and metrics. This library can also be added into your existing python project.
 
 - Library Documentation: https://datadogpy.readthedocs.io/en/latest/
 - HTTP API Documentation: https://docs.datadoghq.com/api/
