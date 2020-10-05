@@ -14,7 +14,7 @@ This document provides some basic guidelines for contributing to this repository
 * If you have a feature request, it is encouraged to [contact support][3] so the request can be prioritized and properly tracked.
 * **Do not open an issue if you have a question**, instead [contact support][3].
 
-## Suggesting an enhancements - Pull Requests
+## Suggesting an enhancements -Pull Requests
 
 Have you fixed an issue? Many thanks!
 
