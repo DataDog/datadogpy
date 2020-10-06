@@ -44,6 +44,9 @@ class _LambdaDecorator(object):
                 # This avoids adding execution time at the end of the lambda run
                 t = Thread(target=_init_api_client)
                 t.start()
+
+                # Make sure the global ThreadStats has been created
+                _get_lambda_stats()
             cls._counter = cls._counter + 1
 
     @classmethod
@@ -63,7 +66,7 @@ class _LambdaDecorator(object):
                     if cls._counter > 0:
                         should_flush = False
                 if should_flush:
-                    _lambda_stats.flush(float("inf"))
+                    _get_lambda_stats().flush(float("inf"))
 
     def __call__(self, *args, **kw):
         warnings.warn("datadog_lambda_wrapper() is relocated to https://git.io/fjy8o", DeprecationWarning)
@@ -74,14 +77,22 @@ class _LambdaDecorator(object):
             _LambdaDecorator._close()
 
 
-_lambda_stats = ThreadStats()
-_lambda_stats.start(flush_in_greenlet=False, flush_in_thread=False)
+_lambda_stats = None
 datadog_lambda_wrapper = _LambdaDecorator
+
+
+def _get_lambda_stats():
+    global _lambda_stats
+    # This is not thread-safe, it should be called first by _LambdaDecorator
+    if _lambda_stats is None:
+        _lambda_stats = ThreadStats()
+        _lambda_stats.start(flush_in_greenlet=False, flush_in_thread=False)
+    return _lambda_stats
 
 
 def lambda_metric(*args, **kw):
     """ Alias to expose only distributions for lambda functions"""
-    _lambda_stats.distribution(*args, **kw)
+    _get_lambda_stats().distribution(*args, **kw)
 
 
 def _init_api_client():
