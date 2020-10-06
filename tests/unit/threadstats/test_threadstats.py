@@ -17,7 +17,7 @@ from mock import patch
 
 # datadog
 from datadog import ThreadStats, lambda_metric, datadog_lambda_wrapper
-from datadog.threadstats.aws_lambda import _lambda_stats
+from datadog.threadstats.aws_lambda import _get_lambda_stats
 from tests.util.contextmanagers import preserve_environment_variable
 
 # Silence the logger.
@@ -808,11 +808,11 @@ class TestUnitThreadStats(unittest.TestCase):
         def basic_wrapped_function():
             lambda_metric("lambda.somemetric", 100)
 
-        _lambda_stats.reporter = self.reporter
+        _get_lambda_stats().reporter = self.reporter
         basic_wrapped_function()
 
-        assert _lambda_stats.reporter.dist_flush_counter == 1
-        dists = self.sort_metrics(_lambda_stats.reporter.distributions)
+        assert _get_lambda_stats().reporter.dist_flush_counter == 1
+        dists = self.sort_metrics(_get_lambda_stats().reporter.distributions)
         assert len(dists) == 1
 
     def test_embedded_lambda_decorator(self):
@@ -829,9 +829,9 @@ class TestUnitThreadStats(unittest.TestCase):
             wrapped_function_1()
             lambda_metric("lambda.dist.2", 30)
 
-        _lambda_stats.reporter = self.reporter
+        _get_lambda_stats().reporter = self.reporter
         wrapped_function_2()
-        assert _lambda_stats.reporter.dist_flush_counter == 1
+        assert _get_lambda_stats().reporter.dist_flush_counter == 1
 
-        dists = self.sort_metrics(_lambda_stats.reporter.distributions)
+        dists = self.sort_metrics(_get_lambda_stats().reporter.distributions)
         assert len(dists) == 2
