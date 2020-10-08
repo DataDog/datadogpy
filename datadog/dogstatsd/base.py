@@ -13,7 +13,7 @@ import os
 import socket
 import errno
 import time
-from threading import Lock
+from multiprocessing import Lock
 
 # datadog
 from datadog.dogstatsd.context import (
@@ -427,12 +427,13 @@ class DogStatsd(object):
         """
         Closes connected socket if connected.
         """
-        if self.socket:
-            try:
-                self.socket.close()
-            except OSError as e:
-                log.error("Unexpected error: %s", str(e))
-            self.socket = None
+        try:
+            with self.lock:
+                if self.socket:
+                    # self.socket.close()
+                    self.socket = None
+        except OSError as e:
+            log.error("Unexpected error: %s", str(e))
 
     def _serialize_metric(self, metric, metric_type, value, tags, sample_rate=1):
         # Create/format the metric packet
@@ -499,8 +500,8 @@ class DogStatsd(object):
         return self._telemetry and self._last_flush_time + self._telemetry_flush_interval < time.time()
 
     def _send_to_server(self, packet):
-        self._xmit_packet(packet, self._telemetry)
-        if self._is_telemetry_flush_time():
+        # Only attempt to send telemetry if submitted metric are successfully sent
+        if self._xmit_packet(packet, self._telemetry) and self._is_telemetry_flush_time():
             telemetry = self._flush_telemetry()
             if self._xmit_packet(telemetry, False):
                 self._reset_telemetry()
@@ -514,8 +515,21 @@ class DogStatsd(object):
 
     def _xmit_packet(self, packet, telemetry):
         try:
-            # If set, use socket directly
-            (self.socket or self.get_socket()).send(packet.encode(self.encoding))
+            # Socket operations are protected
+            with self.lock:
+                # If socket exist reuse it
+                if not self.socket:
+                    if self.socket_path is not None:
+                        sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+                        sock.setblocking(0)
+                        sock.connect(self.socket_path)
+                        self.socket = sock
+                    else:
+                        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                        sock.setblocking(0)
+                        sock.connect((self.host, self.port))
+                        self.socket = sock
+                self.socket.send(packet.encode(self.encoding))
             if telemetry:
                 self.packets_sent += 1
                 self.bytes_sent += len(packet)
