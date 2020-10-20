@@ -206,14 +206,14 @@ class Synthetics(
         """
         Delete a test
 
-        :param ids: list of public IDs to delete corresponding tests
-        :type ids: list of strings
+        :param public_ids: list of public IDs to delete corresponding tests
+        :type public_ids: list of strings
 
         :return: Dictionary representing the API's JSON response
         """
 
         if not isinstance(body["public_ids"], list):
-            raise ApiError("Parameter 'ids' must be a list")
+            raise ApiError("Parameter 'public_ids' must be a list")
 
         # API path = "synthetics/tests/delete
 
