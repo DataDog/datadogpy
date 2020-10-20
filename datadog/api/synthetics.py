@@ -146,17 +146,14 @@ class Synthetics(
         :Otherwise, you should omit this argument.
         :type subtype: string
 
-        :param request: The request associated to your API and SSL test
-        :type request: dict
+        :param config: The test configuration, contains the request specification and the assertions.
+        :type config: dict
 
         :param options: List of options to customize the test
         :type options: dict
 
         :param message: A description of the test
         :type message: string
-
-        :param assertions: required for API and SSL test - The assertions associated with the test
-        :type assertions: list of dict
 
         :param locations: A list of the locations to send the tests from
         :type locations: list
