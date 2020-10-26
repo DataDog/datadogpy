@@ -574,7 +574,7 @@ class DogStatsd(object):
         self._xmit_packet(packet, self._telemetry, False)
         if self._is_telemetry_flush_time():
             telemetry = self._flush_telemetry()
-            if self._xmit_packet(telemetry, False):
+            if self._xmit_packet(telemetry, False, True):
                 self._reset_telemetry()
                 self.packets_sent += 1
                 self.bytes_sent += len(telemetry)
@@ -587,12 +587,12 @@ class DogStatsd(object):
     def _xmit_packet(self, packet, account, is_telemetry):
         try:
             if is_telemetry and self._dedicated_telemetry_destination():
-                socket = (self.telemetry_socket or self.get_socket(telemetry=True))
+                mysocket = (self.telemetry_socket or self.get_socket(telemetry=True))
             else:
                 # If set, use socket directly
-                socket = (self.socket or self.get_socket())
+                mysocket = (self.socket or self.get_socket())
 
-            socket.send(packet.encode(self.encoding))
+            mysocket.send(packet.encode(self.encoding))
 
             if account:
                 self.packets_sent += 1

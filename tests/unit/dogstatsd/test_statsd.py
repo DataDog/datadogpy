@@ -700,7 +700,7 @@ class TestDogStatsd(unittest.TestCase):
         assert_equal(0, self.statsd.metrics_count)
         assert_equal(0, self.statsd.events_count)
         assert_equal(0, self.statsd.service_checks_count)
-        assert_equal(len(payload) + len(telemetry) + 1, self.statsd.bytes_sent)  # +1 for CR between telemetry and payload
+        assert_equal(len(telemetry), self.statsd.bytes_sent)
         assert_equal(0, self.statsd.bytes_dropped)
         assert_equal(1, self.statsd.packets_sent)
         assert_equal(0, self.statsd.packets_dropped)
@@ -745,11 +745,11 @@ class TestDogStatsd(unittest.TestCase):
 
         t1 = time.time()
         # setting the last flush time in the past to trigger a telemetry flush
-        statsd._last_flush_time = t1 - statsd._telemetry_flush_interval -1
+        statsd._last_flush_time = t1 - statsd._telemetry_flush_interval - 1
         statsd.gauge('gauge', 123.4)
 
         assert_equal('gauge:123.4|g', fake_socket.recv())
-        assert_equal_telemetry('', fake_telemetry_socket.recv(), telemetry=telemetry_metrics(metrics=2, bytes_sent=13, packets_sent=1))
+        assert_equal_telemetry('', fake_telemetry_socket.recv(), telemetry=telemetry_metrics(metrics=2, bytes_sent=13*2, packets_sent=2))
         # assert that _last_flush_time has been updated
         assert t1 < statsd._last_flush_time
 
@@ -795,12 +795,7 @@ class TestDogStatsd(unittest.TestCase):
             statsd.socket = fake_socket
             for i in range(metrics_per_packet + 1):
                 statsd.increment('mycounter')
-
             payload = '\n'.join([single_metric for i in range(metrics_per_packet)])
-            telemetry = telemetry_metrics(metrics=metrics_per_packet)
-            bytes_sent += len(payload) + len(telemetry) + 1  # +1 for CR between telemetry and payload
-
-            assert_equal_telemetry(payload, fake_socket.recv(), telemetry=telemetry)
 
             telemetry = telemetry_metrics(metrics=metrics_per_packet+1, bytes_sent=len(payload))
             bytes_sent += len(payload) + len(telemetry)
@@ -927,12 +922,11 @@ class TestDogStatsd(unittest.TestCase):
             # Make call with no tags passed; only the globally configured tags will be used.
             global_tags_str = ','.join([t for t in global_tags])
             statsd.gauge('gt', 123.4)
-            assert_equal_telemetry(
-                # Protect against the no tags case.
-                'gt:123.4|g|#{}'.format(global_tags_str) if global_tags_str else 'gt:123.4|g',
-                statsd.socket.recv(),
-                telemetry=telemetry_metrics(tags=global_tags_str)
-            )
+
+            # Protect against the no tags case.
+            metric = 'gt:123.4|g|#{}'.format(global_tags_str) if global_tags_str else 'gt:123.4|g'
+            assert_equal( metric, statsd.socket.recv())
+            assert_equal(telemetry_metrics(tags=global_tags_str, bytes_sent=len(metric)), statsd.socket.recv())
             statsd._reset_telemetry()
 
             # Make another call with local tags passed.
