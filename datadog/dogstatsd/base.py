@@ -116,7 +116,7 @@ class DogStatsd(object):
 
         :envvar DD_TELEMETRY_PORT: the port for the dogstatsd server we wish to submit
         telemetry stats to. If set, it overrides default value.
-        :type DD_TELEMETRY_HOST: string
+        :type DD_TELEMETRY_PORT: integer
 
         :param host: the host of the DogStatsd server.
         :type host: string
