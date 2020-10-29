@@ -14,6 +14,10 @@ import os
 from contextlib import contextmanager
 from functools import wraps
 from time import time
+try:
+    from time import monotonic  # type: ignore[attr-defined]
+except ImportError:
+    from time import time as monotonic
 
 # datadog
 from datadog.api.exceptions import ApiNotInitialized
@@ -272,12 +276,12 @@ class ThreadStats(object):
                 finally:
                     stats.histogram('user.query.time', time.time() - start)
         """
-        start = time()
+        start = monotonic()
         try:
             yield
         finally:
-            end = time()
-            self.timing(metric_name, end - start, end, tags=tags,
+            end = monotonic()
+            self.timing(metric_name, end - start, time(), tags=tags,
                         sample_rate=sample_rate, host=host)
 
     def timed(self, metric_name, sample_rate=1, tags=None, host=None):
