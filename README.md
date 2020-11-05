@@ -53,7 +53,7 @@ api.Event.create(title=title, text=text, tags=tags)
 
 As an alternate method to using the `initialize` function with the `options` parameters, set the environment variables `DATADOG_API_KEY` and `DATADOG_APP_KEY` within the context of your application.
 
-If `DATADOG_API_KEY` or `DATADOG_APP_KEY` are not set, the library attempts to fall back to Datadog's APM environmnent variable prefixes: `DD_API_KEY` and `DD_APP_KEY`.
+If `DATADOG_API_KEY` or `DATADOG_APP_KEY` are not set, the library attempts to fall back to Datadog's APM environment variable prefixes: `DD_API_KEY` and `DD_APP_KEY`.
 
 ```python
 from datadog import initialize, api
