@@ -88,10 +88,10 @@ class ThreadStats(object):
             using datadog module ``initialize`` method.
 
         >>> from datadog import initialize, ThreadStats
-        >>> initialize(api_key='my_api_key')
+        >>> initialize(api_key="my_api_key")
         >>> stats = ThreadStats()
         >>> stats.start()
-        >>> stats.increment('home.page.hits')
+        >>> stats.increment("home.page.hits")
 
         :param flush_interval: The number of seconds to wait between flushes.
         :type flush_interval: int
@@ -145,9 +145,9 @@ class ThreadStats(object):
         """
         Send an event. Attributes are the same as the Event API. (http://docs.datadoghq.com/api/)
 
-        >>> stats.event('Man down!', 'This server needs assistance.')
-        >>> stats.event('The web server restarted', \
-            'The web server is up again', alert_type='success')
+        >>> stats.event("Man down!", "This server needs assistance.")
+        >>> stats.event("The web server restarted", \
+            "The web server is up again", alert_type="success")
         """
         if not self._disabled:
             # Append all client level tags to every event
@@ -171,8 +171,8 @@ class ThreadStats(object):
         such as total hard disk space, process uptime, total number of active
         users, or number of rows in a database table.
 
-        >>> stats.gauge('process.uptime', time.time() - process_start_time)
-        >>> stats.gauge('cache.bytes.free', cache.get_free_bytes(), tags=['version:1.0'])
+        >>> stats.gauge("process.uptime", time.time() - process_start_time)
+        >>> stats.gauge("cache.bytes.free", cache.get_free_bytes(), tags=["version:1.0"])
         """
         if not self._disabled:
             self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value, Gauge,
@@ -184,7 +184,7 @@ class ThreadStats(object):
         flushed as a gauge to Datadog. Optionally, specify a set of
         tags to associate with the metric.
 
-        >>> stats.set('example_metric.set', "value_1", tags=['environement:dev'])
+        >>> stats.set("example_metric.set", "value_1", tags=["environement:dev"])
         """
         if not self._disabled:
             self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value, Set,
@@ -208,8 +208,8 @@ class ThreadStats(object):
         Decrement a counter, optionally setting a value, tags and a sample
         rate.
 
-        >>> stats.decrement('files.remaining')
-        >>> stats.decrement('active.connections', 2)
+        >>> stats.decrement("files.remaining")
+        >>> stats.decrement("active.connections", 2)
         """
         if not self._disabled:
             self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), -value,
@@ -222,7 +222,7 @@ class ThreadStats(object):
         average, count and the 75/85/95/99 percentiles. Optionally, specify
         a list of ``tags`` to associate with the metric.
 
-        >>> stats.histogram('uploaded_file.size', uploaded_file.size())
+        >>> stats.histogram("uploaded_file.size", uploaded_file.size())
         """
         if not self._disabled:
             self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
@@ -235,7 +235,7 @@ class ThreadStats(object):
         median, average, count and the 50/75/90/95/99 percentiles. Optionally,
         specify a list of ``tags`` to associate with the metric.
 
-        >>> stats.distribution('uploaded_file.size', uploaded_file.size())
+        >>> stats.distribution("uploaded_file.size", uploaded_file.size())
         """
         if not self._disabled:
             self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
@@ -259,7 +259,7 @@ class ThreadStats(object):
         ::
 
             def get_user(user_id):
-                with stats.timer('user.query.time'):
+                with stats.timer("user.query.time"):
                     # Do what you need to ...
                     pass
 
@@ -270,7 +270,7 @@ class ThreadStats(object):
                     # Do what you need to ...
                     pass
                 finally:
-                    stats.histogram('user.query.time', time.time() - start)
+                    stats.histogram("user.query.time", time.time() - start)
         """
         start = time()
         try:
@@ -286,7 +286,7 @@ class ThreadStats(object):
         Optionally specify a list of tags to associate with the metric.
         ::
 
-            @stats.timed('user.query.time')
+            @stats.timed("user.query.time")
             def get_user(user_id):
                 # Do what you need to ...
                 pass
@@ -296,7 +296,7 @@ class ThreadStats(object):
             try:
                 get_user(user_id)
             finally:
-                stats.histogram('user.query.time', time.time() - start)
+                stats.histogram("user.query.time", time.time() - start)
         """
 
         def wrapper(func):

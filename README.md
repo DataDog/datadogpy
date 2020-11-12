@@ -32,15 +32,15 @@ Find below a working example for submitting an event to your Event Stream:
 from datadog import initialize, api
 
 options = {
-    'api_key': '<YOUR_API_KEY>',
-    'app_key': '<YOUR_APP_KEY>'
+    "api_key": "<YOUR_API_KEY>",
+    "app_key": "<YOUR_APP_KEY>",
 }
 
 initialize(**options)
 
 title = "Something big happened!"
-text = 'And let me tell you all about it here!'
-tags = ['version:1', 'application:web']
+text = "And let me tell you all about it here!"
+tags = ["version:1", "application:web"]
 
 api.Event.create(title=title, text=text, tags=tags)
 ```
@@ -63,8 +63,8 @@ from datadog import initialize, api
 initialize()
 
 title = "Something big happened!"
-text = 'And let me tell you all about it here!'
-tags = ['version:1', 'application:web']
+text = "And let me tell you all about it here!"
+tags = ["version:1", "application:web"]
 
 api.Event.create(title=title, text=text, tags=tags)
 ```
@@ -83,8 +83,8 @@ Once the Datadog Python Library is installed, instantiate the StatsD client usin
 from datadog import initialize, statsd
 
 options = {
-    'statsd_host':'127.0.0.1',
-    'statsd_port':8125
+    "statsd_host": "127.0.0.1",
+    "statsd_port": 8125,
 }
 
 initialize(**options)
@@ -100,7 +100,7 @@ Once the Datadog Python Library is installed, instantiate the StatsD client usin
 from datadog import initialize, statsd
 
 options = {
-    'statsd_socket_path' : PATH_TO_SOCKET
+    "statsd_socket_path": PATH_TO_SOCKET,
 }
 
 initialize(**options)
@@ -161,9 +161,9 @@ size should be used, you can set it with the parameter `max_buffer_len`. Example
 from datadog import initialize
 
 options = {
-    'api_key': '<YOUR_API_KEY>',
-    'app_key': '<YOUR_APP_KEY>',
-    'max_buffer_len': 4096
+    "api_key": "<YOUR_API_KEY>",
+    "app_key": "<YOUR_APP_KEY>",
+    "max_buffer_len": 4096,
 }
 
 initialize(**options)
