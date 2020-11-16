@@ -571,10 +571,10 @@ class DogStatsd(object):
         return self._telemetry and self._last_flush_time + self._telemetry_flush_interval < time.time()
 
     def _send_to_server(self, packet):
-        self._xmit_packet(packet, self._telemetry, False)
+        self._xmit_packet(packet, False)
         if self._is_telemetry_flush_time():
             telemetry = self._flush_telemetry()
-            if self._xmit_packet(telemetry, False, True):
+            if self._xmit_packet(telemetry, True):
                 self._reset_telemetry()
                 self.packets_sent += 1
                 self.bytes_sent += len(telemetry)
@@ -584,7 +584,7 @@ class DogStatsd(object):
                 self.bytes_dropped += len(telemetry)
                 self.packets_dropped += 1
 
-    def _xmit_packet(self, packet, account, is_telemetry):
+    def _xmit_packet(self, packet, is_telemetry):
         try:
             if is_telemetry and self._dedicated_telemetry_destination():
                 mysocket = (self.telemetry_socket or self.get_socket(telemetry=True))
@@ -594,7 +594,7 @@ class DogStatsd(object):
 
             mysocket.send(packet.encode(self.encoding))
 
-            if account:
+            if not is_telemetry and self._telemetry:
                 self.packets_sent += 1
                 self.bytes_sent += len(packet)
 
@@ -613,7 +613,7 @@ class DogStatsd(object):
                 self.close_socket()
         except Exception as e:
             log.error("Unexpected error: %s", str(e))
-        if account:
+        if not is_telemetry and self._telemetry:
             self.bytes_dropped += len(packet)
             self.packets_dropped += 1
         return False
