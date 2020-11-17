@@ -24,7 +24,7 @@ from datadog.dogstatsd.route import get_default_route
 from datadog.util.compat import text
 from datadog.util.format import normalize_tags
 from datadog.version import __version__
-from typing import Optional, List, Text
+from typing import Optional, List, Text, Union
 
 # Logging
 log = logging.getLogger('datadog.dogstatsd')
@@ -72,7 +72,7 @@ class DogStatsd(object):
         ),                              # type: int
 
         telemetry_host=None,            # type: Text
-        telemetry_port=None,            # type: int
+        telemetry_port=None,            # type: Union[str, int]
         telemetry_socket_path=None,     # type: Text
         max_buffer_len=0                # type: int
     ):  # type: (...) -> None
