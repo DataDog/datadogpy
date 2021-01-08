@@ -3,7 +3,10 @@
 # Copyright 2015-Present Datadog, Inc
 # stdlib
 from functools import wraps
-from time import time
+try:
+    from time import monotonic  # type: ignore[attr-defined]
+except ImportError:
+    from time import time as monotonic
 
 # datadog
 from datadog.dogstatsd.context_async import _get_wrapped_co
@@ -40,7 +43,7 @@ class TimedContextManagerDecorator(object):
         # Others
         @wraps(func)
         def wrapped(*args, **kwargs):
-            start = time()
+            start = monotonic()
             try:
                 return func(*args, **kwargs)
             finally:
@@ -50,7 +53,7 @@ class TimedContextManagerDecorator(object):
     def __enter__(self):
         if not self.metric:
             raise TypeError("Cannot used timed without a metric!")
-        self._start = time()
+        self._start = monotonic()
         return self
 
     def __exit__(self, type, value, traceback):
@@ -58,7 +61,7 @@ class TimedContextManagerDecorator(object):
         self._send(self._start)
 
     def _send(self, start):
-        elapsed = time() - start
+        elapsed = monotonic() - start
         use_ms = self.use_ms if self.use_ms is not None else self.statsd.use_ms
         elapsed = int(round(1000 * elapsed)) if use_ms else elapsed
         self.timing_func(self.metric, elapsed, self.tags, self.sample_rate)
