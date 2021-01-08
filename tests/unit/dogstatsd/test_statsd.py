@@ -119,7 +119,7 @@ class TestDogStatsd(unittest.TestCase):
         # Mock the proc filesystem
         route_data = load_fixtures('route')
         self._procfs_mock = patch('datadog.util.compat.builtins.open', mock_open())
-        self._procfs_mock.__enter__().return_value.readlines.return_value = route_data.split("\n")
+        self._procfs_mock.start().return_value.readlines.return_value = route_data.split("\n")
 
     #def setup_method(self, method):
     #    self.statsd._reset_telemetry()
@@ -128,7 +128,7 @@ class TestDogStatsd(unittest.TestCase):
         """
         Unmock the proc filesystem.
         """
-        self._procfs_mock.__exit__()
+        self._procfs_mock.stop()
 
     def recv(self, n=1):
         packets = []
