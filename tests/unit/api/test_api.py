@@ -17,6 +17,7 @@ from datadog import initialize, api, util
 from datadog.api import (
     Distribution,
     Event,
+    Logs,
     Metric,
     ServiceCheck,
     User
@@ -602,6 +603,16 @@ class TestEventResource(DatadogAPIWithInitialization):
                 title="test no hostname", text="test no hostname", attach_host_name=False, alert_type="wrong_type"
             )
         assert "Parameter alert_type must be either error, warning, info or success" in str(excinfo.value)
+
+
+class TestLogsResource(DatadogAPIWithInitialization):
+    def test_list_logs(self):
+        Logs.list(data={"time": {"from": "2021-01-01T11:00:00Z", "to": "2021-01-02T11:00:00Z"}})
+        self.request_called_with(
+            "POST",
+            "https://example.com/api/v1/logs-queries/list",
+            data={"time": {"from": "2021-01-01T11:00:00Z", "to": "2021-01-02T11:00:00Z"}}
+        )
 
 
 class TestMetricResource(DatadogAPIWithInitialization):
