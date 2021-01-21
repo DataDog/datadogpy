@@ -141,7 +141,7 @@ class TestDogwrap(unittest.TestCase):
     @mock.patch('subprocess.Popen')
     def test_execute_exit_code(self, mock_popen, mock_poll):
         mock_proc = mock.Mock()
-        mock_proc.stdout.readline.side_effect = [b'out1\n', b'out2\n', '']
+        mock_proc.stdout.readline.side_effect = [b'out1\n', b'out2\n', b'']
         mock_proc.stderr.readline.side_effect = [b'err1\n', b'']
         mock_popen.return_value = mock_proc
         mock_poll.return_value = 14
@@ -160,7 +160,7 @@ class TestDogwrap(unittest.TestCase):
     @mock.patch('subprocess.Popen')
     def test_execute_cmd_timeout(self, mock_popen, mock_poll):
         mock_proc = mock.Mock()
-        mock_proc.stdout.readline.side_effect = [b'out1\n', b'out2\n', '']
+        mock_proc.stdout.readline.side_effect = [b'out1\n', b'out2\n', b'']
         mock_proc.stderr.readline.side_effect = [b'err1\n', b'']
         mock_popen.return_value = mock_proc
         mock_poll.side_effect = [Timeout, 1]
@@ -182,7 +182,7 @@ class TestDogwrap(unittest.TestCase):
     @mock.patch('subprocess.Popen')
     def test_execute_sigterm_timeout(self, mock_popen, mock_poll):
         mock_proc = mock.Mock()
-        mock_proc.stdout.readline.side_effect = [b'out1\n', b'out2\n', '']
+        mock_proc.stdout.readline.side_effect = [b'out1\n', b'out2\n', b'']
         mock_proc.stderr.readline.side_effect = [b'err1\n', b'']
         mock_popen.return_value = mock_proc
         mock_poll.side_effect = [Timeout, Timeout, 2]
@@ -205,7 +205,7 @@ class TestDogwrap(unittest.TestCase):
     @mock.patch('subprocess.Popen')
     def test_execute_sigkill_timeout(self, mock_popen, mock_poll):
         mock_proc = mock.Mock()
-        mock_proc.stdout.readline.side_effect = [b'out1\n', b'out2\n', '']
+        mock_proc.stdout.readline.side_effect = [b'out1\n', b'out2\n', b'']
         mock_proc.stderr.readline.side_effect = [b'err1\n', b'']
         mock_popen.return_value = mock_proc
         mock_poll.side_effect = [Timeout, Timeout, Timeout]
@@ -228,7 +228,7 @@ class TestDogwrap(unittest.TestCase):
     @mock.patch('subprocess.Popen')
     def test_execute_oserror(self, mock_popen, mock_poll):
         mock_proc = mock.Mock()
-        mock_proc.stdout.readline.side_effect = [b'out1\n', b'out2\n', '']
+        mock_proc.stdout.readline.side_effect = [b'out1\n', b'out2\n', b'']
         mock_proc.stderr.readline.side_effect = [b'err1\n', b'']
         mock_popen.return_value = mock_proc
         mock_poll.side_effect = [Timeout, Timeout]
