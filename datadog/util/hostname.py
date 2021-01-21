@@ -66,7 +66,7 @@ def get_hostname(hostname_from_config):
                             "to get rid of this warning")
                 return config_hostname
     except CfgNotFound:
-        log.warning("No agent or invalid configuration file found")
+        log.info("No agent or invalid configuration file found")
 
     # Try to get GCE instance name
     if hostname is None:
