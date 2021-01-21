@@ -773,7 +773,7 @@ class TestUnitThreadStats(unittest.TestCase):
         dog.start(flush_interval=1, roll_up_interval=1)
 
     def test_tags_from_environment_env_service_version(self):
-        test_tags = ['env:staging', 'service:food', 'version:1.2.3']
+        test_tags = set(['env:staging', 'service:food', 'version:1.2.3'])
         with EnvVars(
             env_vars={
                 "DD_ENV": "staging",
@@ -795,7 +795,7 @@ class TestUnitThreadStats(unittest.TestCase):
         [event1] = reporter.events
         assert event1['title'] == event1_title
         assert event1['text'] == event1_text
-        assert event1['tags'] == test_tags
+        assert set(event1['tags']) == test_tags
 
     def test_metric_type(self):
         """
