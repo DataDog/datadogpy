@@ -305,7 +305,7 @@ class TestDogStatsd(unittest.TestCase):
             'my_check.name', self.statsd.WARNING,
             tags=['key1:val1', 'key2:val2'], timestamp=now,
             hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪")
-        check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}'.format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\: T0µ ♪")
+        check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}'.format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\\: T0µ ♪")
         assert_equal_telemetry(check, self.recv(2), telemetry=telemetry_metrics(metrics=0, service_checks=1, bytes_sent=len(check)))
 
     def test_service_check_constant_tags(self):
@@ -315,7 +315,7 @@ class TestDogStatsd(unittest.TestCase):
             'my_check.name', self.statsd.WARNING,
             timestamp=now,
             hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪")
-        check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#bar:baz,foo|m:{2}'.format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\: T0µ ♪")
+        check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#bar:baz,foo|m:{2}'.format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\\: T0µ ♪")
         assert_equal_telemetry(check, self.recv(2),
             telemetry=telemetry_metrics(metrics=0, service_checks=1, tags="bar:baz,foo", bytes_sent=len(check)))
 
@@ -325,7 +325,7 @@ class TestDogStatsd(unittest.TestCase):
             'my_check.name', self.statsd.WARNING,
             tags=['key1:val1', 'key2:val2'], timestamp=now,
             hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪")
-        check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2,bar:baz,foo|m:{2}'.format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\: T0µ ♪")
+        check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2,bar:baz,foo|m:{2}'.format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\\: T0µ ♪")
         assert_equal_telemetry(check, self.recv(2),
             telemetry=telemetry_metrics(metrics=0, service_checks=1, tags="bar:baz,foo", bytes_sent=len(check)))
 
@@ -551,8 +551,7 @@ class TestDogStatsd(unittest.TestCase):
         import asyncio
 
         @self.statsd.timed('timed.test')
-        @asyncio.coroutine
-        def print_foo():
+        async def print_foo():
             """docstring"""
             time.sleep(0.5)
             print("foo")
