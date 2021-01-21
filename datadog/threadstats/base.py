@@ -31,6 +31,12 @@ from datadog.threadstats.reporters import HttpReporter
 # Loggers
 log = logging.getLogger('datadog.threadstats')
 
+DD_ENV_TAGS_MAPPING = {
+    'DD_ENV': 'env',
+    'DD_SERVICE': 'service',
+    'DD_VERSION': 'version',
+}
+
 
 class ThreadStats(object):
 
@@ -48,11 +54,27 @@ class ThreadStats(object):
         :type compress_payload: bool
 
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by ThreadStats client
-        :type DATADOG_TAGS: list of strings
+        :type DATADOG_TAGS: comma-delimited string
+
+        :envvar DD_ENV: the env of the service running the ThreadStats client.
+        If set, it is appended to the constant (global) tags of the client.
+        :type DD_ENV: string
+
+        :envvar DD_SERVICE: the name of the service running the ThreadStats client.
+        If set, it is appended to the constant (global) tags of the client.
+        :type DD_SERVICE: string
+
+        :envvar DD_VERSION: the version of the service running the ThreadStats client.
+        If set, it is appended to the constant (global) tags of the client.
+        :type DD_VERSION: string
         """
         # Parameters
         self.namespace = namespace
         env_tags = [tag for tag in os.environ.get('DATADOG_TAGS', '').split(',') if tag]
+        for var, tag_name in DD_ENV_TAGS_MAPPING.items():
+            value = os.environ.get(var, '')
+            if value:
+                env_tags.append('{name}:{value}'.format(name=tag_name, value=value))
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
