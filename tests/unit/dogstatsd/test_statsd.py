@@ -550,14 +550,18 @@ class TestDogStatsd(unittest.TestCase):
         """
         import asyncio
 
-        @self.statsd.timed('timed.test')
-        async def print_foo():
-            """docstring"""
-            time.sleep(0.5)
-            print("foo")
+        source= """
+@self.statsd.timed('timed.test')
+async def print_foo():
+    "docstring"
+    import time
+    time.sleep(0.5)
+    print("foo")
+        """
+        exec(source, {}, locals())
 
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(print_foo())
+        loop.run_until_complete(locals()['print_foo']())
         loop.close()
 
         # Assert
