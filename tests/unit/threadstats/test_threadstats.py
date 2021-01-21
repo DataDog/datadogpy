@@ -18,7 +18,7 @@ from mock import patch
 # datadog
 from datadog import ThreadStats, lambda_metric, datadog_lambda_wrapper
 from datadog.threadstats.aws_lambda import _get_lambda_stats
-from tests.util.contextmanagers import preserve_environment_variable
+from tests.util.contextmanagers import preserve_environment_variable, EnvVars
 
 # Silence the logger.
 logger = logging.getLogger('dd.datadogpy')
@@ -771,6 +771,31 @@ class TestUnitThreadStats(unittest.TestCase):
         assert event['date_happened'] == event1_date_happened
         assert event['tags'] == [event1_tag] + constant_tags + test_tags
         dog.start(flush_interval=1, roll_up_interval=1)
+
+    def test_tags_from_environment_env_service_version(self):
+        test_tags = set(['env:staging', 'service:food', 'version:1.2.3'])
+        with EnvVars(
+            env_vars={
+                "DD_ENV": "staging",
+                "DD_VERSION": "1.2.3",
+                "DD_SERVICE": "food",
+            }
+        ):
+            dog = ThreadStats()
+        dog.start(roll_up_interval=10, flush_in_thread=False)
+        reporter = dog.reporter = MemoryReporter()
+
+        # Add two events
+        event1_title = "Event 1 title"
+        event1_text = "Event 1 text"
+        dog.event(event1_title, event1_text)
+
+        # Flush and test
+        dog.flush()
+        [event1] = reporter.events
+        assert event1['title'] == event1_title
+        assert event1['text'] == event1_text
+        assert set(event1['tags']) == test_tags
 
     def test_metric_type(self):
         """
