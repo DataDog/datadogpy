@@ -280,10 +280,10 @@ class DogStatsd(object):
         """
         Resolve the DogStatsd host.
 
-        Args:
-            host (string): host
-            use_default_route (bool): use the system default route as host
-                (overrides the `host` parameter)
+        :param host: host
+        :type host: string
+        :param use_default_route: use the system default route as host (overrides the `host` parameter)
+        :type use_default_route: bool
         """
         if not use_default_route:
             return host
@@ -336,8 +336,8 @@ class DogStatsd(object):
         You can also use this as a context manager.
 
         >>> with DogStatsd() as batch:
-        >>>     batch.gauge('users.online', 123)
-        >>>     batch.gauge('active.connections', 1001)
+        >>>     batch.gauge("users.online", 123)
+        >>>     batch.gauge("active.connections", 1001)
         """
         if max_buffer_size is not None:
             log.warning("The parameter max_buffer_size is now deprecated and is not used anymore")
@@ -366,8 +366,8 @@ class DogStatsd(object):
         Record the value of a gauge, optionally setting a list of tags and a
         sample rate.
 
-        >>> statsd.gauge('users.online', 123)
-        >>> statsd.gauge('active.connections', 1001, tags=["protocol:http"])
+        >>> statsd.gauge("users.online", 123)
+        >>> statsd.gauge("active.connections", 1001, tags=["protocol:http"])
         """
         return self._report(metric, 'g', value, tags, sample_rate)
 
@@ -382,8 +382,8 @@ class DogStatsd(object):
         Increment a counter, optionally setting a value, tags and a sample
         rate.
 
-        >>> statsd.increment('page.views')
-        >>> statsd.increment('files.transferred', 124)
+        >>> statsd.increment("page.views")
+        >>> statsd.increment("files.transferred", 124)
         """
         self._report(metric, 'c', value, tags, sample_rate)
 
@@ -392,8 +392,8 @@ class DogStatsd(object):
         Decrement a counter, optionally setting a value, tags and a sample
         rate.
 
-        >>> statsd.decrement('files.remaining')
-        >>> statsd.decrement('active.connections', 2)
+        >>> statsd.decrement("files.remaining")
+        >>> statsd.decrement("active.connections", 2)
         """
         metric_value = -value if value else value
         self._report(metric, 'c', metric_value, tags, sample_rate)
@@ -402,8 +402,8 @@ class DogStatsd(object):
         """
         Sample a histogram value, optionally setting tags and a sample rate.
 
-        >>> statsd.histogram('uploaded.file.size', 1445)
-        >>> statsd.histogram('album.photo.count', 26, tags=["gender:female"])
+        >>> statsd.histogram("uploaded.file.size", 1445)
+        >>> statsd.histogram("album.photo.count", 26, tags=["gender:female"])
         """
         self._report(metric, 'h', value, tags, sample_rate)
 
@@ -411,8 +411,8 @@ class DogStatsd(object):
         """
         Send a global distribution value, optionally setting tags and a sample rate.
 
-        >>> statsd.distribution('uploaded.file.size', 1445)
-        >>> statsd.distribution('album.photo.count', 26, tags=["gender:female"])
+        >>> statsd.distribution("uploaded.file.size", 1445)
+        >>> statsd.distribution("album.photo.count", 26, tags=["gender:female"])
         """
         self._report(metric, 'd', value, tags, sample_rate)
 
@@ -433,13 +433,13 @@ class DogStatsd(object):
         manager.
         ::
 
-            @statsd.timed('user.query.time', sample_rate=0.5)
+            @statsd.timed("user.query.time", sample_rate=0.5)
             def get_user(user_id):
                 # Do what you need to ...
                 pass
 
             # Is equivalent to ...
-            with statsd.timed('user.query.time', sample_rate=0.5):
+            with statsd.timed("user.query.time", sample_rate=0.5):
                 # Do what you need to ...
                 pass
 
@@ -448,7 +448,7 @@ class DogStatsd(object):
             try:
                 get_user(user_id)
             finally:
-                statsd.timing('user.query.time', time.time() - start)
+                statsd.timing("user.query.time", time.time() - start)
         """
         return TimedContextManagerDecorator(self, metric, tags, sample_rate, use_ms)
 
@@ -461,13 +461,13 @@ class DogStatsd(object):
         The metric is required as a context manager.
         ::
 
-            @statsd.distributed('user.query.time', sample_rate=0.5)
+            @statsd.distributed("user.query.time", sample_rate=0.5)
             def get_user(user_id):
                 # Do what you need to ...
                 pass
 
             # Is equivalent to ...
-            with statsd.distributed('user.query.time', sample_rate=0.5):
+            with statsd.distributed("user.query.time", sample_rate=0.5):
                 # Do what you need to ...
                 pass
 
@@ -476,7 +476,7 @@ class DogStatsd(object):
             try:
                 get_user(user_id)
             finally:
-                statsd.distribution('user.query.time', time.time() - start)
+                statsd.distribution("user.query.time", time.time() - start)
         """
         return DistributedContextManagerDecorator(self, metric, tags, sample_rate, use_ms)
 
@@ -484,7 +484,7 @@ class DogStatsd(object):
         """
         Sample a set value.
 
-        >>> statsd.set('visitors.uniques', 999)
+        >>> statsd.set("visitors.uniques", 999)
         """
         self._report(metric, 's', value, tags, sample_rate)
 
@@ -648,8 +648,8 @@ class DogStatsd(object):
         Send an event. Attributes are the same as the Event API.
             http://docs.datadoghq.com/api/
 
-        >>> statsd.event('Man down!', 'This server needs assistance.')
-        >>> statsd.event('The web server restarted', 'The web server is up again', alert_type='success')  # NOQA
+        >>> statsd.event("Man down!", "This server needs assistance.")
+        >>> statsd.event("The web server restarted", "The web server is up again", alert_type="success")  # NOQA
         """
         title = self._escape_event_content(title)
         text = self._escape_event_content(text)
@@ -686,7 +686,7 @@ class DogStatsd(object):
         """
         Send a service check run.
 
-        >>> statsd.service_check('my_service.check_name', DogStatsd.WARNING)
+        >>> statsd.service_check("my_service.check_name", DogStatsd.WARNING)
         """
         message = self._escape_service_check_message(message) if message is not None else ''
 
