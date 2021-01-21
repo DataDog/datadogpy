@@ -24,7 +24,7 @@ from datadog.dogstatsd.route import get_default_route
 from datadog.util.compat import text
 from datadog.util.format import normalize_tags
 from datadog.version import __version__
-from typing import Optional, List, Text
+from typing import Optional, List, Text, Union
 
 # Logging
 log = logging.getLogger('datadog.dogstatsd')
@@ -70,6 +70,10 @@ class DogStatsd(object):
         telemetry_min_flush_interval=(
             DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL
         ),                              # type: int
+
+        telemetry_host=None,            # type: Text
+        telemetry_port=None,            # type: Union[str, int]
+        telemetry_socket_path=None,     # type: Text
         max_buffer_len=0                # type: int
     ):  # type: (...) -> None
         """
@@ -106,6 +110,14 @@ class DogStatsd(object):
         :envvar DD_DOGSTATSD_DISABLE: Disable any statsd metric collection (default False)
         :type DD_DOGSTATSD_DISABLE: boolean
 
+        :envvar DD_TELEMETRY_HOST: the host for the dogstatsd server we wish to submit
+        telemetry stats to. If set, it overrides default value.
+        :type DD_TELEMETRY_HOST: string
+
+        :envvar DD_TELEMETRY_PORT: the port for the dogstatsd server we wish to submit
+        telemetry stats to. If set, it overrides default value.
+        :type DD_TELEMETRY_PORT: integer
+
         :param host: the host of the DogStatsd server.
         :type host: string
 
@@ -139,6 +151,26 @@ class DogStatsd(object):
         if sending metrics in batch. If not specified it will be adjusted to a optimal value
         depending on the connection type.
         :type max_buffer_len: integer
+
+        :param disable_telemetry: Should client telemetry be disabled
+        :type disable_telemetry: boolean
+
+        :param telemetry_min_flush_interval: Minimum flush interval for telemetry in seconds
+        :type telemetry_min_flush_interval: integer
+
+        :param telemetry_host: the host for the dogstatsd server we wish to submit
+        telemetry stats to. Optional. If telemetry is enabled and this is not specified
+        the default host will be used.
+        :type host: string
+
+        :param telemetry_port: the port for the dogstatsd server we wish to submit
+        telemetry stats to. Optional. If telemetry is enabled and this is not specified
+        the default host will be used.
+        :type port: integer
+
+        :param telemetry_socket_path: Submit client telemetry to dogstatsd through a UNIX
+        socket instead of UDP. If set, disables UDP transmission (Linux only)
+        :type telemetry_socket_path: string
         """
 
         self.lock = Lock()
@@ -159,6 +191,10 @@ class DogStatsd(object):
             except ValueError:
                 log.warning("Port number provided in DD_DOGSTATSD_PORT env var is not an integer: \
                 %s, using %s as port number", dogstatsd_port, port)
+
+        # Assuming environment variables always override
+        telemetry_host = os.environ.get('DD_TELEMETRY_HOST', telemetry_host)
+        telemetry_port = os.environ.get('DD_TELEMETRY_PORT', telemetry_port) or port
 
         # Check enabled
         if os.environ.get('DD_DOGSTATSD_DISABLE') not in {'True', 'true', 'yes', '1'}:
@@ -183,8 +219,17 @@ class DogStatsd(object):
             if not self._max_payload_size:
                 self._max_payload_size = UDP_OPTIMAL_PAYLOAD_LENGTH
 
+        self.telemetry_socket_path = telemetry_socket_path
+        self.telemetry_host = None
+        self.telemetry_port = None
+        if not telemetry_socket_path and telemetry_host:
+            self.telemetry_socket_path = None
+            self.telemetry_host = self.resolve_host(telemetry_host, use_default_route)
+            self.telemetry_port = int(telemetry_port)
+
         # Socket
         self.socket = None
+        self.telemetry_socket = None
         self._send = self._send_to_server
         self.encoding = 'utf-8'
 
@@ -220,6 +265,9 @@ class DogStatsd(object):
     def enable_telemetry(self):
         self._telemetry = True
 
+    def _dedicated_telemetry_destination(self):
+        return bool(self.telemetry_socket_path or self.telemetry_host)
+
     def __enter__(self):
         self.open_buffer()
         return self
@@ -242,7 +290,7 @@ class DogStatsd(object):
 
         return get_default_route()
 
-    def get_socket(self):
+    def get_socket(self, telemetry=False):
         """
         Return a connected socket.
 
@@ -250,19 +298,36 @@ class DogStatsd(object):
         avoid bad thread race conditions.
         """
         with self.lock:
-            if not self.socket:
-                if self.socket_path is not None:
-                    sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-                    sock.setblocking(0)
-                    sock.connect(self.socket_path)
-                    self.socket = sock
-                else:
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                    sock.setblocking(0)
-                    sock.connect((self.host, self.port))
-                    self.socket = sock
+            if telemetry and self._dedicated_telemetry_destination():
+                if not self.telemetry_socket:
+                    if self.telemetry_socket_path is not None:
+                        self.telemetry_socket = self._get_uds_socket(self.telemetry_socket_path)
+                    else:
+                        self.telemetry_socket = self._get_udp_socket_socket(
+                            self.telemetry_host, self.telemetry_port)
+
+                return self.telemetry_socket
+            else:
+                if not self.socket:
+                    if self.socket_path is not None:
+                        self.socket = self._get_uds_socket(self.socket_path)
+                    else:
+                        self.socket = self._get_udp_socket(self.host, self.port)
 
         return self.socket
+
+    @staticmethod
+    def _get_uds_socket(socket_path):
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+        sock.connect(socket_path)
+        sock.setblocking(0)
+        return sock
+
+    @staticmethod
+    def _get_udp_socket(host, port):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.connect((host, port))
+        return sock
 
     def open_buffer(self, max_buffer_size=None):
         """
@@ -434,6 +499,13 @@ class DogStatsd(object):
                 log.error("Unexpected error: %s", str(e))
             self.socket = None
 
+        if self.telemetry_socket:
+            try:
+                self.telemetry_socket.close()
+            except OSError as e:
+                log.error("Unexpected error: %s", str(e))
+            self.telemetry_socket = None
+
     def _serialize_metric(self, metric, metric_type, value, tags, sample_rate=1):
         # Create/format the metric packet
         return "%s%s:%s|%s%s%s" % (
@@ -499,10 +571,10 @@ class DogStatsd(object):
         return self._telemetry and self._last_flush_time + self._telemetry_flush_interval < time.time()
 
     def _send_to_server(self, packet):
-        self._xmit_packet(packet, self._telemetry)
+        self._xmit_packet(packet, False)
         if self._is_telemetry_flush_time():
             telemetry = self._flush_telemetry()
-            if self._xmit_packet(telemetry, False):
+            if self._xmit_packet(telemetry, True):
                 self._reset_telemetry()
                 self.packets_sent += 1
                 self.bytes_sent += len(telemetry)
@@ -512,13 +584,20 @@ class DogStatsd(object):
                 self.bytes_dropped += len(telemetry)
                 self.packets_dropped += 1
 
-    def _xmit_packet(self, packet, telemetry):
+    def _xmit_packet(self, packet, is_telemetry):
         try:
-            # If set, use socket directly
-            (self.socket or self.get_socket()).send(packet.encode(self.encoding))
-            if telemetry:
+            if is_telemetry and self._dedicated_telemetry_destination():
+                mysocket = (self.telemetry_socket or self.get_socket(telemetry=True))
+            else:
+                # If set, use socket directly
+                mysocket = (self.socket or self.get_socket())
+
+            mysocket.send(packet.encode(self.encoding))
+
+            if not is_telemetry and self._telemetry:
                 self.packets_sent += 1
                 self.bytes_sent += len(packet)
+
             return True
         except socket.timeout:
             # dogstatsd is overflowing, drop the packets (mimicks the UDP behaviour)
@@ -534,7 +613,7 @@ class DogStatsd(object):
                 self.close_socket()
         except Exception as e:
             log.error("Unexpected error: %s", str(e))
-        if telemetry:
+        if not is_telemetry and self._telemetry:
             self.bytes_dropped += len(packet)
             self.packets_dropped += 1
         return False

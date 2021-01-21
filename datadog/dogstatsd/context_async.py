@@ -20,7 +20,10 @@ import sys
 # https://github.com/python/mypy/issues/6897
 ASYNC_SOURCE = r'''
 from functools import wraps
-from time import time
+try:
+    from time import monotonic
+except ImportError:
+    from time import time as monotonic
 
 
 def _get_wrapped_co(self, func):
@@ -29,7 +32,7 @@ def _get_wrapped_co(self, func):
     """
     @wraps(func)
     async def wrapped_co(*args, **kwargs):
-        start = time()
+        start = monotonic()
         try:
             result = await func(*args, **kwargs)
             return result
