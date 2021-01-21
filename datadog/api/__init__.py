@@ -49,3 +49,4 @@ from datadog.api.roles import Roles
 from datadog.api.permissions import Permissions
 from datadog.api.service_level_objectives import ServiceLevelObjective
 from datadog.api.synthetics import Synthetics
+from datadog.api.logs import Logs
