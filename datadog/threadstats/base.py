@@ -177,12 +177,13 @@ class ThreadStats(object):
         """
         if not self._disabled:
             # Append all client level tags to every event
-            event_tags = tags
+            event_tags = []
+            if tags:
+                event_tags.extend(tags)
             if self.constant_tags:
-                if tags:
-                    event_tags = tags + self.constant_tags
-                else:
-                    event_tags = self.constant_tags
+                event_tags.extend(self.constant_tags)
+
+            event_tags = event_tags if event_tags else None
 
             self._event_aggregator.add_event(
                 title=title, text=text, alert_type=alert_type, aggregation_key=aggregation_key,

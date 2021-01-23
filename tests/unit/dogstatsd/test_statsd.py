@@ -365,6 +365,12 @@ class TestDogStatsd(unittest.TestCase):
         metric = "gauge:123.4|g|#foo:bar,bar:baz"
         assert_equal_telemetry(metric, self.recv(2), telemetry=telemetry_metrics(tags="bar:baz", bytes_sent=len(metric)))
 
+    def test_gauge_constant_tags_with_iterable_metric_tags(self):
+        metric_level_tag = iter(('foo:bar',))
+        self.statsd.constant_tags = ['bar:baz']
+        self.statsd.gauge('gauge', 123.4, tags=metric_level_tag)
+        assert_equal_telemetry('gauge:123.4|g|#foo:bar,bar:baz', self.recv(), telemetry=telemetry_metrics(tags="bar:baz"))
+
     @staticmethod
     def assert_almost_equal(a, b, delta):
         assert 0 <= abs(a - b) <= delta, "%s - %s not within %s" % (a, b, delta)

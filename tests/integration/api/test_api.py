@@ -56,7 +56,8 @@ class TestDatadog:
         )
 
         # The response from `update` can be flaky, so let's test that it work by getting the tags
-        dog.Tag.update(hostname, tags=["test_tag:3"], source="datadog")
+        # Testing Iterable tags as well
+        dog.Tag.update(hostname, tags=iter(["test_tag:3"]), source="datadog")
         get_with_retry(
             "Tag",
             hostname,
@@ -116,7 +117,7 @@ class TestDatadog:
         assert event["event"]["alert_type"] == "success"
 
         event = dog.Event.create(
-            title="test tags", text="test tags", tags=["test_tag:1", "test_tag:2"]
+            title="test tags", text="test tags", tags=set(["test_tag:1", "test_tag:2"])
         )
         assert "test_tag:1" in event["event"]["tags"]
         assert "test_tag:2" in event["event"]["tags"]
