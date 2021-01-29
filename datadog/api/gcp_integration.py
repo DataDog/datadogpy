@@ -1,17 +1,16 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
-from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
-    DeletableAPIResource, UpdatableAPIResource
+from datadog.api.resources import GetableAPIResource, CreateableAPIResource, DeletableAPIResource, UpdatableAPIResource
 
 
-class GcpIntegration(GetableAPIResource, CreateableAPIResource, DeletableAPIResource,
-                     UpdatableAPIResource):
+class GcpIntegration(GetableAPIResource, CreateableAPIResource, DeletableAPIResource, UpdatableAPIResource):
     """
     A wrapper around GCP integration API.
     """
-    _resource_name = 'integration'
-    _resource_id = 'gcp'
+
+    _resource_name = "integration"
+    _resource_id = "gcp"
 
     @classmethod
     def list(cls, **params):

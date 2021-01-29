@@ -27,9 +27,7 @@ class ServiceLevelObjective(
     _resource_name = "slo"
 
     @classmethod
-    def create(
-        cls, attach_host_name=False, method="POST", id=None, params=None, **body
-    ):
+    def create(cls, attach_host_name=False, method="POST", id=None, params=None, **body):
         """
         Create a SLO
 

@@ -1,17 +1,16 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
-from datadog.api.resources import DeletableAPISubResource, \
-    ListableAPISubResource, AddableAPISubResource
+from datadog.api.resources import DeletableAPISubResource, ListableAPISubResource, AddableAPISubResource
 
 
-class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource,
-                         AddableAPISubResource):
+class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource, AddableAPISubResource):
     """
     A wrapper around AWS Logs API.
     """
-    _resource_name = 'integration'
-    _resource_id = 'aws'
+
+    _resource_name = "integration"
+    _resource_id = "aws"
 
     @classmethod
     def list_log_services(cls, **params):
@@ -20,7 +19,7 @@ class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource,
 
         >>> api.AwsLogsIntegration.list_log_services()
         """
-        cls._sub_resource_name = 'logs/services'
+        cls._sub_resource_name = "logs/services"
         return super(AwsLogsIntegration, cls).get_items(id=cls._resource_id, **params)
 
     @classmethod
@@ -34,7 +33,7 @@ class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource,
 
         >>> api.AwsLogsIntegration.add_log_lambda_arn(account_id=account_id, lambda_arn=lambda_arn)
         """
-        cls._sub_resource_name = 'logs'
+        cls._sub_resource_name = "logs"
         return super(AwsLogsIntegration, cls).add_items(id=cls._resource_id, **params)
 
     @classmethod
@@ -47,7 +46,7 @@ class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource,
 
         >>> api.AwsLogsIntegration.save_services()
         """
-        cls._sub_resource_name = 'logs/services'
+        cls._sub_resource_name = "logs/services"
         return super(AwsLogsIntegration, cls).add_items(id=cls._resource_id, **params)
 
     @classmethod
@@ -61,7 +60,7 @@ class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource,
 
         >>> api.AwsLogsIntegration.delete_config(account_id=account_id, lambda_arn=lambda_arn)
         """
-        cls._sub_resource_name = 'logs'
+        cls._sub_resource_name = "logs"
         return super(AwsLogsIntegration, cls).delete_items(id=cls._resource_id, **params)
 
     @classmethod
@@ -82,7 +81,7 @@ class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource,
 
         >>> api.AwsLogsIntegration.check_lambda(account_id=account_id, lambda_arn=lambda_arn)
         """
-        cls._sub_resource_name = 'logs/check_async'
+        cls._sub_resource_name = "logs/check_async"
         return super(AwsLogsIntegration, cls).add_items(id=cls._resource_id, **params)
 
     @classmethod
@@ -98,7 +97,7 @@ class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource,
 
         >>> api.AwsLogsIntegration.check_services()
         """
-        cls._sub_resource_name = 'logs/services_async'
+        cls._sub_resource_name = "logs/services_async"
         return super(AwsLogsIntegration, cls).add_items(id=cls._resource_id, **params)
 
     @classmethod
@@ -108,5 +107,5 @@ class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource,
 
         >>> api.AwsLogsIntegration.list()
         """
-        cls._sub_resource_name = 'logs'
+        cls._sub_resource_name = "logs"
         return super(AwsLogsIntegration, cls).get_items(id=cls._resource_id, **params)

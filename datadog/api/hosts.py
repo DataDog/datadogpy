@@ -8,7 +8,8 @@ class Host(ActionAPIResource):
     """
     A wrapper around Host HTTP API.
     """
-    _resource_name = 'host'
+
+    _resource_name = "host"
 
     @classmethod
     def mute(cls, host_name, **body):
@@ -31,7 +32,7 @@ class Host(ActionAPIResource):
         :returns: Dictionary representing the API's JSON response
 
         """
-        return super(Host, cls)._trigger_class_action('POST', 'mute', host_name, **body)
+        return super(Host, cls)._trigger_class_action("POST", "mute", host_name, **body)
 
     @classmethod
     def unmute(cls, host_name):
@@ -44,14 +45,15 @@ class Host(ActionAPIResource):
         :returns: Dictionary representing the API's JSON response
 
         """
-        return super(Host, cls)._trigger_class_action('POST', 'unmute', host_name)
+        return super(Host, cls)._trigger_class_action("POST", "unmute", host_name)
 
 
 class Hosts(ActionAPIResource, SearchableAPIResource):
     """
     A wrapper around Hosts HTTP API.
     """
-    _resource_name = 'hosts'
+
+    _resource_name = "hosts"
 
     @classmethod
     def search(cls, **params):
@@ -86,4 +88,4 @@ class Hosts(ActionAPIResource, SearchableAPIResource):
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Hosts, cls)._trigger_class_action('GET', 'totals')
+        return super(Hosts, cls)._trigger_class_action("GET", "totals")

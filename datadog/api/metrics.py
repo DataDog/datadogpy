@@ -11,11 +11,12 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
     """
     A wrapper around Metric HTTP API
     """
+
     _resource_name = None
 
-    _METRIC_QUERY_ENDPOINT = 'query'
-    _METRIC_SUBMIT_ENDPOINT = 'series'
-    _METRIC_LIST_ENDPOINT = 'metrics'
+    _METRIC_QUERY_ENDPOINT = "query"
+    _METRIC_SUBMIT_ENDPOINT = "series"
+    _METRIC_LIST_ENDPOINT = "metrics"
 
     @classmethod
     def list(cls, from_epoch):
@@ -31,7 +32,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
 
         try:
             seconds = int(from_epoch)
-            params = {'from': seconds}
+            params = {"from": seconds}
         except ValueError:
             raise ApiError("Parameter 'from_epoch' must be an integer")
 
@@ -46,8 +47,8 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
         instead of `type`.
         To be consistent and avoid 'backward incompatibilities', properly rename this parameter.
         """
-        if 'metric_type' in metric:
-            metric['type'] = metric.pop('metric_type')
+        if "metric_type" in metric:
+            metric["type"] = metric.pop("metric_type")
 
     @classmethod
     def send(cls, metrics=None, attach_host_name=True, compress_payload=False, **single_metric):
@@ -94,11 +95,11 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
                 for metric in metrics:
                     if isinstance(metric, dict):
                         cls._rename_metric_type(metric)
-                        metric['points'] = format_points(metric['points'])
+                        metric["points"] = format_points(metric["points"])
                 metrics_dict = {"series": metrics}
             else:
                 cls._rename_metric_type(single_metric)
-                single_metric['points'] = format_points(single_metric['points'])
+                single_metric["points"] = format_points(single_metric["points"])
                 metrics = [single_metric]
                 metrics_dict = {"series": metrics}
 
@@ -138,8 +139,8 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
         # `api.Metric.query(from=...)` is not permited
         # -> map `start` to `from` and `end` to `to`
         try:
-            params['from'] = params.pop('start')
-            params['to'] = params.pop('end')
+            params["from"] = params.pop("start")
+            params["to"] = params.pop("end")
         except KeyError as e:
             raise ApiError("The parameter '{0}' is required".format(e.args[0]))
 

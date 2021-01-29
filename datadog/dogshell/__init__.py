@@ -32,32 +32,49 @@ def main():
     if sys.argv[0].endswith("dog"):
         warnings.warn("dog is pending deprecation. Please use dogshell instead.", PendingDeprecationWarning)
 
-    parser = argparse.ArgumentParser(description="Interact with the Datadog API",
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--config', help="location of your dogrc file (default ~/.dogrc)",
-                        default=os.path.expanduser('~/.dogrc'))
-    parser.add_argument('--api-key', help="your API key, from "
-                        "https://app.datadoghq.com/account/settings#api. "
-                        "You can also set the environment variables DATADOG_API_KEY or DD_API_KEY",
-                        dest='api_key', default=os.environ.get('DATADOG_API_KEY', os.environ.get('DD_API_KEY')))
-    parser.add_argument('--application-key', help="your Application key, from "
-                        "https://app.datadoghq.com/account/settings#api. "
-                        "You can also set the environment variables DATADOG_APP_KEY or DD_APP_KEY",
-                        dest='app_key', default=os.environ.get('DATADOG_APP_KEY', os.environ.get('DD_APP_KEY')))
-    parser.add_argument('--pretty', help="pretty-print output (suitable for human consumption, "
-                        "less useful for scripting)", dest='format',
-                        action='store_const', const='pretty')
-    parser.add_argument('--raw', help="raw JSON as returned by the HTTP service",
-                        dest='format', action='store_const', const='raw')
-    parser.add_argument('--timeout', help="time to wait in seconds before timing"
-                        " out an API call (default 10)", default=10, type=int)
-    parser.add_argument('-v', '--version', help='Dog API version', action='version',
-                        version='%(prog)s {0}'.format(__version__))
+    parser = argparse.ArgumentParser(
+        description="Interact with the Datadog API", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "--config", help="location of your dogrc file (default ~/.dogrc)", default=os.path.expanduser("~/.dogrc")
+    )
+    parser.add_argument(
+        "--api-key",
+        help="your API key, from "
+        "https://app.datadoghq.com/account/settings#api. "
+        "You can also set the environment variables DATADOG_API_KEY or DD_API_KEY",
+        dest="api_key",
+        default=os.environ.get("DATADOG_API_KEY", os.environ.get("DD_API_KEY")),
+    )
+    parser.add_argument(
+        "--application-key",
+        help="your Application key, from "
+        "https://app.datadoghq.com/account/settings#api. "
+        "You can also set the environment variables DATADOG_APP_KEY or DD_APP_KEY",
+        dest="app_key",
+        default=os.environ.get("DATADOG_APP_KEY", os.environ.get("DD_APP_KEY")),
+    )
+    parser.add_argument(
+        "--pretty",
+        help="pretty-print output (suitable for human consumption, " "less useful for scripting)",
+        dest="format",
+        action="store_const",
+        const="pretty",
+    )
+    parser.add_argument(
+        "--raw", help="raw JSON as returned by the HTTP service", dest="format", action="store_const", const="raw"
+    )
+    parser.add_argument(
+        "--timeout", help="time to wait in seconds before timing" " out an API call (default 10)", default=10, type=int
+    )
+    parser.add_argument(
+        "-v", "--version", help="Dog API version", action="version", version="%(prog)s {0}".format(__version__)
+    )
 
     config = DogshellConfig()
 
     # Set up subparsers for each service
-    subparsers = parser.add_subparsers(title='Modes', dest='mode')
+    subparsers = parser.add_subparsers(title="Modes", dest="mode")
     subparsers.required = True
 
     CommentClient.setup_parser(subparsers)
@@ -84,5 +101,5 @@ def main():
     args.func(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

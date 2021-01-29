@@ -9,13 +9,14 @@ class Logs(CreateableAPIResource):
     """
     A wrapper around Log HTTP API.
     """
-    _resource_name = 'logs-queries'
+
+    _resource_name = "logs-queries"
 
     @classmethod
     def list(cls, data):
-        path = '{resource_name}/list'.format(
+        path = "{resource_name}/list".format(
             resource_name=cls._resource_name,
         )
-        api_version = getattr(cls, '_api_version', None)
+        api_version = getattr(cls, "_api_version", None)
 
         return APIClient.submit("POST", path, api_version, data)

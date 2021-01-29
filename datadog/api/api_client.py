@@ -9,19 +9,13 @@ import zlib
 
 # datadog
 from datadog.api import _api_version, _max_timeouts, _backoff_period
-from datadog.api.exceptions import (
-    ClientError,
-    ApiError,
-    HttpBackoff,
-    HttpTimeout,
-    ApiNotInitialized
-)
+from datadog.api.exceptions import ClientError, ApiError, HttpBackoff, HttpTimeout, ApiNotInitialized
 from datadog.api.http_client import resolve_http_client
 from datadog.util.compat import is_p3k
 from datadog.util.format import construct_url, construct_path, normalize_tags
 
 
-log = logging.getLogger('datadog.api')
+log = logging.getLogger("datadog.api")
 
 
 class APIClient(object):
@@ -29,6 +23,7 @@ class APIClient(object):
     Datadog API client: format and submit API calls to Datadog.
     Embeds a HTTP client.
     """
+
     # HTTP transport parameters
     _backoff_period = _backoff_period
     _max_timeouts = _max_timeouts
@@ -50,9 +45,19 @@ class APIClient(object):
         return cls._http_client
 
     @classmethod
-    def submit(cls, method, path, api_version=None, body=None, attach_host_name=False,
-               response_formatter=None, error_formatter=None, suppress_response_errors_on_codes=None,
-               compress_payload=False, **params):
+    def submit(
+        cls,
+        method,
+        path,
+        api_version=None,
+        body=None,
+        attach_host_name=False,
+        response_formatter=None,
+        error_formatter=None,
+        suppress_response_errors_on_codes=None,
+        compress_payload=False,
+        **params
+    ):
         """
         Make an HTTP API request
 
@@ -95,20 +100,28 @@ class APIClient(object):
                 raise HttpBackoff(backoff_time_left)
 
             # Import API, User and HTTP settings
-            from datadog.api import _api_key, _application_key, _api_host, \
-                _mute, _host_name, _proxies, _max_retries, _timeout, \
-                _cacert, _return_raw_response
+            from datadog.api import (
+                _api_key,
+                _application_key,
+                _api_host,
+                _mute,
+                _host_name,
+                _proxies,
+                _max_retries,
+                _timeout,
+                _cacert,
+                _return_raw_response,
+            )
 
             # Check keys and add then to params
             if _api_key is None:
-                raise ApiNotInitialized("API key is not set."
-                                        " Please run 'initialize' method first.")
+                raise ApiNotInitialized("API key is not set." " Please run 'initialize' method first.")
 
             # Set api and app keys in headers
             headers = {}
-            headers['DD-API-KEY'] = _api_key
+            headers["DD-API-KEY"] = _api_key
             if _application_key:
-                headers['DD-APPLICATION-KEY'] = _application_key
+                headers["DD-APPLICATION-KEY"] = _application_key
 
             # Check if the api_version is provided
             if not api_version:
@@ -117,37 +130,37 @@ class APIClient(object):
             # set api and app keys in params only for some endpoints and thus remove keys from headers
             # as they cannot be set in both params and headers
             if cls._set_api_and_app_keys_in_params(api_version, path):
-                params['api_key'] = _api_key
-                del headers['DD-API-KEY']
+                params["api_key"] = _api_key
+                del headers["DD-API-KEY"]
                 if _application_key:
-                    params['application_key'] = _application_key
-                    del headers['DD-APPLICATION-KEY']
+                    params["application_key"] = _application_key
+                    del headers["DD-APPLICATION-KEY"]
 
             # Attach host name to body
             if attach_host_name and body:
                 # Is it a 'series' list of objects ?
-                if 'series' in body:
+                if "series" in body:
                     # Adding the host name to all objects
-                    for obj_params in body['series']:
-                        if obj_params.get('host', "") == "":
-                            obj_params['host'] = _host_name
+                    for obj_params in body["series"]:
+                        if obj_params.get("host", "") == "":
+                            obj_params["host"] = _host_name
                 else:
-                    if body.get('host', "") == "":
-                        body['host'] = _host_name
+                    if body.get("host", "") == "":
+                        body["host"] = _host_name
 
             # If defined, make sure tags are defined as a comma-separated string
-            if 'tags' in params and isinstance(params['tags'], list):
-                tag_list = normalize_tags(params['tags'])
-                params['tags'] = ','.join(tag_list)
+            if "tags" in params and isinstance(params["tags"], list):
+                tag_list = normalize_tags(params["tags"])
+                params["tags"] = ",".join(tag_list)
 
             # If defined, make sure monitor_ids are defined as a comma-separated string
-            if 'monitor_ids' in params and isinstance(params['monitor_ids'], list):
-                params['monitor_ids'] = ','.join(str(i) for i in params['monitor_ids'])
+            if "monitor_ids" in params and isinstance(params["monitor_ids"], list):
+                params["monitor_ids"] = ",".join(str(i) for i in params["monitor_ids"])
 
             # Process the body, if necessary
             if isinstance(body, dict):
                 body = json.dumps(body, sort_keys=cls._sort_keys)
-                headers['Content-Type'] = 'application/json'
+                headers["Content-Type"] = "application/json"
 
             if compress_payload:
                 body = zlib.compress(body.encode("utf-8"))
@@ -160,14 +173,19 @@ class APIClient(object):
             start_time = time.time()
 
             result = cls._get_http_client().request(
-                method=method, url=url,
-                headers=headers, params=params, data=body,
-                timeout=_timeout, max_retries=_max_retries,
-                proxies=_proxies, verify=_cacert
+                method=method,
+                url=url,
+                headers=headers,
+                params=params,
+                data=body,
+                timeout=_timeout,
+                max_retries=_max_retries,
+                proxies=_proxies,
+                verify=_cacert,
             )
 
             # Request succeeded: log it and reset the timeout counter
-            duration = round((time.time() - start_time) * 1000., 4)
+            duration = round((time.time() - start_time) * 1000.0, 4)
             log.info("%s %s %s (%sms)" % (result.status_code, method, url, duration))
             cls._timeout_counter = 0
 
@@ -177,18 +195,20 @@ class APIClient(object):
             if content:
                 try:
                     if is_p3k():
-                        response_obj = json.loads(content.decode('utf-8'))
+                        response_obj = json.loads(content.decode("utf-8"))
                     else:
                         response_obj = json.loads(content)
                 except ValueError:
-                    raise ValueError('Invalid JSON response: {0}'.format(content))
+                    raise ValueError("Invalid JSON response: {0}".format(content))
 
                 # response_obj can be a bool and not a dict
                 if isinstance(response_obj, dict):
-                    if response_obj and 'errors' in response_obj:
+                    if response_obj and "errors" in response_obj:
                         # suppress ApiError when specified and just return the response
-                        if not (suppress_response_errors_on_codes and
-                                result.status_code in suppress_response_errors_on_codes):
+                        if not (
+                            suppress_response_errors_on_codes
+                            and result.status_code in suppress_response_errors_on_codes
+                        ):
                             raise ApiError(response_obj)
             else:
                 response_obj = None
@@ -208,14 +228,14 @@ class APIClient(object):
             if _mute:
                 log.error(str(e))
                 if error_formatter is None:
-                    return {'errors': e.args[0]}
+                    return {"errors": e.args[0]}
                 else:
-                    return error_formatter({'errors': e.args[0]})
+                    return error_formatter({"errors": e.args[0]})
             else:
                 raise
         except ApiError as e:
             if _mute:
-                for error in (e.args[0].get('errors') or []):
+                for error in e.args[0].get("errors") or []:
                     log.error(error)
                 if error_formatter is None:
                     return e.args[0]
@@ -237,8 +257,7 @@ class APIClient(object):
         # number of timeouts, then enter the backoff state, recording the time
         # we started backing off
         if not cls._backoff_timestamp and cls._timeout_counter >= cls._max_timeouts:
-            log.info("Max number of datadog timeouts exceeded, backing off for {0} seconds"
-                     .format(cls._backoff_period))
+            log.info("Max number of datadog timeouts exceeded, backing off for {0} seconds".format(cls._backoff_period))
             cls._backoff_timestamp = now
             should_submit = False
 
@@ -248,14 +267,14 @@ class APIClient(object):
         elif cls._backoff_timestamp:
             backed_off_time, backoff_time_left = cls._backoff_status()
             if backoff_time_left < 0:
-                log.info("Exiting backoff state after {0} seconds, will try to submit metrics again"
-                         .format(backed_off_time))
+                log.info(
+                    "Exiting backoff state after {0} seconds, will try to submit metrics again".format(backed_off_time)
+                )
                 cls._backoff_timestamp = None
                 cls._timeout_counter = 0
                 should_submit = True
             else:
-                log.info("In backoff state, won't submit metrics for another {0} seconds"
-                         .format(backoff_time_left))
+                log.info("In backoff state, won't submit metrics for another {0} seconds".format(backoff_time_left))
                 should_submit = False
         else:
             should_submit = True

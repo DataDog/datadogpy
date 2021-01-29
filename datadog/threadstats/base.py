@@ -10,10 +10,12 @@ on your application's needs.
 import atexit
 import logging
 import os
+
 # stdlib
 from contextlib import contextmanager
 from functools import wraps
 from time import time
+
 try:
     from time import monotonic  # type: ignore[attr-defined]
 except ImportError:
@@ -23,23 +25,20 @@ except ImportError:
 from datadog.api.exceptions import ApiNotInitialized
 from datadog.threadstats.constants import MetricType
 from datadog.threadstats.events import EventsAggregator
-from datadog.threadstats.metrics import (
-    MetricsAggregator, Counter, Gauge, Histogram, Timing, Distribution, Set
-)
+from datadog.threadstats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing, Distribution, Set
 from datadog.threadstats.reporters import HttpReporter
 
 # Loggers
-log = logging.getLogger('datadog.threadstats')
+log = logging.getLogger("datadog.threadstats")
 
 DD_ENV_TAGS_MAPPING = {
-    'DD_ENV': 'env',
-    'DD_SERVICE': 'service',
-    'DD_VERSION': 'version',
+    "DD_ENV": "env",
+    "DD_SERVICE": "service",
+    "DD_VERSION": "version",
 }
 
 
 class ThreadStats(object):
-
     def __init__(self, namespace="", constant_tags=None, compress_payload=False):
         """
         Initialize a threadstats object.
@@ -70,11 +69,11 @@ class ThreadStats(object):
         """
         # Parameters
         self.namespace = namespace
-        env_tags = [tag for tag in os.environ.get('DATADOG_TAGS', '').split(',') if tag]
+        env_tags = [tag for tag in os.environ.get("DATADOG_TAGS", "").split(",") if tag]
         for var, tag_name in DD_ENV_TAGS_MAPPING.items():
-            value = os.environ.get(var, '')
+            value = os.environ.get(var, "")
             if value:
-                env_tags.append('{name}:{value}'.format(name=tag_name, value=value))
+                env_tags.append("{name}:{value}".format(name=tag_name, value=value))
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
@@ -83,8 +82,15 @@ class ThreadStats(object):
         self._disabled = True
         self.compress_payload = compress_payload
 
-    def start(self, flush_interval=10, roll_up_interval=10, device=None,
-              flush_in_thread=True, flush_in_greenlet=False, disabled=False):
+    def start(
+        self,
+        flush_interval=10,
+        roll_up_interval=10,
+        device=None,
+        flush_in_thread=True,
+        flush_in_greenlet=False,
+        disabled=False,
+    ):
         """
         Start the ThreadStats instance with the specified metric flushing method and preferences.
 
@@ -155,7 +161,7 @@ class ThreadStats(object):
                 self._start_flush_thread()
 
         # Flush all remaining metrics on exit
-        atexit.register(lambda: self.flush(float('inf')))
+        atexit.register(lambda: self.flush(float("inf")))
 
     def stop(self):
         if not self._is_auto_flushing:
@@ -165,9 +171,18 @@ class ThreadStats(object):
             self._is_auto_flushing = False
             return True
 
-    def event(self, title, text, alert_type=None, aggregation_key=None,
-              source_type_name=None, date_happened=None, priority=None,
-              tags=None, hostname=None):
+    def event(
+        self,
+        title,
+        text,
+        alert_type=None,
+        aggregation_key=None,
+        source_type_name=None,
+        date_happened=None,
+        priority=None,
+        tags=None,
+        hostname=None,
+    ):
         """
         Send an event. Attributes are the same as the Event API. (http://docs.datadoghq.com/api/)
 
@@ -185,9 +200,16 @@ class ThreadStats(object):
                     event_tags = self.constant_tags
 
             self._event_aggregator.add_event(
-                title=title, text=text, alert_type=alert_type, aggregation_key=aggregation_key,
-                source_type_name=source_type_name, date_happened=date_happened, priority=priority,
-                tags=event_tags, host=hostname)
+                title=title,
+                text=text,
+                alert_type=alert_type,
+                aggregation_key=aggregation_key,
+                source_type_name=source_type_name,
+                date_happened=date_happened,
+                priority=priority,
+                tags=event_tags,
+                host=hostname,
+            )
 
     def gauge(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
         """
@@ -201,8 +223,9 @@ class ThreadStats(object):
         >>> stats.gauge("cache.bytes.free", cache.get_free_bytes(), tags=["version:1.0"])
         """
         if not self._disabled:
-            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value, Gauge,
-                                              sample_rate=sample_rate, host=host)
+            self._metric_aggregator.add_point(
+                metric_name, tags, timestamp or time(), value, Gauge, sample_rate=sample_rate, host=host
+            )
 
     def set(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
         """
@@ -213,8 +236,9 @@ class ThreadStats(object):
         >>> stats.set("example_metric.set", "value_1", tags=["environement:dev"])
         """
         if not self._disabled:
-            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value, Set,
-                                              sample_rate=sample_rate, host=host)
+            self._metric_aggregator.add_point(
+                metric_name, tags, timestamp or time(), value, Set, sample_rate=sample_rate, host=host
+            )
 
     def increment(self, metric_name, value=1, timestamp=None, tags=None, sample_rate=1, host=None):
         """
@@ -226,8 +250,9 @@ class ThreadStats(object):
         >>> stats.increment('bytes.processed', file.size())
         """
         if not self._disabled:
-            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
-                                              Counter, sample_rate=sample_rate, host=host)
+            self._metric_aggregator.add_point(
+                metric_name, tags, timestamp or time(), value, Counter, sample_rate=sample_rate, host=host
+            )
 
     def decrement(self, metric_name, value=1, timestamp=None, tags=None, sample_rate=1, host=None):
         """
@@ -238,8 +263,9 @@ class ThreadStats(object):
         >>> stats.decrement("active.connections", 2)
         """
         if not self._disabled:
-            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), -value,
-                                              Counter, sample_rate=sample_rate, host=host)
+            self._metric_aggregator.add_point(
+                metric_name, tags, timestamp or time(), -value, Counter, sample_rate=sample_rate, host=host
+            )
 
     def histogram(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
         """
@@ -251,8 +277,9 @@ class ThreadStats(object):
         >>> stats.histogram("uploaded_file.size", uploaded_file.size())
         """
         if not self._disabled:
-            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
-                                              Histogram, sample_rate=sample_rate, host=host)
+            self._metric_aggregator.add_point(
+                metric_name, tags, timestamp or time(), value, Histogram, sample_rate=sample_rate, host=host
+            )
 
     def distribution(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
         """
@@ -264,8 +291,9 @@ class ThreadStats(object):
         >>> stats.distribution("uploaded_file.size", uploaded_file.size())
         """
         if not self._disabled:
-            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
-                                              Distribution, sample_rate=sample_rate, host=host)
+            self._metric_aggregator.add_point(
+                metric_name, tags, timestamp or time(), value, Distribution, sample_rate=sample_rate, host=host
+            )
 
     def timing(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
         """
@@ -274,8 +302,9 @@ class ThreadStats(object):
         >>> stats.timing("query.response.time", 1234)
         """
         if not self._disabled:
-            self._metric_aggregator.add_point(metric_name, tags, timestamp or time(), value,
-                                              Timing, sample_rate=sample_rate, host=host)
+            self._metric_aggregator.add_point(
+                metric_name, tags, timestamp or time(), value, Timing, sample_rate=sample_rate, host=host
+            )
 
     @contextmanager
     def timer(self, metric_name, sample_rate=1, tags=None, host=None):
@@ -303,8 +332,7 @@ class ThreadStats(object):
             yield
         finally:
             end = monotonic()
-            self.timing(metric_name, end - start, time(), tags=tags,
-                        sample_rate=sample_rate, host=host)
+            self.timing(metric_name, end - start, time(), tags=tags, sample_rate=sample_rate, host=host)
 
     def timed(self, metric_name, sample_rate=1, tags=None, host=None):
         """
@@ -415,13 +443,13 @@ class ThreadStats(object):
                 metric_name = self.namespace + "." + name
 
             metric = {
-                'metric': metric_name,
-                'points': [[timestamp, value]],
-                'type': metric_type,
-                'host': host,
-                'device': self.device,
-                'tags': metric_tags,
-                'interval': interval
+                "metric": metric_name,
+                "points": [[timestamp, value]],
+                "type": metric_type,
+                "host": host,
+                "device": self.device,
+                "tags": metric_tags,
+                "interval": interval,
             }
             if metric_type == MetricType.Distribution:
                 dists.append(metric)
@@ -437,6 +465,7 @@ class ThreadStats(object):
     def _start_flush_thread(self):
         """ Start a thread to flush metrics. """
         from datadog.threadstats.periodic_timer import PeriodicTimer
+
         if self._is_auto_flushing:
             log.info("Autoflushing already started.")
             return

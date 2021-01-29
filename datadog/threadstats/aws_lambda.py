@@ -37,8 +37,8 @@ class _LambdaDecorator(object):
         with cls._counter_lock:
             if not cls._was_initialized:
                 cls._was_initialized = True
-                api._api_key = os.environ.get('DATADOG_API_KEY', os.environ.get('DD_API_KEY'))
-                api._api_host = os.environ.get('DATADOG_HOST', 'https://api.datadoghq.com')
+                api._api_key = os.environ.get("DATADOG_API_KEY", os.environ.get("DD_API_KEY"))
+                api._api_host = os.environ.get("DATADOG_HOST", "https://api.datadoghq.com")
 
                 # Async initialization of the TLS connection with our endpoints
                 # This avoids adding execution time at the end of the lambda run
@@ -96,7 +96,7 @@ def lambda_metric(*args, **kw):
 
 
 def _init_api_client():
-    """ No-op GET to initialize the requests connection with DD's endpoints
+    """No-op GET to initialize the requests connection with DD's endpoints
 
     The goal here is to make the final flush faster:
     we keep alive the Requests session, this means that we can re-use the connection
@@ -106,6 +106,6 @@ def _init_api_client():
     By making the initial request async, we spare a lot of execution time in the lambdas.
     """
     try:
-        api.api_client.APIClient.submit('GET', 'validate')
+        api.api_client.APIClient.submit("GET", "validate")
     except Exception:
         pass

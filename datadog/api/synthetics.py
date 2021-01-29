@@ -42,9 +42,7 @@ class Synthetics(
 
         name = "tests"
 
-        return super(Synthetics, cls)._trigger_synthetics_class_action(
-            "GET", id=id, name=name, params=params
-        )
+        return super(Synthetics, cls)._trigger_synthetics_class_action("GET", id=id, name=name, params=params)
 
     @classmethod
     def get_all_tests(cls, **params):
@@ -74,9 +72,7 @@ class Synthetics(
 
         name = "browser/devices"
 
-        return super(Synthetics, cls)._trigger_synthetics_class_action(
-            "GET", name=name, params=params
-        )
+        return super(Synthetics, cls)._trigger_synthetics_class_action("GET", name=name, params=params)
 
     @classmethod
     def get_locations(cls, **params):
@@ -90,9 +86,7 @@ class Synthetics(
 
         # API path = "synthetics/locations
 
-        return super(Synthetics, cls)._trigger_synthetics_class_action(
-            "GET", name=name, params=params
-        )
+        return super(Synthetics, cls)._trigger_synthetics_class_action("GET", name=name, params=params)
 
     @classmethod
     def get_results(cls, id, **params):
@@ -217,6 +211,4 @@ class Synthetics(
 
         # API path = "synthetics/tests/delete
 
-        return super(Synthetics, cls)._trigger_action(
-            "POST", name="synthetics", id="tests/delete", **body
-        )
+        return super(Synthetics, cls)._trigger_action("POST", name="synthetics", id="tests/delete", **body)

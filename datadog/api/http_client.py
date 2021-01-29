@@ -31,12 +31,13 @@ except ImportError:
 from datadog.api.exceptions import ProxyError, ClientError, HTTPError, HttpTimeout
 
 
-log = logging.getLogger('datadog.api')
+log = logging.getLogger("datadog.api")
 
 
 def _get_user_agent_header():
     from datadog import version
-    return 'datadogpy/{version} (python {pyver}; os {os}; arch {arch})'.format(
+
+    return "datadogpy/{version} (python {pyver}; os {os}; arch {arch})".format(
         version=version.__version__,
         pyver=platform.python_version(),
         os=platform.system().lower(),
@@ -54,6 +55,7 @@ class HTTPClient(object):
     """
     An abstract generic HTTP client. Subclasses must implement the `request` methods.
     """
+
     @classmethod
     def request(cls, method, url, headers, params, data, timeout, proxies, verify, max_retries):
         """
@@ -68,9 +70,7 @@ class HTTPClient(object):
         * `HttpTimeout`: connection timed out
         * `HTTPError`: unexpected HTTP response code
         """
-        raise NotImplementedError(
-            u"Must be implemented by HTTPClient subclasses."
-        )
+        raise NotImplementedError(u"Must be implemented by HTTPClient subclasses.")
 
 
 class RequestClient(HTTPClient):
@@ -90,14 +90,12 @@ class RequestClient(HTTPClient):
                 if cls._session is None:
                     cls._session = requests.Session()
                     http_adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
-                    cls._session.mount('https://', http_adapter)
-                    cls._session.headers.update({'User-Agent': _get_user_agent_header()})
+                    cls._session.mount("https://", http_adapter)
+                    cls._session.headers.update({"User-Agent": _get_user_agent_header()})
 
             result = cls._session.request(
-                method, url,
-                headers=headers, params=params, data=data,
-                timeout=timeout,
-                proxies=proxies, verify=verify)
+                method, url, headers=headers, params=params, data=data, timeout=timeout, proxies=proxies, verify=verify
+            )
 
             result.raise_for_status()
 
@@ -127,6 +125,7 @@ class URLFetchClient(HTTPClient):
     """
     HTTP client based on Google App Engine `urlfetch` module.
     """
+
     @classmethod
     def request(cls, method, url, headers, params, data, timeout, proxies, verify, max_retries):
         """
@@ -139,12 +138,9 @@ class URLFetchClient(HTTPClient):
         validate_certificate = True if verify else False
 
         # Encode parameters in the url
-        url_with_params = "{url}?{params}".format(
-            url=url,
-            params=urllib.urlencode(params)
-        )
+        url_with_params = "{url}?{params}".format(url=url, params=urllib.urlencode(params))
         newheaders = copy.deepcopy(headers)
-        newheaders['User-Agent'] = _get_user_agent_header()
+        newheaders["User-Agent"] = _get_user_agent_header()
 
         try:
             result = urlfetch.fetch(
@@ -156,7 +152,7 @@ class URLFetchClient(HTTPClient):
                 payload=data,
                 # setting follow_redirects=False may be slightly faster:
                 # https://cloud.google.com/appengine/docs/python/microservice-performance#use_the_shortest_route
-                follow_redirects=False
+                follow_redirects=False,
             )
 
             cls.raise_on_status(result)
@@ -195,6 +191,5 @@ def resolve_http_client():
         return URLFetchClient
 
     raise ImportError(
-        u"Datadog API client was unable to resolve a HTTP client. "
-        u" Please install `requests` library."
+        u"Datadog API client was unable to resolve a HTTP client. " u" Please install `requests` library."
     )

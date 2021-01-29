@@ -35,6 +35,8 @@ if sys.version_info[0] >= 3:
 
     def iternext(iter):
         return next(iter)
+
+
 # Python 2.x
 else:
     import __builtin__ as builtins
@@ -55,13 +57,16 @@ else:
     def iternext(iter):
         return iter.next()
 
+
 # Python >= 3.5
 if sys.version_info >= (3, 5):
     from asyncio import iscoroutinefunction
 # Others
 else:
+
     def iscoroutinefunction(*args, **kwargs):
         return False
+
 
 # Python >= 2.7
 if sys.version_info >= (2, 7):
@@ -100,4 +105,4 @@ def is_pypy():
     """
     Assert that PyPy is being used (regardless of 2 or 3)
     """
-    return '__pypy__' in sys.builtin_module_names
+    return "__pypy__" in sys.builtin_module_names

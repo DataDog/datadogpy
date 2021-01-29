@@ -23,16 +23,16 @@ class PathNotFound(Exception):
 
 def get_os():
     "Human-friendly OS name"
-    if sys.platform == 'darwin':
-        return 'mac'
-    elif sys.platform.find('freebsd') != -1:
-        return 'freebsd'
-    elif sys.platform.find('linux') != -1:
-        return 'linux'
-    elif sys.platform.find('win32') != -1:
-        return 'windows'
-    elif sys.platform.find('sunos') != -1:
-        return 'solaris'
+    if sys.platform == "darwin":
+        return "mac"
+    elif sys.platform.find("freebsd") != -1:
+        return "freebsd"
+    elif sys.platform.find("linux") != -1:
+        return "linux"
+    elif sys.platform.find("win32") != -1:
+        return "windows"
+    elif sys.platform.find("sunos") != -1:
+        return "solaris"
     else:
         return sys.platform
 
@@ -56,10 +56,7 @@ def _windows_commondata_path():
     CSIDL_COMMON_APPDATA = 35
 
     _SHGetFolderPath = windll.shell32.SHGetFolderPathW
-    _SHGetFolderPath.argtypes = [wintypes.HWND,
-                                 ctypes.c_int,
-                                 wintypes.HANDLE,
-                                 wintypes.DWORD, wintypes.LPCWSTR]
+    _SHGetFolderPath.argtypes = [wintypes.HWND, ctypes.c_int, wintypes.HANDLE, wintypes.DWORD, wintypes.LPCWSTR]
 
     path_buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
     _SHGetFolderPath(0, CSIDL_COMMON_APPDATA, 0, 0, path_buf)
@@ -68,21 +65,21 @@ def _windows_commondata_path():
 
 def _windows_config_path():
     common_data = _windows_commondata_path()
-    path = os.path.join(common_data, 'Datadog', DATADOG_CONF)
+    path = os.path.join(common_data, "Datadog", DATADOG_CONF)
     if os.path.exists(path):
         return path
     raise PathNotFound(path)
 
 
 def _unix_config_path():
-    path = os.path.join('/etc/dd-agent', DATADOG_CONF)
+    path = os.path.join("/etc/dd-agent", DATADOG_CONF)
     if os.path.exists(path):
         return path
     raise PathNotFound(path)
 
 
 def _mac_config_path():
-    path = os.path.join('~/.datadog-agent/agent', DATADOG_CONF)
+    path = os.path.join("~/.datadog-agent/agent", DATADOG_CONF)
     path = os.path.expanduser(path)
     if os.path.exists(path):
         return path
@@ -98,9 +95,9 @@ def get_config_path(cfg_path=None, os_name=None):
         os_name = get_os()
 
     # Check for an OS-specific path, continue on not-found exceptions
-    if os_name == 'windows':
+    if os_name == "windows":
         return _windows_config_path()
-    elif os_name == 'mac':
+    elif os_name == "mac":
         return _mac_config_path()
     else:
         return _unix_config_path()
@@ -124,8 +121,8 @@ def get_config(cfg_path=None, options=None):
                 config.readfp(skip_leading_wsp(config_file))
 
         # bulk import
-        for option in config.options('Main'):
-            agentConfig[option] = config.get('Main', option)
+        for option in config.options("Main"):
+            agentConfig[option] = config.get("Main", option)
 
     except Exception:
         raise CfgNotFound

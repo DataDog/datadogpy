@@ -1,17 +1,29 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
-from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
-    UpdatableAPIResource, ListableAPIResource, DeletableAPIResource, \
-    ActionAPIResource
+from datadog.api.resources import (
+    GetableAPIResource,
+    CreateableAPIResource,
+    UpdatableAPIResource,
+    ListableAPIResource,
+    DeletableAPIResource,
+    ActionAPIResource,
+)
 
 
-class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
-              ListableAPIResource, DeletableAPIResource, ActionAPIResource):
+class Monitor(
+    GetableAPIResource,
+    CreateableAPIResource,
+    UpdatableAPIResource,
+    ListableAPIResource,
+    DeletableAPIResource,
+    ActionAPIResource,
+):
     """
     A wrapper around Monitor HTTP API.
     """
-    _resource_name = 'monitor'
+
+    _resource_name = "monitor"
 
     @classmethod
     def get(cls, id, **params):
@@ -27,8 +39,8 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
 
         :returns: Dictionary representing the API's JSON response
         """
-        if 'group_states' in params and isinstance(params['group_states'], list):
-            params['group_states'] = ','.join(params['group_states'])
+        if "group_states" in params and isinstance(params["group_states"], list):
+            params["group_states"] = ",".join(params["group_states"])
 
         return super(Monitor, cls).get(id, **params)
 
@@ -53,9 +65,9 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
 
         :returns: Dictionary representing the API's JSON response
         """
-        for p in ['group_states', 'tags', 'monitor_tags']:
+        for p in ["group_states", "tags", "monitor_tags"]:
             if p in params and isinstance(params[p], list):
-                params[p] = ','.join(params[p])
+                params[p] = ",".join(params[p])
 
         return super(Monitor, cls).get_all(**params)
 
@@ -73,7 +85,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Monitor, cls)._trigger_class_action('POST', 'mute', id, **body)
+        return super(Monitor, cls)._trigger_class_action("POST", "mute", id, **body)
 
     @classmethod
     def unmute(cls, id, **body):
@@ -88,7 +100,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Monitor, cls)._trigger_class_action('POST', 'unmute', id, **body)
+        return super(Monitor, cls)._trigger_class_action("POST", "unmute", id, **body)
 
     @classmethod
     def mute_all(cls):
@@ -97,7 +109,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Monitor, cls)._trigger_class_action('POST', 'mute_all')
+        return super(Monitor, cls)._trigger_class_action("POST", "mute_all")
 
     @classmethod
     def unmute_all(cls):
@@ -106,7 +118,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Monitor, cls)._trigger_class_action('POST', 'unmute_all')
+        return super(Monitor, cls)._trigger_class_action("POST", "unmute_all")
 
     @classmethod
     def search(cls, **params):
@@ -115,7 +127,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Monitor, cls)._trigger_class_action('GET', 'search', params=params)
+        return super(Monitor, cls)._trigger_class_action("GET", "search", params=params)
 
     @classmethod
     def search_groups(cls, **params):
@@ -124,7 +136,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Monitor, cls)._trigger_class_action('GET', 'groups/search', params=params)
+        return super(Monitor, cls)._trigger_class_action("GET", "groups/search", params=params)
 
     @classmethod
     def can_delete(cls, **params):
@@ -133,7 +145,7 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Monitor, cls)._trigger_class_action('GET', 'can_delete', params=params)
+        return super(Monitor, cls)._trigger_class_action("GET", "can_delete", params=params)
 
     @classmethod
     def validate(cls, **body):
@@ -142,4 +154,4 @@ class Monitor(GetableAPIResource, CreateableAPIResource, UpdatableAPIResource,
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Monitor, cls)._trigger_class_action('POST', 'validate', **body)
+        return super(Monitor, cls)._trigger_class_action("POST", "validate", **body)

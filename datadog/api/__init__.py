@@ -6,11 +6,11 @@
 from typing import Optional
 
 # API settings
-_api_key = None          # type: Optional[str]
+_api_key = None  # type: Optional[str]
 _application_key = None  # type: Optional[str]
-_api_version = 'v1'
-_api_host = None         # type: Optional[str]
-_host_name = None        # type: Optional[str]
+_api_version = "v1"
+_api_host = None  # type: Optional[str]
+_host_name = None  # type: Optional[str]
 _hostname_from_config = True
 _cacert = True
 

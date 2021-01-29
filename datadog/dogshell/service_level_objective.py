@@ -37,9 +37,7 @@ class ServiceLevelObjectiveClient(object):
             choices=["metric", "monitor"],
         )
         create_parser.add_argument("--name", help="name of the SLO", default=None)
-        create_parser.add_argument(
-            "--description", help="description of the SLO", default=None
-        )
+        create_parser.add_argument("--description", help="description of the SLO", default=None)
         create_parser.add_argument(
             "--tags",
             help="comma-separated list of tags",
@@ -66,9 +64,7 @@ class ServiceLevelObjectiveClient(object):
             default=None,
             type=set_of_ints,
         )
-        create_parser.add_argument(
-            "--monitor_search", help="monitor search terms to use", default=None
-        )
+        create_parser.add_argument("--monitor_search", help="monitor search terms to use", default=None)
         create_parser.add_argument(
             "--groups",
             help="for a single monitor you can specify the specific groups as a pipe (|) delimited string",
@@ -77,27 +73,19 @@ class ServiceLevelObjectiveClient(object):
         )
         create_parser.set_defaults(func=cls._create)
 
-        file_create_parser = verb_parsers.add_parser(
-            "fcreate", help="Create a SLO from file"
-        )
-        file_create_parser.add_argument(
-            "file", help="json file holding all details", type=argparse.FileType("r")
-        )
+        file_create_parser = verb_parsers.add_parser("fcreate", help="Create a SLO from file")
+        file_create_parser.add_argument("file", help="json file holding all details", type=argparse.FileType("r"))
         file_create_parser.set_defaults(func=cls._file_create)
 
         update_parser = verb_parsers.add_parser("update", help="Update existing SLO")
-        update_parser.add_argument(
-            "slo_id", help="SLO to replace with the new definition"
-        )
+        update_parser.add_argument("slo_id", help="SLO to replace with the new definition")
         update_parser.add_argument(
             "--type",
             help="type of the SLO (must specify it's original type)",
             choices=["metric", "monitor"],
         )
         update_parser.add_argument("--name", help="name of the SLO", default=None)
-        update_parser.add_argument(
-            "--description", help="description of the SLO", default=None
-        )
+        update_parser.add_argument("--description", help="description of the SLO", default=None)
         update_parser.add_argument(
             "--thresholds",
             help="comma separated list of <timeframe>:<target>[:<warning>[:<target_display>[:<warning_display>]]",
@@ -124,9 +112,7 @@ class ServiceLevelObjectiveClient(object):
             default=[],
             type=list,
         )
-        update_parser.add_argument(
-            "--monitor_search", help="monitor search terms to use", default=None
-        )
+        update_parser.add_argument("--monitor_search", help="monitor search terms to use", default=None)
         update_parser.add_argument(
             "--groups",
             help="for a single monitor you can specify the specific groups as a pipe (|) delimited string",
@@ -134,35 +120,23 @@ class ServiceLevelObjectiveClient(object):
         )
         update_parser.set_defaults(func=cls._update)
 
-        file_update_parser = verb_parsers.add_parser(
-            "fupdate", help="Update existing SLO from file"
-        )
-        file_update_parser.add_argument(
-            "file", help="json file holding all details", type=argparse.FileType("r")
-        )
+        file_update_parser = verb_parsers.add_parser("fupdate", help="Update existing SLO from file")
+        file_update_parser.add_argument("file", help="json file holding all details", type=argparse.FileType("r"))
         file_update_parser.set_defaults(func=cls._file_update)
 
         show_parser = verb_parsers.add_parser("show", help="Show a SLO definition")
         show_parser.add_argument("slo_id", help="SLO to show")
         show_parser.set_defaults(func=cls._show)
 
-        show_all_parser = verb_parsers.add_parser(
-            "show_all", help="Show a list of all SLOs"
-        )
-        show_all_parser.add_argument(
-            "--query", help="string to filter SLOs by query (see UI or documentation)"
-        )
+        show_all_parser = verb_parsers.add_parser("show_all", help="Show a list of all SLOs")
+        show_all_parser.add_argument("--query", help="string to filter SLOs by query (see UI or documentation)")
         show_all_parser.add_argument(
             "--slo_ids",
             help="comma separated list indicating what SLO IDs to get at once",
             type=comma_set,
         )
-        show_all_parser.add_argument(
-            "--offset", help="offset of query pagination", default=0
-        )
-        show_all_parser.add_argument(
-            "--limit", help="limit of query pagination", default=100
-        )
+        show_all_parser.add_argument("--offset", help="offset of query pagination", default=0)
+        show_all_parser.add_argument("--limit", help="limit of query pagination", default=100)
         show_all_parser.set_defaults(func=cls._show_all)
 
         delete_parser = verb_parsers.add_parser("delete", help="Delete a SLO")
@@ -170,14 +144,10 @@ class ServiceLevelObjectiveClient(object):
         delete_parser.set_defaults(func=cls._delete)
 
         delete_many_parser = verb_parsers.add_parser("delete_many", help="Delete a SLO")
-        delete_many_parser.add_argument(
-            "slo_ids", help="comma separated list of SLO IDs to delete", type=comma_set
-        )
+        delete_many_parser.add_argument("slo_ids", help="comma separated list of SLO IDs to delete", type=comma_set)
         delete_many_parser.set_defaults(func=cls._delete_many)
 
-        delete_timeframe_parser = verb_parsers.add_parser(
-            "delete_many", help="Delete a SLO timeframe"
-        )
+        delete_timeframe_parser = verb_parsers.add_parser("delete_many", help="Delete a SLO timeframe")
         delete_timeframe_parser.add_argument("slo_id", help="SLO ID to update")
         delete_timeframe_parser.add_argument(
             "timeframes",
@@ -186,12 +156,8 @@ class ServiceLevelObjectiveClient(object):
         )
         delete_timeframe_parser.set_defaults(func=cls._delete_timeframe)
 
-        can_delete_parser = verb_parsers.add_parser(
-            "can_delete", help="Check if can delete SLOs"
-        )
-        can_delete_parser.add_argument(
-            "slo_ids", help="comma separated list of SLO IDs to delete", type=comma_set
-        )
+        can_delete_parser = verb_parsers.add_parser("can_delete", help="Check if can delete SLOs")
+        can_delete_parser.add_argument("slo_ids", help="comma separated list of SLO IDs to delete", type=comma_set)
         can_delete_parser.set_defaults(func=cls._can_delete)
 
         history_parser = verb_parsers.add_parser("history", help="Get the SLO history")
