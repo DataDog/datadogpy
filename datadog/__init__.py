@@ -25,25 +25,26 @@ from datadog.util.hostname import get_hostname
 from datadog.version import __version__  # noqa
 
 # Loggers
-logging.getLogger('datadog.api').addHandler(NullHandler())
-logging.getLogger('datadog.dogstatsd').addHandler(NullHandler())
-logging.getLogger('datadog.threadstats').addHandler(NullHandler())
+logging.getLogger("datadog.api").addHandler(NullHandler())
+logging.getLogger("datadog.dogstatsd").addHandler(NullHandler())
+logging.getLogger("datadog.threadstats").addHandler(NullHandler())
 
 
-def initialize(api_key=None,                    # type: Optional[str]
-               app_key=None,                    # type: Optional[str]
-               host_name=None,                  # type: Optional[str]
-               api_host=None,                   # type: Optional[str]
-               statsd_host=None,                # type: Optional[str]
-               statsd_port=None,                # type: Optional[int]
-               statsd_use_default_route=False,  # type: bool
-               statsd_socket_path=None,         # type: Optional[str]
-               statsd_namespace=None,           # type: Optional[str]
-               statsd_constant_tags=None,       # type: Optional[List[str]]
-               return_raw_response=False,       # type: bool
-               hostname_from_config=True,       # type: bool
-               **kwargs                         # type: Any
-               ):
+def initialize(
+    api_key=None,  # type: Optional[str]
+    app_key=None,  # type: Optional[str]
+    host_name=None,  # type: Optional[str]
+    api_host=None,  # type: Optional[str]
+    statsd_host=None,  # type: Optional[str]
+    statsd_port=None,  # type: Optional[int]
+    statsd_use_default_route=False,  # type: bool
+    statsd_socket_path=None,  # type: Optional[str]
+    statsd_namespace=None,  # type: Optional[str]
+    statsd_constant_tags=None,  # type: Optional[List[str]]
+    return_raw_response=False,  # type: bool
+    hostname_from_config=True,  # type: bool
+    **kwargs  # type: Any
+):
     # type: (...) -> None
     """
     Initialize and configure Datadog.api and Datadog.statsd modules
@@ -97,15 +98,13 @@ def initialize(api_key=None,                    # type: Optional[str]
     :type hostname_from_config: boolean
     """
     # API configuration
-    api._api_key = api_key or api._api_key or os.environ.get('DATADOG_API_KEY', os.environ.get('DD_API_KEY'))
+    api._api_key = api_key or api._api_key or os.environ.get("DATADOG_API_KEY", os.environ.get("DD_API_KEY"))
     api._application_key = (
-        app_key or
-        api._application_key or
-        os.environ.get('DATADOG_APP_KEY', os.environ.get('DD_APP_KEY'))
+        app_key or api._application_key or os.environ.get("DATADOG_APP_KEY", os.environ.get("DD_APP_KEY"))
     )
     api._hostname_from_config = hostname_from_config
     api._host_name = host_name or api._host_name or get_hostname(hostname_from_config)
-    api._api_host = api_host or api._api_host or os.environ.get('DATADOG_HOST', 'https://api.datadoghq.com')
+    api._api_host = api_host or api._api_host or os.environ.get("DATADOG_HOST", "https://api.datadoghq.com")
 
     # Statsd configuration
     # ...overrides the default `statsd` instance attributes

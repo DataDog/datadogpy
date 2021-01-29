@@ -12,7 +12,7 @@ pr:
 jobs:
 - job: UnitTests
   pool:
-    vmImage: "Ubuntu-16.04"
+    vmImage: "Ubuntu-20.04"
   strategy:
     matrix:
       Py27:
@@ -36,11 +36,14 @@ jobs:
       Pypy3:
         PYTHON_VERSION: "pypy3"
         TOXENV: "pypy3"
+      Format:
+        PYTHON_VERSION: "3.8"
+        TOXENV: "black"
       Lint:
-        PYTHON_VERSION: "3.5"
+        PYTHON_VERSION: "3.8"
         TOXENV: "flake8"
       Mypy:
-        PYTHON_VERSION: "3.5"
+        PYTHON_VERSION: "3.8"
         TOXENV: "mypy"
   steps:
   - task: UsePythonVersion@0

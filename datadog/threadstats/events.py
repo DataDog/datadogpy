@@ -12,6 +12,7 @@ class EventsAggregator(object):
     """
     A simple event aggregator
     """
+
     def __init__(self):
         self._events = []
 

@@ -12,8 +12,9 @@ class CreateableAPIResource(object):
     """
     Creatable API Resource
     """
+
     @classmethod
-    def create(cls, attach_host_name=False, method='POST', id=None, params=None, **body):
+    def create(cls, attach_host_name=False, method="POST", id=None, params=None, **body):
         """
         Create a new API resource object
 
@@ -38,25 +39,22 @@ class CreateableAPIResource(object):
             params = {}
 
         path = cls._resource_name
-        api_version = getattr(cls, '_api_version', None)
+        api_version = getattr(cls, "_api_version", None)
 
-        if method == 'GET':
-            return APIClient.submit('GET', path, api_version, **body)
+        if method == "GET":
+            return APIClient.submit("GET", path, api_version, **body)
         if id is None:
-            return APIClient.submit('POST', path, api_version, body,
-                                    attach_host_name=attach_host_name, **params)
+            return APIClient.submit("POST", path, api_version, body, attach_host_name=attach_host_name, **params)
 
-        path = '{resource_name}/{resource_id}'.format(
-            resource_name=cls._resource_name,
-            resource_id=id
-        )
-        return APIClient.submit('POST', path, api_version, body, attach_host_name=attach_host_name, **params)
+        path = "{resource_name}/{resource_id}".format(resource_name=cls._resource_name, resource_id=id)
+        return APIClient.submit("POST", path, api_version, body, attach_host_name=attach_host_name, **params)
 
 
 class SendableAPIResource(object):
     """
     Fork of CreateableAPIResource class with different method names
     """
+
     @classmethod
     def send(cls, attach_host_name=False, id=None, compress_payload=False, **body):
         """
@@ -76,24 +74,21 @@ class SendableAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        api_version = getattr(cls, '_api_version', None)
+        api_version = getattr(cls, "_api_version", None)
 
         if id is None:
             return APIClient.submit(
-                'POST',
+                "POST",
                 cls._resource_name,
                 api_version,
                 body,
                 attach_host_name=attach_host_name,
-                compress_payload=compress_payload
+                compress_payload=compress_payload,
             )
 
-        path = '{resource_name}/{resource_id}'.format(
-            resource_name=cls._resource_name,
-            resource_id=id
-        )
+        path = "{resource_name}/{resource_id}".format(resource_name=cls._resource_name, resource_id=id)
         return APIClient.submit(
-            'POST', path, api_version, body, attach_host_name=attach_host_name, compress_payload=compress_payload
+            "POST", path, api_version, body, attach_host_name=attach_host_name, compress_payload=compress_payload
         )
 
 
@@ -101,6 +96,7 @@ class UpdatableAPIResource(object):
     """
     Updatable API Resource
     """
+
     @classmethod
     def update(cls, id, params=None, **body):
         """
@@ -117,19 +113,17 @@ class UpdatableAPIResource(object):
         if params is None:
             params = {}
 
-        path = '{resource_name}/{resource_id}'.format(
-            resource_name=cls._resource_name,
-            resource_id=id
-        )
-        api_version = getattr(cls, '_api_version', None)
+        path = "{resource_name}/{resource_id}".format(resource_name=cls._resource_name, resource_id=id)
+        api_version = getattr(cls, "_api_version", None)
 
-        return APIClient.submit('PUT', path, api_version, body, **params)
+        return APIClient.submit("PUT", path, api_version, body, **params)
 
 
 class CustomUpdatableAPIResource(object):
     """
     Updatable API Resource with custom HTTP Verb
     """
+
     @classmethod
     def update(cls, method=None, id=None, params=None, **body):
         """
@@ -151,15 +145,12 @@ class CustomUpdatableAPIResource(object):
         """
 
         if method is None:
-            method = 'PUT'
+            method = "PUT"
         if params is None:
             params = {}
 
-        path = '{resource_name}/{resource_id}'.format(
-            resource_name=cls._resource_name,
-            resource_id=id
-        )
-        api_version = getattr(cls, '_api_version', None)
+        path = "{resource_name}/{resource_id}".format(resource_name=cls._resource_name, resource_id=id)
+        api_version = getattr(cls, "_api_version", None)
 
         return APIClient.submit(method, path, api_version, body, **params)
 
@@ -168,6 +159,7 @@ class DeletableAPIResource(object):
     """
     Deletable API Resource
     """
+
     @classmethod
     def delete(cls, id, **params):
         """
@@ -178,19 +170,17 @@ class DeletableAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        path = '{resource_name}/{resource_id}'.format(
-            resource_name=cls._resource_name,
-            resource_id=id
-        )
-        api_version = getattr(cls, '_api_version', None)
+        path = "{resource_name}/{resource_id}".format(resource_name=cls._resource_name, resource_id=id)
+        api_version = getattr(cls, "_api_version", None)
 
-        return APIClient.submit('DELETE', path, api_version, **params)
+        return APIClient.submit("DELETE", path, api_version, **params)
 
 
 class GetableAPIResource(object):
     """
     Getable API Resource
     """
+
     @classmethod
     def get(cls, id, **params):
         """
@@ -204,19 +194,17 @@ class GetableAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        path = '{resource_name}/{resource_id}'.format(
-            resource_name=cls._resource_name,
-            resource_id=id
-        )
-        api_version = getattr(cls, '_api_version', None)
+        path = "{resource_name}/{resource_id}".format(resource_name=cls._resource_name, resource_id=id)
+        api_version = getattr(cls, "_api_version", None)
 
-        return APIClient.submit('GET', path, api_version, **params)
+        return APIClient.submit("GET", path, api_version, **params)
 
 
 class ListableAPIResource(object):
     """
     Listable API Resource
     """
+
     @classmethod
     def get_all(cls, **params):
         """
@@ -227,9 +215,9 @@ class ListableAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        api_version = getattr(cls, '_api_version', None)
+        api_version = getattr(cls, "_api_version", None)
 
-        return APIClient.submit('GET', cls._resource_name, api_version, **params)
+        return APIClient.submit("GET", cls._resource_name, api_version, **params)
 
 
 class ListableAPISubResource(object):
@@ -251,14 +239,12 @@ class ListableAPISubResource(object):
         :returns: Dictionary representing the API's JSON response
         """
 
-        path = '{resource_name}/{resource_id}/{sub_resource_name}'.format(
-            resource_name=cls._resource_name,
-            resource_id=id,
-            sub_resource_name=cls._sub_resource_name
+        path = "{resource_name}/{resource_id}/{sub_resource_name}".format(
+            resource_name=cls._resource_name, resource_id=id, sub_resource_name=cls._sub_resource_name
         )
-        api_version = getattr(cls, '_api_version', None)
+        api_version = getattr(cls, "_api_version", None)
 
-        return APIClient.submit('GET', path, api_version, **params)
+        return APIClient.submit("GET", path, api_version, **params)
 
 
 class AddableAPISubResource(object):
@@ -285,14 +271,12 @@ class AddableAPISubResource(object):
         if params is None:
             params = {}
 
-        path = '{resource_name}/{resource_id}/{sub_resource_name}'.format(
-            resource_name=cls._resource_name,
-            resource_id=id,
-            sub_resource_name=cls._sub_resource_name
+        path = "{resource_name}/{resource_id}/{sub_resource_name}".format(
+            resource_name=cls._resource_name, resource_id=id, sub_resource_name=cls._sub_resource_name
         )
-        api_version = getattr(cls, '_api_version', None)
+        api_version = getattr(cls, "_api_version", None)
 
-        return APIClient.submit('POST', path, api_version, body, **params)
+        return APIClient.submit("POST", path, api_version, body, **params)
 
 
 class UpdatableAPISubResource(object):
@@ -319,14 +303,12 @@ class UpdatableAPISubResource(object):
         if params is None:
             params = {}
 
-        path = '{resource_name}/{resource_id}/{sub_resource_name}'.format(
-            resource_name=cls._resource_name,
-            resource_id=id,
-            sub_resource_name=cls._sub_resource_name
+        path = "{resource_name}/{resource_id}/{sub_resource_name}".format(
+            resource_name=cls._resource_name, resource_id=id, sub_resource_name=cls._sub_resource_name
         )
-        api_version = getattr(cls, '_api_version', None)
+        api_version = getattr(cls, "_api_version", None)
 
-        return APIClient.submit('PUT', path, api_version, body, **params)
+        return APIClient.submit("PUT", path, api_version, body, **params)
 
 
 class DeletableAPISubResource(object):
@@ -353,20 +335,19 @@ class DeletableAPISubResource(object):
         if params is None:
             params = {}
 
-        path = '{resource_name}/{resource_id}/{sub_resource_name}'.format(
-            resource_name=cls._resource_name,
-            resource_id=id,
-            sub_resource_name=cls._sub_resource_name
+        path = "{resource_name}/{resource_id}/{sub_resource_name}".format(
+            resource_name=cls._resource_name, resource_id=id, sub_resource_name=cls._sub_resource_name
         )
-        api_version = getattr(cls, '_api_version', None)
+        api_version = getattr(cls, "_api_version", None)
 
-        return APIClient.submit('DELETE', path, api_version, body, **params)
+        return APIClient.submit("DELETE", path, api_version, body, **params)
 
 
 class SearchableAPIResource(object):
     """
     Fork of ListableAPIResource class with different method names
     """
+
     @classmethod
     def _search(cls, **params):
         """
@@ -377,15 +358,16 @@ class SearchableAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        api_version = getattr(cls, '_api_version', None)
+        api_version = getattr(cls, "_api_version", None)
 
-        return APIClient.submit('GET', cls._resource_name, api_version, **params)
+        return APIClient.submit("GET", cls._resource_name, api_version, **params)
 
 
 class ActionAPIResource(object):
     """
     Actionable API Resource
     """
+
     @classmethod
     def _trigger_class_action(cls, method, action_name, id=None, params=None, **body):
         """
@@ -411,18 +393,13 @@ class ActionAPIResource(object):
         if params is None:
             params = {}
 
-        api_version = getattr(cls, '_api_version', None)
+        api_version = getattr(cls, "_api_version", None)
 
         if id is None:
-            path = '{resource_name}/{action_name}'.format(
-                resource_name=cls._resource_name,
-                action_name=action_name
-            )
+            path = "{resource_name}/{action_name}".format(resource_name=cls._resource_name, action_name=action_name)
         else:
-            path = '{resource_name}/{resource_id}/{action_name}'.format(
-                resource_name=cls._resource_name,
-                resource_id=id,
-                action_name=action_name
+            path = "{resource_name}/{resource_id}/{action_name}".format(
+                resource_name=cls._resource_name, resource_id=id, action_name=action_name
             )
         if method == "GET":
             # Do not add body to GET requests, it causes 400 Bad request responses on EU site
@@ -448,14 +425,11 @@ class ActionAPIResource(object):
 
         :returns: Dictionary representing the API's JSON response
         """
-        api_version = getattr(cls, '_api_version', None)
+        api_version = getattr(cls, "_api_version", None)
         if id is None:
             return APIClient.submit(method, name, api_version, body)
 
-        path = '{action_name}/{resource_id}'.format(
-            action_name=name,
-            resource_id=id
-        )
+        path = "{action_name}/{resource_id}".format(action_name=name, resource_id=id)
         if method == "GET":
             # Do not add body to GET requests, it causes 400 Bad request responses on EU site
             body = None
@@ -486,14 +460,12 @@ class UpdatableAPISyntheticsSubResource(object):
         if params is None:
             params = {}
 
-        path = '{resource_name}/tests/{resource_id}/{sub_resource_name}'.format(
-            resource_name=cls._resource_name,
-            resource_id=id,
-            sub_resource_name=cls._sub_resource_name
+        path = "{resource_name}/tests/{resource_id}/{sub_resource_name}".format(
+            resource_name=cls._resource_name, resource_id=id, sub_resource_name=cls._sub_resource_name
         )
-        api_version = getattr(cls, '_api_version', None)
+        api_version = getattr(cls, "_api_version", None)
 
-        return APIClient.submit('PUT', path, api_version, body, **params)
+        return APIClient.submit("PUT", path, api_version, body, **params)
 
 
 class UpdatableAPISyntheticsResource(object):
@@ -517,19 +489,17 @@ class UpdatableAPISyntheticsResource(object):
         if params is None:
             params = {}
 
-        path = '{resource_name}/tests/{resource_id}'.format(
-            resource_name=cls._resource_name,
-            resource_id=id
-        )
-        api_version = getattr(cls, '_api_version', None)
+        path = "{resource_name}/tests/{resource_id}".format(resource_name=cls._resource_name, resource_id=id)
+        api_version = getattr(cls, "_api_version", None)
 
-        return APIClient.submit('PUT', path, api_version, body, **params)
+        return APIClient.submit("PUT", path, api_version, body, **params)
 
 
 class ActionAPISyntheticsResource(object):
     """
     Actionable Synthetics API Resource
     """
+
     @classmethod
     def _trigger_synthetics_class_action(cls, method, name, id=None, params=None, **body):
         """
@@ -555,18 +525,13 @@ class ActionAPISyntheticsResource(object):
         if params is None:
             params = {}
 
-        api_version = getattr(cls, '_api_version', None)
+        api_version = getattr(cls, "_api_version", None)
 
         if id is None:
-            path = '{resource_name}/{action_name}'.format(
-                resource_name=cls._resource_name,
-                action_name=name
-            )
+            path = "{resource_name}/{action_name}".format(resource_name=cls._resource_name, action_name=name)
         else:
-            path = '{resource_name}/{action_name}/{resource_id}'.format(
-                resource_name=cls._resource_name,
-                resource_id=id,
-                action_name=name
+            path = "{resource_name}/{action_name}/{resource_id}".format(
+                resource_name=cls._resource_name, resource_id=id, action_name=name
             )
         if method == "GET":
             # Do not add body to GET requests, it causes 400 Bad request responses on EU site

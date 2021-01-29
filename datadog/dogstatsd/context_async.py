@@ -44,8 +44,7 @@ def _get_wrapped_co(self, func):
 
 def _get_wrapped_co(self, func):
     raise NotImplementedError(
-        u"Decorator `timed` compatibility with coroutine functions"
-        u" requires Python 3.5 or higher."
+        u"Decorator `timed` compatibility with coroutine functions" u" requires Python 3.5 or higher."
     )
 
 

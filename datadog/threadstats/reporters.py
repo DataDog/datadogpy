@@ -10,13 +10,11 @@ from datadog import api
 
 
 class Reporter(object):
-
     def flush(self, metrics):
         raise NotImplementedError()
 
 
 class HttpReporter(Reporter):
-
     def __init__(self, compress_payload=False):
         self.compress_payload = compress_payload
 
@@ -32,6 +30,5 @@ class HttpReporter(Reporter):
 
 
 class GraphiteReporter(Reporter):
-
     def flush(self, metrics):
         pass

@@ -3,6 +3,7 @@
 # Copyright 2015-Present Datadog, Inc
 # stdlib
 from functools import wraps
+
 try:
     from time import monotonic  # type: ignore[attr-defined]
 except ImportError:
@@ -18,6 +19,7 @@ class TimedContextManagerDecorator(object):
     A context manager and a decorator which will report the elapsed time in
     the context OR in a function call.
     """
+
     def __init__(self, statsd, metric=None, tags=None, sample_rate=1, use_ms=None):
         self.statsd = statsd
         self.timing_func = statsd.timing
@@ -34,7 +36,7 @@ class TimedContextManagerDecorator(object):
         Default to the function name if metric was not provided.
         """
         if not self.metric:
-            self.metric = '%s.%s' % (func.__module__, func.__name__)
+            self.metric = "%s.%s" % (func.__module__, func.__name__)
 
         # Coroutines
         if iscoroutinefunction(func):
@@ -48,6 +50,7 @@ class TimedContextManagerDecorator(object):
                 return func(*args, **kwargs)
             finally:
                 self._send(start)
+
         return wrapped
 
     def __enter__(self):
@@ -79,6 +82,7 @@ class DistributedContextManagerDecorator(TimedContextManagerDecorator):
     A context manager and a decorator which will report the elapsed time in
     the context OR in a function call using the custom distribution metric.
     """
+
     def __init__(self, statsd, metric=None, tags=None, sample_rate=1, use_ms=None):
         super(DistributedContextManagerDecorator, self).__init__(statsd, metric, tags, sample_rate, use_ms)
         self.timing_func = statsd.distribution

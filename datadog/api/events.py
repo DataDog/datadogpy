@@ -2,8 +2,7 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
 from datadog.api.exceptions import ApiError
-from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
-    SearchableAPIResource
+from datadog.api.resources import GetableAPIResource, CreateableAPIResource, SearchableAPIResource
 from datadog.util.compat import iteritems
 
 
@@ -11,8 +10,9 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
     """
     A wrapper around Event HTTP API.
     """
-    _resource_name = 'events'
-    _timestamp_keys = set(['start', 'end'])
+
+    _resource_name = "events"
+    _timestamp_keys = set(["start", "end"])
 
     @classmethod
     def create(cls, attach_host_name=True, **params):
@@ -83,6 +83,7 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
         >>> api.Event.query(start=1313769783, end=1419436870, priority="normal", \
             tags=["application:web"])
         """
+
         def timestamp_to_integer(k, v):
             if k in cls._timestamp_keys:
                 return int(v)

@@ -8,7 +8,8 @@ from datadog.api.resources import SendableAPIResource
 
 class Distribution(SendableAPIResource):
     """A wrapper around Distribution HTTP API"""
-    _resource_name = 'distribution_points'
+
+    _resource_name = "distribution_points"
 
     @classmethod
     def send(cls, distributions=None, attach_host_name=True, compress_payload=False, **distribution):
@@ -33,11 +34,11 @@ class Distribution(SendableAPIResource):
             # Multiple distributions are sent
             for d in distributions:
                 if isinstance(d, dict):
-                    d['points'] = format_points(d['points'])
+                    d["points"] = format_points(d["points"])
             series_dict = {"series": distributions}
         else:
             # One distribution is sent
-            distribution['points'] = format_points(distribution['points'])
+            distribution["points"] = format_points(distribution["points"])
             series_dict = {"series": [distribution]}
         return super(Distribution, cls).send(
             attach_host_name=attach_host_name, compress_payload=compress_payload, **series_dict

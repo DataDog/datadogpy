@@ -1,19 +1,30 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
-from datadog.api.resources import GetableAPIResource, CreateableAPIResource, \
-    DeletableAPIResource, UpdatableAPIResource, UpdatableAPISubResource, \
-    ListableAPISubResource
+from datadog.api.resources import (
+    GetableAPIResource,
+    CreateableAPIResource,
+    DeletableAPIResource,
+    UpdatableAPIResource,
+    UpdatableAPISubResource,
+    ListableAPISubResource,
+)
 
 
-class AwsIntegration(GetableAPIResource, CreateableAPIResource,
-                     DeletableAPIResource, ListableAPISubResource, UpdatableAPIResource,
-                     UpdatableAPISubResource):
+class AwsIntegration(
+    GetableAPIResource,
+    CreateableAPIResource,
+    DeletableAPIResource,
+    ListableAPISubResource,
+    UpdatableAPIResource,
+    UpdatableAPISubResource,
+):
     """
     A wrapper around AWS Integration API.
     """
-    _resource_name = 'integration'
-    _resource_id = 'aws'
+
+    _resource_name = "integration"
+    _resource_id = "aws"
 
     @classmethod
     def list(cls, **params):
@@ -185,20 +196,20 @@ class AwsIntegration(GetableAPIResource, CreateableAPIResource,
         excluded_regions=excluded_regions)
         """
         params = {}
-        if body.get('account_id') and body.get('role_name'):
-            params['account_id'] = body.pop('account_id')
-            params['role_name'] = body.pop('role_name')
-            if body.get('new_account_id'):
-                body['account_id'] = body.pop('new_account_id')
-            if body.get('new_role_name'):
-                body['role_name'] = body.pop('new_role_name')
-        if body.get('access_key_id') and body.get('secret_access_key'):
-            params['access_key_id'] = body.pop('access_key_id')
-            params['secret_access_key'] = body.pop('secret_access_key')
-            if body.get('new_access_key_id'):
-                body['access_key_id'] = body.pop('new_access_key_id')
-            if body.get('new_secret_access_key'):
-                body['secret_access_key'] = body.pop('new_secret_access_key')
+        if body.get("account_id") and body.get("role_name"):
+            params["account_id"] = body.pop("account_id")
+            params["role_name"] = body.pop("role_name")
+            if body.get("new_account_id"):
+                body["account_id"] = body.pop("new_account_id")
+            if body.get("new_role_name"):
+                body["role_name"] = body.pop("new_role_name")
+        if body.get("access_key_id") and body.get("secret_access_key"):
+            params["access_key_id"] = body.pop("access_key_id")
+            params["secret_access_key"] = body.pop("secret_access_key")
+            if body.get("new_access_key_id"):
+                body["access_key_id"] = body.pop("new_access_key_id")
+            if body.get("new_secret_access_key"):
+                body["secret_access_key"] = body.pop("new_secret_access_key")
         return super(AwsIntegration, cls).update(id=cls._resource_id, params=params, **body)
 
     @classmethod
@@ -220,7 +231,7 @@ class AwsIntegration(GetableAPIResource, CreateableAPIResource,
 
         >>> api.AwsIntegration.list_namespace_rules()
         """
-        cls._sub_resource_name = 'available_namespace_rules'
+        cls._sub_resource_name = "available_namespace_rules"
         return super(AwsIntegration, cls).get_items(id=cls._resource_id, **params)
 
     @classmethod
@@ -233,5 +244,5 @@ class AwsIntegration(GetableAPIResource, CreateableAPIResource,
 
         >>> api.AwsIntegration.generate_new_external_id()
         """
-        cls._sub_resource_name = 'generate_new_external_id'
+        cls._sub_resource_name = "generate_new_external_id"
         return super(AwsIntegration, cls).update_items(id=cls._resource_id, **params)

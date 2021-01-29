@@ -31,7 +31,7 @@ class Metric(object):
 class Set(Metric):
     """ A set metric. """
 
-    stats_tag = 'g'
+    stats_tag = "g"
 
     def __init__(self, name, tags, host):
         self.name = name
@@ -43,14 +43,13 @@ class Set(Metric):
         self.set.add(value)
 
     def flush(self, timestamp, interval):
-        return [(timestamp, len(self.set), self.name, self.tags,
-                self.host, MetricType.Gauge, interval)]
+        return [(timestamp, len(self.set), self.name, self.tags, self.host, MetricType.Gauge, interval)]
 
 
 class Gauge(Metric):
     """ A gauge metric. """
 
-    stats_tag = 'g'
+    stats_tag = "g"
 
     def __init__(self, name, tags, host):
         self.name = name
@@ -62,14 +61,13 @@ class Gauge(Metric):
         self.value = value
 
     def flush(self, timestamp, interval):
-        return [(timestamp, self.value, self.name, self.tags,
-                self.host, MetricType.Gauge, interval)]
+        return [(timestamp, self.value, self.name, self.tags, self.host, MetricType.Gauge, interval)]
 
 
 class Counter(Metric):
     """ A metric that tracks a counter value. """
 
-    stats_tag = 'c'
+    stats_tag = "c"
 
     def __init__(self, name, tags, host):
         self.name = name
@@ -82,14 +80,13 @@ class Counter(Metric):
 
     def flush(self, timestamp, interval):
         count = sum(self.count, 0)
-        return [(timestamp, count/float(interval), self.name,
-                self.tags, self.host, MetricType.Rate, interval)]
+        return [(timestamp, count / float(interval), self.name, self.tags, self.host, MetricType.Rate, interval)]
 
 
 class Distribution(Metric):
     """ A distribution metric. """
 
-    stats_tag = 'd'
+    stats_tag = "d"
 
     def __init__(self, name, tags, host):
         self.name = name
@@ -101,14 +98,13 @@ class Distribution(Metric):
         self.value.append(value)
 
     def flush(self, timestamp, interval):
-        return [(timestamp, self.value, self.name, self.tags,
-                self.host, MetricType.Distribution, interval)]
+        return [(timestamp, self.value, self.name, self.tags, self.host, MetricType.Distribution, interval)]
 
 
 class Histogram(Metric):
     """ A histogram metric. """
 
-    stats_tag = 'h'
+    stats_tag = "h"
 
     def __init__(self, name, tags, host):
         self.name = name
@@ -137,22 +133,25 @@ class Histogram(Metric):
         if not self.count:
             return []
         metrics = [
-            (timestamp, self.min, '%s.min' % self.name,
-             self.tags, self.host, MetricType.Gauge, interval),
-            (timestamp, self.max, '%s.max' % self.name,
-             self.tags, self.host, MetricType.Gauge, interval),
-            (timestamp, self.count/float(interval), '%s.count' % self.name,
-             self.tags, self.host, MetricType.Rate, interval),
-            (timestamp, self.average(), '%s.avg' % self.name,
-             self.tags, self.host, MetricType.Gauge, interval)
+            (timestamp, self.min, "%s.min" % self.name, self.tags, self.host, MetricType.Gauge, interval),
+            (timestamp, self.max, "%s.max" % self.name, self.tags, self.host, MetricType.Gauge, interval),
+            (
+                timestamp,
+                self.count / float(interval),
+                "%s.count" % self.name,
+                self.tags,
+                self.host,
+                MetricType.Rate,
+                interval,
+            ),
+            (timestamp, self.average(), "%s.avg" % self.name, self.tags, self.host, MetricType.Gauge, interval),
         ]
         length = len(self.samples)
         self.samples.sort()
         for p in self.percentiles:
             val = self.samples[int(round(p * length - 1))]
-            name = '%s.%spercentile' % (self.name, int(p * 100))
-            metrics.append((timestamp, val, name,
-                           self.tags, self.host, MetricType.Gauge, interval))
+            name = "%s.%spercentile" % (self.name, int(p * 100))
+            metrics.append((timestamp, val, name, self.tags, self.host, MetricType.Gauge, interval))
         return metrics
 
     def average(self):
@@ -166,7 +165,7 @@ class Timing(Histogram):
     Inherit from Histogram to workaround and support it in API mode
     """
 
-    stats_tag = 'ms'
+    stats_tag = "ms"
 
 
 class MetricsAggregator(object):
@@ -190,8 +189,8 @@ class MetricsAggregator(object):
 
     def flush(self, timestamp):
         """ Flush all metrics up to the given timestamp. """
-        if timestamp == float('inf'):
-            interval = float('inf')
+        if timestamp == float("inf"):
+            interval = float("inf")
         else:
             interval = timestamp - timestamp % self._roll_up_interval
 

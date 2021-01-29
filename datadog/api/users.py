@@ -1,20 +1,31 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
-from datadog.api.resources import ActionAPIResource, GetableAPIResource, \
-    CreateableAPIResource, UpdatableAPIResource, ListableAPIResource, \
-    DeletableAPIResource
+from datadog.api.resources import (
+    ActionAPIResource,
+    GetableAPIResource,
+    CreateableAPIResource,
+    UpdatableAPIResource,
+    ListableAPIResource,
+    DeletableAPIResource,
+)
 
 
-class User(ActionAPIResource, GetableAPIResource, CreateableAPIResource,
-           UpdatableAPIResource, ListableAPIResource,
-           DeletableAPIResource):
+class User(
+    ActionAPIResource,
+    GetableAPIResource,
+    CreateableAPIResource,
+    UpdatableAPIResource,
+    ListableAPIResource,
+    DeletableAPIResource,
+):
 
-    _resource_name = 'user'
+    _resource_name = "user"
 
     """
     A wrapper around User HTTP API.
     """
+
     @classmethod
     def invite(cls, emails):
         """
@@ -33,7 +44,7 @@ class User(ActionAPIResource, GetableAPIResource, CreateableAPIResource,
             emails = [emails]
 
         body = {
-            'emails': emails,
+            "emails": emails,
         }
 
-        return super(User, cls)._trigger_action('POST', '/invite_users', **body)
+        return super(User, cls)._trigger_action("POST", "/invite_users", **body)

@@ -1,16 +1,21 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
-from datadog.api.resources import CreateableAPIResource, UpdatableAPIResource,\
-    DeletableAPIResource, GetableAPIResource, ListableAPIResource
+from datadog.api.resources import (
+    CreateableAPIResource,
+    UpdatableAPIResource,
+    DeletableAPIResource,
+    GetableAPIResource,
+    ListableAPIResource,
+)
 
 
-class Tag(CreateableAPIResource, UpdatableAPIResource, GetableAPIResource,
-          ListableAPIResource, DeletableAPIResource):
+class Tag(CreateableAPIResource, UpdatableAPIResource, GetableAPIResource, ListableAPIResource, DeletableAPIResource):
     """
     A wrapper around Tag HTTP API.
     """
-    _resource_name = 'tags/hosts'
+
+    _resource_name = "tags/hosts"
 
     @classmethod
     def create(cls, host, **body):
@@ -26,8 +31,8 @@ class Tag(CreateableAPIResource, UpdatableAPIResource, GetableAPIResource,
         :returns: Dictionary representing the API's JSON response
         """
         params = {}
-        if 'source' in body:
-            params['source'] = body['source']
+        if "source" in body:
+            params["source"] = body["source"]
         return super(Tag, cls).create(id=host, params=params, **body)
 
     @classmethod
@@ -44,6 +49,6 @@ class Tag(CreateableAPIResource, UpdatableAPIResource, GetableAPIResource,
         :returns: Dictionary representing the API's JSON response
         """
         params = {}
-        if 'source' in body:
-            params['source'] = body['source']
+        if "source" in body:
+            params["source"] = body["source"]
         return super(Tag, cls).update(id=host, params=params, **body)
