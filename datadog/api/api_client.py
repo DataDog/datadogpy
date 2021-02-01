@@ -257,7 +257,10 @@ class APIClient(object):
         # number of timeouts, then enter the backoff state, recording the time
         # we started backing off
         if not cls._backoff_timestamp and cls._timeout_counter >= cls._max_timeouts:
-            log.info("Max number of datadog timeouts exceeded, backing off for {0} seconds".format(cls._backoff_period))
+            log.info(
+                "Max number of datadog timeouts exceeded, backing off for %s seconds",
+                cls._backoff_period,
+            )
             cls._backoff_timestamp = now
             should_submit = False
 
@@ -268,13 +271,17 @@ class APIClient(object):
             backed_off_time, backoff_time_left = cls._backoff_status()
             if backoff_time_left < 0:
                 log.info(
-                    "Exiting backoff state after {0} seconds, will try to submit metrics again".format(backed_off_time)
+                    "Exiting backoff state after %s seconds, will try to submit metrics again",
+                    backed_off_time,
                 )
                 cls._backoff_timestamp = None
                 cls._timeout_counter = 0
                 should_submit = True
             else:
-                log.info("In backoff state, won't submit metrics for another {0} seconds".format(backoff_time_left))
+                log.info(
+                    "In backoff state, won't submit metrics for another %s seconds",
+                    backoff_time_left,
+                )
                 should_submit = False
         else:
             should_submit = True

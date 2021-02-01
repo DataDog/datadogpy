@@ -375,7 +375,8 @@ class TestDogStatsd(unittest.TestCase):
             self.statsd.gauge('no error', 1)
             mock_log.error.assert_not_called()
             mock_log.warning.assert_called_once_with(
-                "Error submitting packet: Socket error, dropping the packet and closing the socket"
+                "Error submitting packet: %s, dropping the packet and closing the socket",
+                socket.error("Socket error")
             )
 
     def test_socket_overflown(self):
@@ -383,7 +384,7 @@ class TestDogStatsd(unittest.TestCase):
         with mock.patch("datadog.dogstatsd.base.log") as mock_log:
             self.statsd.gauge('no error', 1)
             mock_log.error.assert_not_called()
-            c = [call("Socket send would block: Socket error, dropping the packet")]
+            c = [call("Socket send would block: %s, dropping the packet", socket.error("Socket error"))]
             mock_log.warning.assert_has_calls(c * 2)
 
     def test_distributed(self):
