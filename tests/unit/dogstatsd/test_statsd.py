@@ -383,8 +383,8 @@ class TestDogStatsd(unittest.TestCase):
         with mock.patch("datadog.dogstatsd.base.log") as mock_log:
             self.statsd.gauge('no error', 1)
             mock_log.error.assert_not_called()
-            c = [call("Socket send would block: Socket error, dropping the packet")]
-            mock_log.warning.assert_has_calls(c * 2)
+            c = [call("Socket send would block: %s, dropping the packet", mock.ANY)]
+            mock_log.debug.assert_has_calls(c * 2)
 
     def test_distributed(self):
         """
