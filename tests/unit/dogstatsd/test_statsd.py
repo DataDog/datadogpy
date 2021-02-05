@@ -375,7 +375,8 @@ class TestDogStatsd(unittest.TestCase):
             self.statsd.gauge('no error', 1)
             mock_log.error.assert_not_called()
             mock_log.warning.assert_called_once_with(
-                "Error submitting packet: Socket error, dropping the packet and closing the socket"
+                "Error submitting packet: %s, dropping the packet and closing the socket",
+                mock.ANY,
             )
 
     def test_socket_overflown(self):
