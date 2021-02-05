@@ -609,7 +609,7 @@ class DogStatsd(object):
             self.close_socket()
         except socket.error as se:
             if se.errno == errno.EAGAIN:
-                log.warning("Socket send would block: {}, dropping the packet".format(se))
+                log.debug("Socket send would block: %s, dropping the packet", se)
             else:
                 log.warning("Error submitting packet: {}, dropping the packet and closing the socket".format(se))
                 self.close_socket()
