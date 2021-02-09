@@ -1,5 +1,17 @@
 CHANGELOG
 =========
+## 0.40.0 / 2021-02-09
+
+* [Added] Support DD env vars in threadstats. See [#625](https://github.com/DataDog/datadogpy/pull/625).
+* [Added] Add logs listing feature. See [#622](https://github.com/DataDog/datadogpy/pull/622). Thanks [userlocalhost](https://github.com/userlocalhost).
+* [Added] [telemetry] optionally decouple telemetry destination from other metrics. See [#558](https://github.com/DataDog/datadogpy/pull/558).
+* [Fixed] Lazy log formatting. See [#628](https://github.com/DataDog/datadogpy/pull/628).
+* [Fixed] Turn EAGAIN warning into debug. See [#629](https://github.com/DataDog/datadogpy/pull/629).
+* [Fixed] Turn warning into info. See [#623](https://github.com/DataDog/datadogpy/pull/623).
+* [Fixed] [dogstatsd] use monotonic clock source when available for timers. See [#615](https://github.com/DataDog/datadogpy/pull/615). Thanks [jd](https://github.com/jd).
+* [Fixed] Fix Synthetics delete_test parameter name. See [#603](https://github.com/DataDog/datadogpy/pull/603). Thanks [jonathan-hosmer](https://github.com/jonathan-hosmer).
+* [Fixed] Delay creation of lambda ThreadStats. See [#609](https://github.com/DataDog/datadogpy/pull/609).
+
 ## 0.39.0 / 2020-08-25
 
 * [Added] Add environment variable to disable statsd metric collection. See [#589](https://github.com/DataDog/datadogpy/pull/589). Thanks [dgzlopes](https://github.com/dgzlopes).
