@@ -17,7 +17,7 @@ import requests
 from datadog.util.compat import is_p3k, ConfigParser
 from ..api.constants import API_KEY, APP_KEY, MONITOR_REFERENCED_IN_SLO_MESSAGE
 
-WAIT_TIME = 10
+WAIT_TIME = 11
 
 
 def get_temp_file():
