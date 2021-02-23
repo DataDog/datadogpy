@@ -307,14 +307,14 @@ class DogStatsd(object):
                         self.telemetry_socket = self._get_udp_socket_socket(self.telemetry_host, self.telemetry_port)
 
                 return self.telemetry_socket
-            else:
-                if not self.socket:
-                    if self.socket_path is not None:
-                        self.socket = self._get_uds_socket(self.socket_path)
-                    else:
-                        self.socket = self._get_udp_socket(self.host, self.port)
 
-        return self.socket
+            if not self.socket:
+                if self.socket_path is not None:
+                    self.socket = self._get_uds_socket(self.socket_path)
+                else:
+                    self.socket = self._get_udp_socket(self.host, self.port)
+
+            return self.socket
 
     @staticmethod
     def _get_uds_socket(socket_path):
@@ -493,19 +493,20 @@ class DogStatsd(object):
         """
         Closes connected socket if connected.
         """
-        if self.socket:
-            try:
-                self.socket.close()
-            except OSError as e:
-                log.error("Unexpected error: %s", str(e))
-            self.socket = None
+        with self.lock:
+            if self.socket:
+                try:
+                    self.socket.close()
+                except OSError as e:
+                    log.error("Unexpected error: %s", str(e))
+                self.socket = None
 
-        if self.telemetry_socket:
-            try:
-                self.telemetry_socket.close()
-            except OSError as e:
-                log.error("Unexpected error: %s", str(e))
-            self.telemetry_socket = None
+            if self.telemetry_socket:
+                try:
+                    self.telemetry_socket.close()
+                except OSError as e:
+                    log.error("Unexpected error: %s", str(e))
+                self.telemetry_socket = None
 
     def _serialize_metric(self, metric, metric_type, value, tags, sample_rate=1):
         # Create/format the metric packet
