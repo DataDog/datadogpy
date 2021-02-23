@@ -319,13 +319,14 @@ class DogStatsd(object):
     @staticmethod
     def _get_uds_socket(socket_path):
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-        sock.connect(socket_path)
         sock.setblocking(0)
+        sock.connect(socket_path)
         return sock
 
     @staticmethod
     def _get_udp_socket(host, port):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setblocking(0)
         sock.connect((host, port))
         return sock
 
