@@ -1,5 +1,9 @@
 CHANGELOG
 =========
+## 0.40.1 / 2021-03-01
+
+* [Fixed] Fix blocking connections in dogstatsd. See [#634](https://github.com/DataDog/datadogpy/pull/634).
+
 ## 0.40.0 / 2021-02-09
 
 * [Added] Support DD env vars in threadstats. See [#625](https://github.com/DataDog/datadogpy/pull/625).
