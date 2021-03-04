@@ -51,6 +51,19 @@ DD_ENV_TAGS_MAPPING = {
 # Telemetry minimum flush interval in seconds
 DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL = 10
 
+# Telemetry pre-computed formatting string. Pre-computation
+# increases throughput of composing the result by 2-15% from basic
+# '%'-based formatting with a `join`.
+TELEMETRY_FORMATTING_STR = "\n".join([
+    "datadog.dogstatsd.client.metrics:%s|c|#%s",
+    "datadog.dogstatsd.client.events:%s|c|#%s",
+    "datadog.dogstatsd.client.service_checks:%s|c|#%s",
+    "datadog.dogstatsd.client.bytes_sent:%s|c|#%s",
+    "datadog.dogstatsd.client.bytes_dropped:%s|c|#%s",
+    "datadog.dogstatsd.client.packets_sent:%s|c|#%s",
+    "datadog.dogstatsd.client.packets_dropped:%s|c|#%s",
+])
+
 
 class DogStatsd(object):
     OK, WARNING, CRITICAL, UNKNOWN = (0, 1, 2, 3)
@@ -559,16 +572,15 @@ class DogStatsd(object):
 
     def _flush_telemetry(self):
         telemetry_tags = ",".join(self._add_constant_tags(self._client_tags))
-        return "\n".join(
-            (
-                "datadog.dogstatsd.client.metrics:%s|c|#%s" % (self.metrics_count, telemetry_tags),
-                "datadog.dogstatsd.client.events:%s|c|#%s" % (self.events_count, telemetry_tags),
-                "datadog.dogstatsd.client.service_checks:%s|c|#%s" % (self.service_checks_count, telemetry_tags),
-                "datadog.dogstatsd.client.bytes_sent:%s|c|#%s" % (self.bytes_sent, telemetry_tags),
-                "datadog.dogstatsd.client.bytes_dropped:%s|c|#%s" % (self.bytes_dropped, telemetry_tags),
-                "datadog.dogstatsd.client.packets_sent:%s|c|#%s" % (self.packets_sent, telemetry_tags),
-                "datadog.dogstatsd.client.packets_dropped:%s|c|#%s" % (self.packets_dropped, telemetry_tags),
-            )
+
+        return TELEMETRY_FORMATTING_STR % (
+            self.metrics_count, telemetry_tags,
+            self.events_count, telemetry_tags,
+            self.service_checks_count, telemetry_tags,
+            self.bytes_sent, telemetry_tags,
+            self.bytes_dropped, telemetry_tags,
+            self.packets_sent, telemetry_tags,
+            self.packets_dropped, telemetry_tags
         )
 
     def _is_telemetry_flush_time(self):
