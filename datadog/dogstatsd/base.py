@@ -6,7 +6,7 @@
 """
 DogStatsd is a Python client for DogStatsd, a Statsd fork for Datadog.
 """
-# stdlib
+# Standard libraries
 from random import random
 import logging
 import os
@@ -15,7 +15,7 @@ import errno
 import time
 from threading import Lock
 
-# datadog
+# Datadog libraries
 from datadog.dogstatsd.context import (
     TimedContextManagerDecorator,
     DistributedContextManagerDecorator,
