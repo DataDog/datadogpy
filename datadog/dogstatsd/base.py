@@ -273,6 +273,9 @@ class DogStatsd(object):
         self._telemetry_flush_interval = telemetry_min_flush_interval
         self._telemetry = not disable_telemetry
 
+        # Init buffer to an empty value
+        self.buffer = []
+
     def disable_telemetry(self):
         self._telemetry = False
 
