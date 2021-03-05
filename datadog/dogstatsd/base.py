@@ -363,6 +363,9 @@ class DogStatsd(object):
         """
         Flush the buffer and switch back to single metric packets.
         """
+        if not hasattr(self, 'buffer'):
+            raise BufferError('Cannot close buffer that was never opened')
+
         self._send = self._send_to_server
 
         if self.buffer:

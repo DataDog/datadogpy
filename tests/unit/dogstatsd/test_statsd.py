@@ -674,6 +674,10 @@ async def print_foo():
         expected = "page.views:123|g\ntimer:123|ms"
         self.assert_equal_telemetry(expected, self.recv(2), telemetry=telemetry_metrics(metrics=2, bytes_sent=len(expected)))
 
+    def test_close_buffer_without_open(self):
+        with self.assertRaises(BufferError) as be:
+            self.statsd.close_buffer()
+
     def test_telemetry(self):
         self.statsd.metrics_count = 1
         self.statsd.events_count = 2
