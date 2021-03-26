@@ -108,15 +108,32 @@ def initialize(
 
     # Statsd configuration
     # ...overrides the default `statsd` instance attributes
+    target_updated = False
     if statsd_socket_path:
-        statsd.socket_path = statsd_socket_path
-        statsd.host = None
-        statsd.port = None
+        if statsd_socket_path != statsd.socket_path:
+            statsd.socket_path = statsd_socket_path
+            statsd.host = None
+            statsd.port = None
+            target_updated = True
     else:
         if statsd_host or statsd_use_default_route:
-            statsd.host = statsd.resolve_host(statsd_host, statsd_use_default_route)
-        if statsd_port:
+            host = statsd.resolve_host(statsd_host, statsd_use_default_route)
+            if host != statsd.host:
+                statsd.host = host
+                target_updated = True
+        if statsd_port and statsd.port != int(statsd_port):
             statsd.port = int(statsd_port)
+            target_updated = True
+
+        # Reset this var, as it is otherwise taking priority still
+        if statsd.socket_path:
+            statsd.socket_path = None
+            target_updated = True
+
+    if target_updated:
+        # We have changed some connection parameters. If the socket was already opened, reset it
+        statsd.close_socket()
+
     if statsd_namespace:
         statsd.namespace = text(statsd_namespace)
     if statsd_constant_tags:

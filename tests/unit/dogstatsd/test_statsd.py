@@ -147,6 +147,10 @@ class TestDogStatsd(unittest.TestCase):
         initialize(**options)
         self.assertEqual(statsd.host, "myhost")
         self.assertEqual(statsd.port, 1234)
+        self.assertIsNone(statsd.socket)
+        with mock.patch('socket.socket'):
+            statsd.get_socket()
+            statsd.socket.connect.assert_called_with(("myhost", 1234))
 
         # Add namespace
         options['statsd_namespace'] = "mynamespace"
@@ -166,6 +170,10 @@ class TestDogStatsd(unittest.TestCase):
         self.assertEqual(statsd.socket_path, options['statsd_socket_path'])
         self.assertIsNone(statsd.host)
         self.assertIsNone(statsd.port)
+        self.assertIsNone(statsd.socket)
+        with mock.patch('socket.socket'):
+            statsd.get_socket()
+            statsd.socket.connect.assert_called_with('/var/run/dogstatsd.sock')
 
     def test_dogstatsd_initialization_with_env_vars(self):
         """
