@@ -158,11 +158,27 @@ class TestDogStatsd(unittest.TestCase):
         self.assertEqual(statsd.host, "myhost")
         self.assertEqual(statsd.port, 1234)
         self.assertEqual(statsd.namespace, "mynamespace")
+        # This should not have reset the socket
+        self.assertIsNotNone(statsd.socket)
 
         # Set `statsd` host to the system's default route
         initialize(statsd_use_default_route=True, **options)
         self.assertEqual(statsd.host, "172.17.0.1")
         self.assertEqual(statsd.port, 1234)
+        self.assertIsNone(statsd.socket)
+        with mock.patch('socket.socket'):
+            statsd.get_socket()
+            statsd.socket.connect.assert_called_with(("172.17.0.1", 1234))
+
+        options["statsd_constant_tags"] = ["tag1", "tag2:test"]
+        del options["statsd_host"]
+        del options["statsd_port"]
+        initialize(**options)
+        self.assertEqual(statsd.constant_tags, ["tag1", "tag2:test"])
+        # Not changed
+        self.assertEqual(statsd.host, "172.17.0.1")
+        self.assertEqual(statsd.port, 1234)
+        self.assertIsNotNone(statsd.socket)
 
         # Add UNIX socket
         options['statsd_socket_path'] = '/var/run/dogstatsd.sock'
