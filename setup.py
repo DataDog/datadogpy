@@ -32,7 +32,7 @@ install_reqs = [
 
 if sys.version_info < (2, 7):
     install_reqs.append("argparse>=1.2")
-    install_reqs.append("decorator<5.0.0")
+    install_reqs.insert(0, "decorator<5.0.0")
 else:
     install_reqs.append("decorator>=3.3.2")
 
