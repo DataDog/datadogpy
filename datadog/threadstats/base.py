@@ -211,7 +211,7 @@ class ThreadStats(object):
                 host=hostname,
             )
 
-    def gauge(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
+    def gauge(self, metric=None, value=None, timestamp=None, tags=None, sample_rate=1, host=None, metric_name=None):
         """
         Record the current ``value`` of a metric. The most recent value in
         a given flush interval will be recorded. Optionally, specify a set of
@@ -222,12 +222,14 @@ class ThreadStats(object):
         >>> stats.gauge("process.uptime", time.time() - process_start_time)
         >>> stats.gauge("cache.bytes.free", cache.get_free_bytes(), tags=["version:1.0"])
         """
+        if value is None or (metric or metric_name) is None:
+            raise TypeError("Value and metric/metric_name must be set")
         if not self._disabled:
             self._metric_aggregator.add_point(
-                metric_name, tags, timestamp or time(), value, Gauge, sample_rate=sample_rate, host=host
+                metric or metric_name, tags, timestamp or time(), value, Gauge, sample_rate=sample_rate, host=host
             )
 
-    def set(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
+    def set(self, metric=None, value=None, timestamp=None, tags=None, sample_rate=1, host=None, metric_name=None):
         """
         Add ``value`` to the current set. The length of the set is
         flushed as a gauge to Datadog. Optionally, specify a set of
@@ -235,12 +237,14 @@ class ThreadStats(object):
 
         >>> stats.set("example_metric.set", "value_1", tags=["environement:dev"])
         """
+        if value is None or (metric or metric_name) is None:
+            raise TypeError("Value and metric/metric_name must be set")
         if not self._disabled:
             self._metric_aggregator.add_point(
-                metric_name, tags, timestamp or time(), value, Set, sample_rate=sample_rate, host=host
+                metric or metric_name, tags, timestamp or time(), value, Set, sample_rate=sample_rate, host=host
             )
 
-    def increment(self, metric_name, value=1, timestamp=None, tags=None, sample_rate=1, host=None):
+    def increment(self, metric=None, value=1, timestamp=None, tags=None, sample_rate=1, host=None, metric_name=None):
         """
         Increment the counter by the given ``value``. Optionally, specify a list of
         ``tags`` to associate with the metric. This is useful for counting things
@@ -249,12 +253,14 @@ class ThreadStats(object):
         >>> stats.increment('home.page.hits')
         >>> stats.increment('bytes.processed', file.size())
         """
+        if (metric or metric_name) is None:
+            raise TypeError("metric or metric_name must be set")
         if not self._disabled:
             self._metric_aggregator.add_point(
-                metric_name, tags, timestamp or time(), value, Counter, sample_rate=sample_rate, host=host
+                metric or metric_name, tags, timestamp or time(), value, Counter, sample_rate=sample_rate, host=host
             )
 
-    def decrement(self, metric_name, value=1, timestamp=None, tags=None, sample_rate=1, host=None):
+    def decrement(self, metric=None, value=1, timestamp=None, tags=None, sample_rate=1, host=None, metric_name=None):
         """
         Decrement a counter, optionally setting a value, tags and a sample
         rate.
@@ -262,12 +268,14 @@ class ThreadStats(object):
         >>> stats.decrement("files.remaining")
         >>> stats.decrement("active.connections", 2)
         """
+        if (metric or metric_name) is None:
+            raise TypeError("metric or metric_name must be set")
         if not self._disabled:
             self._metric_aggregator.add_point(
-                metric_name, tags, timestamp or time(), -value, Counter, sample_rate=sample_rate, host=host
+                metric or metric_name, tags, timestamp or time(), -value, Counter, sample_rate=sample_rate, host=host
             )
 
-    def histogram(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
+    def histogram(self, metric=None, value=None, timestamp=None, tags=None, sample_rate=1, host=None, metric_name=None):
         """
         Sample a histogram value. Histograms will produce metrics that
         describe the distribution of the recorded values, namely the maximum, mininum,
@@ -276,12 +284,16 @@ class ThreadStats(object):
 
         >>> stats.histogram("uploaded_file.size", uploaded_file.size())
         """
+        if value is None or (metric or metric_name) is None:
+            raise TypeError("Value and metric/metric_name must be set")
         if not self._disabled:
             self._metric_aggregator.add_point(
-                metric_name, tags, timestamp or time(), value, Histogram, sample_rate=sample_rate, host=host
+                metric or metric_name, tags, timestamp or time(), value, Histogram, sample_rate=sample_rate, host=host
             )
 
-    def distribution(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
+    def distribution(
+        self, metric=None, value=None, timestamp=None, tags=None, sample_rate=1, host=None, metric_name=None
+    ):
         """
         Sample a distribution value. Distributions will produce metrics that
         describe the distribution of the recorded values, namely the maximum,
@@ -290,24 +302,34 @@ class ThreadStats(object):
 
         >>> stats.distribution("uploaded_file.size", uploaded_file.size())
         """
+        if value is None or (metric or metric_name) is None:
+            raise TypeError("Value and metric/metric_name must be set")
         if not self._disabled:
             self._metric_aggregator.add_point(
-                metric_name, tags, timestamp or time(), value, Distribution, sample_rate=sample_rate, host=host
+                metric or metric_name,
+                tags,
+                timestamp or time(),
+                value,
+                Distribution,
+                sample_rate=sample_rate,
+                host=host,
             )
 
-    def timing(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
+    def timing(self, metric=None, value=None, timestamp=None, tags=None, sample_rate=1, host=None, metric_name=None):
         """
         Record a timing, optionally setting tags and a sample rate.
 
         >>> stats.timing("query.response.time", 1234)
         """
+        if value is None or (metric or metric_name) is None:
+            raise TypeError("Value and metric/metric_name must be set")
         if not self._disabled:
             self._metric_aggregator.add_point(
-                metric_name, tags, timestamp or time(), value, Timing, sample_rate=sample_rate, host=host
+                metric or metric_name, tags, timestamp or time(), value, Timing, sample_rate=sample_rate, host=host
             )
 
     @contextmanager
-    def timer(self, metric_name, sample_rate=1, tags=None, host=None):
+    def timer(self, metric=None, sample_rate=1, tags=None, host=None, metric_name=None):
         """
         A context manager that will track the distribution of the contained code's run time.
         Optionally specify a list of tags to associate with the metric.
@@ -327,14 +349,16 @@ class ThreadStats(object):
                 finally:
                     stats.histogram("user.query.time", time.time() - start)
         """
+        if (metric or metric_name) is None:
+            raise TypeError("Metric or metric_name must be set")
         start = monotonic()
         try:
             yield
         finally:
             end = monotonic()
-            self.timing(metric_name, end - start, time(), tags=tags, sample_rate=sample_rate, host=host)
+            self.timing(metric or metric_name, end - start, time(), tags=tags, sample_rate=sample_rate, host=host)
 
-    def timed(self, metric_name, sample_rate=1, tags=None, host=None):
+    def timed(self, metric=None, sample_rate=1, tags=None, host=None, metric_name=None):
         """
         A decorator that will track the distribution of a function's run time.
         Optionally specify a list of tags to associate with the metric.
@@ -356,12 +380,14 @@ class ThreadStats(object):
         def wrapper(func):
             @wraps(func)
             def wrapped(*args, **kwargs):
-                with self.timer(metric_name, sample_rate, tags, host):
+                with self.timer(metric or metric_name, sample_rate, tags, host):
                     result = func(*args, **kwargs)
                     return result
 
             return wrapped
 
+        if (metric or metric_name) is None:
+            raise TypeError("Metric or metric_name must be set")
         return wrapper
 
     def flush(self, timestamp=None):
