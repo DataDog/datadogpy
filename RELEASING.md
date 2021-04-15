@@ -35,3 +35,4 @@ Our team will trigger the release pipeline.
 ### Release
 1. Create the release on GitHub. [Example](https://github.com/DataDog/datadogpy/releases/tag/0.40.0)
 1. A github action will kick off that builds and publishes this tag to PyPI. Confirm the [release is available](https://pypi.org/project/datadog/#history)
+1. Bump the version again in `datadog/version.py` to a dev version (e.g. `0.34.0` -> `0.34.1.dev`), open a PR and merge it to master.
