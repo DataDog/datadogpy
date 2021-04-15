@@ -1,5 +1,11 @@
-CHANGELOG
-=========
+# Changelog
+
+## 0.41.0 / 2021-04-15
+
+* [Fixed] Fix decorator dependency for Python 2.7. See [#646](https://github.com/DataDog/datadogpy/pull/646). Thanks [artem888881](https://github.com/artem888881).
+* [Fixed] [dogstatsd] Fix buffer operation thread-safety. See [#642](https://github.com/DataDog/datadogpy/pull/642).
+* [Fixed] [dogstatsd] Improve performance of telemetry serialization. See [#641](https://github.com/DataDog/datadogpy/pull/641).
+
 ## 0.40.1 / 2021-03-01
 
 * [Fixed] Fix blocking connections in dogstatsd. See [#634](https://github.com/DataDog/datadogpy/pull/634).
