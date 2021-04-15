@@ -738,15 +738,13 @@ async def print_foo():
 
         # This is a bit of a tricky thing to test for - initially only our data packet is
         # sent but then telemetry is flushed/reset and the subsequent metric xmit includes
-        # the telemetry data for the previous packet. The reason for 726 -> 727 increase is
-        # because packet #2 sends a three digit byte count ("726") that then increases the
-        # next metric size by 1 byte.
-        expected_xfer_metrics = [
-            (33, 1),
-            (726, 2),
-            (727, 2),
-            (727, 2),
-        ]
+        # the telemetry data for the previous packet.
+        expected_xfer_metrics = [(33, 1)]
+        for i in range(num_threads - 1):
+            expected_xfer_metrics.append(
+                (33 + len(telemetry_metrics(
+                    metrics=2, bytes_sent=expected_xfer_metrics[i][0], packets_sent=expected_xfer_metrics[i][1]
+                )), 2))
 
         for idx in range(num_threads):
             expected_message = "page.%d.views:123|g\ntimer.%d:123|ms" % (idx, idx)
