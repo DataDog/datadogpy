@@ -24,17 +24,14 @@ Our team will trigger the release pipeline.
 - Install [datadog_checks_dev](https://datadog-checks-base.readthedocs.io/en/latest/datadog_checks_dev.cli.html#installation) using Python 3.
 - Setup PyPI, see the internal documentation for more details
 
-### Update Changelog
-#### Commands
-- See changes ready for release by running `ddev release show changes .` at the root of this project. Add any missing labels to PRs if needed.
-- Run `ddev release changelog . <NEW_VERSION>` to update the `CHANGELOG.md` file at the root of this repository
-- Commit the changes to the repository in a release branch and open a PR. Do not merge yet.
+### Update Changelog and version
 
-### Release
+1. See changes ready for release by running `ddev release show changes .` at the root of this project. Add any missing labels to PRs if needed.
+1. Run `ddev release changelog . <NEW_VERSION>` to update the `CHANGELOG.md` file at the root of this repository
+1. Commit the changes to the repository in a release branch and open a PR. Do not merge yet.
 1. Bump the version in [`datadog/version.py`](datadog/version.py) and push it to your changelog PR. [Example](https://github.com/DataDog/datadogpy/pull/495/files#diff-2eeaed663bd0d25b7e608891384b7298)
 1. Merge the PR to master.
-1. Create the release on GitHub. [Example](https://github.com/DataDog/datadogpy/releases/tag/v0.33.0)
-1. Checkout the tag created at the previous step.
-1. Run `ddev release build .` and `ddev release upload --sdist . `.
-   - Make sure that both an `sdist` and a [universal wheel](https://packaging.python.org/guides/distributing-packages-using-setuptools/#universal-wheels) have been uploaded to [PyPI](https://pypi.python.org/pypi/datadog/).
-1. Bump the version again in `datadog/version.py` to a dev version (e.g. `0.34.0` -> `0.34.1.dev`), open a PR and merge it to master.
+
+### Release
+1. Create the release on GitHub. [Example](https://github.com/DataDog/datadogpy/releases/tag/0.40.0)
+1. A github action will kick off that builds and publishes this tag to PyPI. Confirm the [release is available](https://pypi.org/project/datadog/#history)
