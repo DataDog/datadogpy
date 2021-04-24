@@ -30,11 +30,6 @@ install_reqs = [
     'configparser<5;python_version<"3.0"',
 ]
 
-if sys.version_info < (3, 0):
-    install_reqs.insert(0, "decorator<5.0.0")
-else:
-    install_reqs.append("decorator>=3.3.2")
-
 setup(
     name="datadog",
     version=version["__version__"],
