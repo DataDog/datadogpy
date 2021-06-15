@@ -94,7 +94,7 @@ This project contains:
 - [Threadstats](/datadog/threadstats)
 
 
-We have [unit](/tests/unit), [integration](/tests/integration) and [performance](/tests/performamce) tests.
+We have [unit](/tests/unit), [integration](/tests/integration) and [performance](/tests/performance) tests.
 Integration tests need an _API_ and _APP Keys_ to run against a Datadog account.
 - __WARNING__: Never use keys for an organization that contains anything important.
 
@@ -161,7 +161,7 @@ tox -e integration
 ###### Admin integration tests
 
 Admin integration tests are tests that either need admin privileges to run (e.g. manage users) or can destructive changes to your org (e.g. muting/unmuting of all monitors).
-They are not run by default when invoking `tox`, you have to run them explicitely with:
+They are not run by default when invoking `tox`, you have to run them explicitly with:
 ```
 tox -e integration-admin
 ```

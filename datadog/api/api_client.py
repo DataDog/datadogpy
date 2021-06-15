@@ -91,7 +91,7 @@ class APIClient(object):
         :param params: dictionary to be sent in the query string of the request
         :type params: dictionary
 
-        :returns: JSON or formated response from HTTP API request
+        :returns: JSON or formatted response from HTTP API request
         """
         try:
             # Check if it's ok to submit

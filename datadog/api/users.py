@@ -33,7 +33,7 @@ class User(
         *emails* list. If *emails* is a string, it will be wrapped in a list and
         sent. Returns a list of email addresses for which an email was sent.
 
-        :param emails: emails adresses to invite to join datadog
+        :param emails: emails addresses to invite to join datadog
         :type emails: string list
 
         :returns: Dictionary representing the API's JSON response

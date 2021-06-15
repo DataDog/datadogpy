@@ -132,7 +132,7 @@ After the client is created, you can start sending custom metrics to Datadog. Se
 * [Submit a TIMER metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#timer)
 * [Submit a DISTRIBUTION metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#distribution)
 
-Some options are suppported when submitting metrics, like [applying a Sample Rate to your metrics](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#metric-submission-options) or [tagging your metrics with your custom tags](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#metric-tagging).
+Some options are supported when submitting metrics, like [applying a Sample Rate to your metrics](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#metric-submission-options) or [tagging your metrics with your custom tags](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#metric-tagging).
 
 #### Events
 

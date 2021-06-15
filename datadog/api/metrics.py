@@ -136,7 +136,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
         cls._resource_name = cls._METRIC_QUERY_ENDPOINT
 
         # `from` is a reserved keyword in Python, therefore
-        # `api.Metric.query(from=...)` is not permited
+        # `api.Metric.query(from=...)` is not permitted
         # -> map `start` to `from` and `end` to `to`
         try:
             params["from"] = params.pop("start")

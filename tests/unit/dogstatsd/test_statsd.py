@@ -334,7 +334,7 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.gauge('gauge', 123.4)
         self.assert_equal_telemetry('foo.gauge:123.4|g', self.recv(2))
 
-    # Test Client level contant tags
+    # Test Client level constant tags
     def test_gauge_constant_tags(self):
         self.statsd.constant_tags = ['bar:baz', 'foo']
         self.statsd.gauge('gauge', 123.4)
