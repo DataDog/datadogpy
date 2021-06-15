@@ -30,6 +30,9 @@ jobs:
       Py38:
         PYTHON_VERSION: "3.8"
         TOXENV: "py38"
+      Py39:
+        PYTHON_VERSION: "3.9"
+        TOXENV: "py39"
       Pypy2:
         PYTHON_VERSION: "pypy2"
         TOXENV: "pypy2"
@@ -37,13 +40,13 @@ jobs:
         PYTHON_VERSION: "pypy3"
         TOXENV: "pypy3"
       Format:
-        PYTHON_VERSION: "3.8"
+        PYTHON_VERSION: "3.9"
         TOXENV: "black"
       Lint:
-        PYTHON_VERSION: "3.8"
+        PYTHON_VERSION: "3.9"
         TOXENV: "flake8"
       Mypy:
-        PYTHON_VERSION: "3.8"
+        PYTHON_VERSION: "3.9"
         TOXENV: "mypy"
   steps:
   - task: UsePythonVersion@0
