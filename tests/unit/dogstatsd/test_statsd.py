@@ -274,8 +274,18 @@ class TestDogStatsd(unittest.TestCase):
 
         self.statsd.event('Title', u'♬ †øU †øU ¥ºu T0µ ♪',
                           aggregation_key='key', tags=['t1', 't2:v2'])
-        event = u'_e{5,19}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2'
+        event = u'_e{5,32}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2'
         self.assert_equal_telemetry(event, self.recv(2), telemetry=telemetry_metrics(metrics=0, events=1, bytes_sent=len(event)))
+
+    def test_unicode_event(self):
+        self.statsd.event(
+                'my.prefix.Delivery - Daily Settlement Summary Report Delivery — Invoice Cloud succeeded',
+                'Delivered — destination.csv')
+        event = u'_e{89,29}:my.prefix.Delivery - Daily Settlement Summary Report Delivery — Invoice Cloud succeeded|' + \
+            u'Delivered — destination.csv'
+        self.assert_equal_telemetry(event, self.recv(2), telemetry=telemetry_metrics(metrics=0, events=1, bytes_sent=len(event)))
+
+        self.statsd._reset_telemetry()
 
     def test_event_constant_tags(self):
         self.statsd.constant_tags = ['bar:baz', 'foo']
@@ -287,7 +297,7 @@ class TestDogStatsd(unittest.TestCase):
 
         self.statsd.event('Title', u'♬ †øU †øU ¥ºu T0µ ♪',
                           aggregation_key='key', tags=['t1', 't2:v2'])
-        event = u'_e{5,19}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2,bar:baz,foo'
+        event = u'_e{5,32}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2,bar:baz,foo'
         self.assert_equal_telemetry(event, self.recv(2), telemetry=telemetry_metrics(metrics=0, events=1, tags="bar:baz,foo", bytes_sent=len(event)))
 
     def test_service_check(self):
