@@ -21,7 +21,7 @@ from datadog.dogstatsd.context import (
     DistributedContextManagerDecorator,
 )
 from datadog.dogstatsd.route import get_default_route
-from datadog.util.compat import text
+from datadog.util.compat import is_p3k, text
 from datadog.util.format import normalize_tags
 from datadog.version import __version__
 from typing import Optional, List, Text, Union
@@ -711,10 +711,22 @@ class DogStatsd(object):
         title = self._escape_event_content(title)
         text = self._escape_event_content(text)
 
+        if not is_p3k():
+            if not isinstance(title, unicode):                              # noqa: F821
+                title = unicode(self._escape_event_content(title), 'utf8')  # noqa: F821
+            if not isinstance(text, unicode):                               # noqa: F821
+                text = unicode(self._escape_event_content(text), 'utf8')    # noqa: F821
+
         # Append all client level tags to every event
         tags = self._add_constant_tags(tags)
 
-        string = u"_e{%d,%d}:%s|%s" % (len(title), len(text), title, text)
+        string = u"_e{{{},{}}}:{}|{}".format(
+            len(title.encode('utf8', 'replace')),
+            len(text.encode('utf8', 'replace')),
+            title,
+            text,
+        )
+
         if date_happened:
             string = "%s|d:%d" % (string, date_happened)
         if hostname:
