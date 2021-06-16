@@ -216,8 +216,8 @@ class TestDogStatsdThreadSafety(unittest.TestCase):
         # All metrics were properly submitted
         self.assertMetrics(values)
 
-    @patch('datadog.dogstatsd.context.time')
-    def test_timed_decorator_threaded(self, mock_time):
+    @patch('datadog.dogstatsd.context.monotonic')
+    def test_timed_decorator_threaded(self, mock_monotonic):
         """
         `timed` decorator plays well with concurrent threads.
         """
@@ -226,7 +226,7 @@ class TestDogStatsdThreadSafety(unittest.TestCase):
         statsd.socket = self.socket
 
         # Set up the mocked time
-        mock_time.return_value = 0
+        mock_monotonic.return_value = 0
 
         # Method to time
         @statsd.timed("foo")
@@ -234,8 +234,8 @@ class TestDogStatsdThreadSafety(unittest.TestCase):
             """
             Wait 5 time units and return.
             """
-            initial_time = mock_time.return_value
-            while mock_time.return_value < initial_time + 2:
+            initial_time = mock_monotonic.return_value
+            while mock_monotonic.return_value < initial_time + 2:
                 pass
 
         # Run the method within multiple threads
@@ -244,16 +244,16 @@ class TestDogStatsdThreadSafety(unittest.TestCase):
             t = threading.Thread(target=bar)
             threads.append(t)
             # Bump time so that previous thread can complete
-            mock_time.return_value += 1
+            mock_monotonic.return_value += 1
             t.start()
             # Sleep to let the threads start
             time.sleep(0.1)
 
         # Bump time so that all threads completes
         time.sleep(0.1)
-        mock_time.return_value += 1
+        mock_monotonic.return_value += 1
         time.sleep(0.1)
-        mock_time.return_value += 1
+        mock_monotonic.return_value += 1
 
         for t in threads:
             t.join()
@@ -262,8 +262,8 @@ class TestDogStatsdThreadSafety(unittest.TestCase):
         expected_values = [2 for _ in range(0, 10)]
         self.assertMetrics(expected_values)
 
-    @patch('datadog.dogstatsd.context.time')
-    def test_timed_context_manager_threaded(self, mock_time):
+    @patch('datadog.dogstatsd.context.monotonic')
+    def test_timed_context_manager_threaded(self, mock_monotonic):
         """
         `timed` context manager plays well with concurrent threads.
         """
@@ -272,17 +272,17 @@ class TestDogStatsdThreadSafety(unittest.TestCase):
         statsd.socket = self.socket
 
         # Set up the mocked time
-        mock_time.return_value = 0
+        mock_monotonic.return_value = 0
 
         # Method to time
         def bar():
             """
             Wait 5 time units and return.
             """
-            initial_time = mock_time.return_value
+            initial_time = mock_monotonic.return_value
 
             with statsd.timed("foo"):
-                while mock_time.return_value < initial_time + 2:
+                while mock_monotonic.return_value < initial_time + 2:
                     pass
 
         # Run the method within multiple threads
@@ -291,16 +291,16 @@ class TestDogStatsdThreadSafety(unittest.TestCase):
             t = threading.Thread(target=bar)
             threads.append(t)
             # Bump time so that previous thread can complete
-            mock_time.return_value += 1
+            mock_monotonic.return_value += 1
             t.start()
             # Sleep to let the threads start
             time.sleep(0.1)
 
         # Bump time so that all threads completes
         time.sleep(0.1)
-        mock_time.return_value += 1
+        mock_monotonic.return_value += 1
         time.sleep(0.1)
-        mock_time.return_value += 1
+        mock_monotonic.return_value += 1
 
         for t in threads:
             t.join()
