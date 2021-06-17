@@ -34,7 +34,7 @@ setup(
     name="datadog",
     version=version["__version__"],
     install_requires=install_reqs,
-    tests_require=["pytest", "mock", "freezegun"],
+    tests_require=["pytest", "mock", "freezegun", "psutil"],
     packages=["datadog", "datadog.api", "datadog.dogstatsd", "datadog.threadstats", "datadog.util", "datadog.dogshell"],
     package_data={"datadog": ["py.typed"]},
     author="Datadog, Inc.",
