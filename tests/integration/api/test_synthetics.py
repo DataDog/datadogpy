@@ -126,7 +126,7 @@ class TestSynthetics:
     def test_get_all_tests(self, dog):
         output = dog.Synthetics.get_all_tests()
         # 2 tests were created
-        assert len(output["tests"]) == 2
+        assert len(output["tests"]) >= 2
 
     def test_get_locations(self, dog):
         output = dog.Synthetics.get_locations()
