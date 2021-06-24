@@ -48,6 +48,9 @@ ENTITY_ID_TAG_NAME = "dd.internal.entity_id"
 UDP_OPTIMAL_PAYLOAD_LENGTH = 1432
 UDS_OPTIMAL_PAYLOAD_LENGTH = 8192
 
+# Socket options
+MIN_SEND_BUFFER_SIZE = 32 * 1024
+
 # Mapping of each "DD_" prefixed environment variable to a specific tag name
 DD_ENV_TAGS_MAPPING = {
     "DD_ENTITY_ID": ENTITY_ID_TAG_NAME,
@@ -403,18 +406,34 @@ class DogStatsd(object):
 
             return self.socket
 
-    @staticmethod
-    def _get_uds_socket(socket_path):
+    @classmethod
+    def _ensure_min_send_buffer_size(cls, sock, min_size=MIN_SEND_BUFFER_SIZE):
+        # Increase the receiving buffer size where needed (e.g. MacOS has 4k RX
+        # buffers which is half of the max packet size that the client will send.
+        if os.name == 'posix':
+            try:
+                recv_buff_size = sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
+                if recv_buff_size <= min_size:
+                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, min_size)
+                    log.debug("Socket send buffer increased to %dkb", min_size / 1024)
+            finally:
+                pass
+
+    @classmethod
+    def _get_uds_socket(cls, socket_path):
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
         sock.setblocking(0)
+        cls._ensure_min_send_buffer_size(sock)
         sock.connect(socket_path)
         return sock
 
-    @staticmethod
-    def _get_udp_socket(host, port):
+    @classmethod
+    def _get_udp_socket(cls, host, port):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setblocking(0)
+        cls._ensure_min_send_buffer_size(sock)
         sock.connect((host, port))
+
         return sock
 
     @deprecated("Statsd module now uses buffering by default.")

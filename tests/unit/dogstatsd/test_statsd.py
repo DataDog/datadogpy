@@ -19,13 +19,13 @@ import warnings
 
 # Third-party libraries
 import mock
-from mock import call, mock_open, patch
+from mock import call, Mock, mock_open, patch
 import pytest
 
 # Datadog libraries
 from datadog import initialize, statsd
 from datadog import __version__ as version
-from datadog.dogstatsd.base import DEFAULT_FLUSH_INTERVAL, DogStatsd, UDP_OPTIMAL_PAYLOAD_LENGTH
+from datadog.dogstatsd.base import DEFAULT_FLUSH_INTERVAL, DogStatsd, MIN_SEND_BUFFER_SIZE, UDP_OPTIMAL_PAYLOAD_LENGTH
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
 from tests.util.contextmanagers import preserve_environment_variable, EnvVars
@@ -557,6 +557,46 @@ class TestDogStatsd(unittest.TestCase):
             mock_log.error.assert_not_called()
             calls = [call("Socket buffer full: %s, dropping the packet", mock.ANY)]
             mock_log.debug.assert_has_calls(calls * 2)
+
+    @patch('socket.socket')
+    def test_uds_socket_ensures_min_receive_buffer(self, mock_socket_create):
+        mock_socket = mock_socket_create.return_value
+        mock_socket.setblocking.return_value = None
+        mock_socket.connect.return_value = None
+        mock_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE / 2
+
+        datadog = DogStatsd(socket_path="/fake/uds/socket/path")
+        datadog.gauge('some value', 1)
+        datadog.flush()
+
+        # Sanity check
+        mock_socket_create.assert_called_once_with(socket.AF_UNIX, socket.SOCK_DGRAM)
+
+        mock_socket.setsockopt.assert_called_once_with(
+            socket.SOL_SOCKET,
+            socket.SO_SNDBUF,
+            MIN_SEND_BUFFER_SIZE,
+        )
+
+    @patch('socket.socket')
+    def test_udp_socket_ensures_min_receive_buffer(self, mock_socket_create):
+        mock_socket = mock_socket_create.return_value
+        mock_socket.setblocking.return_value = None
+        mock_socket.connect.return_value = None
+        mock_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE / 2
+
+        datadog = DogStatsd()
+        datadog.gauge('some value', 1)
+        datadog.flush()
+
+        # Sanity check
+        mock_socket_create.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
+
+        mock_socket.setsockopt.assert_called_once_with(
+            socket.SOL_SOCKET,
+            socket.SO_SNDBUF,
+            MIN_SEND_BUFFER_SIZE,
+        )
 
     def test_distributed(self):
         """
