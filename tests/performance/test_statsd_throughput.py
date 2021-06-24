@@ -108,7 +108,7 @@ class TestDogStatsdThroughput(unittest.TestCase):
 
     RUN_MESSAGE = (
         "Run #{:2d}/{:2d}: {:.4f}s (latency: {:.2f}μs, cpu: {:.4f},"
-        + " mem.rss: {:.0f}kb, recv: {:.2f}%)"
+        + " mem.rss_diff: {:.0f}kb, recv: {:.2f}%)"
     )
 
     def setUp(self):
@@ -192,14 +192,14 @@ class TestDogStatsdThroughput(unittest.TestCase):
                     duration,
                     avg_latency,
                     sys_stats["cpu.user"] + sys_stats["cpu.system"],
-                    sys_stats["mem.rss_kb"],
+                    sys_stats["mem.rss_diff_kb"],
                     received_packet_pct,
                 )
             )
 
             run_durations.append(duration)
             run_cpu_stats.append(sys_stats["cpu.user"] + sys_stats["cpu.system"])
-            run_memory_stats.append(sys_stats["mem.rss_kb"])
+            run_memory_stats.append(sys_stats["mem.rss_diff_kb"])
             run_latencies.append(float(avg_latency))
             received_packet_pcts.append(received_packet_pct)
 
@@ -207,7 +207,7 @@ class TestDogStatsdThroughput(unittest.TestCase):
         result_msg += "\tDuration:\t\t{:.4f}s\n"
         result_msg += "\tLatency:\t\t{:.2f}μs\n"
         result_msg += "\tCPU:\t\t\t{:.4f}\n"
-        result_msg += "\tMemory:\t\t\t{:.0f}kb\n"
+        result_msg += "\tMemory (rss) diff:\t{:.0f}kb\n"
         result_msg += "\tReceived packets:\t{:.2f}%"
         print(
             result_msg.format(
