@@ -78,7 +78,6 @@ class FakeServer(object):
                         self.MIN_RECV_BUFFER_SIZE,
                     )
 
-                    recv_buff_size = sock.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
             sock.bind(socket_path)
 
             # We are using ctypes for shmem so we have to use a consistent
