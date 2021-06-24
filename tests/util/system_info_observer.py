@@ -39,8 +39,11 @@ class SysInfoObserver(object):
         pid = os.getpid()
         self.proc_info = psutil.Process(pid)
 
+        # Record baselines
         self.initial_cpu_user = self.proc_info.cpu_times().user
         self.initial_cpu_system = self.proc_info.cpu_times().system
+        self.initial_mem_rss = self.proc_info.memory_full_info().rss
+        self.initial_mem_vms = self.proc_info.memory_full_info().vms
 
         self.observer_thread = Thread(
             name=self.__class__.__name__,
@@ -53,6 +56,8 @@ class SysInfoObserver(object):
         self.observer_thread.daemon = True
         self.observer_thread.start()
 
+        return self
+
     def __exit__(self, exception_type, exception_value, exception_traceback):
         self.exit.set()
         self.observer_thread.join()
@@ -64,8 +69,8 @@ class SysInfoObserver(object):
             mem_info = proc_info.memory_full_info()
             datapoint = {
                 "interval": interval,
-                "mem.rss_kb": mem_info.rss / 1024,
-                "mem.vms_kb": mem_info.vms / 1024,
+                "mem.rss_diff_kb": (mem_info.rss - self.initial_mem_rss) / 1024,
+                "mem.vms_diff_kb": (mem_info.vms- self.initial_mem_vms)  / 1024,
             }
 
             self._stats.append(datapoint)
