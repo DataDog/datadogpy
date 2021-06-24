@@ -11,6 +11,7 @@ import socket
 import tempfile
 import threading
 import time
+import warnings
 from multiprocessing import Array, Event, Process, Value
 
 from datadog.util.compat import is_p3k
@@ -25,6 +26,7 @@ class FakeServer(object):
 
     SOCKET_NAME = "fake_statsd_server_socket"
     ALLOWED_TRANSPORTS = ["UDS", "UDP"]
+    MIN_RECV_BUFFER_SIZE = 32 * 1024
 
     def __init__(self, transport="UDS", debug=False):
         if transport not in self.ALLOWED_TRANSPORTS:
@@ -64,6 +66,19 @@ class FakeServer(object):
 
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
             sock.settimeout(3)
+
+            # Increase the receiving buffer size where needed (e.g. MacOS has 4k RX
+            # buffers which is half of the max packet size that the client will send.
+            if os.name != 'nt':
+                recv_buff_size = sock.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
+                if recv_buff_size <= self.MIN_RECV_BUFFER_SIZE:
+                    sock.setsockopt(
+                        socket.SOL_SOCKET,
+                        socket.SO_RCVBUF,
+                        self.MIN_RECV_BUFFER_SIZE,
+                    )
+
+                    recv_buff_size = sock.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
             sock.bind(socket_path)
 
             # We are using ctypes for shmem so we have to use a consistent

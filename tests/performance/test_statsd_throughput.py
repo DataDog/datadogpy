@@ -298,15 +298,6 @@ class TestDogStatsdThroughput(unittest.TestCase):
                 )
             )
 
-        # Verify that dropped metric count is matching our statsd expectations. Note
-        # that in some scenarios, some data is expected to be dropped.
-        if server.metrics_captured != statsd_instance.packets_sent:
-            error_msg = "WARN: Statsd sent packet count ({}) did not match the server "
-            error_msg += "captured metric count ({})!\n"
-            warnings.warn(
-                error_msg.format(statsd_instance.packets_sent, server.metrics_captured)
-            )
-
         # Verify that received metric count is matching our metric totals expectations. Note
         # that in some scenarios, some data is expected to be dropped.
         if server.metrics_captured != expected_metrics:
@@ -332,5 +323,8 @@ class TestDogStatsdThroughput(unittest.TestCase):
             StatsdSender.send(metric, statsd_instance, metric_idx)
 
             duration += timeit.default_timer() - start_time
+
+        if hasattr(statsd_instance, 'flush'):
+            statsd_instance.flush()
 
         latency_results.put(duration)
