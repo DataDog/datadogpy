@@ -777,10 +777,10 @@ class DogStatsd(object):
         return False
 
     def _send_to_buffer(self, packet):
-        if self._should_flush(len(packet)):
-            self.flush()
-
         with self._buffer_lock:
+            if self._should_flush(len(packet)):
+                self.flush()
+
             self._buffer.append(packet)
             # Update the current buffer length, including line break to anticipate
             # the final packet size
