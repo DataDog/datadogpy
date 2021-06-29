@@ -9,14 +9,14 @@ DogStatsd is a Python client for DogStatsd, a Statsd fork for Datadog.
 """
 # Standard libraries
 from random import random
+import errno
 import logging
+import multiprocessing
 import os
 import socket
-import errno
 import threading
 import time
 from threading import Lock, RLock
-
 from typing import Optional, List, Text, Union
 
 # Datadog libraries
@@ -319,11 +319,17 @@ class DogStatsd(object):
         # Start the flush thread if buffering is enabled and the interval is above
         # a reasonable range. This both prevents thrashing and allow us to use "0.0"
         # as a value for disabling the automatic flush timer as well.
-        if disable_buffering is False and flush_interval >= MIN_FLUSH_INTERVAL:
-            self._register_flush_thread(flush_interval)
+        self._flush_thread = None
+        self.flush_interval = flush_interval
+        if disable_buffering is False and self.flush_interval >= MIN_FLUSH_INTERVAL:
+            self.process_id = multiprocessing.current_process().pid
+            self.process_name = multiprocessing.current_process().name
+            self._register_flush_thread(self.flush_interval)
             log.debug(
-                "Statsd flush thread registered with period of %s",
+                    "Statsd flush thread registered with period of %s on process %s (pid: %d)",
                 flush_interval,
+                self.process_name,
+                self.process_id,
             )
         else:
             log.info("Statsd periodic buffer flush is disabled")
@@ -333,6 +339,32 @@ class DogStatsd(object):
 
     def enable_telemetry(self):
         self._telemetry = True
+
+    def _forked_process_init(self):
+        # Reset buffer variables
+        self._buffer = []  # type: List[Text]
+        self._current_buffer_total_size = 0
+
+        # Switch to sync mode
+        self._send = self._send_to_server
+        self._flush_thread = None
+
+        # Reset any telemetry already accrued
+        self._reset_telemetry()
+
+        # Don't reuse the old socket objects
+        self.telemetry_socket = None
+        self.socket = None
+
+        # Reset locks
+        for lock in [
+                self._socket_lock,
+                self._manual_buffer_lock,
+        ]:
+            try:
+                lock.release()
+            except Exception as e:
+                pass
 
     def _register_flush_thread(self, sleep_duration):
         def _flush_thread_loop(self, sleep_duration):
@@ -778,6 +810,23 @@ class DogStatsd(object):
 
     def _send_to_buffer(self, packet):
         with self._buffer_lock:
+            # In case we are multiplexing forked processes, we need to handle that
+            # explicitly since we will have a lot of unwanted state (like the stale
+            # flush thread and sockets)
+            if multiprocessing.current_process().pid != self.process_id:
+                log.info(
+                    "Stored process info ('%s', pid: %d) does not match "
+                    "current process info ('%s', pid: %d). "
+                    "Switching to non-buffered mode for this process.",
+                    self.process_name,
+                    self.process_id,
+                    multiprocessing.current_process().name,
+                    multiprocessing.current_process().pid,
+                )
+                self._forked_process_init()
+                self._send(packet)
+                return
+
             if self._should_flush(len(packet)):
                 self.flush()
 
