@@ -6,8 +6,11 @@
 # Copyright 2015-Present Datadog, Inc
 
 # stdlib
+import cProfile
+import io
 import logging
 import os
+import pstats
 import random
 import sys
 import threading
@@ -22,6 +25,7 @@ except ImportError:
 
 # datadog
 from datadog.dogstatsd.base import DogStatsd
+from datadog.util.compat import is_p3k
 
 # test utils
 from tests.util.fake_statsd_server import FakeServer
@@ -121,6 +125,7 @@ class TestDogStatsdThroughput(unittest.TestCase):
             os.getenv("BENCHMARK_NUM_THREADS", str(self.DEFAULT_NUM_THREADS))
         )
         self.num_runs = int(os.getenv("BENCHMARK_NUM_RUNS", str(self.DEFAULT_NUM_RUNS)))
+        self.profiling_enabled = os.getenv("BENCHMARK_PROFILING", "false") in ["1", "true", "True", "Y", "yes", "Yes"]
         self.transport = os.getenv(
             "BENCHMARK_TRANSPORT", str(self.DEFAULT_TRANSPORT)
         ).upper()
@@ -142,11 +147,12 @@ class TestDogStatsdThroughput(unittest.TestCase):
     # pylint: disable=too-many-locals
     def test_statsd_performance(self):
         print(
-            "Starting: {} run(s), {} threads, {} points/thread via {}...".format(
+            "Starting: {} run(s), {} threads, {} points/thread via {} (profiling: {})...".format(
                 self.num_runs,
                 self.num_threads,
                 self.num_datapoints,
                 self.transport,
+                str(self.profiling_enabled).lower(),
             )
         )
 
@@ -250,6 +256,7 @@ class TestDogStatsdThroughput(unittest.TestCase):
                         start_signal,
                         metrics_order[thread_idx],
                         latency_results,
+                        self.profiling_enabled,
                     ),
                 )
                 thread.daemon = True
@@ -311,10 +318,18 @@ class TestDogStatsdThroughput(unittest.TestCase):
 
     @staticmethod
     def _thread_runner(
-        statsd_instance, start_event, thread_metrics_order, latency_results
+        statsd_instance,
+        start_event,
+        thread_metrics_order,
+        latency_results,
+        profiling_enabled,
     ):
         # We wait for a global signal to start running our events
         start_event.wait(5)
+
+        if profiling_enabled:
+            profiler = cProfile.Profile()
+            profiler.enable()
 
         duration = 0.0
         for metric_idx, metric in enumerate(thread_metrics_order):
@@ -328,3 +343,31 @@ class TestDogStatsdThroughput(unittest.TestCase):
             statsd_instance.flush()
 
         latency_results.put(duration)
+
+        if profiling_enabled:
+            TestDogStatsdThroughput.print_profiling_stats(profiler)
+
+
+    @staticmethod
+    def print_profiling_stats(profiler, sort_by='cumulative'):
+        """
+        Prints profiling results for the thread that finishes its run. Options for
+        sorting include 'tottime', 'pcalls', 'ncalls', 'cumulative', etc but you can
+        check https://github.com/python/cpython/blob/3.9/Lib/pstats.py#L37-L45 for
+        other options.
+        """
+
+        profiler.disable()
+
+        if is_p3k():
+            output_stream = io.StringIO()
+        else:
+            output_stream = io.BytesIO()
+
+        profiling_stats = pstats.Stats(
+                profiler,
+                stream=output_stream,
+        ).sort_stats(sort_by)
+
+        profiling_stats.print_stats()
+        print(output_stream.getvalue())
