@@ -30,4 +30,4 @@ def force_to_epoch_seconds(epoch_sec_or_dt):
 
 
 def normalize_tags(tag_list):
-    return [re.sub(TAG_INVALID_CHARS_RE, TAG_INVALID_CHARS_SUBS, tag) for tag in tag_list]
+    return [TAG_INVALID_CHARS_RE.sub(TAG_INVALID_CHARS_SUBS, tag) for tag in tag_list]
