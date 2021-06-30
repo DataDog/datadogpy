@@ -10,6 +10,9 @@ import logging
 import socket
 import sys
 
+# Logging
+log = logging.getLogger("datadog.util")
+
 # Note: using `sys.version_info` instead of the helper functions defined here
 # so that mypy detects version-specific code paths. Currently, mypy doesn't
 # support try/except imports for version-specific code paths either.
@@ -94,6 +97,13 @@ def is_p3k():
     return _is_py_version_higher_than(3)
 
 
+def is_higher_py32():
+    """
+    Assert that Python is version 3.2 or higher.
+    """
+    return _is_py_version_higher_than(3, 2)
+
+
 def is_higher_py35():
     """
     Assert that Python is version 3.5 or higher.
@@ -106,3 +116,20 @@ def is_pypy():
     Assert that PyPy is being used (regardless of 2 or 3)
     """
     return "__pypy__" in sys.builtin_module_names
+
+
+def conditional_lru_cache(func):
+    """
+    A decorator that conditionally enables a lru_cache of size 512 if
+    the version of Python can support it (>3.2) and otherwise returns
+    the original function
+    """
+    if not is_higher_py32():
+        return func
+
+    log.debug("Enabling LRU cache for function %s", func.__name__)
+
+    # pylint: disable=import-outside-toplevel
+    from functools import lru_cache
+
+    return lru_cache(maxsize=512)(func)

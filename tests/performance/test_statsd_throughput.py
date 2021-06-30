@@ -147,12 +147,14 @@ class TestDogStatsdThroughput(unittest.TestCase):
     # pylint: disable=too-many-locals
     def test_statsd_performance(self):
         print(
-            "Starting: {} run(s), {} threads, {} points/thread via {} (profiling: {})...".format(
+            "Starting: {} run(s), {} thread(s), {} points/thread via {} (profiling: {}) on Python{}.{} ...".format(
                 self.num_runs,
                 self.num_threads,
                 self.num_datapoints,
                 self.transport,
                 str(self.profiling_enabled).lower(),
+                sys.version_info[0],
+                sys.version_info[1],
             )
         )
 
@@ -209,7 +211,7 @@ class TestDogStatsdThroughput(unittest.TestCase):
             run_latencies.append(float(avg_latency))
             received_packet_pcts.append(received_packet_pct)
 
-        result_msg = "\nTotal for {} run(s), {} threads, {} points/thread via {}:\n"
+        result_msg = "\nTotal for {} run(s), {} thread(s), {} points/thread via {} on Python{}.{}:\n"
         result_msg += "\tDuration:\t\t{:.4f}s\n"
         result_msg += "\tLatency:\t\t{:.2f}μs\n"
         result_msg += "\tCPU:\t\t\t{:.4f}\n"
@@ -221,6 +223,8 @@ class TestDogStatsdThroughput(unittest.TestCase):
                 self.num_threads,
                 self.num_datapoints,
                 self.transport,
+                sys.version_info[0],
+                sys.version_info[1],
                 sum(run_durations) / len(run_durations),
                 sum(run_latencies) / len(run_latencies),
                 sum(run_cpu_stats) / len(run_cpu_stats),
