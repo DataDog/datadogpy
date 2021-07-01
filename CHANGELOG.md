@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.42.0 / 2021-07-01
+
+* [Fixed] Remove unused decorator dependency. See [#651](https://github.com/DataDog/datadogpy/pull/651).
+* [Fixed] [dogstatsd] Fix unicode handling of event text. See [#661](https://github.com/DataDog/datadogpy/pull/661).
+* [Added] [dogstatsd] Improve tag normalization speed. See [#672](https://github.com/DataDog/datadogpy/pull/672).
+
 ## 0.41.0 / 2021-04-15
 
 * [Fixed] Fix decorator dependency for Python 2.7. See [#646](https://github.com/DataDog/datadogpy/pull/646). Thanks [artem888881](https://github.com/artem888881).
