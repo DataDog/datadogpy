@@ -39,6 +39,8 @@ class TestNormalizeTags:
     Test of the format's `normalize_tags` functionality
     """
     test_data = [
+        ([], []),
+        ([''],['']),
         (['this is a tag'], ['this_is_a_tag']),
         (['abc!@#$%^&*()0987654321{}}{'], ['abc__________0987654321____']),
         (['abc!@#', '^%$#3456#'], ['abc___', '____3456_']),
