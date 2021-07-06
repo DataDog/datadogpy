@@ -312,14 +312,14 @@ class DogStatsd(object):
 
         # If buffering is disabled, we bypass the buffer function.
         self._send = self._send_to_buffer
-        if disable_buffering is True:
+        if disable_buffering:
             log.info("Statsd buffering is disabled")
             self._send = self._send_to_server
 
         # Start the flush thread if buffering is enabled and the interval is above
         # a reasonable range. This both prevents thrashing and allow us to use "0.0"
         # as a value for disabling the automatic flush timer as well.
-        if disable_buffering is False and flush_interval >= MIN_FLUSH_INTERVAL:
+        if not disable_buffering and flush_interval >= MIN_FLUSH_INTERVAL:
             self._register_flush_thread(flush_interval)
             log.debug(
                 "Statsd flush thread registered with period of %s",
@@ -442,7 +442,7 @@ class DogStatsd(object):
         WARNING: Deprecated method - all operations are now buffered by default.
         Open a buffer to send a batch of metrics.
 
-        To take dvantage of automatic flushing, you should use the context manager instead
+        To take advantage of automatic flushing, you should use the context manager instead
 
         >>> with DogStatsd() as batch:
         >>>     batch.gauge("users.online", 123)
@@ -480,7 +480,7 @@ class DogStatsd(object):
 
     def flush(self):
         """
-        Flush the metrics buffer by sending the data to the server
+        Flush the metrics buffer by sending the data to the server.
         """
         with self._buffer_lock:
             # Only send packets if there are packets to send
@@ -855,7 +855,7 @@ class DogStatsd(object):
 
         if len(string) > 8 * 1024:
             raise Exception(
-                u'Event "{}" payload is too big (>=8KB). Event discarded'.format(
+                u'Event "{0}" payload is too big (>=8KB). Event discarded'.format(
                     title
                 )
             )

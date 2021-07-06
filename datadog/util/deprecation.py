@@ -11,7 +11,7 @@ def deprecated(message):
         @wraps(func)
         def deprecated_func(*args, **kwargs):
             warnings.warn(
-                "'{}' is a deprecated function. {}".format(func.__name__, message),
+                "'{0}' is a deprecated function. {1}".format(func.__name__, message),
                 category=DeprecationWarning,
                 stacklevel=2,
             )
