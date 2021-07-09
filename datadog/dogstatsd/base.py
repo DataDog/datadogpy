@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-# Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
-# This product includes software developed at Datadog (https://www.datadoghq.com/).
+# Unless explicitly stated otherwise all files in this repository are licensed under
+# the BSD-3-Clause License. This product includes software developed at Datadog
+# (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
 """
 DogStatsd is a Python client for DogStatsd, a Statsd fork for Datadog.
@@ -12,8 +13,11 @@ import logging
 import os
 import socket
 import errno
+import threading
 import time
 from threading import Lock, RLock
+
+from typing import Optional, List, Text, Union
 
 # Datadog libraries
 from datadog.dogstatsd.context import (
@@ -22,9 +26,9 @@ from datadog.dogstatsd.context import (
 )
 from datadog.dogstatsd.route import get_default_route
 from datadog.util.compat import is_p3k, text
+from datadog.util.deprecation import deprecated
 from datadog.util.format import normalize_tags
 from datadog.version import __version__
-from typing import Optional, List, Text, Union
 
 # Logging
 log = logging.getLogger("datadog.dogstatsd")
@@ -33,12 +37,19 @@ log = logging.getLogger("datadog.dogstatsd")
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8125
 
+# Buffering-related values (in seconds)
+DEFAULT_FLUSH_INTERVAL = 0.3
+MIN_FLUSH_INTERVAL = 0.0001
+
 # Tag name of entity_id
 ENTITY_ID_TAG_NAME = "dd.internal.entity_id"
 
-# Default buffer settings
+# Default buffer settings based on socket type
 UDP_OPTIMAL_PAYLOAD_LENGTH = 1432
 UDS_OPTIMAL_PAYLOAD_LENGTH = 8192
+
+# Socket options
+MIN_SEND_BUFFER_SIZE = 32 * 1024
 
 # Mapping of each "DD_" prefixed environment variable to a specific tag name
 DD_ENV_TAGS_MAPPING = {
@@ -67,26 +78,30 @@ TELEMETRY_FORMATTING_STR = "\n".join(
 )
 
 
+# pylint: disable=useless-object-inheritance,too-many-instance-attributes
+# pylint: disable=too-many-arguments,too-many-locals
 class DogStatsd(object):
     OK, WARNING, CRITICAL, UNKNOWN = (0, 1, 2, 3)
 
     def __init__(
         self,
-        host=DEFAULT_HOST,  # type: Text
-        port=DEFAULT_PORT,  # type: int
-        max_buffer_size=None,  # type: None
-        namespace=None,  # type: Optional[Text]
-        constant_tags=None,  # type: Optional[List[str]]
-        use_ms=False,  # type: bool
-        use_default_route=False,  # type: bool
-        socket_path=None,  # type: Optional[Text]
-        default_sample_rate=1,  # type: float
-        disable_telemetry=False,  # type: bool
+        host=DEFAULT_HOST,                      # type: Text
+        port=DEFAULT_PORT,                      # type: int
+        max_buffer_size=None,                   # type: None
+        flush_interval=DEFAULT_FLUSH_INTERVAL,  # type: float
+        disable_buffering=False,                # type: bool
+        namespace=None,                         # type: Optional[Text]
+        constant_tags=None,                     # type: Optional[List[str]]
+        use_ms=False,                           # type: bool
+        use_default_route=False,                # type: bool
+        socket_path=None,                       # type: Optional[Text]
+        default_sample_rate=1,                  # type: float
+        disable_telemetry=False,                # type: bool
         telemetry_min_flush_interval=(DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL),  # type: int
-        telemetry_host=None,  # type: Text
-        telemetry_port=None,  # type: Union[str, int]
-        telemetry_socket_path=None,  # type: Text
-        max_buffer_len=0,  # type: int
+        telemetry_host=None,                    # type: Text
+        telemetry_port=None,                    # type: Union[str, int]
+        telemetry_socket_path=None,             # type: Text
+        max_buffer_len=0,                       # type: int
     ):  # type: (...) -> None
         """
         Initialize a DogStatsd object.
@@ -138,6 +153,15 @@ class DogStatsd(object):
 
         :max_buffer_size: Deprecated option, do not use it anymore.
         :type max_buffer_type: None
+
+        :flush_interval: Amount of time in seconds that the flush thread will
+        wait before trying to flush the buffered metrics to the server. If set,
+        it overrides the default value.
+        :type flush_interval: float
+
+        :disable_buffering: If set, metrics are no longered buffered by the client and
+        all data is sent synchronously to the server
+        :type disable_buffering: bool
 
         :param namespace: Namespace to prefix all metric names
         :type namespace: string
@@ -246,7 +270,6 @@ class DogStatsd(object):
         # Socket
         self.socket = None
         self.telemetry_socket = None
-        self._send = self._send_to_server
         self.encoding = "utf-8"
 
         # Options
@@ -274,8 +297,36 @@ class DogStatsd(object):
         self._reset_telemetry()
         self._telemetry_flush_interval = telemetry_min_flush_interval
         self._telemetry = not disable_telemetry
+        self._last_flush_time = time.time()
 
+        self._current_buffer_total_size = 0
+        self._buffer = []  # type: List[Text]
         self._buffer_lock = RLock()
+
+        self._reset_buffer()
+
+        # This lock is used for backwards compatibility to prevent concurrent
+        # changes to the buffer when the user is managing the buffer themselves
+        # via deprecated `open_buffer()` and `close_buffer()` functions.
+        self._manual_buffer_lock = RLock()
+
+        # If buffering is disabled, we bypass the buffer function.
+        self._send = self._send_to_buffer
+        if disable_buffering:
+            log.info("Statsd buffering is disabled")
+            self._send = self._send_to_server
+
+        # Start the flush thread if buffering is enabled and the interval is above
+        # a reasonable range. This both prevents thrashing and allow us to use "0.0"
+        # as a value for disabling the automatic flush timer as well.
+        if not disable_buffering and flush_interval >= MIN_FLUSH_INTERVAL:
+            self._register_flush_thread(flush_interval)
+            log.debug(
+                "Statsd flush thread registered with period of %s",
+                flush_interval,
+            )
+        else:
+            log.info("Statsd periodic buffer flush is disabled")
 
     def disable_telemetry(self):
         self._telemetry = False
@@ -283,15 +334,29 @@ class DogStatsd(object):
     def enable_telemetry(self):
         self._telemetry = True
 
+    def _register_flush_thread(self, sleep_duration):
+        def _flush_thread_loop(self, sleep_duration):
+            while True:
+                time.sleep(sleep_duration)
+                self.flush()
+
+        self._flush_thread = threading.Thread(
+            name="{}_flush_thread".format(self.__class__.__name__),
+            target=_flush_thread_loop,
+            args=(self, sleep_duration,),
+        )
+        self._flush_thread.daemon = True
+        self._flush_thread.start()
+
     def _dedicated_telemetry_destination(self):
         return bool(self.telemetry_socket_path or self.telemetry_host)
 
     def __enter__(self):
-        self.open_buffer()
+        self._reset_buffer()
         return self
 
-    def __exit__(self, type, value, traceback):
-        self.close_buffer()
+    def __exit__(self, exc_type, value, traceback):
+        self.flush()
 
     @staticmethod
     def resolve_host(host, use_default_route):
@@ -300,7 +365,7 @@ class DogStatsd(object):
 
         :param host: host
         :type host: string
-        :param use_default_route: use the system default route as host (overrides the `host` parameter)
+        :param use_default_route: Use the system default route as host (overrides `host` parameter)
         :type use_default_route: bool
         """
         if not use_default_route:
@@ -319,9 +384,14 @@ class DogStatsd(object):
             if telemetry and self._dedicated_telemetry_destination():
                 if not self.telemetry_socket:
                     if self.telemetry_socket_path is not None:
-                        self.telemetry_socket = self._get_uds_socket(self.telemetry_socket_path)
+                        self.telemetry_socket = self._get_uds_socket(
+                            self.telemetry_socket_path,
+                        )
                     else:
-                        self.telemetry_socket = self._get_udp_socket_socket(self.telemetry_host, self.telemetry_port)
+                        self.telemetry_socket = self._get_udp_socket_socket(
+                            self.telemetry_host,
+                            self.telemetry_port,
+                        )
 
                 return self.telemetry_socket
 
@@ -329,29 +399,50 @@ class DogStatsd(object):
                 if self.socket_path is not None:
                     self.socket = self._get_uds_socket(self.socket_path)
                 else:
-                    self.socket = self._get_udp_socket(self.host, self.port)
+                    self.socket = self._get_udp_socket(
+                        self.host,
+                        self.port,
+                    )
 
             return self.socket
 
-    @staticmethod
-    def _get_uds_socket(socket_path):
+    @classmethod
+    def _ensure_min_send_buffer_size(cls, sock, min_size=MIN_SEND_BUFFER_SIZE):
+        # Increase the receiving buffer size where needed (e.g. MacOS has 4k RX
+        # buffers which is half of the max packet size that the client will send.
+        if os.name == 'posix':
+            try:
+                recv_buff_size = sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
+                if recv_buff_size <= min_size:
+                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, min_size)
+                    log.debug("Socket send buffer increased to %dkb", min_size / 1024)
+            finally:
+                pass
+
+    @classmethod
+    def _get_uds_socket(cls, socket_path):
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
         sock.setblocking(0)
+        cls._ensure_min_send_buffer_size(sock)
         sock.connect(socket_path)
         return sock
 
-    @staticmethod
-    def _get_udp_socket(host, port):
+    @classmethod
+    def _get_udp_socket(cls, host, port):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setblocking(0)
+        cls._ensure_min_send_buffer_size(sock)
         sock.connect((host, port))
+
         return sock
 
+    @deprecated("Statsd module now uses buffering by default.")
     def open_buffer(self, max_buffer_size=None):
         """
+        WARNING: Deprecated method - all operations are now buffered by default.
         Open a buffer to send a batch of metrics.
 
-        You can also use this as a context manager.
+        To take advantage of automatic flushing, you should use the context manager instead
 
         >>> with DogStatsd() as batch:
         >>>     batch.gauge("users.online", 123)
@@ -360,33 +451,42 @@ class DogStatsd(object):
         Note: This method must be called before close_buffer() matching invocation.
         """
 
-        self._buffer_lock.acquire()
+        self._manual_buffer_lock.acquire()
 
         if max_buffer_size is not None:
             log.warning("The parameter max_buffer_size is now deprecated and is not used anymore")
-        self._current_buffer_total_size = 0
-        self.buffer = []
-        self._send = self._send_to_buffer
 
+        self._reset_buffer()
+
+    @deprecated("Statsd module now uses buffering by default.")
     def close_buffer(self):
         """
+        WARNING: Deprecated method - all operations are now buffered by default.
+
         Flush the buffer and switch back to single metric packets.
 
         Note: This method must be called after a matching open_buffer()
         invocation.
         """
-
-        if not hasattr(self, "buffer"):
-            raise BufferError("Cannot close buffer that was never opened")
-
         try:
-            self._send = self._send_to_server
-
-            if self.buffer:
-                # Only send packets if there are packets to send
-                self._flush_buffer()
+            self.flush()
         finally:
-            self._buffer_lock.release()
+            self._manual_buffer_lock.release()
+
+    def _reset_buffer(self):
+        with self._buffer_lock:
+            self._current_buffer_total_size = 0
+            self._buffer = []
+
+    def flush(self):
+        """
+        Flush the metrics buffer by sending the data to the server.
+        """
+        with self._buffer_lock:
+            # Only send packets if there are packets to send
+            if self._buffer:
+                self._send_to_server("\n".join(self._buffer))
+                self._reset_buffer()
 
     def gauge(
         self,
@@ -610,7 +710,8 @@ class DogStatsd(object):
         )
 
     def _is_telemetry_flush_time(self):
-        return self._telemetry and self._last_flush_time + self._telemetry_flush_interval < time.time()
+        return self._telemetry and \
+            self._last_flush_time + self._telemetry_flush_interval < time.time()
 
     def _send_to_server(self, packet):
         self._xmit_packet(packet, False)
@@ -644,55 +745,64 @@ class DogStatsd(object):
         except socket.timeout:
             # dogstatsd is overflowing, drop the packets (mimicks the UDP behaviour)
             pass
-        except (socket.herror, socket.gaierror) as se:
+        except (socket.herror, socket.gaierror) as socket_err:
             log.warning(
                 "Error submitting packet: %s, dropping the packet and closing the socket",
-                se,
+                socket_err,
             )
             self.close_socket()
-        except socket.error as se:
-            if se.errno == errno.EAGAIN:
-                log.debug("Socket send would block: %s, dropping the packet", se)
+        except socket.error as socket_err:
+            if socket_err.errno == errno.EAGAIN:
+                log.debug("Socket send would block: %s, dropping the packet", socket_err)
+            elif socket_err.errno == errno.ENOBUFS:
+                log.debug("Socket buffer full: %s, dropping the packet", socket_err)
+            elif socket_err.errno == errno.EMSGSIZE:
+                log.debug(
+                    "Packet size too big (size: %d): %s, dropping the packet",
+                    len(packet.encode(self.encoding)),
+                    socket_err)
             else:
                 log.warning(
                     "Error submitting packet: %s, dropping the packet and closing the socket",
-                    se,
+                    socket_err,
                 )
                 self.close_socket()
         except Exception as e:
             log.error("Unexpected error: %s", str(e))
+
         if not is_telemetry and self._telemetry:
             self.bytes_dropped += len(packet)
             self.packets_dropped += 1
+
         return False
 
     def _send_to_buffer(self, packet):
-        if self._should_flush(len(packet)):
-            self._flush_buffer()
-        self.buffer.append(packet)
-        # Update the current buffer length, including line break to anticipate the final packet size
-        self._current_buffer_total_size += len(packet) + 1
+        with self._buffer_lock:
+            if self._should_flush(len(packet)):
+                self.flush()
+
+            self._buffer.append(packet)
+            # Update the current buffer length, including line break to anticipate
+            # the final packet size
+            self._current_buffer_total_size += len(packet) + 1
 
     def _should_flush(self, length_to_be_added):
         if self._current_buffer_total_size + length_to_be_added > self._max_payload_size:
             return True
         return False
 
-    def _flush_buffer(self):
-        self._send_to_server("\n".join(self.buffer))
-        self._current_buffer_total_size = 0
-        self.buffer = []
-
-    def _escape_event_content(self, string):
+    @staticmethod
+    def _escape_event_content(string):
         return string.replace("\n", "\\n")
 
-    def _escape_service_check_message(self, string):
+    @staticmethod
+    def _escape_service_check_message(string):
         return string.replace("\n", "\\n").replace("m:", "m\\:")
 
     def event(
         self,
         title,
-        text,
+        message,
         alert_type=None,
         aggregation_key=None,
         source_type_name=None,
@@ -706,25 +816,26 @@ class DogStatsd(object):
             http://docs.datadoghq.com/api/
 
         >>> statsd.event("Man down!", "This server needs assistance.")
-        >>> statsd.event("The web server restarted", "The web server is up again", alert_type="success")  # NOQA
+        >>> statsd.event("Web server restart", "The web server is up", alert_type="success")  # NOQA
         """
-        title = self._escape_event_content(title)
-        text = self._escape_event_content(text)
+        title = DogStatsd._escape_event_content(title)
+        message = DogStatsd._escape_event_content(message)
 
+        # pylint: disable=undefined-variable
         if not is_p3k():
-            if not isinstance(title, unicode):                              # noqa: F821
-                title = unicode(self._escape_event_content(title), 'utf8')  # noqa: F821
-            if not isinstance(text, unicode):                               # noqa: F821
-                text = unicode(self._escape_event_content(text), 'utf8')    # noqa: F821
+            if not isinstance(title, unicode):                                       # noqa: F821
+                title = unicode(DogStatsd._escape_event_content(title), 'utf8')      # noqa: F821
+            if not isinstance(message, unicode):                                     # noqa: F821
+                message = unicode(DogStatsd._escape_event_content(message), 'utf8')  # noqa: F821
 
         # Append all client level tags to every event
         tags = self._add_constant_tags(tags)
 
         string = u"_e{{{},{}}}:{}|{}".format(
             len(title.encode('utf8', 'replace')),
-            len(text.encode('utf8', 'replace')),
+            len(message.encode('utf8', 'replace')),
             title,
-            text,
+            message,
         )
 
         if date_happened:
@@ -743,19 +854,32 @@ class DogStatsd(object):
             string = "%s|#%s" % (string, ",".join(tags))
 
         if len(string) > 8 * 1024:
-            raise Exception(u'Event "%s" payload is too big (more than 8KB), ' "event discarded" % title)
+            raise Exception(
+                u'Event "{0}" payload is too big (>=8KB). Event discarded'.format(
+                    title
+                )
+            )
 
         if self._telemetry:
             self.events_count += 1
+
         self._send(string)
 
-    def service_check(self, check_name, status, tags=None, timestamp=None, hostname=None, message=None):
+    def service_check(
+        self,
+        check_name,
+        status,
+        tags=None,
+        timestamp=None,
+        hostname=None,
+        message=None,
+    ):
         """
         Send a service check run.
 
         >>> statsd.service_check("my_service.check_name", DogStatsd.WARNING)
         """
-        message = self._escape_service_check_message(message) if message is not None else ""
+        message = DogStatsd._escape_service_check_message(message) if message is not None else ""
 
         string = u"_sc|{0}|{1}".format(check_name, status)
 
@@ -773,14 +897,15 @@ class DogStatsd(object):
 
         if self._telemetry:
             self.service_checks_count += 1
+
         self._send(string)
 
     def _add_constant_tags(self, tags):
         if self.constant_tags:
             if tags:
                 return tags + self.constant_tags
-            else:
-                return self.constant_tags
+
+            return self.constant_tags
         return tags
 
 

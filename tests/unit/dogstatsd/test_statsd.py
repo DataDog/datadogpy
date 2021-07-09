@@ -10,22 +10,22 @@ Tests for dogstatsd.py
 # Standard libraries
 from collections import deque
 from threading import Thread
+import errno
 import os
 import socket
-import errno
-
 import time
 import unittest
+import warnings
 
 # Third-party libraries
 import mock
-from mock import call, mock_open, patch
+from mock import call, Mock, mock_open, patch
 import pytest
 
 # Datadog libraries
 from datadog import initialize, statsd
 from datadog import __version__ as version
-from datadog.dogstatsd.base import DogStatsd, UDP_OPTIMAL_PAYLOAD_LENGTH
+from datadog.dogstatsd.base import DEFAULT_FLUSH_INTERVAL, DogStatsd, MIN_SEND_BUFFER_SIZE, UDP_OPTIMAL_PAYLOAD_LENGTH
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
 from tests.util.contextmanagers import preserve_environment_variable, EnvVars
@@ -35,8 +35,13 @@ from tests.unit.dogstatsd.fixtures import load_fixtures
 class FakeSocket(object):
     """ A fake socket for testing. """
 
-    def __init__(self):
+    FLUSH_GRACE_PERIOD = 0.2
+
+    def __init__(self, flush_interval=DEFAULT_FLUSH_INTERVAL):
         self.payloads = deque()
+
+        self._flush_interval = flush_interval
+        self._flush_wait = False
 
     def send(self, payload):
         if is_p3k():
@@ -46,14 +51,21 @@ class FakeSocket(object):
 
         self.payloads.append(payload)
 
-    def recv(self, count=1):
-        try:
-            out = []
-            for _ in range(count):
-                out.append(self.payloads.popleft().decode('utf-8'))
-            return '\n'.join(out)
-        except IndexError:
+    def recv(self, count=1, reset_wait=False, no_wait=False):
+        # Initial receive should wait for the flush thread timeout unless we
+        # specifically want either a follow-up wait or no waiting at all
+        if not self._flush_wait or reset_wait:
+            if not no_wait:
+                time.sleep(self._flush_interval+self.FLUSH_GRACE_PERIOD)
+            self._flush_wait = True
+
+        if count > len(self.payloads):
             return None
+
+        out = []
+        for _ in range(count):
+            out.append(self.payloads.popleft().decode('utf-8'))
+        return '\n'.join(out)
 
     def close(self):
         pass
@@ -63,17 +75,23 @@ class FakeSocket(object):
 
 
 class BrokenSocket(FakeSocket):
+    def __init__(self, error_number=None):
+        super(BrokenSocket, self).__init__()
+
+        self.error_number = error_number
 
     def send(self, payload):
-        raise socket.error("Socket error")
+        error = socket.error("Socket error [Errno {}]".format(self.error_number))
+        if self.error_number:
+            error.errno = self.error_number
 
-
-class OverflownSocket(FakeSocket):
-
-    def send(self, payload):
-        error = socket.error("Socket error")
-        error.errno = errno.EAGAIN
         raise error
+
+
+class OverflownSocket(BrokenSocket):
+
+    def __init__(self):
+        super(OverflownSocket, self).__init__(errno.EAGAIN)
 
 
 def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped=0, packets_sent=1, packets_dropped=0, transport="udp", tags=""):
@@ -123,13 +141,22 @@ class TestDogStatsd(unittest.TestCase):
         return self.assertEqual(expected_payload, actual_payload)
 
     def assert_almost_equal(self, val1, val2, delta):
-        return self.assertTrue(0 <= abs(val1 - val2) <= delta, "%s - %s not within %s" % (val1, val2, delta))
+        """
+        Calculates a delta between first and second value and ensures
+        that this difference falls within the delta range
+        """
+        return self.assertTrue(
+            0 <= abs(val1 - val2) <= delta,
+            "Absolute difference of {} and {} ({}) is not within {}".format(
+                val1,
+                val2,
+                abs(val1-val2),
+                delta,
+            ),
+        )
 
-    def recv(self, count=1):
-        packets = []
-        for _ in range(count):
-            packets.append(self.statsd.socket.recv())
-        return "\n".join(packets)
+    def recv(self, *args, **kwargs):
+        return self.statsd.socket.recv(*args, **kwargs)
 
     def test_initialization(self):
         """
@@ -203,18 +230,22 @@ class TestDogStatsd(unittest.TestCase):
 
     def test_counter(self):
         self.statsd.increment('page.views')
+        self.statsd.flush()
         self.assert_equal_telemetry('page.views:1|c', self.recv(2))
 
         self.statsd._reset_telemetry()
         self.statsd.increment('page.views', 11)
+        self.statsd.flush()
         self.assert_equal_telemetry('page.views:11|c', self.recv(2))
 
         self.statsd._reset_telemetry()
         self.statsd.decrement('page.views')
+        self.statsd.flush()
         self.assert_equal_telemetry('page.views:-1|c', self.recv(2))
 
         self.statsd._reset_telemetry()
         self.statsd.decrement('page.views', 12)
+        self.statsd.flush()
         self.assert_equal_telemetry('page.views:-12|c', self.recv(2))
 
     def test_histogram(self):
@@ -238,44 +269,93 @@ class TestDogStatsd(unittest.TestCase):
         self.assert_equal_telemetry('h:1|h|#red', self.recv(2))
 
     def test_sample_rate(self):
-        self.statsd._telemetry = False # disabling telemetry since sample_rate imply randomness
+        # Disabling telemetry since sample_rate imply randomness
+        self.statsd._telemetry = False
+
         self.statsd.increment('c', sample_rate=0)
-        self.assertFalse(self.statsd.socket.recv())
+        self.assertFalse(self.recv())
+
         for _ in range(10000):
             self.statsd.increment('sampled_counter', sample_rate=0.3)
-        self.assert_almost_equal(3000, len(self.statsd.socket.payloads), 150)
-        self.assertEqual('sampled_counter:1|c|@0.3', self.recv())
+
+        self.statsd.flush()
+
+        total_metrics = 0
+        payload = self.recv()
+        while payload:
+            metrics = payload.split('\n')
+            for metric in metrics:
+                self.assertEqual('sampled_counter:1|c|@0.3', metric)
+            total_metrics += len(metrics)
+            payload = self.recv()
+
+        self.assert_almost_equal(3000, total_metrics, 150)
 
     def test_default_sample_rate(self):
-        self.statsd._telemetry = False # disabling telemetry since sample_rate imply randomness
+        # Disabling telemetry since sample_rate imply randomness
+        self.statsd._telemetry = False
+
         self.statsd.default_sample_rate = 0.3
         for _ in range(10000):
             self.statsd.increment('sampled_counter')
-        self.assert_almost_equal(3000, len(self.statsd.socket.payloads), 150)
-        self.assertEqual('sampled_counter:1|c|@0.3', self.recv())
+
+        total_metrics = 0
+        payload = self.recv()
+        while payload:
+            metrics = payload.split('\n')
+            for metric in metrics:
+                self.assertEqual('sampled_counter:1|c|@0.3', metric)
+
+            total_metrics += len(metrics)
+            payload = self.recv()
+
+        self.assert_almost_equal(3000, total_metrics, 150)
 
     def test_tags_and_samples(self):
-        self.statsd._telemetry = False # disabling telemetry since sample_rate imply randomness
+        # Disabling telemetry since sample_rate imply randomness
+        self.statsd._telemetry = False
+
         for _ in range(100):
             self.statsd.gauge('gst', 23, tags=["sampled"], sample_rate=0.9)
 
-        self.assertEqual('gst:23|g|@0.9|#sampled', self.recv())
+        self.assertEqual('gst:23|g|@0.9|#sampled', self.recv().split('\n')[0])
 
     def test_timing(self):
         self.statsd.timing('t', 123)
         self.assert_equal_telemetry('t:123|ms', self.recv(2))
 
     def test_event(self):
-        self.statsd.event('Title', u'L1\nL2', priority='low', date_happened=1375296969)
-        event = u'_e{5,6}:Title|L1\\nL2|d:1375296969|p:low'
-        self.assert_equal_telemetry(event, self.recv(2), telemetry=telemetry_metrics(metrics=0, events=1, bytes_sent=len(event)))
+        self.statsd.event(
+            'Title',
+            u'L1\nL2',
+            priority='low',
+            date_happened=1375296969,
+        )
+        event2 = u'_e{5,6}:Title|L1\\nL2|d:1375296969|p:low'
+        self.assert_equal_telemetry(
+            event2,
+            self.recv(2),
+            telemetry=telemetry_metrics(
+                metrics=0,
+                events=1,
+                bytes_sent=len(event2),
+            ),
+        )
 
         self.statsd._reset_telemetry()
 
         self.statsd.event('Title', u'♬ †øU †øU ¥ºu T0µ ♪',
                           aggregation_key='key', tags=['t1', 't2:v2'])
-        event = u'_e{5,32}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2'
-        self.assert_equal_telemetry(event, self.recv(2), telemetry=telemetry_metrics(metrics=0, events=1, bytes_sent=len(event)))
+        event3 = u'_e{5,32}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2'
+        self.assert_equal_telemetry(
+            event3,
+            self.recv(2, reset_wait=True),
+            telemetry=telemetry_metrics(
+                metrics=0,
+                events=1,
+                bytes_sent=len(event3),
+            ),
+        )
 
     def test_unicode_event(self):
         self.statsd.event(
@@ -283,7 +363,15 @@ class TestDogStatsd(unittest.TestCase):
                 'Delivered — destination.csv')
         event = u'_e{89,29}:my.prefix.Delivery - Daily Settlement Summary Report Delivery — Invoice Cloud succeeded|' + \
             u'Delivered — destination.csv'
-        self.assert_equal_telemetry(event, self.recv(2), telemetry=telemetry_metrics(metrics=0, events=1, bytes_sent=len(event)))
+        self.assert_equal_telemetry(
+            event,
+            self.recv(2),
+            telemetry=telemetry_metrics(
+                metrics=0,
+                events=1,
+                bytes_sent=len(event),
+            ),
+        )
 
         self.statsd._reset_telemetry()
 
@@ -291,14 +379,32 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.constant_tags = ['bar:baz', 'foo']
         self.statsd.event('Title', u'L1\nL2', priority='low', date_happened=1375296969)
         event = u'_e{5,6}:Title|L1\\nL2|d:1375296969|p:low|#bar:baz,foo'
-        self.assert_equal_telemetry(event, self.recv(2), telemetry=telemetry_metrics(metrics=0, events=1, tags="bar:baz,foo", bytes_sent=len(event)))
+        self.assert_equal_telemetry(
+            event,
+            self.recv(2),
+            telemetry=telemetry_metrics(
+                metrics=0,
+                events=1,
+                tags="bar:baz,foo",
+                bytes_sent=len(event),
+            ),
+        )
 
         self.statsd._reset_telemetry()
 
         self.statsd.event('Title', u'♬ †øU †øU ¥ºu T0µ ♪',
                           aggregation_key='key', tags=['t1', 't2:v2'])
         event = u'_e{5,32}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2,bar:baz,foo'
-        self.assert_equal_telemetry(event, self.recv(2), telemetry=telemetry_metrics(metrics=0, events=1, tags="bar:baz,foo", bytes_sent=len(event)))
+        self.assert_equal_telemetry(
+            event,
+            self.recv(2, reset_wait=True),
+            telemetry=telemetry_metrics(
+                metrics=0,
+                events=1,
+                tags="bar:baz,foo",
+                bytes_sent=len(event),
+            ),
+        )
 
     def test_service_check(self):
         now = int(time.time())
@@ -307,7 +413,15 @@ class TestDogStatsd(unittest.TestCase):
             tags=['key1:val1', 'key2:val2'], timestamp=now,
             hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪")
         check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}'.format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\\: T0µ ♪")
-        self.assert_equal_telemetry(check, self.recv(2), telemetry=telemetry_metrics(metrics=0, service_checks=1, bytes_sent=len(check)))
+        self.assert_equal_telemetry(
+            check,
+            self.recv(2),
+            telemetry=telemetry_metrics(
+                metrics=0,
+                service_checks=1,
+                bytes_sent=len(check),
+            ),
+        )
 
     def test_service_check_constant_tags(self):
         self.statsd.constant_tags = ['bar:baz', 'foo']
@@ -319,8 +433,13 @@ class TestDogStatsd(unittest.TestCase):
         check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#bar:baz,foo|m:{2}'.format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\\: T0µ ♪")
         self.assert_equal_telemetry(
             check,
-            self.recv(2),
-            telemetry=telemetry_metrics(metrics=0, service_checks=1, tags="bar:baz,foo", bytes_sent=len(check))
+            self.recv(2, True),
+            telemetry=telemetry_metrics(
+                metrics=0,
+                service_checks=1,
+                tags="bar:baz,foo",
+                bytes_sent=len(check),
+            ),
         )
 
         self.statsd._reset_telemetry()
@@ -332,8 +451,13 @@ class TestDogStatsd(unittest.TestCase):
         check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2,bar:baz,foo|m:{2}'.format(self.statsd.WARNING, now, u"♬ †øU \\n†øU ¥ºu|m\\: T0µ ♪")
         self.assert_equal_telemetry(
             check,
-            self.recv(2),
-            telemetry=telemetry_metrics(metrics=0, service_checks=1, tags="bar:baz,foo", bytes_sent=len(check))
+            self.recv(2, True),
+            telemetry=telemetry_metrics(
+                metrics=0,
+                service_checks=1,
+                tags="bar:baz,foo",
+                bytes_sent=len(check),
+            ),
         )
 
     def test_metric_namespace(self):
@@ -362,7 +486,14 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.constant_tags = ['bar:baz']
         self.statsd.gauge('gauge', 123.4, tags=metric_level_tag)
         metric = 'gauge:123.4|g|#foo:bar,bar:baz'
-        self.assert_equal_telemetry(metric, self.recv(2), telemetry=telemetry_metrics(tags="bar:baz", bytes_sent=len(metric)))
+        self.assert_equal_telemetry(
+            metric,
+            self.recv(2),
+            telemetry=telemetry_metrics(
+                tags="bar:baz",
+                bytes_sent=len(metric),
+            ),
+        )
 
         self.statsd._reset_telemetry()
 
@@ -370,12 +501,21 @@ class TestDogStatsd(unittest.TestCase):
         # should not duplicate the tags being sent
         self.statsd.gauge('gauge', 123.4, tags=metric_level_tag)
         metric = "gauge:123.4|g|#foo:bar,bar:baz"
-        self.assert_equal_telemetry(metric, self.recv(2), telemetry=telemetry_metrics(tags="bar:baz", bytes_sent=len(metric)))
+        self.assert_equal_telemetry(
+            metric,
+            self.recv(2, reset_wait=True),
+            telemetry=telemetry_metrics(
+                tags="bar:baz",
+                bytes_sent=len(metric),
+            ),
+        )
 
     def test_socket_error(self):
         self.statsd.socket = BrokenSocket()
         with mock.patch("datadog.dogstatsd.base.log") as mock_log:
             self.statsd.gauge('no error', 1)
+            self.statsd.flush()
+
             mock_log.error.assert_not_called()
             mock_log.warning.assert_called_once_with(
                 "Error submitting packet: %s, dropping the packet and closing the socket",
@@ -386,9 +526,77 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.socket = OverflownSocket()
         with mock.patch("datadog.dogstatsd.base.log") as mock_log:
             self.statsd.gauge('no error', 1)
+            self.statsd.flush()
+
             mock_log.error.assert_not_called()
             calls = [call("Socket send would block: %s, dropping the packet", mock.ANY)]
             mock_log.debug.assert_has_calls(calls * 2)
+
+    def test_socket_message_too_long(self):
+        self.statsd.socket = BrokenSocket(error_number=errno.EMSGSIZE)
+        with mock.patch("datadog.dogstatsd.base.log") as mock_log:
+            self.statsd.gauge('no error', 1)
+            self.statsd.flush()
+
+            mock_log.error.assert_not_called()
+            calls = [
+                call(
+                    "Packet size too big (size: %d): %s, dropping the packet",
+                    mock.ANY,
+                    mock.ANY,
+                ),
+            ]
+            mock_log.debug.assert_has_calls(calls * 2)
+
+    def test_socket_no_buffer_space(self):
+        self.statsd.socket = BrokenSocket(error_number=errno.ENOBUFS)
+        with mock.patch("datadog.dogstatsd.base.log") as mock_log:
+            self.statsd.gauge('no error', 1)
+            self.statsd.flush()
+
+            mock_log.error.assert_not_called()
+            calls = [call("Socket buffer full: %s, dropping the packet", mock.ANY)]
+            mock_log.debug.assert_has_calls(calls * 2)
+
+    @patch('socket.socket')
+    def test_uds_socket_ensures_min_receive_buffer(self, mock_socket_create):
+        mock_socket = mock_socket_create.return_value
+        mock_socket.setblocking.return_value = None
+        mock_socket.connect.return_value = None
+        mock_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE / 2
+
+        datadog = DogStatsd(socket_path="/fake/uds/socket/path")
+        datadog.gauge('some value', 1)
+        datadog.flush()
+
+        # Sanity check
+        mock_socket_create.assert_called_once_with(socket.AF_UNIX, socket.SOCK_DGRAM)
+
+        mock_socket.setsockopt.assert_called_once_with(
+            socket.SOL_SOCKET,
+            socket.SO_SNDBUF,
+            MIN_SEND_BUFFER_SIZE,
+        )
+
+    @patch('socket.socket')
+    def test_udp_socket_ensures_min_receive_buffer(self, mock_socket_create):
+        mock_socket = mock_socket_create.return_value
+        mock_socket.setblocking.return_value = None
+        mock_socket.connect.return_value = None
+        mock_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE / 2
+
+        datadog = DogStatsd()
+        datadog.gauge('some value', 1)
+        datadog.flush()
+
+        # Sanity check
+        mock_socket_create.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
+
+        mock_socket.setsockopt.assert_called_once_with(
+            socket.SOL_SOCKET,
+            socket.SO_SNDBUF,
+            MIN_SEND_BUFFER_SIZE,
+        )
 
     def test_distributed(self):
         """
@@ -398,7 +606,7 @@ class TestDogStatsd(unittest.TestCase):
         @self.statsd.distributed('distributed.test')
         def func(arg1, arg2, kwarg1=1, kwarg2=1):
             """docstring"""
-            time.sleep(0.5)
+            time.sleep(0.1)
             return (arg1, arg2, kwarg1, kwarg2)
 
         self.assertEqual('func', func.__name__)
@@ -414,7 +622,7 @@ class TestDogStatsd(unittest.TestCase):
 
         self.assertEqual('d', type_)
         self.assertEqual('distributed.test', name)
-        self.assert_almost_equal(0.5, float(value), 0.1)
+        self.assert_almost_equal(0.1, float(value), 0.09)
 
         # Repeat, force timer value in milliseconds
         @self.statsd.distributed('distributed.test', use_ms=True)
@@ -425,14 +633,14 @@ class TestDogStatsd(unittest.TestCase):
 
         func(1, 2, kwarg2=3)
 
-        packet = self.recv(2).split("\n")[0] # ignore telemetry packet
+        # Ignore telemetry packet
+        packet = self.recv(2, reset_wait=True).split("\n")[0]
         name_value, type_ = packet.split('|')
         name, value = name_value.split(':')
 
         self.assertEqual('d', type_)
         self.assertEqual('distributed.test', name)
         self.assert_almost_equal(500, float(value), 100)
-
 
     def test_timed(self):
         """
@@ -468,8 +676,10 @@ class TestDogStatsd(unittest.TestCase):
             return (arg1, arg2, kwarg1, kwarg2)
 
         func(1, 2, kwarg2=3)
+        self.statsd.flush()
 
-        packet = self.recv(2).split("\n")[0] # ignore telemetry packet
+        # Ignore telemetry packet
+        packet = self.recv(2).split("\n")[0]
         name_value, type_ = packet.split('|')
         name, value = name_value.split(':')
 
@@ -510,6 +720,7 @@ class TestDogStatsd(unittest.TestCase):
             return (arg1, arg2, kwarg1, kwarg2)
 
         func(1, 2, kwarg2=3)
+        self.statsd.flush()
 
         packet = self.recv()
         name_value, type_ = packet.split('|')
@@ -545,7 +756,7 @@ class TestDogStatsd(unittest.TestCase):
         self.assertEqual('tests.unit.dogstatsd.test_statsd.func', name)
         self.assert_almost_equal(0.5, float(value), 0.1)
 
-    @pytest.mark.skipif(not is_higher_py35(), reason="Coroutines are supported on Python 3.5 or higher.")
+    @unittest.skipIf(not is_higher_py35(), reason="Coroutines are supported on Python 3.5 or higher.")
     def test_timed_coroutine(self):
         """
         Measure the distribution of a coroutine function's run time.
@@ -599,7 +810,7 @@ async def print_foo():
         with self.statsd.timed('timed_context.test', use_ms=True) as timer:
             time.sleep(0.5)
 
-        packet = self.recv(2).split("\n")[0] # ignore telemetry packet
+        packet = self.recv(2, reset_wait=True).split("\n")[0] # ignore telemetry packet
         name_value, type_ = packet.split('|')
         name, value = name_value.split(':')
 
@@ -669,7 +880,7 @@ async def print_foo():
         time.sleep(0.5)
         timer.stop()
 
-        packet = self.recv(2).split("\n")[0] # ignore telemetry packet
+        packet = self.recv(2, reset_wait=True).split("\n")[0] # ignore telemetry packet
         name_value, type_ = packet.split('|')
         name, value = name_value.split(':')
 
@@ -688,6 +899,68 @@ async def print_foo():
                 self.recv(2),
                 telemetry=telemetry_metrics(metrics=2, bytes_sent=len(expected))
         )
+
+    def test_flush(self):
+        self.statsd.increment('page.views')
+        self.assertIsNone(self.recv(no_wait=True))
+        self.statsd.flush()
+        self.assert_equal_telemetry('page.views:1|c', self.recv(2))
+
+    def test_flush_interval(self):
+        dogstatsd = DogStatsd(flush_interval=1, telemetry_min_flush_interval=0)
+        fake_socket = FakeSocket()
+        dogstatsd.socket = fake_socket
+
+        dogstatsd.increment('page.views')
+        self.assertIsNone(fake_socket.recv(no_wait=True))
+
+        time.sleep(0.3)
+        self.assertIsNone(fake_socket.recv(no_wait=True))
+
+        time.sleep(1)
+        self.assert_equal_telemetry(
+            'page.views:1|c',
+            fake_socket.recv(2, no_wait=True)
+        )
+
+    def test_disable_buffering(self):
+        dogstatsd = DogStatsd(disable_buffering=True, telemetry_min_flush_interval=0)
+        fake_socket = FakeSocket()
+        dogstatsd.socket = fake_socket
+
+        dogstatsd.increment('page.views')
+        self.assert_equal_telemetry(
+            'page.views:1|c',
+            fake_socket.recv(2, no_wait=True)
+        )
+
+    def test_flush_disable(self):
+        dogstatsd = DogStatsd(
+            flush_interval=0,
+            telemetry_min_flush_interval=0
+        )
+        fake_socket = FakeSocket()
+        dogstatsd.socket = fake_socket
+
+        dogstatsd.increment('page.views')
+        self.assertIsNone(fake_socket.recv(no_wait=True))
+
+        time.sleep(DEFAULT_FLUSH_INTERVAL)
+        self.assertIsNone(fake_socket.recv(no_wait=True))
+
+        time.sleep(0.3)
+        self.assertIsNone(fake_socket.recv(no_wait=True))
+
+    @patch("warnings.warn")
+    def test_manual_buffer_ops_deprecation(self, mock_warn):
+        self.assertFalse(mock_warn.called)
+
+        self.statsd.open_buffer()
+        self.assertTrue(mock_warn.called)
+        self.assertEqual(mock_warn.call_count, 1)
+
+        self.statsd.close_buffer()
+        self.assertEqual(mock_warn.call_count, 2)
 
     def test_batching_sequential(self):
         self.statsd.open_buffer()
@@ -722,6 +995,10 @@ async def print_foo():
         num_threads = 4
         threads = []
 
+        dogstatsd = DogStatsd(telemetry_min_flush_interval=0)
+        fake_socket = FakeSocket()
+        dogstatsd.socket = fake_socket
+
         def batch_metrics(index, dsd):
             time.sleep(0.3 * index)
 
@@ -737,84 +1014,67 @@ async def print_foo():
             dsd.close_buffer()
 
         for idx in range(num_threads):
-            threads.append(Thread(target=batch_metrics, args=(idx, self.statsd)))
+            thread = Thread(
+                name="{}_sender_thread_{}".format(self.__class__.__name__, idx),
+                target=batch_metrics,
+                args=(idx, dogstatsd)
+            )
+            thread.daemon = True
+
+            threads.append(thread)
 
         for thread in threads:
             thread.start()
 
+        time.sleep(5)
+
         for thread in threads:
             if thread.is_alive():
-                thread.join()
+                thread.join(0.1)
 
-        # This is a bit of a tricky thing to test for - initially only our data packet is
-        # sent but then telemetry is flushed/reset and the subsequent metric xmit includes
-        # the telemetry data for the previous packet.
-        expected_xfer_metrics = [(33, 1)]
-        for i in range(num_threads - 1):
-            expected_xfer_metrics.append(
-                (33 + len(telemetry_metrics(
-                    metrics=2, bytes_sent=expected_xfer_metrics[i][0], packets_sent=expected_xfer_metrics[i][1]
-                )), 2))
+        previous_telemetry_packet_size = 0
+        thread_idx = 0
 
-        for idx in range(num_threads):
-            expected_message = "page.%d.views:123|g\ntimer.%d:123|ms" % (idx, idx)
-            bytes_sent, packets_sent = expected_xfer_metrics[idx]
+        while thread_idx < num_threads:
+            first_message = "page.{}.views:123|g".format(thread_idx)
+            first_message_len = len(first_message)
+            second_message = "timer.{}:123|ms".format(thread_idx)
+            second_message_len = len(second_message)
 
-            self.assert_equal_telemetry(
-                expected_message,
-                self.recv(2),
-                telemetry=telemetry_metrics(
-                    metrics=2,
+            received_payload = fake_socket.recv(1)
+
+            # Base assumption is that we got both messages but
+            # we may get metrics split depending on when the flush thread triggers
+            if received_payload == first_message:
+                message = first_message
+                packet_size = first_message_len
+                num_metrics = 1
+            elif received_payload == second_message:
+                message = second_message
+                packet_size = second_message_len
+                num_metrics = 1
+                thread_idx += 1
+            else:
+                message = '\n'.join([first_message, second_message])
+                packet_size = len(message)
+                num_metrics = 2
+                thread_idx += 1
+
+            self.assertEqual(received_payload, message)
+
+            packet_sent = 2
+            if previous_telemetry_packet_size == 0:
+                packet_sent = 1
+
+            bytes_sent = previous_telemetry_packet_size + packet_size
+            telemetry = telemetry_metrics(
+                    metrics=num_metrics,
                     bytes_sent=bytes_sent,
-                    packets_sent=packets_sent,
-                )
+                    packets_sent=packet_sent,
             )
+            self.assertEqual(telemetry, fake_socket.recv(1))
 
-    def test_close_buffer_without_open(self):
-        dogstatsd = DogStatsd()
-        with self.assertRaises(BufferError):
-            dogstatsd.close_buffer()
-
-    def test_threaded_close_buffer_without_open(self):
-        def batch_metrics(dsd):
-            time.sleep(0.3)
-            dsd.open_buffer()
-
-            dsd.gauge('page.views', 123)
-            dsd.timing('timer', 123)
-
-            time.sleep(0.5)
-            dsd.close_buffer()
-
-        def close_async_buffer(self, dsd):
-            # Ensures that buffer is defined
-            dsd.open_buffer()
-            dsd.close_buffer()
-
-            time.sleep(0.5)
-            with self.assertRaises(RuntimeError):
-                dsd.close_buffer()
-
-        thread1 = Thread(target=batch_metrics, args=(self.statsd,))
-        thread2 = Thread(target=close_async_buffer, args=(self, self.statsd,))
-
-        for thread in [thread1, thread2]:
-            thread.start()
-
-        for thread in [thread1, thread2]:
-            if thread.is_alive():
-                thread.join()
-
-        expected_message = "page.views:123|g\ntimer:123|ms"
-        self.assert_equal_telemetry(
-            expected_message,
-            self.recv(2),
-            telemetry=telemetry_metrics(
-                metrics=2,
-                bytes_sent=29,
-                packets_sent=1,
-            )
-        )
+            previous_telemetry_packet_size = len(telemetry)
 
     def test_telemetry(self):
         self.statsd.metrics_count = 1
@@ -848,7 +1108,7 @@ async def print_foo():
         fake_socket = FakeSocket()
         dogstatsd.socket = fake_socket
 
-        # set the last flush time in the future to be sure we won't flush
+        # Set the last flush time in the future to be sure we won't flush
         dogstatsd._last_flush_time = time.time() + dogstatsd._telemetry_flush_interval
         dogstatsd.gauge('gauge', 123.4)
 
@@ -856,10 +1116,18 @@ async def print_foo():
         self.assertEqual(metric, fake_socket.recv())
 
         time1 = time.time()
-        # setting the last flush time in the past to trigger a telemetry flush
+        # Setting the last flush time in the past to trigger a telemetry flush
         dogstatsd._last_flush_time = time1 - dogstatsd._telemetry_flush_interval -1
         dogstatsd.gauge('gauge', 123.4)
-        self.assert_equal_telemetry(metric, fake_socket.recv(2), telemetry=telemetry_metrics(metrics=2, bytes_sent=2*len(metric), packets_sent=2))
+        self.assert_equal_telemetry(
+            metric,
+            fake_socket.recv(2, reset_wait=True),
+            telemetry=telemetry_metrics(
+                metrics=2,
+                bytes_sent=2*len(metric),
+                packets_sent=2,
+            ),
+        )
 
         # assert that _last_flush_time has been updated
         self.assertTrue(time1 < dogstatsd._last_flush_time)
@@ -886,8 +1154,16 @@ async def print_foo():
         dogstatsd._last_flush_time = time1 - dogstatsd._telemetry_flush_interval - 1
         dogstatsd.gauge('gauge', 123.4)
 
-        self.assertEqual('gauge:123.4|g', fake_socket.recv())
-        self.assert_equal_telemetry('', fake_telemetry_socket.recv(), telemetry=telemetry_metrics(metrics=2, bytes_sent=13*2, packets_sent=2))
+        self.assertEqual('gauge:123.4|g', fake_socket.recv(reset_wait=True))
+        self.assert_equal_telemetry(
+            '',
+            fake_telemetry_socket.recv(),
+            telemetry=telemetry_metrics(
+                metrics=2,
+                bytes_sent=13*2,
+                packets_sent=2,
+            ),
+        )
 
         # assert that _last_flush_time has been updated
         self.assertTrue(time1 < dogstatsd._last_flush_time)
@@ -919,28 +1195,46 @@ async def print_foo():
             dogstatsd.socket = fake_socket
             dogstatsd.gauge('page.views', 123)
             dogstatsd.timing('timer', 123)
-        metric = "page.views:123|g\ntimer:123|ms"
-        self.assertEqual(metric, fake_socket.recv())
-        self.assertEqual(telemetry_metrics(metrics=2, bytes_sent=len(metric)), fake_socket.recv())
-        # self.assert_equal_telemetry("page.views:123|g\ntimer:123|ms", fake_socket.recv(2), telemetry=telemetry_metrics(metrics=2))
+            dogstatsd.increment('my_counter', 3)
+
+        metric1 = "page.views:123|g"
+        metric2 = "timer:123|ms"
+        metric3 = "my_counter:3|c"
+
+        metrics = '\n'.join([metric1, metric2, metric3])
+        self.assertEqual(metrics, fake_socket.recv(no_wait=True))
+
+        metrics_packet = telemetry_metrics(
+            metrics=3,
+            bytes_sent=len(metrics),
+            packets_sent=1,
+        )
+        self.assertEqual(metrics_packet, fake_socket.recv(no_wait=True))
 
     def test_batched_buffer_autoflush(self):
         fake_socket = FakeSocket()
         bytes_sent = 0
         with DogStatsd(telemetry_min_flush_interval=0) as dogstatsd:
-            single_metric = 'mycounter:1|c'
-            self.assertEqual(dogstatsd._max_payload_size, UDP_OPTIMAL_PAYLOAD_LENGTH)
-            metrics_per_packet = dogstatsd._max_payload_size // (len(single_metric) + 1)
             dogstatsd.socket = fake_socket
+
+            self.assertEqual(dogstatsd._max_payload_size, UDP_OPTIMAL_PAYLOAD_LENGTH)
+
+            single_metric = 'mycounter:1|c'
+            metrics_per_packet = dogstatsd._max_payload_size // (len(single_metric) + 1)
             for _ in range(metrics_per_packet + 1):
                 dogstatsd.increment('mycounter')
             payload = '\n'.join([single_metric for _ in range(metrics_per_packet)])
 
-            telemetry = telemetry_metrics(metrics=metrics_per_packet+1, bytes_sent=len(payload))
+            telemetry = telemetry_metrics(
+                metrics=metrics_per_packet+1,
+                bytes_sent=len(payload),
+            )
             bytes_sent += len(payload) + len(telemetry)
             self.assertEqual(payload, fake_socket.recv())
             self.assertEqual(telemetry, fake_socket.recv())
+
         self.assertEqual(single_metric, fake_socket.recv())
+
         telemetry = telemetry_metrics(metrics=0, packets_sent=2, bytes_sent=len(single_metric) + len(telemetry))
         self.assertEqual(telemetry, fake_socket.recv())
 
@@ -1063,38 +1357,52 @@ async def print_foo():
             # Make call with no tags passed; only the globally configured tags will be used.
             global_tags_str = ','.join([t for t in global_tags])
             dogstatsd.gauge('gt', 123.4)
+            dogstatsd.flush()
 
             # Protect against the no tags case.
             metric = 'gt:123.4|g|#{}'.format(global_tags_str) if global_tags_str else 'gt:123.4|g'
             self.assertEqual(metric, dogstatsd.socket.recv())
-            self.assertEqual(telemetry_metrics(tags=global_tags_str, bytes_sent=len(metric)), dogstatsd.socket.recv())
+            self.assertEqual(
+                telemetry_metrics(
+                    tags=global_tags_str,
+                    bytes_sent=len(metric)
+                ),
+                dogstatsd.socket.recv(),
+            )
             dogstatsd._reset_telemetry()
 
             # Make another call with local tags passed.
             passed_tags = ['env:prod', 'version:def456', 'custom_tag:toad']
             all_tags_str = ','.join([t for t in passed_tags + global_tags])
             dogstatsd.gauge('gt', 123.4, tags=passed_tags)
+            dogstatsd.flush()
 
             metric = 'gt:123.4|g|#{}'.format(all_tags_str)
             self.assertEqual(metric, dogstatsd.socket.recv())
-            self.assertEqual(telemetry_metrics(tags=global_tags_str, bytes_sent=len(metric)), dogstatsd.socket.recv())
+            self.assertEqual(
+                telemetry_metrics(
+                    tags=global_tags_str,
+                    bytes_sent=len(metric),
+                ),
+                dogstatsd.socket.recv(),
+            )
 
     def test_gauge_does_not_send_none(self):
         self.statsd.gauge('metric', None)
-        self.assertIsNone(self.statsd.socket.recv())
+        self.assertIsNone(self.recv())
 
     def test_increment_does_not_send_none(self):
         self.statsd.increment('metric', None)
-        self.assertIsNone(self.statsd.socket.recv())
+        self.assertIsNone(self.recv())
 
     def test_decrement_does_not_send_none(self):
         self.statsd.decrement('metric', None)
-        self.assertIsNone(self.statsd.socket.recv())
+        self.assertIsNone(self.recv())
 
     def test_timing_does_not_send_none(self):
         self.statsd.timing('metric', None)
-        self.assertIsNone(self.statsd.socket.recv())
+        self.assertIsNone(self.recv())
 
     def test_histogram_does_not_send_none(self):
         self.statsd.histogram('metric', None)
-        self.assertIsNone(self.statsd.socket.recv())
+        self.assertIsNone(self.recv())
