@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Unless explicitly stated otherwise all files in this repository are licensed
 # under the BSD-3-Clause License. This product includes software developed at
 # Datadog (https://www.datadoghq.com/).
@@ -8,13 +9,11 @@ import ctypes
 import os
 import shutil
 import socket
+import sys
 import tempfile
 import threading
 import time
-import warnings
 from multiprocessing import Array, Event, Process, Value
-
-from datadog.util.compat import is_p3k
 
 # pylint: disable=too-many-instance-attributes,useless-object-inheritance
 class FakeServer(object):
@@ -28,7 +27,7 @@ class FakeServer(object):
     ALLOWED_TRANSPORTS = ["UDS", "UDP"]
     MIN_RECV_BUFFER_SIZE = 32 * 1024
 
-    def __init__(self, transport="UDS", debug=False):
+    def __init__(self, transport="UDS", ignore_timeouts=True, debug=False):
         if transport not in self.ALLOWED_TRANSPORTS:
             raise ValueError(
                 "Transport {} is not a valid transport type. Only {} are allowed!".format(
@@ -38,6 +37,7 @@ class FakeServer(object):
             )
 
         self.transport = transport
+        self.ignore_timeouts = ignore_timeouts
         self.debug = debug
 
         self.server_process = None
@@ -80,9 +80,12 @@ class FakeServer(object):
 
             sock.bind(socket_path)
 
+            if self.debug:
+                print("Listening via UDS on", socket_path)
+
             # We are using ctypes for shmem so we have to use a consistent
             # datatype across Python versions
-            if is_p3k():
+            if sys.version_info[0] > 2:
                 self._socket_path.value = socket_path.encode("utf-8")
             else:
                 self._socket_path.value = socket_path
@@ -93,6 +96,9 @@ class FakeServer(object):
             sock.bind(("", 0))
 
             _, self._port.value = sock.getsockname()
+
+            if self.debug:
+                print("Listening via UDP on port", self.port)
 
         # Run an async thread to update our shared-mem counters. We don't want to update
         # the shared memory values when we get data due to performance reasons.
@@ -110,14 +116,20 @@ class FakeServer(object):
             self.ready.set()
 
             while not self.exit.is_set():
-                payload, _ = sock.recvfrom(8192)
+                try:
+                    payload, _ = sock.recvfrom(8192)
+                except socket.timeout as ste:
+                    if self.ignore_timeouts is True:
+                        continue
+
+                    raise ste
 
                 payload_counter += 1
                 metric_counter += len(payload.split(b"\n"))
 
                 if self.debug:
                     print(
-                        "Got '{}' (pkts: {}, payloads: {}, metrics: {}".format(
+                        "Got '{}' (pkts: {}, payloads: {}, metrics: {})".format(
                             payload,
                             len(payload.split(b"\n")),
                             payload_counter,
@@ -127,6 +139,7 @@ class FakeServer(object):
 
         except socket.timeout as ste:
             if not self.exit.is_set():
+                self.exit.set()
                 raise ste
         finally:
             counter_update_timer.join()
@@ -145,6 +158,8 @@ class FakeServer(object):
         self.server_process.start()
 
         self.ready.wait(5)
+
+        return self
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
         # Allow grace time to capture all metrics
@@ -179,3 +194,17 @@ class FakeServer(object):
         return "<FakeThreadedUDPServer(Packets RX: {}, Metrics RX: {}".format(
             self._payload_counter_shmem_var.value, self._metric_counter_shmem_var.value
         )
+
+
+if __name__ == '__main__':
+    options = {
+      'ignore_timeouts': True,
+      'debug': True,
+    }
+
+    if len(sys.argv) > 1:
+        options['transport'] = sys.argv[1].upper()
+
+    with FakeServer(**options) as server:
+        while not server.exit.is_set():
+            time.sleep(0.5)
