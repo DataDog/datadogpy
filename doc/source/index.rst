@@ -5,9 +5,9 @@
 .. module:: datadog
 
 The :mod:`datadog` module provides
-  - :mod:`datadog.api`: a client for Datadog's HTTP API.
-  - :mod:`datadog.dogstatsd`: a DogStatsd client.
-  - :mod:`datadog.threadstats`: a DogStatsd client that submits metrics in a
+  - :mod:`datadog.api`: A client for Datadog's HTTP API.
+  - :mod:`datadog.dogstatsd`: A UDP/UDS DogStatsd client.
+  - :mod:`datadog.threadstats`: A client for Datadog’s HTTP API that submits metrics in a
     worker thread.
 
 
@@ -22,9 +22,10 @@ Install from PyPI::
 Initialization
 ==============
 
-:mod:`datadog` must be initialized with :meth:`datadog.initialize`. An API key
-and an app key are required. These can be passed explicitly to
-:meth:`datadog.initialize` or defined as environment variables
+:mod:`datadog` must be initialized with :meth:`datadog.initialize`. An
+API key and an app key are required unless you intend to use only the
+:class:`~datadog.dogstatsd.base.DogStatsd` client. The keys can be passed
+explicitly to :meth:`datadog.initialize` or defined as environment variables
 ``DATADOG_API_KEY`` and ``DATADOG_APP_KEY`` respectively.
 
 Here's an example where the statsd host and port are configured as well::
@@ -131,11 +132,10 @@ Be sure to initialize the client using :meth:`datadog.initialize` and then use
 
 datadog.threadstats
 ===================
-:mod:`datadog.threadstats` is a DogStatsd client that aggregates metrics when
-possible and submits them asynchronously in order to minimize the performance
-impact on the application. Submitting metrics can be done with a worker thread
-or in a greenlet.
-
+:mod:`datadog.threadstats` is a tool for collecting application metrics without hindering
+performance. It collects metrics in the application thread with very little overhead
+and allows flushing metrics in process, in a thread, or in a greenlet, depending
+on your application's needs. Submission is done through the HTTP API.
 
 Usage
 ~~~~~
@@ -159,6 +159,41 @@ an instance of :class:`datadog.threadstats.ThreadStats`::
 
 datadog.dogstatsd
 =================
+:mod:`datadog.dogstatsd` is a Python client for DogStatsd that automatically
+buffers submitted metrics and submits them to the server asynchronously or at
+maximum sizes for a packet that would prevent fragmentation.
+
+.. note::
+
+    To ensure that all the metrics are sent to the server, either use the
+    context-managed instance of :class:`~datadog.dogstatsd.base.DogStatsd`
+    or when you are finished with the client perform a manual :code:`flush()`.
+    Otherwise the buffered data may get de-allocated before being sent.
+
+
+.. warning::
+
+    :class:`~datadog.dogstatsd.base.DogStatsd` instances are not :code:`fork()`-safe
+    because the automatic buffer flushing occurs in a thread only on the
+    process that created the :class:`~datadog.dogstatsd.base.DogStatsd`
+    instance. Because of this, instances of those clients must not be copied
+    from a parent process to a child process. Instead, the parent process and
+    each child process must create their own instances of the client or the
+    buffering must be globally disabled by using the :code:`disable_buffering`
+    initialization flag.
+
+
+Usage
+~~~~~
+
+::
+
+    from datadog.dogstatsd import DogStatsd
+    
+    client = DogStatsd()
+    client.increment("home.page.hits")
+    client.flush()
+
 
 .. autoclass::  datadog.dogstatsd.base.DogStatsd
     :members:
@@ -173,6 +208,15 @@ datadog.dogstatsd
     >>> from datadog import initialize, statsd
     >>> initialize(statsd_host="localhost", statsd_port=8125)
     >>> statsd.increment("home.page.hits")
+
+.. warning::
+
+    Global :class:`~datadog.dogstatsd.base.DogStatsd` is not :code:`fork()`-safe
+    because the automatic buffer flushing occurs in a thread only on the
+    process that created the :class:`~datadog.dogstatsd.base.DogStatsd`
+    instance. Because of this, the parent process and each child process must
+    create their own instances of the client or the buffering must be globally
+    disabled by using the :code:`disable_buffering` initialization flag.
 
 
 Get in Touch
