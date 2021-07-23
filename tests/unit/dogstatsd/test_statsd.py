@@ -25,7 +25,7 @@ import pytest
 # Datadog libraries
 from datadog import initialize, statsd
 from datadog import __version__ as version
-from datadog.dogstatsd.base import DEFAULT_FLUSH_INTERVAL, DogStatsd, MIN_SEND_BUFFER_SIZE, UDP_OPTIMAL_PAYLOAD_LENGTH
+from datadog.dogstatsd.base import DEFAULT_FLUSH_INTERVAL, DogStatsd, MIN_SEND_BUFFER_SIZE, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_OPTIMAL_PAYLOAD_LENGTH
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
 from tests.util.contextmanagers import preserve_environment_variable, EnvVars
@@ -1386,6 +1386,54 @@ async def print_foo():
                 ),
                 dogstatsd.socket.recv(),
             )
+
+    def test_default_max_udp_packet_size(self):
+        dogstatsd = DogStatsd(flush_interval=10000, disable_telemetry=True)
+        dogstatsd.socket = FakeSocket()
+
+        for _ in range(10000):
+            dogstatsd.increment('val')
+
+        payload = dogstatsd.socket.recv()
+        self.assertIsNotNone(payload)
+        while payload is not None:
+            payload_size = len(payload)
+            self.assertLess(payload_size, UDP_OPTIMAL_PAYLOAD_LENGTH)
+            self.assertGreater(payload_size, UDP_OPTIMAL_PAYLOAD_LENGTH - 100)
+
+            payload = dogstatsd.socket.recv()
+
+    def test_default_max_uds_packet_size(self):
+        dogstatsd = DogStatsd(socket_path="fake", flush_interval=10000, disable_telemetry=True)
+        dogstatsd.socket = FakeSocket()
+
+        for _ in range(10000):
+            dogstatsd.increment('val')
+
+        payload = dogstatsd.socket.recv()
+        self.assertIsNotNone(payload)
+        while payload is not None:
+            payload_size = len(payload)
+            self.assertLess(payload_size, UDS_OPTIMAL_PAYLOAD_LENGTH)
+            self.assertGreater(payload_size, UDS_OPTIMAL_PAYLOAD_LENGTH - 100)
+
+            payload = dogstatsd.socket.recv()
+
+    def test_custom_max_packet_size(self):
+        dogstatsd = DogStatsd(max_buffer_len=4000, flush_interval=10000, disable_telemetry=True)
+        dogstatsd.socket = FakeSocket()
+
+        for _ in range(10000):
+            dogstatsd.increment('val')
+
+        payload = dogstatsd.socket.recv()
+        self.assertIsNotNone(payload)
+        while payload is not None:
+            payload_size = len(payload)
+            self.assertLess(payload_size, 4000)
+            self.assertGreater(payload_size, 3900)
+
+            payload = dogstatsd.socket.recv()
 
     def test_gauge_does_not_send_none(self):
         self.statsd.gauge('metric', None)
