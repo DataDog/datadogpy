@@ -35,8 +35,8 @@ Here's an example where the statsd host and port are configured as well::
     initialize(
         api_key="<your api key>",
         app_key="<your app key>",
-        statsd_host: "127.0.0.1",
-        statsd_port: 8125
+        statsd_host="127.0.0.1",
+        statsd_port=8125
     )
 
 
