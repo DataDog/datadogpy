@@ -17,7 +17,6 @@ import os.path
 from typing import Any, List, Optional
 
 # datadog
-from datadog import api
 from datadog.dogstatsd import DogStatsd, statsd  # noqa
 from datadog.threadstats import ThreadStats, datadog_lambda_wrapper, lambda_metric  # noqa
 from datadog.util.compat import iteritems, NullHandler, text
@@ -46,6 +45,7 @@ def initialize(
     **kwargs  # type: Any
 ):
     # type: (...) -> None
+
     """
     Initialize and configure Datadog.api and Datadog.statsd modules
 
@@ -97,14 +97,26 @@ def initialize(
     :param hostname_from_config: Set the hostname from the Datadog agent config (agent 5). Will be deprecated
     :type hostname_from_config: boolean
     """
-    # API configuration
-    api._api_key = api_key or api._api_key or os.environ.get("DATADOG_API_KEY", os.environ.get("DD_API_KEY"))
-    api._application_key = (
-        app_key or api._application_key or os.environ.get("DATADOG_APP_KEY", os.environ.get("DD_APP_KEY"))
-    )
-    api._hostname_from_config = hostname_from_config
-    api._host_name = host_name or api._host_name or get_hostname(hostname_from_config)
-    api._api_host = api_host or api._api_host or os.environ.get("DATADOG_HOST", "https://api.datadoghq.com")
+
+    # If we are in an AWS Lambda environment we can skip loading and configuration api
+    # as underlying package are heavy to load and slows down cold start
+    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME") is None:
+        from datadog import api
+
+        # API configuration
+        api._api_key = api_key or api._api_key or os.environ.get("DATADOG_API_KEY", os.environ.get("DD_API_KEY"))
+        api._application_key = (
+            app_key or api._application_key or os.environ.get("DATADOG_APP_KEY", os.environ.get("DD_APP_KEY"))
+        )
+        api._hostname_from_config = hostname_from_config
+        api._host_name = host_name or api._host_name or get_hostname(hostname_from_config)
+        api._api_host = api_host or api._api_host or os.environ.get("DATADOG_HOST", "https://api.datadoghq.com")
+        api._return_raw_response = return_raw_response
+
+        # HTTP client and API options
+        for key, value in iteritems(kwargs):
+            attribute = "_{}".format(key)
+            setattr(api, attribute, value)
 
     # Statsd configuration
     # ...overrides the default `statsd` instance attributes
@@ -121,10 +133,3 @@ def initialize(
         statsd.namespace = text(statsd_namespace)
     if statsd_constant_tags:
         statsd.constant_tags += statsd_constant_tags
-
-    api._return_raw_response = return_raw_response
-
-    # HTTP client and API options
-    for key, value in iteritems(kwargs):
-        attribute = "_{}".format(key)
-        setattr(api, attribute, value)

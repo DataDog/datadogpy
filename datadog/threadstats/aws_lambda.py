@@ -3,7 +3,6 @@
 # Copyright 2015-Present Datadog, Inc
 from datadog.threadstats import ThreadStats
 from threading import Lock, Thread
-from datadog import api
 import os
 import warnings
 
@@ -36,6 +35,9 @@ class _LambdaDecorator(object):
 
         with cls._counter_lock:
             if not cls._was_initialized:
+                from datadog import api
+
+
                 cls._was_initialized = True
                 api._api_key = os.environ.get("DATADOG_API_KEY", os.environ.get("DD_API_KEY"))
                 api._api_host = os.environ.get("DATADOG_HOST", "https://api.datadoghq.com")

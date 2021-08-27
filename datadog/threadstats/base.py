@@ -22,11 +22,9 @@ except ImportError:
     from time import time as monotonic
 
 # datadog
-from datadog.api.exceptions import ApiNotInitialized
 from datadog.threadstats.constants import MetricType
 from datadog.threadstats.events import EventsAggregator
 from datadog.threadstats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing, Distribution, Set
-from datadog.threadstats.reporters import HttpReporter
 
 # Loggers
 log = logging.getLogger("datadog.threadstats")
@@ -135,6 +133,9 @@ class ThreadStats(object):
         :param disabled: Disable metrics collection
         :type disabled: bool
         """
+        from datadog.threadstats.reporters import HttpReporter
+
+
         self.flush_interval = flush_interval
         self.roll_up_interval = roll_up_interval
         self.device = device
@@ -370,6 +371,9 @@ class ThreadStats(object):
         call, so it is likely not suitable for user facing processes. In those
         cases, it's probably best to flush in a thread or greenlet.
         """
+        from datadog.api.exceptions import ApiNotInitialized
+
+
         try:
             if self._is_flush_in_progress:
                 log.debug("A flush is already in progress. Skipping this one.")
