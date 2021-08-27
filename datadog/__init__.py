@@ -45,7 +45,6 @@ def initialize(
     **kwargs  # type: Any
 ):
     # type: (...) -> None
-
     """
     Initialize and configure Datadog.api and Datadog.statsd modules
 
@@ -99,7 +98,7 @@ def initialize(
     """
 
     # If we are in an AWS Lambda environment we can skip loading and configuration api
-    # as underlying package are heavy to load and slows down cold start
+    # as underlying packages are heavy to load and slows down cold start
     if os.environ.get("AWS_LAMBDA_FUNCTION_NAME") is None:
         from datadog import api
 
