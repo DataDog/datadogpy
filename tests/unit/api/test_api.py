@@ -334,6 +334,15 @@ class TestInitialization(DatadogAPINoInitialization):
             del os.environ["DATADOG_APP_KEY"]
             del os.environ["DATADOG_HOST"]
 
+    def test_api_should_not_be_init_in_lambda(self):
+        os.environ["AWS_LAMBDA_FUNCTION_NAME"] = "my_test_function"
+        initialize(api_key="API_KEY", app_key="APP_KEY", api_host="HOST", host_name="HOSTNAME")
+        self.assertIsNone(api._api_key)
+        self.assertIsNone(api._application_key)
+        self.assertIsNone(api._api_host)
+        self.assertIsNone(api._host_name)
+        del os.environ["AWS_LAMBDA_FUNCTION_NAME"]
+
 
 class TestExceptions(DatadogAPINoInitialization):
 
