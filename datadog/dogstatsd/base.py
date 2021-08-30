@@ -75,7 +75,7 @@ TELEMETRY_FORMATTING_STR = "\n".join(
         "datadog.dogstatsd.client.packets_sent:%s|c|#%s",
         "datadog.dogstatsd.client.packets_dropped:%s|c|#%s",
     ]
-)
+) + "\n"
 
 
 # pylint: disable=useless-object-inheritance,too-many-instance-attributes
@@ -714,7 +714,7 @@ class DogStatsd(object):
             self._last_flush_time + self._telemetry_flush_interval < time.time()
 
     def _send_to_server(self, packet):
-        self._xmit_packet(packet, False)
+        self._xmit_packet(packet + '\n', False)
         if self._is_telemetry_flush_time():
             telemetry = self._flush_telemetry()
             if self._xmit_packet(telemetry, True):
@@ -787,7 +787,7 @@ class DogStatsd(object):
             self._current_buffer_total_size += len(packet) + 1
 
     def _should_flush(self, length_to_be_added):
-        if self._current_buffer_total_size + length_to_be_added > self._max_payload_size:
+        if self._current_buffer_total_size + length_to_be_added + 1 > self._max_payload_size:
             return True
         return False
 
