@@ -26,6 +26,10 @@ To install from source:
 
 ## Datadog API
 
+To support all Datadog HTTP APIs, a generated library is
+available which will expose all the endpoints:
+[datadog-api-client-python](https://github.com/DataDog/datadog-api-client-python).
+
 Find below a working example for submitting an event to your Event Stream:
 
 ```python
