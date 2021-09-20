@@ -45,7 +45,7 @@ tags = ["version:1", "application:web"]
 api.Event.create(title=title, text=text, tags=tags)
 ```
 
-**Consult the full list of supported Datadog API endpoints with working code examples in [the Datadog API documentation](https://docs.datadoghq.com/api/?code-lang=python).**
+**Consult the full list of supported Datadog API endpoints with working code examples in [the Datadog API documentation](https://docs.datadoghq.com/api/latest/?code-lang=python).**
 
 **Note**: The full list of available Datadog API endpoints is also available in the [Datadog Python Library documentation](https://datadogpy.readthedocs.io/en/latest/)
 
@@ -136,7 +136,7 @@ Some options are suppported when submitting metrics, like [applying a Sample Rat
 
 #### Events
 
-After the client is created, you can start sending events to your Datadog Event Stream. See the dedicated [Event Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/events/dogstatsd/?code-lang=python) to see how to submit an event to your Datadog Event Stream.
+After the client is created, you can start sending events to your Datadog Event Stream. See the dedicated [Event Submission: DogStatsD documentation](https://docs.datadoghq.com/events/guides/dogstatsd/?code-lang=python) to see how to submit an event to your Datadog Event Stream.
 
 #### Service Checks
 
