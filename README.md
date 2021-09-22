@@ -49,7 +49,7 @@ tags = ["version:1", "application:web"]
 api.Event.create(title=title, text=text, tags=tags)
 ```
 
-**Consult the full list of supported Datadog API endpoints with working code examples in [the Datadog API documentation](https://docs.datadoghq.com/api/?lang=python).**
+**Consult the full list of supported Datadog API endpoints with working code examples in [the Datadog API documentation](https://docs.datadoghq.com/api/latest/?code-lang=python).**
 
 **Note**: The full list of available Datadog API endpoints is also available in the [Datadog Python Library documentation](https://datadogpy.readthedocs.io/en/latest/)
 
@@ -77,7 +77,7 @@ In development, you can disable any `statsd` metric collection using `DD_DOGSTAT
 
 ## DogStatsD
 
-In order to use DogStatsD metrics, the Agent must be [running and available](https://docs.datadoghq.com/developers/dogstatsd/?tab=python).
+In order to use DogStatsD metrics, the Agent must be [running and available](https://docs.datadoghq.com/developers/dogstatsd/?code-lang=python).
 
 ### Instantiate the DogStatsD client with UDP
 
@@ -94,7 +94,7 @@ options = {
 initialize(**options)
 ```
 
-See the full list of available [DogStatsD client instantiation parameters](https://docs.datadoghq.com/developers/dogstatsd/?tab=python#client-instantiation-parameters).
+See the full list of available [DogStatsD client instantiation parameters](https://docs.datadoghq.com/developers/dogstatsd/?code-lang=python#client-instantiation-parameters).
 
 #### Instantiate the DogStatsd client with UDS
 
@@ -127,31 +127,31 @@ env:
 ### Usage
 #### Metrics
 
-After the client is created, you can start sending custom metrics to Datadog. See the dedicated [Metric Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python) to see how to submit all supported metric types to Datadog with working code examples:
+After the client is created, you can start sending custom metrics to Datadog. See the dedicated [Metric Submission: DogStatsD documentation](https://docs.datadoghq.com/metrics/dogstatsd_metrics_submission/?code-lang=python) to see how to submit all supported metric types to Datadog with working code examples:
 
-* [Submit a COUNT metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#count).
-* [Submit a GAUGE metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#gauge).
-* [Submit a SET metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#set)
-* [Submit a HISTOGRAM metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#histogram)
-* [Submit a TIMER metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#timer)
-* [Submit a DISTRIBUTION metric](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#distribution)
+* [Submit a COUNT metric](https://docs.datadoghq.com/metrics/dogstatsd_metrics_submission/?code-lang=python#count).
+* [Submit a GAUGE metric](https://docs.datadoghq.com/metrics/dogstatsd_metrics_submission/?code-lang=python#gauge).
+* [Submit a SET metric](https://docs.datadoghq.com/metrics/dogstatsd_metrics_submission/?code-lang=python#set)
+* [Submit a HISTOGRAM metric](https://docs.datadoghq.com/metrics/dogstatsd_metrics_submission/?code-lang=python#histogram)
+* [Submit a TIMER metric](https://docs.datadoghq.com/metrics/dogstatsd_metrics_submission/?code-lang=python#timer)
+* [Submit a DISTRIBUTION metric](https://docs.datadoghq.com/metrics/dogstatsd_metrics_submission/?code-lang=python#distribution)
 
-Some options are suppported when submitting metrics, like [applying a Sample Rate to your metrics](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#metric-submission-options) or [tagging your metrics with your custom tags](https://docs.datadoghq.com/developers/metrics/dogstatsd_metrics_submission/?tab=python#metric-tagging).
+Some options are suppported when submitting metrics, like [applying a Sample Rate to your metrics](https://docs.datadoghq.com/metrics/dogstatsd_metrics_submission/?code-lang=python#metric-submission-options) or [tagging your metrics with your custom tags](https://docs.datadoghq.com/metrics/dogstatsd_metrics_submission/?code-lang=python#metric-tagging).
 
 #### Events
 
-After the client is created, you can start sending events to your Datadog Event Stream. See the dedicated [Event Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/events/dogstatsd/?tab=python) to see how to submit an event to your Datadog Event Stream.
+After the client is created, you can start sending events to your Datadog Event Stream. See the dedicated [Event Submission: DogStatsD documentation](https://docs.datadoghq.com/events/guides/dogstatsd/?code-lang=python) to see how to submit an event to your Datadog Event Stream.
 
 #### Service Checks
 
-After the client is created, you can start sending Service Checks to Datadog. See the dedicated [Service Check Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/service_checks/dogstatsd_service_checks_submission/?tab=python) to see how to submit a Service Check to Datadog.
+After the client is created, you can start sending Service Checks to Datadog. See the dedicated [Service Check Submission: DogStatsD documentation](https://docs.datadoghq.com/developers/service_checks/dogstatsd_service_checks_submission/?code-lang=python) to see how to submit a Service Check to Datadog.
 
 ### Monitoring this client
 
 This client automatically injects telemetry about itself in the DogStatsD stream.
 Those metrics will not be counted as custom and will not be billed. This feature can be disabled using the `statsd.disable_telemetry()` method.
 
-See [Telemetry documentation](https://docs.datadoghq.com/developers/dogstatsd/high_throughput/?tab=python#client-side-telemetry) to learn more about it.
+See [Telemetry documentation](https://docs.datadoghq.com/developers/dogstatsd/high_throughput/?code-lang=python#client-side-telemetry) to learn more about it.
 
 ### Benchmarks
 
