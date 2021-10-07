@@ -388,7 +388,7 @@ class DogStatsd(object):
                             self.telemetry_socket_path,
                         )
                     else:
-                        self.telemetry_socket = self._get_udp_socket_socket(
+                        self.telemetry_socket = self._get_udp_socket(
                             self.telemetry_host,
                             self.telemetry_port,
                         )
