@@ -388,7 +388,7 @@ class DogStatsd(object):
                             self.telemetry_socket_path,
                         )
                     else:
-                        self.telemetry_socket = self._get_udp_socket_socket(
+                        self.telemetry_socket = self._get_udp_socket(
                             self.telemetry_host,
                             self.telemetry_port,
                         )
@@ -767,8 +767,9 @@ class DogStatsd(object):
                     socket_err,
                 )
                 self.close_socket()
-        except Exception as e:
-            log.error("Unexpected error: %s", str(e))
+        except Exception as exc:
+            print("Unexpected error: %s", exc)
+            log.error("Unexpected error: %s", str(exc))
 
         if not is_telemetry and self._telemetry:
             self.bytes_dropped += len(packet)
