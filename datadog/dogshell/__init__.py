@@ -71,6 +71,14 @@ def main():
         "-v", "--version", help="Dog API version", action="version", version="%(prog)s {0}".format(__version__)
     )
 
+    parser.add_argument(
+        "--site",
+        help="Datadog site to send data, us (datadoghq.com), eu (datadoghq.eu) or us3 (us3.datadoghq.com), default: us",
+        dest="site",
+        default=os.environ.get("DD_SITE", os.environ.get("DATADOG_HOST")),
+        choices=["datadoghq.com", "us", "datadoghq.eu", "eu", "us3.datadoghq.com", "us3"],
+    )
+
     config = DogshellConfig()
 
     # Set up subparsers for each service
@@ -93,7 +101,8 @@ def main():
     ServiceLevelObjectiveClient.setup_parser(subparsers)
 
     args = parser.parse_args()
-    config.load(args.config, args.api_key, args.app_key)
+
+    config.load(args.config, args.api_key, args.app_key, args.site)
 
     # Initialize datadog.api package
     initialize(**config)

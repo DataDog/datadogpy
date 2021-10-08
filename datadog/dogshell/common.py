@@ -43,8 +43,16 @@ def report_warnings(res):
 
 
 class DogshellConfig(IterableUserDict):
-    def load(self, config_file, api_key, app_key):
+    def load(self, config_file, api_key, app_key, site):
         config = configparser.ConfigParser()
+        
+        if site is not None:
+            if site in ("us" or "datadoghq.com"):
+                self["api_host"] = "https://datadoghq.com"
+            elif site in ("datadoghq.eu", "eu"):
+                self["api_host"] = "https://datadoghq.eu"
+            elif site in ("us3.datadoghq.com", "us3"):
+                self["api_host"] = "https://us3.datadoghq.com"
 
         if api_key is not None and app_key is not None:
             self["api_key"] = api_key
