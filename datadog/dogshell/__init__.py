@@ -72,10 +72,9 @@ def main():
     )
 
     parser.add_argument(
-        "--site",
+        "--api_host",
         help="Datadog site to send data, us (datadoghq.com), eu (datadoghq.eu) or us3 (us3.datadoghq.com), default: us",
-        dest="site",
-        default=os.environ.get("DD_SITE", os.environ.get("DATADOG_HOST")),
+        dest="api_host",
         choices=["datadoghq.com", "us", "datadoghq.eu", "eu", "us3.datadoghq.com", "us3"],
     )
 
@@ -102,7 +101,7 @@ def main():
 
     args = parser.parse_args()
 
-    config.load(args.config, args.api_key, args.app_key, args.site)
+    config.load(args.config, args.api_key, args.app_key, args.api_host)
 
     # Initialize datadog.api package
     initialize(**config)
