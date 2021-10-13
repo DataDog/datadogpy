@@ -26,7 +26,6 @@ from datadog.dogstatsd.context import (
 )
 from datadog.dogstatsd.route import get_default_route
 from datadog.util.compat import is_p3k, text
-from datadog.util.deprecation import deprecated
 from datadog.util.format import normalize_tags
 from datadog.version import __version__
 
@@ -89,7 +88,7 @@ class DogStatsd(object):
         port=DEFAULT_PORT,                      # type: int
         max_buffer_size=None,                   # type: None
         flush_interval=DEFAULT_FLUSH_INTERVAL,  # type: float
-        disable_buffering=False,                # type: bool
+        disable_buffering=True,                 # type: bool
         namespace=None,                         # type: Optional[Text]
         constant_tags=None,                     # type: Optional[List[str]]
         use_ms=False,                           # type: bool
@@ -436,10 +435,8 @@ class DogStatsd(object):
 
         return sock
 
-    @deprecated("Statsd module now uses buffering by default.")
     def open_buffer(self, max_buffer_size=None):
         """
-        WARNING: Deprecated method - all operations are now buffered by default.
         Open a buffer to send a batch of metrics.
 
         To take advantage of automatic flushing, you should use the context manager instead
@@ -453,16 +450,16 @@ class DogStatsd(object):
 
         self._manual_buffer_lock.acquire()
 
+        # XXX Remove if `disable_buffering` default is changed to False
+        self._send = self._send_to_buffer
+
         if max_buffer_size is not None:
             log.warning("The parameter max_buffer_size is now deprecated and is not used anymore")
 
         self._reset_buffer()
 
-    @deprecated("Statsd module now uses buffering by default.")
     def close_buffer(self):
         """
-        WARNING: Deprecated method - all operations are now buffered by default.
-
         Flush the buffer and switch back to single metric packets.
 
         Note: This method must be called after a matching open_buffer()
@@ -471,6 +468,9 @@ class DogStatsd(object):
         try:
             self.flush()
         finally:
+            # XXX Remove if `disable_buffering` default is changed to False
+            self._send = self._send_to_server
+
             self._manual_buffer_lock.release()
 
     def _reset_buffer(self):

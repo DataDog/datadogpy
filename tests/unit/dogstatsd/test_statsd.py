@@ -905,13 +905,17 @@ async def print_foo():
         )
 
     def test_flush(self):
-        self.statsd.increment('page.views')
-        self.assertIsNone(self.recv(no_wait=True))
-        self.statsd.flush()
-        self.assert_equal_telemetry('page.views:1|c\n', self.recv(2))
+        dogstatsd = DogStatsd(disable_buffering=False, telemetry_min_flush_interval=0)
+        fake_socket = FakeSocket()
+        dogstatsd.socket = fake_socket
+
+        dogstatsd.increment('page.views')
+        self.assertIsNone(fake_socket.recv(no_wait=True))
+        dogstatsd.flush()
+        self.assert_equal_telemetry('page.views:1|c\n', fake_socket.recv(2))
 
     def test_flush_interval(self):
-        dogstatsd = DogStatsd(flush_interval=1, telemetry_min_flush_interval=0)
+        dogstatsd = DogStatsd(disable_buffering=False, flush_interval=1, telemetry_min_flush_interval=0)
         fake_socket = FakeSocket()
         dogstatsd.socket = fake_socket
 
@@ -940,6 +944,7 @@ async def print_foo():
 
     def test_flush_disable(self):
         dogstatsd = DogStatsd(
+            disable_buffering=False,
             flush_interval=0,
             telemetry_min_flush_interval=0
         )
@@ -955,6 +960,7 @@ async def print_foo():
         time.sleep(0.3)
         self.assertIsNone(fake_socket.recv(no_wait=True))
 
+    @unittest.skip("Buffering has been disabled again so the deprecation is not valid")
     @patch("warnings.warn")
     def test_manual_buffer_ops_deprecation(self, mock_warn):
         self.assertFalse(mock_warn.called)
@@ -1108,7 +1114,7 @@ async def print_foo():
         self.assertEqual(0, self.statsd.packets_dropped)
 
     def test_telemetry_flush_interval(self):
-        dogstatsd = DogStatsd()
+        dogstatsd = DogStatsd(disable_buffering=False)
         fake_socket = FakeSocket()
         dogstatsd.socket = fake_socket
 
@@ -1173,7 +1179,7 @@ async def print_foo():
         self.assertTrue(time1 < dogstatsd._last_flush_time)
 
     def test_telemetry_flush_interval_batch(self):
-        dogstatsd = DogStatsd()
+        dogstatsd = DogStatsd(disable_buffering=False)
 
         fake_socket = FakeSocket()
         dogstatsd.socket = fake_socket
@@ -1256,7 +1262,7 @@ async def print_foo():
 
     def test_context_manager(self):
         fake_socket = FakeSocket()
-        with DogStatsd(telemetry_min_flush_interval=0) as dogstatsd:
+        with DogStatsd(disable_buffering=False, telemetry_min_flush_interval=0) as dogstatsd:
             dogstatsd.socket = fake_socket
             dogstatsd.gauge('page.views', 123)
             dogstatsd.timing('timer', 123)
@@ -1279,7 +1285,7 @@ async def print_foo():
     def test_batched_buffer_autoflush(self):
         fake_socket = FakeSocket()
         bytes_sent = 0
-        with DogStatsd(telemetry_min_flush_interval=0) as dogstatsd:
+        with DogStatsd(telemetry_min_flush_interval=0, disable_buffering=False) as dogstatsd:
             dogstatsd.socket = fake_socket
 
             self.assertEqual(dogstatsd._max_payload_size, UDP_OPTIMAL_PAYLOAD_LENGTH)
@@ -1453,7 +1459,7 @@ async def print_foo():
             )
 
     def test_default_max_udp_packet_size(self):
-        dogstatsd = DogStatsd(flush_interval=10000, disable_telemetry=True)
+        dogstatsd = DogStatsd(disable_buffering=False, flush_interval=10000, disable_telemetry=True)
         dogstatsd.socket = FakeSocket()
 
         for _ in range(10000):
@@ -1469,7 +1475,12 @@ async def print_foo():
             payload = dogstatsd.socket.recv()
 
     def test_default_max_uds_packet_size(self):
-        dogstatsd = DogStatsd(socket_path="fake", flush_interval=10000, disable_telemetry=True)
+        dogstatsd = DogStatsd(
+            disable_buffering=False,
+            socket_path="fake",
+            flush_interval=10000,
+            disable_telemetry=True,
+        )
         dogstatsd.socket = FakeSocket()
 
         for _ in range(10000):
@@ -1485,7 +1496,12 @@ async def print_foo():
             payload = dogstatsd.socket.recv()
 
     def test_custom_max_packet_size(self):
-        dogstatsd = DogStatsd(max_buffer_len=4000, flush_interval=10000, disable_telemetry=True)
+        dogstatsd = DogStatsd(
+            disable_buffering=False,
+            max_buffer_len=4000,
+            flush_interval=10000,
+            disable_telemetry=True,
+        )
         dogstatsd.socket = FakeSocket()
 
         for _ in range(10000):
