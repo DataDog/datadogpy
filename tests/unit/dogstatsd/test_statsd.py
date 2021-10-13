@@ -1262,7 +1262,7 @@ async def print_foo():
 
     def test_context_manager(self):
         fake_socket = FakeSocket()
-        with DogStatsd(disable_buffering=False, telemetry_min_flush_interval=0) as dogstatsd:
+        with DogStatsd(telemetry_min_flush_interval=0) as dogstatsd:
             dogstatsd.socket = fake_socket
             dogstatsd.gauge('page.views', 123)
             dogstatsd.timing('timer', 123)

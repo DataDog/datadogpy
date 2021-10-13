@@ -351,11 +351,11 @@ class DogStatsd(object):
         return bool(self.telemetry_socket_path or self.telemetry_host)
 
     def __enter__(self):
-        self._reset_buffer()
+        self.open_buffer()
         return self
 
     def __exit__(self, exc_type, value, traceback):
-        self.flush()
+        self.close_buffer()
 
     @staticmethod
     def resolve_host(host, use_default_route):
