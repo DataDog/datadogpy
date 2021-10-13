@@ -159,28 +159,8 @@ an instance of :class:`datadog.threadstats.ThreadStats`::
 
 datadog.dogstatsd
 =================
-:mod:`datadog.dogstatsd` is a Python client for DogStatsd that automatically
-buffers submitted metrics and submits them to the server asynchronously or at
-maximum sizes for a packet that would prevent fragmentation.
-
-.. note::
-
-    To ensure that all the metrics are sent to the server, either use the
-    context-managed instance of :class:`~datadog.dogstatsd.base.DogStatsd`
-    or when you are finished with the client perform a manual :code:`flush()`.
-    Otherwise the buffered data may get de-allocated before being sent.
-
-
-.. warning::
-
-    :class:`~datadog.dogstatsd.base.DogStatsd` instances are not :code:`fork()`-safe
-    because the automatic buffer flushing occurs in a thread only on the
-    process that created the :class:`~datadog.dogstatsd.base.DogStatsd`
-    instance. Because of this, instances of those clients must not be copied
-    from a parent process to a child process. Instead, the parent process and
-    each child process must create their own instances of the client or the
-    buffering must be globally disabled by using the :code:`disable_buffering`
-    initialization flag.
+:mod:`datadog.dogstatsd` is a Python client for DogStatsd that submits metrics
+to the Agent.
 
 
 Usage
@@ -192,7 +172,6 @@ Usage
     
     client = DogStatsd()
     client.increment("home.page.hits")
-    client.flush()
 
 
 .. autoclass::  datadog.dogstatsd.base.DogStatsd
@@ -208,15 +187,6 @@ Usage
     >>> from datadog import initialize, statsd
     >>> initialize(statsd_host="localhost", statsd_port=8125)
     >>> statsd.increment("home.page.hits")
-
-.. warning::
-
-    Global :class:`~datadog.dogstatsd.base.DogStatsd` is not :code:`fork()`-safe
-    because the automatic buffer flushing occurs in a thread only on the
-    process that created the :class:`~datadog.dogstatsd.base.DogStatsd`
-    instance. Because of this, the parent process and each child process must
-    create their own instances of the client or the buffering must be globally
-    disabled by using the :code:`disable_buffering` initialization flag.
 
 
 Get in Touch
