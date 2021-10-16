@@ -125,13 +125,18 @@ class FakeServer(object):
                     raise ste
 
                 payload_counter += 1
-                metric_counter += len(payload.split(b"\n"))
+
+                offset = 0
+                if payload[-1] == b"\n":
+                    offset = -1
+
+                metric_counter += len(payload[:offset].split(b"\n"))
 
                 if self.debug:
                     print(
                         "Got '{}' (pkts: {}, payloads: {}, metrics: {})".format(
-                            payload,
-                            len(payload.split(b"\n")),
+                            payload.decode('utf-8'),
+                            len(payload[:offset].split(b"\n")),
                             payload_counter,
                             metric_counter,
                         )
