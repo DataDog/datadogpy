@@ -54,8 +54,6 @@ class TestAwsIntegration:
             'filter_tags',
             'host_tags',
             'account_specific_namespace_rules',
-            'role_name',
-            'account_id'
         ]
         assert all(k in output['accounts'][0].keys() for k in expected_fields)
 
