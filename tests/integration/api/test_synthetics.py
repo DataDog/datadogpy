@@ -15,7 +15,7 @@ class TestSynthetics:
         self.options = {"tick_every": 300}
         self.config = {
             "assertions": [{"operator": "is", "type": "statusCode", "target": 200}],
-            "request": {"method": "GET", "url": "https://example.com", "timeout": 300},
+            "request": {"method": "GET", "url": "https://example.com", "timeout": 30},
         }
 
         # config and option for a Browser test
