@@ -9,10 +9,14 @@ Tests for dogstatsd.py
 """
 # Standard libraries
 from collections import deque
+from contextlib import closing
 from threading import Thread
 import errno
 import os
+import shutil
 import socket
+import tempfile
+import threading
 import time
 import unittest
 import warnings
@@ -901,13 +905,17 @@ async def print_foo():
         )
 
     def test_flush(self):
-        self.statsd.increment('page.views')
-        self.assertIsNone(self.recv(no_wait=True))
-        self.statsd.flush()
-        self.assert_equal_telemetry('page.views:1|c\n', self.recv(2))
+        dogstatsd = DogStatsd(disable_buffering=False, telemetry_min_flush_interval=0)
+        fake_socket = FakeSocket()
+        dogstatsd.socket = fake_socket
+
+        dogstatsd.increment('page.views')
+        self.assertIsNone(fake_socket.recv(no_wait=True))
+        dogstatsd.flush()
+        self.assert_equal_telemetry('page.views:1|c\n', fake_socket.recv(2))
 
     def test_flush_interval(self):
-        dogstatsd = DogStatsd(flush_interval=1, telemetry_min_flush_interval=0)
+        dogstatsd = DogStatsd(disable_buffering=False, flush_interval=1, telemetry_min_flush_interval=0)
         fake_socket = FakeSocket()
         dogstatsd.socket = fake_socket
 
@@ -936,6 +944,7 @@ async def print_foo():
 
     def test_flush_disable(self):
         dogstatsd = DogStatsd(
+            disable_buffering=False,
             flush_interval=0,
             telemetry_min_flush_interval=0
         )
@@ -951,6 +960,7 @@ async def print_foo():
         time.sleep(0.3)
         self.assertIsNone(fake_socket.recv(no_wait=True))
 
+    @unittest.skip("Buffering has been disabled again so the deprecation is not valid")
     @patch("warnings.warn")
     def test_manual_buffer_ops_deprecation(self, mock_warn):
         self.assertFalse(mock_warn.called)
@@ -1104,7 +1114,7 @@ async def print_foo():
         self.assertEqual(0, self.statsd.packets_dropped)
 
     def test_telemetry_flush_interval(self):
-        dogstatsd = DogStatsd()
+        dogstatsd = DogStatsd(disable_buffering=False)
         fake_socket = FakeSocket()
         dogstatsd.socket = fake_socket
 
@@ -1169,7 +1179,7 @@ async def print_foo():
         self.assertTrue(time1 < dogstatsd._last_flush_time)
 
     def test_telemetry_flush_interval_batch(self):
-        dogstatsd = DogStatsd()
+        dogstatsd = DogStatsd(disable_buffering=False)
 
         fake_socket = FakeSocket()
         dogstatsd.socket = fake_socket
@@ -1188,6 +1198,67 @@ async def print_foo():
         self.assert_equal_telemetry(metric, fake_socket.recv(2), telemetry=telemetry_metrics(metrics=2, bytes_sent=len(metric)))
         # assert that _last_flush_time has been updated
         self.assertTrue(time1 < dogstatsd._last_flush_time)
+
+
+    def test_dedicated_udp_telemetry_dest(self):
+        listener_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        listener_sock.bind(('localhost', 0))
+
+        def wait_for_data():
+            global udp_thread_telemetry_data
+            udp_thread_telemetry_data = listener_sock.recvfrom(UDP_OPTIMAL_PAYLOAD_LENGTH)[0].decode('utf-8')
+
+        with closing(listener_sock):
+            port = listener_sock.getsockname()[1]
+
+            dogstatsd = DogStatsd(
+                host="localhost",
+                port=12345,
+                telemetry_min_flush_interval=0,
+                telemetry_host="localhost",
+                telemetry_port=port,
+            )
+
+            server = threading.Thread(target=wait_for_data)
+            server.start()
+
+            dogstatsd.increment('abc')
+
+            server.join(3)
+
+            expected_telemetry = telemetry_metrics(metrics=1, packets_sent=1, bytes_sent=8)
+            self.assertEqual(udp_thread_telemetry_data, expected_telemetry)
+
+    def test_dedicated_uds_telemetry_dest(self):
+        tempdir = tempfile.mkdtemp()
+        socket_path = os.path.join(tempdir, 'socket.sock')
+
+        listener_sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+        listener_sock.bind(socket_path)
+
+        def wait_for_data():
+            global uds_thread_telemetry_data
+            uds_thread_telemetry_data = listener_sock.recvfrom(UDS_OPTIMAL_PAYLOAD_LENGTH)[0].decode('utf-8')
+
+        with closing(listener_sock):
+            dogstatsd = DogStatsd(
+                host="localhost",
+                port=12345,
+                telemetry_min_flush_interval=0,
+                telemetry_socket_path=socket_path,
+            )
+
+            server = threading.Thread(target=wait_for_data)
+            server.start()
+
+            dogstatsd.increment('def')
+
+            server.join(3)
+
+            expected_telemetry = telemetry_metrics(metrics=1, packets_sent=1, bytes_sent=8)
+            self.assertEqual(uds_thread_telemetry_data, expected_telemetry)
+
+        shutil.rmtree(tempdir)
 
     def test_context_manager(self):
         fake_socket = FakeSocket()
@@ -1214,7 +1285,7 @@ async def print_foo():
     def test_batched_buffer_autoflush(self):
         fake_socket = FakeSocket()
         bytes_sent = 0
-        with DogStatsd(telemetry_min_flush_interval=0) as dogstatsd:
+        with DogStatsd(telemetry_min_flush_interval=0, disable_buffering=False) as dogstatsd:
             dogstatsd.socket = fake_socket
 
             self.assertEqual(dogstatsd._max_payload_size, UDP_OPTIMAL_PAYLOAD_LENGTH)
@@ -1388,7 +1459,7 @@ async def print_foo():
             )
 
     def test_default_max_udp_packet_size(self):
-        dogstatsd = DogStatsd(flush_interval=10000, disable_telemetry=True)
+        dogstatsd = DogStatsd(disable_buffering=False, flush_interval=10000, disable_telemetry=True)
         dogstatsd.socket = FakeSocket()
 
         for _ in range(10000):
@@ -1404,7 +1475,12 @@ async def print_foo():
             payload = dogstatsd.socket.recv()
 
     def test_default_max_uds_packet_size(self):
-        dogstatsd = DogStatsd(socket_path="fake", flush_interval=10000, disable_telemetry=True)
+        dogstatsd = DogStatsd(
+            disable_buffering=False,
+            socket_path="fake",
+            flush_interval=10000,
+            disable_telemetry=True,
+        )
         dogstatsd.socket = FakeSocket()
 
         for _ in range(10000):
@@ -1420,7 +1496,12 @@ async def print_foo():
             payload = dogstatsd.socket.recv()
 
     def test_custom_max_packet_size(self):
-        dogstatsd = DogStatsd(max_buffer_len=4000, flush_interval=10000, disable_telemetry=True)
+        dogstatsd = DogStatsd(
+            disable_buffering=False,
+            max_buffer_len=4000,
+            flush_interval=10000,
+            disable_telemetry=True,
+        )
         dogstatsd.socket = FakeSocket()
 
         for _ in range(10000):
