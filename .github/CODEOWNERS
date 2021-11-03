@@ -17,7 +17,11 @@
 
 # Dogstatd
 /datadog/dogstatsd/              @DataDog/integrations-tools-and-libraries @DataDog/agent-core
+/datadog/util/                   @DataDog/integrations-tools-and-libraries @DataDog/agent-core
+/tests/integration/dogstatsd/    @DataDog/integrations-tools-and-libraries @DataDog/agent-core
 /tests/unit/dogstatsd/           @DataDog/integrations-tools-and-libraries @DataDog/agent-core
+/tests/unit/util/                @DataDog/integrations-tools-and-libraries @DataDog/agent-core
+/tests/util/                     @DataDog/integrations-tools-and-libraries @DataDog/agent-core
 /tests/performance/test_statsd_* @DataDog/integrations-tools-and-libraries @DataDog/agent-core
 
 # Threadstats
