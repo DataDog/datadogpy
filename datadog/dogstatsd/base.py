@@ -304,28 +304,24 @@ class DogStatsd(object):
 
         self._reset_buffer()
 
-        # This lock is used for backwards compatibility to prevent concurrent
-        # changes to the buffer when the user is managing the buffer themselves
-        # via deprecated `open_buffer()` and `close_buffer()` functions.
-        self._manual_buffer_lock = RLock()
+        # This lock is used for all cases where buffering functionality is
+        # being toggled (by `open_buffer()`, `close_buffer()`, or
+        # `self._disable_buffering` calls).
+        self._buffering_toggle_lock = RLock()
 
         # If buffering is disabled, we bypass the buffer function.
         self._send = self._send_to_buffer
-        if disable_buffering:
-            log.info("Statsd buffering is disabled")
+        self._disable_buffering = disable_buffering
+        if self._disable_buffering:
             self._send = self._send_to_server
+            log.info("Statsd buffering is disabled")
 
         # Start the flush thread if buffering is enabled and the interval is above
         # a reasonable range. This both prevents thrashing and allow us to use "0.0"
         # as a value for disabling the automatic flush timer as well.
-        if not disable_buffering and flush_interval >= MIN_FLUSH_INTERVAL:
-            self._register_flush_thread(flush_interval)
-            log.debug(
-                "Statsd flush thread registered with period of %s",
-                flush_interval,
-            )
-        else:
-            log.info("Statsd periodic buffer flush is disabled")
+        self._flush_interval = flush_interval
+        self._flush_thread_stop = threading.Event()
+        self._start_flush_thread(self._flush_interval)
 
     def disable_telemetry(self):
         self._telemetry = False
@@ -333,29 +329,83 @@ class DogStatsd(object):
     def enable_telemetry(self):
         self._telemetry = True
 
-    def _register_flush_thread(self, sleep_duration):
-        def _flush_thread_loop(self, sleep_duration):
-            while True:
-                time.sleep(sleep_duration)
+    # Note: Invocations of this method should be thread-safe
+    def _start_flush_thread(self, flush_interval):
+        if self._disable_buffering or self._flush_interval <= MIN_FLUSH_INTERVAL:
+            log.info("Statsd periodic buffer flush is disabled")
+            return
+
+        def _flush_thread_loop(self, flush_interval):
+            while not self._flush_thread_stop.is_set():
+                time.sleep(flush_interval)
                 self.flush()
 
         self._flush_thread = threading.Thread(
             name="{}_flush_thread".format(self.__class__.__name__),
             target=_flush_thread_loop,
-            args=(self, sleep_duration,),
+            args=(self, flush_interval,),
         )
         self._flush_thread.daemon = True
         self._flush_thread.start()
 
+        log.debug(
+            "Statsd flush thread registered with period of %s",
+            self._flush_interval,
+        )
+
+    # Note: Invocations of this method should be thread-safe
+    def _stop_flush_thread(self):
+        if not self._flush_thread:
+            log.warning("No statsd flush thread to stop")
+            return
+
+        try:
+            self.flush()
+        finally:
+            pass
+
+        self._flush_thread_stop.set()
+
+        self._flush_thread.join()
+        self._flush_thread = None
+
+        self._flush_thread_stop.clear()
+
     def _dedicated_telemetry_destination(self):
         return bool(self.telemetry_socket_path or self.telemetry_host)
 
+    # Context manager helper
     def __enter__(self):
         self.open_buffer()
         return self
 
+    # Context manager helper
     def __exit__(self, exc_type, value, traceback):
         self.close_buffer()
+
+    @property
+    def disable_buffering(self):
+        with self._buffering_toggle_lock:
+            return self._disable_buffering
+
+    @disable_buffering.setter
+    def disable_buffering(self, is_disabled):
+        with self._buffering_toggle_lock:
+            # If the toggle didn't change anything, this method is a noop
+            if self._disable_buffering == is_disabled:
+                return
+
+            self._disable_buffering = is_disabled
+
+            # If buffering has been disabled, flush and kill the background thread
+            # otherwise start up the flushing thread and enable the buffering.
+            if is_disabled:
+                self._send = self._send_to_server
+                self._stop_flush_thread()
+                log.info("Statsd buffering is disabled")
+            else:
+                self._send = self._send_to_buffer
+                self._start_flush_thread(self._flush_interval)
 
     @staticmethod
     def resolve_host(host, use_default_route):
@@ -448,7 +498,7 @@ class DogStatsd(object):
         Note: This method must be called before close_buffer() matching invocation.
         """
 
-        self._manual_buffer_lock.acquire()
+        self._buffering_toggle_lock.acquire()
 
         # XXX Remove if `disable_buffering` default is changed to False
         self._send = self._send_to_buffer
@@ -471,7 +521,7 @@ class DogStatsd(object):
             # XXX Remove if `disable_buffering` default is changed to False
             self._send = self._send_to_server
 
-            self._manual_buffer_lock.release()
+            self._buffering_toggle_lock.release()
 
     def _reset_buffer(self):
         with self._buffer_lock:
