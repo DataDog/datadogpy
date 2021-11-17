@@ -37,6 +37,7 @@ def initialize(
     api_host=None,  # type: Optional[str]
     statsd_host=None,  # type: Optional[str]
     statsd_port=None,  # type: Optional[int]
+    statsd_disable_buffering=True,  # type: bool
     statsd_use_default_route=False,  # type: bool
     statsd_socket_path=None,  # type: Optional[str]
     statsd_namespace=None,  # type: Optional[str]
@@ -70,6 +71,10 @@ def initialize(
 
     :param statsd_port: Port of DogStatsd server or statsd daemon
     :type statsd_port: port
+
+    :param statsd_disable_buffering: Enable/disable statsd client buffering support
+                                     (default: True).
+    :type statsd_disable_buffering: boolean
 
     :param statsd_use_default_route: Dynamically set the statsd host to the default route
                                      (Useful when running the client in a container)
@@ -121,6 +126,8 @@ def initialize(
         statsd.namespace = text(statsd_namespace)
     if statsd_constant_tags:
         statsd.constant_tags += statsd_constant_tags
+
+    statsd.disable_buffering = statsd_disable_buffering
 
     api._return_raw_response = return_raw_response
 

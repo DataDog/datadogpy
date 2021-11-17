@@ -113,6 +113,11 @@ def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes
 
 
 class TestDogStatsd(unittest.TestCase):
+    METRIC_TYPE_MAP = {
+        'gauge': { 'id': 'g' },
+        'timing': { 'id': 'ms' },
+    }
+
     def setUp(self):
         """
         Set up a default Dogstatsd instance and mock the proc filesystem.
@@ -143,6 +148,63 @@ class TestDogStatsd(unittest.TestCase):
             expected_payload = telemetry
 
         return self.assertEqual(expected_payload, actual_payload)
+
+    def send_and_assert(
+        self,
+        dogstatsd,
+        expected_metrics,
+        last_telemetry_size=0,
+        buffered=False,
+    ):
+        """
+        Send and then asserts that a chain of metrics arrive in the right order
+        and with expected telemetry values.
+        """
+
+        expected_messages = []
+        for metric_type, metric_name, metric_value in expected_metrics:
+            # Construct the expected message data
+            metric_type_id = TestDogStatsd.METRIC_TYPE_MAP[metric_type]['id']
+            expected_messages.append(
+                "{}:{}|{}\n".format(metric_name, metric_value, metric_type_id)
+            )
+
+            # Send the value
+            getattr(dogstatsd, metric_type)(metric_name, metric_value)
+
+        # Sanity check
+        if buffered:
+            # Ensure that packets didn't arrive immediately if we are expecting
+            # buffering behavior
+            self.assertIsNone(dogstatsd.socket.recv(2, no_wait=True))
+
+        metrics = 1
+        if buffered:
+            metrics = len(expected_messages)
+
+        if buffered:
+            expected_messages = [ ''.join(expected_messages) ]
+
+        for message in expected_messages:
+            packets_sent = 1
+            # For all ono-initial packets, our current telemetry stats will
+            # contain the metadata for the last telemetry packet as well.
+            if last_telemetry_size > 0:
+                packets_sent += 1
+
+            expected_metrics=telemetry_metrics(
+                metrics=metrics,
+                packets_sent=packets_sent,
+                bytes_sent=len(message) + last_telemetry_size
+            )
+            self.assert_equal_telemetry(
+                message,
+                dogstatsd.socket.recv(2, no_wait=not buffered, reset_wait=True),
+                telemetry=expected_metrics,
+            )
+            last_telemetry_size = len(expected_metrics)
+
+        return last_telemetry_size
 
     def assert_almost_equal(self, val1, val2, delta):
         """
@@ -999,6 +1061,68 @@ async def print_foo():
                 packets_sent=2,
                 bytes_sent=len(expected2 + expected_metrics1)
             )
+        )
+
+    def test_batching_runtime_changes(self):
+        dogstatsd = DogStatsd(
+            disable_buffering=True,
+            telemetry_min_flush_interval=0
+        )
+        dogstatsd.socket = FakeSocket()
+
+        # Send some unbuffered metrics and verify we got it immediately
+        last_telemetry_size = self.send_and_assert(
+            dogstatsd,
+            [
+                ('gauge', 'rt.gauge', 123),
+                ('timing', 'rt.timer', 123),
+            ],
+        )
+
+        # Disable buffering (noop expected) and validate
+        dogstatsd.disable_buffering = True
+        last_telemetry_size = self.send_and_assert(
+            dogstatsd,
+            [
+                ('gauge', 'rt.gauge2', 321),
+                ('timing', 'rt.timer2', 321),
+            ],
+            last_telemetry_size = last_telemetry_size,
+        )
+
+        # Enable buffering and validate
+        dogstatsd.disable_buffering = False
+        last_telemetry_size = self.send_and_assert(
+            dogstatsd,
+            [
+                ('gauge', 'buffered.gauge', 12345),
+                ('timing', 'buffered.timer', 12345),
+            ],
+            last_telemetry_size = last_telemetry_size,
+            buffered=True,
+        )
+
+        # Enable buffering again (another noop change expected)
+        dogstatsd.disable_buffering = False
+        last_telemetry_size = self.send_and_assert(
+            dogstatsd,
+            [
+                ('gauge', 'buffered.gauge2', 321),
+                ('timing', 'buffered.timer2', 321),
+            ],
+            last_telemetry_size = last_telemetry_size,
+            buffered=True,
+        )
+
+        # Flip the toggle to unbuffered functionality one more time and verify
+        dogstatsd.disable_buffering = True
+        last_telemetry_size = self.send_and_assert(
+            dogstatsd,
+            [
+                ('gauge', 'rt.gauge3', 333),
+                ('timing', 'rt.timer3', 333),
+            ],
+            last_telemetry_size = last_telemetry_size,
         )
 
     def test_threaded_batching(self):
