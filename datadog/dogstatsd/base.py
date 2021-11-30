@@ -272,7 +272,7 @@ class DogStatsd(object):
         self.encoding = "utf-8"
 
         # Options
-        env_tags = [tag for tag in os.environ.get("DATADOG_TAGS", "").split(",") if tag]
+        env_tags = [tag for tag in os.environ.get("DATADOG_TAGS", os.environ.get("DD_TAGS", "")).split(",") if tag]
         # Inject values of DD_* environment variables as global tags.
         for var, tag_name in DD_ENV_TAGS_MAPPING.items():
             value = os.environ.get(var, "")

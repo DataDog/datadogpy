@@ -69,7 +69,7 @@ class ThreadStats(object):
         """
         # Parameters
         self.namespace = namespace
-        env_tags = [tag for tag in os.environ.get("DATADOG_TAGS", "").split(",") if tag]
+        env_tags = [tag for tag in os.environ.get("DATADOG_TAGS", os.environ.get("DD_TAGS", "")).split(",") if tag]
         for var, tag_name in DD_ENV_TAGS_MAPPING.items():
             value = os.environ.get(var, "")
             if value:
