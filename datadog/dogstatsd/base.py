@@ -118,6 +118,9 @@ class DogStatsd(object):
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by dogstatsd client.
         :type DATADOG_TAGS: comma-delimited string
 
+        :envvar DD_TAGS: Additional tags to attach to every metric reported by dogstatsd client.
+        :type DD_TAGS: comma-delimited string
+
         :envvar DD_ENTITY_ID: Tag to identify the client entity.
         :type DD_ENTITY_ID: string
 

@@ -55,6 +55,9 @@ class ThreadStats(object):
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by ThreadStats client
         :type DATADOG_TAGS: comma-delimited string
 
+        :envvar DD_TAGS: Additional tags to attach to every metric reported by ThreadStats client
+        :type DD_TAGS: comma-delimited string
+
         :envvar DD_ENV: the env of the service running the ThreadStats client.
         If set, it is appended to the constant (global) tags of the client.
         :type DD_ENV: string
