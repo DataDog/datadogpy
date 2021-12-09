@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.43.0 / 2021-12-09
+
+* [Added] [statsd] Add ability to toggle `statsd.disable_buffering` state during runtime. See [#700](https://github.com/DataDog/datadogpy/pull/700).
+* [Added] Add a dogshell option to change Datadog site to call API. See [#691](https://github.com/DataDog/datadogpy/pull/691).
+* [Fixed] [statsd] Fix dedicated-endpoint telemetry shipping when used with UDP. See [#690](https://github.com/DataDog/datadogpy/pull/690).
+* [Changed] [statsd] Disable statsd buffering by default. See [#692](https://github.com/DataDog/datadogpy/pull/692).
+* [Changed] [statsd] Always terminate packets with newline. See [#685](https://github.com/DataDog/datadogpy/pull/685).
+* [Changed] [statsd] Enable buffering by default for statsd. See [#670](https://github.com/DataDog/datadogpy/pull/670).
+* [Changed] [statsd] Add caching to tag normalization for Python3.2+. See [#674](https://github.com/DataDog/datadogpy/pull/674).
+
 ## 0.42.0 / 2021-07-01
 
 * [Fixed] Remove unused decorator dependency. See [#651](https://github.com/DataDog/datadogpy/pull/651).
