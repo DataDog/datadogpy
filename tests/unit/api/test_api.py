@@ -771,7 +771,7 @@ class TestMetricResource(DatadogAPIWithInitialization):
         headers = kwargs["headers"]
         assert "Content-Encoding" not in headers
         assert req_data == json.dumps({"series": [series]})
-        # Same result when explicitely False
+        # Same result when explicitly False
         Metric.send(compress_payload=False, attach_host_name=False, **series)
         _, kwargs = self.request_mock.call_args()
         req_data = kwargs["data"]
@@ -786,7 +786,7 @@ class TestMetricResource(DatadogAPIWithInitialization):
         headers = kwargs["headers"]
         assert "Content-Encoding" not in headers
         assert req_data == json.dumps({"series": [series]})
-        # Same result when explicitely False
+        # Same result when explicitly False
         Distribution.send(compress_payload=False, attach_host_name=False, **series)
         _, kwargs = self.request_mock.call_args()
         req_data = kwargs["data"]

@@ -114,7 +114,7 @@ class RequestClient(HTTPClient):
         except TypeError:
             raise TypeError(
                 u"Your installed version of `requests` library seems not compatible with"
-                u"Datadog's usage. We recommand upgrading it ('pip install -U requests')."
+                u"Datadog's usage. We recommend upgrading it ('pip install -U requests')."
                 u"If you need help or have any question, please contact support@datadoghq.com"
             )
 
