@@ -793,7 +793,7 @@ class DogStatsd(object):
 
             return True
         except socket.timeout:
-            # dogstatsd is overflowing, drop the packets (mimicks the UDP behaviour)
+            # dogstatsd is overflowing, drop the packets (mimics the UDP behaviour)
             pass
         except (socket.herror, socket.gaierror) as socket_err:
             log.warning(

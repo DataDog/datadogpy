@@ -233,7 +233,7 @@ class ThreadStats(object):
         flushed as a gauge to Datadog. Optionally, specify a set of
         tags to associate with the metric.
 
-        >>> stats.set("example_metric.set", "value_1", tags=["environement:dev"])
+        >>> stats.set("example_metric.set", "value_1", tags=["environment:dev"])
         """
         if not self._disabled:
             self._metric_aggregator.add_point(
@@ -270,7 +270,7 @@ class ThreadStats(object):
     def histogram(self, metric_name, value, timestamp=None, tags=None, sample_rate=1, host=None):
         """
         Sample a histogram value. Histograms will produce metrics that
-        describe the distribution of the recorded values, namely the maximum, mininum,
+        describe the distribution of the recorded values, namely the maximum, minimum,
         average, count and the 75/85/95/99 percentiles. Optionally, specify
         a list of ``tags`` to associate with the metric.
 
