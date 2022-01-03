@@ -142,7 +142,7 @@ class DatadogAPITestCase(unittest.TestCase):
 
     def load_request_response(self, status_code=200, response_body='{}', raise_for_status=False):
         """
-        Load the repsonse body from the given payload
+        Load the response body from the given payload
         """
         mock_response = MockResponse(raise_for_status=raise_for_status)
         if is_p3k():

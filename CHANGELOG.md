@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.43.0 / 2021-12-09
+
+* [Added] [statsd] Add ability to toggle `statsd.disable_buffering` state during runtime. See [#700](https://github.com/DataDog/datadogpy/pull/700).
+* [Added] Add a dogshell option to change Datadog site to call API. See [#691](https://github.com/DataDog/datadogpy/pull/691).
+* [Fixed] [statsd] Fix dedicated-endpoint telemetry shipping when used with UDP. See [#690](https://github.com/DataDog/datadogpy/pull/690).
+* [Changed] [statsd] Disable statsd buffering by default. See [#692](https://github.com/DataDog/datadogpy/pull/692).
+* [Changed] [statsd] Always terminate packets with newline. See [#685](https://github.com/DataDog/datadogpy/pull/685).
+* [Changed] [statsd] Enable buffering by default for statsd. See [#670](https://github.com/DataDog/datadogpy/pull/670).
+* [Changed] [statsd] Add caching to tag normalization for Python3.2+. See [#674](https://github.com/DataDog/datadogpy/pull/674).
+
 ## 0.42.0 / 2021-07-01
 
 * [Fixed] Remove unused decorator dependency. See [#651](https://github.com/DataDog/datadogpy/pull/651).
@@ -206,7 +216,7 @@ The Timeboard and Screenboard API resources are deprecated in favor of the new D
 * [BUGFIX] Dogshell: Submit `--date_happened` timestamp when posting events, [#287][], [#301][] (thanks [@gplasky][])
 * [FEATURE] API: Add [search](https://docs.datadoghq.com/api/?lang=python#monitors-search) and [groups search](https://docs.datadoghq.com/api/?lang=python#monitors-group-search) methods to the `Monitor` resource, [#299][]
 * [IMPROVEMENT] Dogshell: Set API and APP keys with environment variables, [#228][] (thanks [@taraslayshchuk][])
-* [IMPROVEMENT] DogStatsD: Prevent an issue that was causing the `timed` context manager object from overwritting a method with an instance variable, [#263][] (thanks [@florean][])
+* [IMPROVEMENT] DogStatsD: Prevent an issue that was causing the `timed` context manager object from overwriting a method with an instance variable, [#263][] (thanks [@florean][])
 * [OTHER] Include tests in PyPI tarball, [#259][] (thanks [@dotlambda][])
 
 # 0.22.0 / 2018-06-27
@@ -251,7 +261,7 @@ See [#242][] (thanks [@nilabhsagar][]) for more details.
 
 # 0.18.0 / 2018-01-24
 * [BUGFIX] Dogshell: Service checks can be sent with optional parameters set to null values, [#241][] (thanks [@timvisher][])
-* [BUGFIX] Dogwrap: Respect the ouput channel encoding format, [#236][] (thanks [@martin308][])
+* [BUGFIX] Dogwrap: Respect the output channel encoding format, [#236][] (thanks [@martin308][])
 * [FEATURE] DogstatsD: Add beta support for sending global distribution metrics, [#249][]
 
 # 0.17.0 / 2017-11-06
