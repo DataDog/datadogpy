@@ -570,7 +570,13 @@ class DogStatsd(object):
         """
         self._report(metric, "c", value, tags, sample_rate)
 
-    def decrement(self, metric, value=1, tags=None, sample_rate=None):
+    def decrement(
+        self,
+        metric,  # type: Text
+        value=1,  # type: float
+        tags=None,  # type: Optional[List[str]]
+        sample_rate=None,  # type: Optional[float]
+    ):  # type(...) -> None
         """
         Decrement a counter, optionally setting a value, tags and a sample
         rate.
@@ -581,7 +587,13 @@ class DogStatsd(object):
         metric_value = -value if value else value
         self._report(metric, "c", metric_value, tags, sample_rate)
 
-    def histogram(self, metric, value, tags=None, sample_rate=None):
+    def histogram(
+        self,
+        metric,  # type: Text
+        value,  # type: float
+        tags=None,  # type: Optional[List[str]]
+        sample_rate=None,  # type: Optional[float]
+    ):  # type(...) -> None
         """
         Sample a histogram value, optionally setting tags and a sample rate.
 
@@ -590,7 +602,13 @@ class DogStatsd(object):
         """
         self._report(metric, "h", value, tags, sample_rate)
 
-    def distribution(self, metric, value, tags=None, sample_rate=None):
+    def distribution(
+        self,
+        metric,  # type: Text
+        value,  # type: float
+        tags=None,  # type: Optional[List[str]]
+        sample_rate=None,  # type: Optional[float]
+    ):  # type(...) -> None
         """
         Send a global distribution value, optionally setting tags and a sample rate.
 
@@ -599,7 +617,13 @@ class DogStatsd(object):
         """
         self._report(metric, "d", value, tags, sample_rate)
 
-    def timing(self, metric, value, tags=None, sample_rate=None):
+    def timing(
+        self,
+        metric,  # type: Text
+        value,  # type: float
+        tags=None,  # type: Optional[List[str]]
+        sample_rate=None,  # type: Optional[float]
+    ):  # type(...) -> None
         """
         Record a timing, optionally setting tags and a sample rate.
 
