@@ -150,7 +150,8 @@ class TestUnitThreadStats(unittest.TestCase):
         event1_text = "Event 1 text"
         event2_text = "Event 2 text"
         dog.event(event1_title, event1_text)
-        dog.event(event2_title, event2_text)
+        # Positional arg names should match statsd
+        dog.event(title=event2_title, message=event2_text)
 
         # Flush and test
         dog.flush()
