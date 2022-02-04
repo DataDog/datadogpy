@@ -174,7 +174,7 @@ class ThreadStats(object):
     def event(
         self,
         title,
-        text,
+        message,
         alert_type=None,
         aggregation_key=None,
         source_type_name=None,
@@ -184,7 +184,7 @@ class ThreadStats(object):
         hostname=None,
     ):
         """
-        Send an event. Attributes are the same as the Event API. (http://docs.datadoghq.com/api/)
+        Send an event. See http://docs.datadoghq.com/api/ for more info.
 
         >>> stats.event("Man down!", "This server needs assistance.")
         >>> stats.event("The web server restarted", \
@@ -201,7 +201,7 @@ class ThreadStats(object):
 
             self._event_aggregator.add_event(
                 title=title,
-                text=text,
+                text=message,
                 alert_type=alert_type,
                 aggregation_key=aggregation_key,
                 source_type_name=source_type_name,

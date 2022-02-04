@@ -441,6 +441,22 @@ class TestDogStatsd(unittest.TestCase):
 
         self.statsd._reset_telemetry()
 
+    # Positional arg names should match threadstats
+    def test_event_matching_signature(self):
+        self.statsd.event(title="foo", message="bar1")
+        event = u'_e{3,4}:foo|bar1\n'
+        self.assert_equal_telemetry(
+            event,
+            self.recv(2),
+            telemetry=telemetry_metrics(
+                metrics=0,
+                events=1,
+                bytes_sent=len(event),
+            ),
+        )
+
+        self.statsd._reset_telemetry()
+
     def test_event_constant_tags(self):
         self.statsd.constant_tags = ['bar:baz', 'foo']
         self.statsd.event('Title', u'L1\nL2', priority='low', date_happened=1375296969)
