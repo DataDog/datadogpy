@@ -1,3 +1,0 @@
-include LICENSE
-include datadog/py.typed
-graft tests
