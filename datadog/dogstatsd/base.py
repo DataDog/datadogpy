@@ -519,7 +519,8 @@ class DogStatsd(object):
             self.flush()
         finally:
             # XXX Remove if `disable_buffering` default is changed to False
-            self._send = self._send_to_server
+            if self._disable_buffering:
+                self._send = self._send_to_server
 
             self._buffering_toggle_lock.release()
 
