@@ -1422,6 +1422,67 @@ async def print_foo():
         )
         self.assertEqual(metrics_packet, fake_socket.recv(no_wait=True))
 
+    def test_context_manager_restores_enabled_buffering_state(self):
+        fake_socket = FakeSocket()
+        dogstatsd = DogStatsd(telemetry_min_flush_interval=0, disable_buffering=False)
+        dogstatsd.socket = fake_socket
+
+        with dogstatsd:
+            dogstatsd.gauge('page.views', 123)
+            dogstatsd.timing('timer', 123)
+
+        dogstatsd.gauge('newpage.views', 123)
+        dogstatsd.timing('newtimer', 123)
+
+        metric1 = "page.views:123|g"
+        metric2 = "timer:123|ms"
+        metric3 = "newpage.views:123|g"
+        metric4 = "newtimer:123|ms"
+
+        metrics1 = '\n'.join([metric1, metric2]) + "\n"
+        self.assertEqual(metrics1, fake_socket.recv(no_wait=True))
+
+        metrics_packet1 = telemetry_metrics(metrics=2, bytes_sent=len(metrics1), packets_sent=1)
+        self.assertEqual(metrics_packet1, fake_socket.recv(no_wait=True))
+
+        metrics2 = '\n'.join([metric3, metric4]) + "\n"
+        metrics_packet2 = telemetry_metrics(metrics=2, bytes_sent=len(metrics_packet1 + metrics2), packets_sent=2)
+        self.assertEqual(metrics2, fake_socket.recv(reset_wait=True))
+        self.assertEqual(metrics_packet2, fake_socket.recv())
+
+    def test_context_manager_restores_disabled_buffering_state(self):
+        fake_socket = FakeSocket()
+        dogstatsd = DogStatsd(telemetry_min_flush_interval=0, disable_buffering=True)
+        dogstatsd.socket = fake_socket
+
+        with dogstatsd:
+            dogstatsd.gauge('page.views', 123)
+            dogstatsd.timing('timer', 123)
+
+        dogstatsd.gauge('newpage.views', 123)
+        dogstatsd.timing('newtimer', 123)
+
+        metric1 = "page.views:123|g"
+        metric2 = "timer:123|ms"
+        metric3 = "newpage.views:123|g"
+        metric4 = "newtimer:123|ms"
+
+        metrics1 = '\n'.join([metric1, metric2]) + "\n"
+        self.assertEqual(metrics1, fake_socket.recv(no_wait=True))
+
+        metrics_packet1 = telemetry_metrics(metrics=2, bytes_sent=len(metrics1), packets_sent=1)
+        self.assertEqual(metrics_packet1, fake_socket.recv(no_wait=True))
+
+        metrics2 = '\n'.join([metric3]) + "\n"
+        metrics_packet2 = telemetry_metrics(metrics=1, bytes_sent=len(metrics_packet1 + metrics2), packets_sent=2)
+        self.assertEqual(metrics2, fake_socket.recv())
+        self.assertEqual(metrics_packet2, fake_socket.recv(no_wait=True))
+
+        metrics3 = '\n'.join([metric4]) + "\n"
+        metrics_packet3 = telemetry_metrics(metrics=1, bytes_sent=len(metrics_packet2 + metrics3), packets_sent=2)
+        self.assertEqual(metrics3, fake_socket.recv())
+        self.assertEqual(metrics_packet3, fake_socket.recv(no_wait=True))
+
     def test_batched_buffer_autoflush(self):
         fake_socket = FakeSocket()
         bytes_sent = 0
