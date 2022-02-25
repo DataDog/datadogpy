@@ -18,21 +18,12 @@ jobs:
       Py27:
         PYTHON_VERSION: "2.7"
         TOXENV: "py27"
-      Py36:
-        PYTHON_VERSION: "3.6"
-        TOXENV: "py36"
       Py37:
         PYTHON_VERSION: "3.7"
         TOXENV: "py37"
       Py38:
         PYTHON_VERSION: "3.8"
         TOXENV: "py38"
-      Pypy2:
-        PYTHON_VERSION: "pypy2"
-        TOXENV: "pypy2"
-      Pypy3:
-        PYTHON_VERSION: "pypy3"
-        TOXENV: "pypy3"
       Format:
         PYTHON_VERSION: "3.8"
         TOXENV: "black"
