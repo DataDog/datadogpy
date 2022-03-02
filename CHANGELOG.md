@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.44.0 / 2022-03-02
+
+* [Added] Update package metadata. See [#713](https://github.com/DataDog/datadogpy/pull/713).
+* [Fixed] [statsd] Restore buffering state when exiting context manager. See [#715](https://github.com/DataDog/datadogpy/pull/715).
+* [Changed] [threadstats] Ensure `ThreadStats` and `DogStatsd` `event()` signatures match. See [#712](https://github.com/DataDog/datadogpy/pull/712).
+* [Changed] Improved dogstatsd mypy integration by adding additional type annotations. See [#710](https://github.com/DataDog/datadogpy/pull/710). Thanks [jahodfra](https://github.com/jahodfra).
+
 ## 0.43.0 / 2021-12-09
 
 * [Added] [statsd] Add ability to toggle `statsd.disable_buffering` state during runtime. See [#700](https://github.com/DataDog/datadogpy/pull/700).
