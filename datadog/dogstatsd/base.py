@@ -313,7 +313,7 @@ class DogStatsd(object):
             value = os.environ.get(var, "")
             if value:
                 env_tags.append("{name}:{value}".format(name=tag_name, value=value))
-                if value == ENTITY_ID_ENV_VAR:
+                if var == ENTITY_ID_ENV_VAR:
                     has_entity_id = True
         if constant_tags is None:
             constant_tags = []
