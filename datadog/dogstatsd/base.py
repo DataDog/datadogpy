@@ -25,6 +25,7 @@ from datadog.dogstatsd.context import (
     DistributedContextManagerDecorator,
 )
 from datadog.dogstatsd.route import get_default_route
+from datadog.dogstatsd.container import ContainerID
 from datadog.util.compat import is_p3k, text
 from datadog.util.format import normalize_tags
 from datadog.version import __version__
@@ -43,6 +44,12 @@ MIN_FLUSH_INTERVAL = 0.0001
 # Tag name of entity_id
 ENTITY_ID_TAG_NAME = "dd.internal.entity_id"
 
+# Env var name of entity_id
+ENTITY_ID_ENV_VAR = "DD_ENTITY_ID"
+
+# Env var to enable/disable sending the container ID field
+ORIGIN_DETECTION_ENABLED = "DD_ORIGIN_DETECTION_ENABLED"
+
 # Default buffer settings based on socket type
 UDP_OPTIMAL_PAYLOAD_LENGTH = 1432
 UDS_OPTIMAL_PAYLOAD_LENGTH = 8192
@@ -52,7 +59,7 @@ MIN_SEND_BUFFER_SIZE = 32 * 1024
 
 # Mapping of each "DD_" prefixed environment variable to a specific tag name
 DD_ENV_TAGS_MAPPING = {
-    "DD_ENTITY_ID": ENTITY_ID_TAG_NAME,
+    ENTITY_ID_ENV_VAR: ENTITY_ID_TAG_NAME,
     "DD_ENV": "env",
     "DD_SERVICE": "service",
     "DD_VERSION": "version",
@@ -101,6 +108,8 @@ class DogStatsd(object):
         telemetry_port=None,                    # type: Union[str, int]
         telemetry_socket_path=None,             # type: Text
         max_buffer_len=0,                       # type: int
+        container_id=None,                      # type: Optional[Text]
+        origin_detection_enabled=True,          # type: bool
     ):  # type: (...) -> None
         """
         Initialize a DogStatsd object.
@@ -143,6 +152,10 @@ class DogStatsd(object):
         :envvar DD_TELEMETRY_PORT: the port for the dogstatsd server we wish to submit
         telemetry stats to. If set, it overrides default value.
         :type DD_TELEMETRY_PORT: integer
+
+        :envvar DD_ORIGIN_DETECTION_ENABLED: Enable/disable sending the container ID field
+        for origin detection.
+        :type DD_ORIGIN_DETECTION_ENABLED: boolean
 
         :param host: the host of the DogStatsd server.
         :type host: string
@@ -206,6 +219,26 @@ class DogStatsd(object):
         :param telemetry_socket_path: Submit client telemetry to dogstatsd through a UNIX
         socket instead of UDP. If set, disables UDP transmission (Linux only)
         :type telemetry_socket_path: string
+
+        :param container_id: Allows passing the container ID, this will be used by the Agent to enrich
+        metrics with container tags.
+        This feature requires Datadog Agent version >=6.35.0 && <7.0.0 or Agent versions >=7.35.0.
+        When configured, the provided container ID is prioritized over the container ID discovered
+        via Origin Detection. When DD_ENTITY_ID is set, this value is ignored.
+        Default: None.
+        :type container_id: string
+
+        :param origin_detection_enabled: Enable/disable the client origin detection.
+        This feature requires Datadog Agent version >=6.35.0 && <7.0.0 or Agent versions >=7.35.0.
+        When enabled, the client tries to discover its container ID and sends it to the Agent
+        to enrich the metrics with container tags.
+        Origin detection can be disabled by configuring the environment variabe DD_ORIGIN_DETECTION_ENABLED=false
+        The client tries to read the container ID by parsing the file /proc/self/cgroup.
+        This is not supported on Windows.
+        The client prioritizes the value passed via DD_ENTITY_ID (if set) over the container ID.
+        Default: True.
+        More on this: https://docs.datadoghq.com/developers/dogstatsd/?tab=kubernetes#origin-detection-over-udp
+        :type origin_detection_enabled: boolean
         """
 
         self._socket_lock = Lock()
@@ -274,10 +307,13 @@ class DogStatsd(object):
         # Options
         env_tags = [tag for tag in os.environ.get("DATADOG_TAGS", "").split(",") if tag]
         # Inject values of DD_* environment variables as global tags.
+        has_entity_id = False
         for var, tag_name in DD_ENV_TAGS_MAPPING.items():
             value = os.environ.get(var, "")
             if value:
                 env_tags.append("{name}:{value}".format(name=tag_name, value=value))
+                if var == ENTITY_ID_ENV_VAR:
+                    has_entity_id = True
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
@@ -286,6 +322,14 @@ class DogStatsd(object):
         self.namespace = namespace
         self.use_ms = use_ms
         self.default_sample_rate = default_sample_rate
+
+        # Origin detection
+        self._container_id = None
+        if not has_entity_id:
+            origin_detection_enabled = self._is_origin_detection_enabled(
+                container_id, origin_detection_enabled, has_entity_id
+            )
+            self._set_container_id(container_id, origin_detection_enabled)
 
         # init telemetry version
         self._client_tags = [
@@ -717,13 +761,14 @@ class DogStatsd(object):
 
     def _serialize_metric(self, metric, metric_type, value, tags, sample_rate=1):
         # Create/format the metric packet
-        return "%s%s:%s|%s%s%s" % (
+        return "%s%s:%s|%s%s%s%s" % (
             (self.namespace + ".") if self.namespace else "",
             metric,
             value,
             metric_type,
             ("|@" + text(sample_rate)) if sample_rate != 1 else "",
             ("|#" + ",".join(normalize_tags(tags))) if tags else "",
+            ("|c:" + self._container_id if self._container_id else "")
         )
 
     def _report(self, metric, metric_type, value, tags, sample_rate):
@@ -928,6 +973,8 @@ class DogStatsd(object):
             string = "%s|t:%s" % (string, alert_type)
         if tags:
             string = "%s|#%s" % (string, ",".join(tags))
+        if self._container_id:
+            string = "%s|c:%s" % (string, self._container_id)
 
         if len(string) > 8 * 1024:
             raise Exception(
@@ -970,6 +1017,8 @@ class DogStatsd(object):
             string = u"{0}|#{1}".format(string, ",".join(tags))
         if message:
             string = u"{0}|m:{1}".format(string, message)
+        if self._container_id:
+            string = u"{0}|c:{1}".format(string, self._container_id)
 
         if self._telemetry:
             self.service_checks_count += 1
@@ -983,6 +1032,39 @@ class DogStatsd(object):
 
             return self.constant_tags
         return tags
+
+    def _is_origin_detection_enabled(self, container_id, origin_detection_enabled, has_entity_id):
+        """
+        Returns whether the client should fill the container field.
+        If DD_ENTITY_ID is set, we don't send the container ID
+        If a user-defined container ID is provided, we don't ignore origin detection
+        as dd.internal.entity_id is prioritized over the container field for backward compatibility.
+        If DD_ENTITY_ID is not set, we try to fill the container field automatically unless
+        DD_ORIGIN_DETECTION_ENABLED is explicitly set to false.
+        """
+        if not origin_detection_enabled or has_entity_id or container_id is not None:
+            # origin detection is explicitly disabled
+            # or DD_ENTITY_ID was found
+            # or a user-defined container ID was provided
+            return False
+        value = os.environ.get(ORIGIN_DETECTION_ENABLED, "")
+        return value.lower() not in {"no", "false", "0", "n", "off"}
+
+    def _set_container_id(self, container_id, origin_detection_enabled):
+        """
+        Initializes the container ID.
+        It can either be provided by the user or read from cgroups.
+        """
+        if container_id:
+            self._container_id = container_id
+            return
+        if origin_detection_enabled:
+            try:
+                reader = ContainerID()
+                self._container_id = reader.container_id
+            except Exception as e:
+                log.debug("Couldn't get container ID: %s", str(e))
+                self._container_id = None
 
 
 statsd = DogStatsd()
