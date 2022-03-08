@@ -125,12 +125,12 @@ def get_mock_open(read_data=None):
         ),
     ),
 )
-def test_get_container_id(file_contents, expected_container_id):
+def test_container_id(file_contents, expected_container_id):
     with get_mock_open(read_data=file_contents) as mock_open:
         if file_contents is None:
             mock_open.side_effect = IOError
 
         reader = ContainerID()
-        assert expected_container_id == reader.get_container_id()
+        assert expected_container_id == reader.container_id
 
         mock_open.assert_called_once_with("/proc/self/cgroup", mode="r")

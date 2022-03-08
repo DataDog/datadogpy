@@ -1738,19 +1738,19 @@ async def print_foo():
         self.assertIsNone(self.recv())
 
     def test_set_with_container_field(self):
-        self.statsd._container_id_field = "|c:fake-container-id"
+        self.statsd._container_id = "fake-container-id"
         self.statsd.set("set", 123)
         self.assert_equal_telemetry("set:123|s|c:fake-container-id\n", self.recv(2))
-        self.statsd._container_id_field = None
+        self.statsd._container_id = None
 
     def test_gauge_with_container_field(self):
-        self.statsd._container_id_field = "|c:fake-container-id"
+        self.statsd._container_id = "fake-container-id"
         self.statsd.gauge("gauge", 123.4)
         self.assert_equal_telemetry("gauge:123.4|g|c:fake-container-id\n", self.recv(2))
-        self.statsd._container_id_field = None
+        self.statsd._container_id = None
 
     def test_counter_with_container_field(self):
-        self.statsd._container_id_field = "|c:fake-container-id"
+        self.statsd._container_id = "fake-container-id"
 
         self.statsd.increment("page.views")
         self.statsd.flush()
@@ -1771,22 +1771,22 @@ async def print_foo():
         self.statsd.flush()
         self.assert_equal_telemetry("page.views:-12|c|c:fake-container-id\n", self.recv(2))
 
-        self.statsd._container_id_field = None
+        self.statsd._container_id = None
 
     def test_histogram_with_container_field(self):
-        self.statsd._container_id_field = "|c:fake-container-id"
+        self.statsd._container_id = "fake-container-id"
         self.statsd.histogram("histo", 123.4)
         self.assert_equal_telemetry("histo:123.4|h|c:fake-container-id\n", self.recv(2))
-        self.statsd._container_id_field = None
+        self.statsd._container_id = None
 
     def test_timing_with_container_field(self):
-        self.statsd._container_id_field = "|c:fake-container-id"
+        self.statsd._container_id = "fake-container-id"
         self.statsd.timing("t", 123)
         self.assert_equal_telemetry("t:123|ms|c:fake-container-id\n", self.recv(2))
-        self.statsd._container_id_field = None
+        self.statsd._container_id = None
 
     def test_event_with_container_field(self):
-        self.statsd._container_id_field = "|c:fake-container-id"
+        self.statsd._container_id = "fake-container-id"
         self.statsd.event(
             "Title",
             "L1\nL2",
@@ -1817,10 +1817,10 @@ async def print_foo():
                 bytes_sent=len(event3),
             ),
         )
-        self.statsd._container_id_field = None
+        self.statsd._container_id = None
 
     def test_service_check_with_container_field(self):
-        self.statsd._container_id_field = "|c:fake-container-id"
+        self.statsd._container_id = "fake-container-id"
         now = int(time.time())
         self.statsd.service_check(
             "my_check.name",
@@ -1842,4 +1842,4 @@ async def print_foo():
                 bytes_sent=len(check),
             ),
         )
-        self.statsd._container_id_field = None
+        self.statsd._container_id = None

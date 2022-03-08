@@ -325,12 +325,12 @@ class DogStatsd(object):
         self.default_sample_rate = default_sample_rate
 
         # Origin detection
-        self._container_id_field = None
+        self._container_id = None
         if not has_entity_id:
             origin_detection_enabled = self._is_origin_detection_enabled(
                 container_id, origin_detection_enabled, has_entity_id
             )
-            self._set_container_id_field(container_id, origin_detection_enabled)
+            self._set_container_id(container_id, origin_detection_enabled)
 
         # init telemetry version
         self._client_tags = [
@@ -769,7 +769,7 @@ class DogStatsd(object):
             metric_type,
             ("|@" + text(sample_rate)) if sample_rate != 1 else "",
             ("|#" + ",".join(normalize_tags(tags))) if tags else "",
-            self._get_container_id_field(),
+            ("|c:" + self._container_id if self._container_id else "")
         )
 
     def _report(self, metric, metric_type, value, tags, sample_rate):
@@ -974,7 +974,8 @@ class DogStatsd(object):
             string = "%s|t:%s" % (string, alert_type)
         if tags:
             string = "%s|#%s" % (string, ",".join(tags))
-        string = "%s%s" % (string, self._get_container_id_field())
+        if self._container_id:
+            string = "%s|c:%s" % (string, self._container_id)
 
         if len(string) > 8 * 1024:
             raise Exception(
@@ -1017,7 +1018,8 @@ class DogStatsd(object):
             string = u"{0}|#{1}".format(string, ",".join(tags))
         if message:
             string = u"{0}|m:{1}".format(string, message)
-        string = u"{0}{1}".format(string, self._get_container_id_field())
+        if self._container_id:
+            string = u"{0}|c:{1}".format(string, self._container_id)
 
         if self._telemetry:
             self.service_checks_count += 1
@@ -1049,31 +1051,21 @@ class DogStatsd(object):
         value = os.environ.get(ORIGIN_DETECTION_ENABLED, "")
         return value.lower() not in {"no", "false", "0", "n", "off"}
 
-    def _set_container_id_field(self, container_id, origin_detection_enabled):
+    def _set_container_id(self, container_id, origin_detection_enabled):
         """
         Initializes the container ID.
         It can either be provided by the user or read from cgroups.
         """
-        container_id_prefix = "|c:"
         if container_id:
-            self._container_id_field = container_id_prefix + container_id
+            self._container_id = container_id
             return
         if origin_detection_enabled:
             try:
                 reader = ContainerID()
-                self._container_id_field = container_id_prefix + reader.get_container_id()
+                self._container_id = reader.container_id
             except Exception as e:
                 log.debug("Couldn't get container ID: %s", str(e))
-                self._container_id_field = None
-
-    def _get_container_id_field(self):
-        """
-        Returns the container ID field prefixed and ready to be appended to the datagram.
-        Returns an empty string if the container ID was not set.
-        """
-        if self._container_id_field:
-            return self._container_id_field
-        return ""
+                self._container_id = None
 
 
 statsd = DogStatsd()

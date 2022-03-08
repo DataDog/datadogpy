@@ -33,7 +33,7 @@ class ContainerID(object):
     CONTAINER_RE = re.compile(r"(?:.+)?({0}|{1}|{2})(?:\.scope)?$".format(UUID_SOURCE, CONTAINER_SOURCE, TASK_SOURCE))
 
     def __init__(self):
-        self._container_id = self._read_container_id(self.CGROUP_PATH)
+        self.container_id = self._read_container_id(self.CGROUP_PATH)
 
     def _read_container_id(self, fpath):
         try:
@@ -52,12 +52,6 @@ class ContainerID(object):
         except IOError as e:
             if e.errno != errno.ENOENT:
                 raise NotImplementedError("Unable to open {}.".format(self.CGROUP_PATH))
-        except Exception:
-            raise UnresolvableContainerID("Unable to read the container ID.")
+        except Exception as e:
+            raise UnresolvableContainerID("Unable to read the container ID: " + str(e))
         return None
-
-    def get_container_id(self):
-        """
-        Returns the container ID if found, None otherwise.
-        """
-        return self._container_id
