@@ -224,8 +224,7 @@ class DogStatsd(object):
         metrics with container tags.
         This feature requires Datadog Agent version >=6.35.0 && <7.0.0 or Agent versions >=7.35.0.
         When configured, the provided container ID is prioritized over the container ID discovered
-        via Origin Detection.
-        The client prioritizes the value passed via DD_ENTITY_ID (if set) over the container ID.
+        via Origin Detection. When DD_ENTITY_ID is set, this value is ignored.
         Default: None.
         :type container_id: string
 
