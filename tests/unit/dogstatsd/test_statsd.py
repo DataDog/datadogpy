@@ -1736,3 +1736,110 @@ async def print_foo():
     def test_histogram_does_not_send_none(self):
         self.statsd.histogram('metric', None)
         self.assertIsNone(self.recv())
+
+    def test_set_with_container_field(self):
+        self.statsd._container_id = "fake-container-id"
+        self.statsd.set("set", 123)
+        self.assert_equal_telemetry("set:123|s|c:fake-container-id\n", self.recv(2))
+        self.statsd._container_id = None
+
+    def test_gauge_with_container_field(self):
+        self.statsd._container_id = "fake-container-id"
+        self.statsd.gauge("gauge", 123.4)
+        self.assert_equal_telemetry("gauge:123.4|g|c:fake-container-id\n", self.recv(2))
+        self.statsd._container_id = None
+
+    def test_counter_with_container_field(self):
+        self.statsd._container_id = "fake-container-id"
+
+        self.statsd.increment("page.views")
+        self.statsd.flush()
+        self.assert_equal_telemetry("page.views:1|c|c:fake-container-id\n", self.recv(2))
+
+        self.statsd._reset_telemetry()
+        self.statsd.increment("page.views", 11)
+        self.statsd.flush()
+        self.assert_equal_telemetry("page.views:11|c|c:fake-container-id\n", self.recv(2))
+
+        self.statsd._reset_telemetry()
+        self.statsd.decrement("page.views")
+        self.statsd.flush()
+        self.assert_equal_telemetry("page.views:-1|c|c:fake-container-id\n", self.recv(2))
+
+        self.statsd._reset_telemetry()
+        self.statsd.decrement("page.views", 12)
+        self.statsd.flush()
+        self.assert_equal_telemetry("page.views:-12|c|c:fake-container-id\n", self.recv(2))
+
+        self.statsd._container_id = None
+
+    def test_histogram_with_container_field(self):
+        self.statsd._container_id = "fake-container-id"
+        self.statsd.histogram("histo", 123.4)
+        self.assert_equal_telemetry("histo:123.4|h|c:fake-container-id\n", self.recv(2))
+        self.statsd._container_id = None
+
+    def test_timing_with_container_field(self):
+        self.statsd._container_id = "fake-container-id"
+        self.statsd.timing("t", 123)
+        self.assert_equal_telemetry("t:123|ms|c:fake-container-id\n", self.recv(2))
+        self.statsd._container_id = None
+
+    def test_event_with_container_field(self):
+        self.statsd._container_id = "fake-container-id"
+        self.statsd.event(
+            "Title",
+            "L1\nL2",
+            priority="low",
+            date_happened=1375296969,
+        )
+        event2 = u"_e{5,6}:Title|L1\\nL2|d:1375296969|p:low|c:fake-container-id\n"
+        self.assert_equal_telemetry(
+            event2,
+            self.recv(2),
+            telemetry=telemetry_metrics(
+                metrics=0,
+                events=1,
+                bytes_sent=len(event2),
+            ),
+        )
+
+        self.statsd._reset_telemetry()
+
+        self.statsd.event("Title", u"♬ †øU †øU ¥ºu T0µ ♪", aggregation_key="key", tags=["t1", "t2:v2"])
+        event3 = u"_e{5,32}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2|c:fake-container-id\n"
+        self.assert_equal_telemetry(
+            event3,
+            self.recv(2, reset_wait=True),
+            telemetry=telemetry_metrics(
+                metrics=0,
+                events=1,
+                bytes_sent=len(event3),
+            ),
+        )
+        self.statsd._container_id = None
+
+    def test_service_check_with_container_field(self):
+        self.statsd._container_id = "fake-container-id"
+        now = int(time.time())
+        self.statsd.service_check(
+            "my_check.name",
+            self.statsd.WARNING,
+            tags=["key1:val1", "key2:val2"],
+            timestamp=now,
+            hostname=u"i-abcd1234",
+            message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪",
+        )
+        check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}|c:fake-container-id\n'.format(
+            self.statsd.WARNING, now, u'♬ †øU \\n†øU ¥ºu|m\\: T0µ ♪'
+        )
+        self.assert_equal_telemetry(
+            check,
+            self.recv(2),
+            telemetry=telemetry_metrics(
+                metrics=0,
+                service_checks=1,
+                bytes_sent=len(check),
+            ),
+        )
+        self.statsd._container_id = None
