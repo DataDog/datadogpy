@@ -53,7 +53,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
     @classmethod
     def send(cls, metrics=None, attach_host_name=True, compress_payload=False, **single_metric):
         """
-        Submit a metric or a list of metrics to the metric API
+        Submit a metric or a list of metrics to the metric API.
         A metric dictionary should consist of 5 keys: metric, points, host, tags, type (some of which optional),
         see below:
 
