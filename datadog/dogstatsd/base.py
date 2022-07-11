@@ -358,7 +358,7 @@ class DogStatsd(object):
         self._disable_buffering = disable_buffering
         if self._disable_buffering:
             self._send = self._send_to_server
-            log.info("Statsd buffering is disabled")
+            log.debug("Statsd buffering is disabled")
 
         # Start the flush thread if buffering is enabled and the interval is above
         # a reasonable range. This both prevents thrashing and allow us to use "0.0"
@@ -376,7 +376,7 @@ class DogStatsd(object):
     # Note: Invocations of this method should be thread-safe
     def _start_flush_thread(self, flush_interval):
         if self._disable_buffering or self._flush_interval <= MIN_FLUSH_INTERVAL:
-            log.info("Statsd periodic buffer flush is disabled")
+            log.debug("Statsd periodic buffer flush is disabled")
             return
 
         def _flush_thread_loop(self, flush_interval):
@@ -446,7 +446,7 @@ class DogStatsd(object):
             if is_disabled:
                 self._send = self._send_to_server
                 self._stop_flush_thread()
-                log.info("Statsd buffering is disabled")
+                log.debug("Statsd buffering is disabled")
             else:
                 self._send = self._send_to_buffer
                 self._start_flush_thread(self._flush_interval)
