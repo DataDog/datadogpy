@@ -489,7 +489,7 @@ class TestDogStatsd(unittest.TestCase):
         )
 
     def test_event_payload_error(self):
-        def func():
+        def func(self):
             # define an event payload that is > 8 * 1024
             message = ["l" for i in range(8 * 1024)]
             message = "".join(message)
@@ -499,7 +499,7 @@ class TestDogStatsd(unittest.TestCase):
 
         # check that the method fails when the payload is too large
         with pytest.raises(TypeError):
-            func()
+            func(self)
 
         # check that the method does not fail with a small payload
         self.statsd.event("title", "message")
