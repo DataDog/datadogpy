@@ -489,7 +489,7 @@ class TestDogStatsd(unittest.TestCase):
         )
 
     def test_event_payload_error(self):
-        def func(fail: bool):
+        def func():
             # define an event payload that is > 8 * 1024
             message = ["l" for i in range(8 * 1024)]
             message = "".join(message)
