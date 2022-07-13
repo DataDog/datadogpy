@@ -488,6 +488,23 @@ class TestDogStatsd(unittest.TestCase):
             ),
         )
 
+    def test_event_payload_error(self):
+        def func(fail: bool):
+            # define an event payload that is > 8 * 1024
+            message = ["l" for i in range(8 * 1024)]
+            message = "".join(message)
+            payload = {"title": "title", "message": message}
+
+            self.statsd.event(**payload)
+
+        # check that the method fails when the payload is too large
+        with pytest.raises(TypeError):
+            func()
+
+        # check that the method does not fail with a small payload
+        self.statsd.event("title", "message")
+
+
     def test_service_check(self):
         now = int(time.time())
         self.statsd.service_check(
