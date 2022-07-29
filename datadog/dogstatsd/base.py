@@ -977,7 +977,7 @@ class DogStatsd(object):
             string = "%s|c:%s" % (string, self._container_id)
 
         if len(string) > 8 * 1024:
-            raise Exception(
+            raise ValueError(
                 u'Event "{0}" payload is too big (>=8KB). Event discarded'.format(
                     title
                 )
