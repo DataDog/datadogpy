@@ -568,6 +568,18 @@ class TestDogshell:
         out = json.loads(out)
         assert out == {}
 
+    @pytest.mark.admin_needed
+    def test_monitors_fpost(self, dogshell):
+        # Create a monitor
+        query = "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100"
+        type_alert = "metric alert"
+        out, _, _ = dogshell(["monitor", "post", "fpost", "test-monitor.json"])
+
+        out = json.loads(out)
+        assert out["tags"] == "fpost_tag"
+        assert out["priority"] == 4
+
+
     def test_host_muting(self, freezer, dogshell, get_unique, dogshell_with_retry):
         # Submit a metric to create a host
         hostname = "my.test.host{}".format(get_unique())
