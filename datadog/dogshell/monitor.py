@@ -178,6 +178,8 @@ class MonitorClient(object):
             name=monitor["name"],
             message=monitor["message"],
             options=monitor["options"],
+            tags=monitor["tags"],
+            priority=monitor["priority"],
         )
         report_warnings(res)
         report_errors(res)
