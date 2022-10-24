@@ -573,7 +573,7 @@ class TestDogshell:
         # Create a monitor
         query = "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100"
         type_alert = "metric alert"
-        out, _, _ = dogshell(["monitor", "fpost", "test-monitor.json"])
+        out, _, _ = dogshell(["monitor", "fpost", "fpostmonitor.json"])
 
         out = json.loads(out)
         assert out["tags"] == "fpost_tag"
