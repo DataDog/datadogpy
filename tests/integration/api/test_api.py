@@ -632,10 +632,13 @@ class TestDatadog:
         assert slo["name"] == name
         slos = [
             s
-            for s in dog.ServiceLevelObjective.get_all()["data"]
+            for s in dog.ServiceLevelObjective.get_all(tags_query="type:test")["data"]
             if s["id"] == slo["id"]
         ]
         assert len(slos) == 1
+
+        slo_search = dog.ServiceLevelObjective.search(query="{} AND type:test".format(name))
+        assert len(slo_search["data"]) == 1
 
         assert dog.ServiceLevelObjective.get(slo["id"])["data"]["id"] == slo["id"]
         dog.ServiceLevelObjective.delete(slo["id"])
