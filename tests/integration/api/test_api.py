@@ -638,7 +638,7 @@ class TestDatadog:
         assert len(slos) == 1
 
         slo_search = dog.ServiceLevelObjective.search(query="{} AND type:test".format(name))
-        assert len(slo_search["data"]) == 1
+        assert len(slo_search["data"]) >= 1
 
         assert dog.ServiceLevelObjective.get(slo["id"])["data"]["id"] == slo["id"]
         dog.ServiceLevelObjective.delete(slo["id"])
