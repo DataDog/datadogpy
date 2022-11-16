@@ -50,11 +50,17 @@ class ServiceLevelObjective(
         return super(ServiceLevelObjective, cls).get(id, **params)
 
     @classmethod
-    def get_all(cls, query=None, ids=None, offset=0, limit=100, **params):
+    def get_all(cls, query=None, tags_query=None, metrics_query=None, ids=None, offset=0, limit=100, **params):
         """
         Get all SLO details.
 
-        :param query: optional search query - syntax in UI && online documentation
+        :param query: optional search query to filter results for SLO name
+        :type query: str
+
+        :param tags_query: optional search query to filter results for a single SLO tag
+        :type query: str
+
+        :param metrics_query: optional search query to filter results based on SLO numerator and denominator
         :type query: str
 
         :param ids: optional list of SLO ids to get many specific SLOs at once.
@@ -73,6 +79,10 @@ class ServiceLevelObjective(
             search_terms["query"] = query
         if ids:
             search_terms["ids"] = ids
+        if tags_query:
+            search_terms["tags_query"] = tags_query
+        if metrics_query:
+            search_terms["metrics_query"] = metrics_query
         search_terms["offset"] = offset
         search_terms["limit"] = limit
 
@@ -192,3 +202,12 @@ class ServiceLevelObjective(
             body=None,
             suppress_response_errors_on_codes=[200],
         )
+
+    @classmethod
+    def search(cls, **params):
+        """
+        Search SLOs.
+
+        :returns: Dictionary representing the API's JSON response
+        """
+        return super(ServiceLevelObjective, cls)._trigger_class_action("GET", "search", params=params)
