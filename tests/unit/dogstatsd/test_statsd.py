@@ -294,6 +294,10 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.gauge('gauge', 123.4)
         self.assert_equal_telemetry('gauge:123.4|g\n', self.recv(2))
 
+    def test_gauge_with_unescaped_name(self):
+        self.statsd.gauge('my|new.p3rfect#_gauge', 123.4)
+        self.assert_equal_telemetry('my_new.p3rfect__gauge:123.4|g\n', self.recv(2))
+
     def test_counter(self):
         self.statsd.increment('page.views')
         self.statsd.flush()
