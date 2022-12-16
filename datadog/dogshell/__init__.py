@@ -73,9 +73,9 @@ def main():
 
     parser.add_argument(
         "--api_host",
-        help="Datadog site to send data, us (datadoghq.com), eu (datadoghq.eu) or us3 (us3.datadoghq.com), default: us",
+        help="Datadog site to send data, us (datadoghq.com), eu (datadoghq.eu), us3 (us3.datadoghq.com), or us5 (us5.datadoghq.com), default: us",
         dest="api_host",
-        choices=["datadoghq.com", "us", "datadoghq.eu", "eu", "us3.datadoghq.com", "us3"],
+        choices=["datadoghq.com", "us", "datadoghq.eu", "eu", "us3.datadoghq.com", "us3", "us5.datadoghq.com", "us5"],
     )
 
     config = DogshellConfig()
