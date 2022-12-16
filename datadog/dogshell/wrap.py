@@ -286,9 +286,9 @@ as it should appear on your Datadog stream",
         action="store",
         type="choice",
         default="datadoghq.com",
-        choices=["datadoghq.com", "us", "datadoghq.eu", "eu"],
+        choices=["datadoghq.com", "us", "datadoghq.eu", "eu", "us3.datadoghq.com", "us3"],
         help="The site \
-to send data, us (datadoghq.com) or eu (datadoghq.eu), default: us",
+to send data, us (datadoghq.com) or eu (datadoghq.eu) or us3 (us3.datadoghq.com), default: us",
     )
     parser.add_option(
         "-m",
@@ -421,6 +421,8 @@ def main():
 
     if options.site in ("datadoghq.eu", "eu"):
         api_host = "https://api.datadoghq.eu"
+    elif options.site in ("us3.datadoghq.com", "us3"):
+        api_host = "https://api.us3.datadoghq.com"
     else:
         api_host = "https://api.datadoghq.com"
 
