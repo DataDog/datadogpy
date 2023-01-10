@@ -53,6 +53,8 @@ class DogshellConfig(IterableUserDict):
                 self["api_host"] = "https://datadoghq.eu"
             elif api_host in ("us3.datadoghq.com", "us3"):
                 self["api_host"] = "https://us3.datadoghq.com"
+            elif api_host in ("us5.datadoghq.com", "us5"):
+                self["api_host"] = "https://us5.datadoghq.com"
 
         if api_key is not None and app_key is not None:
             self["api_key"] = api_key
