@@ -12,7 +12,7 @@ from datadog.api import _api_version, _max_timeouts, _backoff_period
 from datadog.api.exceptions import ClientError, ApiError, HttpBackoff, HttpTimeout, ApiNotInitialized
 from datadog.api.http_client import resolve_http_client
 from datadog.util.compat import is_p3k
-from datadog.util.format import construct_url, construct_path, normalize_tags
+from datadog.util.format import construct_url, normalize_tags
 
 
 log = logging.getLogger("datadog.api")
