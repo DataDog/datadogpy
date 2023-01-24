@@ -126,7 +126,7 @@ class DashboardListClient(object):
 
         # Delete Dashboards from Dashboard List parser
         delete_dashboards_v2_parser = verb_parsers.add_parser(
-            "delete_dashboards", help="Delete dashboards from an existing dashboard list"
+            "delete_dashboards_v2", help="Delete dashboards from an existing dashboard list"
         )
         delete_dashboards_v2_parser.add_argument("dashboard_list_id", help="Dashboard list to delete dashboards from")
         delete_dashboards_v2_parser.add_argument(
