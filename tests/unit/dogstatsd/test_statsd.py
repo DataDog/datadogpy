@@ -697,6 +697,50 @@ class TestDogStatsd(unittest.TestCase):
             MIN_SEND_BUFFER_SIZE,
         )
 
+    def test_histogrammed(self):
+        """
+        Measure the histogram of a function's run time using histogram custom metric.
+        """
+        # In seconds
+        @self.statsd.histogrammed('histogram.test')
+        def func(arg1, arg2, kwarg1=1, kwarg2=1):
+            """docstring"""
+            time.sleep(0.1)
+            return (arg1, arg2, kwarg1, kwarg2)
+
+        self.assertEqual('func', func.__name__)
+        self.assertEqual('docstring', func.__doc__)
+
+        result = func(1, 2, kwarg2=3)
+        # Assert it handles args and kwargs correctly.
+        self.assertEqual(result, (1, 2, 1, 3))
+
+        packet = self.recv(2).split("\n")[0] # ignore telemetry packet
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        self.assertEqual('h', type_)
+        self.assertEqual('histogram.test', name)
+        self.assert_almost_equal(0.1, float(value), 0.09)
+
+        # Repeat, force timer value in milliseconds
+        @self.statsd.histogrammed('histogrammed.test', use_ms=True)
+        def func(arg1, arg2, kwarg1=1, kwarg2=1):
+            """docstring"""
+            time.sleep(0.5)
+            return (arg1, arg2, kwarg1, kwarg2)
+
+        func(1, 2, kwarg2=3)
+
+        # Ignore telemetry packet
+        packet = self.recv(2, reset_wait=True).split("\n")[0]
+        name_value, type_ = packet.split('|')
+        name, value = name_value.split(':')
+
+        self.assertEqual('h', type_)
+        self.assertEqual('histogrammed.test', name)
+        self.assert_almost_equal(500, float(value), 100)
+
     def test_distributed(self):
         """
         Measure the distribution of a function's run time using distribution custom metric.
