@@ -36,13 +36,13 @@ jobs:
       - name: Run integration tests
         run: tox -e integration -- --vcr-record=all
         env:
-          DD_TEST_CLIENT_API_KEY: ${{ secrets.DD_CLIENT_API_KEY }}
-          DD_TEST_CLIENT_APP_KEY: ${{ secrets.DD_CLIENT_APP_KEY }}
-          DD_TEST_CLIENT_USER: ${{ secrets.DD_TEST_CLIENT_USER }}
+          DD_TEST_CLIENT_API_KEY: "${{ secrets.DD_TEST_CLIENT_API_KEY }}"
+          DD_TEST_CLIENT_APP_KEY: "${{ secrets.DD_TEST_CLIENT_APP_KEY }}"
+          DD_TEST_CLIENT_USER: "${{ secrets.DD_TEST_CLIENT_USER }}"
 
       - name: Run admin integration tests
         run: tox -e integration-admin -- --vcr-record=all
         env:
-          DD_TEST_CLIENT_API_KEY: ${{ secrets.DD_CLIENT_API_KEY }}
-          DD_TEST_CLIENT_APP_KEY: ${{ secrets.DD_CLIENT_APP_KEY }}
+          DD_TEST_CLIENT_API_KEY: ${{ secrets.DD_TEST_CLIENT_API_KEY }}
+          DD_TEST_CLIENT_APP_KEY: ${{ secrets.DD_TEST_CLIENT_APP_KEY }}
           DD_TEST_CLIENT_USER: ${{ secrets.DD_TEST_CLIENT_USER }}
