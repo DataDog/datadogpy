@@ -71,20 +71,17 @@ DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL = 10
 # Telemetry pre-computed formatting string. Pre-computation
 # increases throughput of composing the result by 2-15% from basic
 # '%'-based formatting with a `join`.
-TELEMETRY_FORMATTING_STR = (
-    "\n".join(
-        [
-            "datadog.dogstatsd.client.metrics:%s|c|#%s",
-            "datadog.dogstatsd.client.events:%s|c|#%s",
-            "datadog.dogstatsd.client.service_checks:%s|c|#%s",
-            "datadog.dogstatsd.client.bytes_sent:%s|c|#%s",
-            "datadog.dogstatsd.client.bytes_dropped:%s|c|#%s",
-            "datadog.dogstatsd.client.packets_sent:%s|c|#%s",
-            "datadog.dogstatsd.client.packets_dropped:%s|c|#%s",
-        ]
-    )
-    + "\n"
-)
+TELEMETRY_FORMATTING_STR = "\n".join(
+    [
+        "datadog.dogstatsd.client.metrics:%s|c|#%s",
+        "datadog.dogstatsd.client.events:%s|c|#%s",
+        "datadog.dogstatsd.client.service_checks:%s|c|#%s",
+        "datadog.dogstatsd.client.bytes_sent:%s|c|#%s",
+        "datadog.dogstatsd.client.bytes_dropped:%s|c|#%s",
+        "datadog.dogstatsd.client.packets_sent:%s|c|#%s",
+        "datadog.dogstatsd.client.packets_dropped:%s|c|#%s",
+    ]
+) + "\n"
 
 
 # pylint: disable=useless-object-inheritance,too-many-instance-attributes
@@ -94,25 +91,25 @@ class DogStatsd(object):
 
     def __init__(
         self,
-        host=DEFAULT_HOST,  # type: Text
-        port=DEFAULT_PORT,  # type: int
-        max_buffer_size=None,  # type: None
+        host=DEFAULT_HOST,                      # type: Text
+        port=DEFAULT_PORT,                      # type: int
+        max_buffer_size=None,                   # type: None
         flush_interval=DEFAULT_FLUSH_INTERVAL,  # type: float
-        disable_buffering=True,  # type: bool
-        namespace=None,  # type: Optional[Text]
-        constant_tags=None,  # type: Optional[List[str]]
-        use_ms=False,  # type: bool
-        use_default_route=False,  # type: bool
-        socket_path=None,  # type: Optional[Text]
-        default_sample_rate=1,  # type: float
-        disable_telemetry=False,  # type: bool
+        disable_buffering=True,                 # type: bool
+        namespace=None,                         # type: Optional[Text]
+        constant_tags=None,                     # type: Optional[List[str]]
+        use_ms=False,                           # type: bool
+        use_default_route=False,                # type: bool
+        socket_path=None,                       # type: Optional[Text]
+        default_sample_rate=1,                  # type: float
+        disable_telemetry=False,                # type: bool
         telemetry_min_flush_interval=(DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL),  # type: int
-        telemetry_host=None,  # type: Text
-        telemetry_port=None,  # type: Union[str, int]
-        telemetry_socket_path=None,  # type: Text
-        max_buffer_len=0,  # type: int
-        container_id=None,  # type: Optional[Text]
-        origin_detection_enabled=True,  # type: bool
+        telemetry_host=None,                    # type: Text
+        telemetry_port=None,                    # type: Union[str, int]
+        telemetry_socket_path=None,             # type: Text
+        max_buffer_len=0,                       # type: int
+        container_id=None,                      # type: Optional[Text]
+        origin_detection_enabled=True,          # type: bool
     ):  # type: (...) -> None
         """
         Initialize a DogStatsd object.
@@ -390,10 +387,7 @@ class DogStatsd(object):
         self._flush_thread = threading.Thread(
             name="{}_flush_thread".format(self.__class__.__name__),
             target=_flush_thread_loop,
-            args=(
-                self,
-                flush_interval,
-            ),
+            args=(self, flush_interval,),
         )
         self._flush_thread.daemon = True
         self._flush_thread.start()
@@ -509,7 +503,7 @@ class DogStatsd(object):
     def _ensure_min_send_buffer_size(cls, sock, min_size=MIN_SEND_BUFFER_SIZE):
         # Increase the receiving buffer size where needed (e.g. MacOS has 4k RX
         # buffers which is half of the max packet size that the client will send.
-        if os.name == "posix":
+        if os.name == 'posix':
             try:
                 recv_buff_size = sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
                 if recv_buff_size <= min_size:
@@ -774,7 +768,7 @@ class DogStatsd(object):
             metric_type,
             ("|@" + text(sample_rate)) if sample_rate != 1 else "",
             ("|#" + ",".join(normalize_tags(tags))) if tags else "",
-            ("|c:" + self._container_id if self._container_id else ""),
+            ("|c:" + self._container_id if self._container_id else "")
         )
 
     def _report(self, metric, metric_type, value, tags, sample_rate):
@@ -836,10 +830,11 @@ class DogStatsd(object):
         )
 
     def _is_telemetry_flush_time(self):
-        return self._telemetry and self._last_flush_time + self._telemetry_flush_interval < time.time()
+        return self._telemetry and \
+            self._last_flush_time + self._telemetry_flush_interval < time.time()
 
     def _send_to_server(self, packet):
-        self._xmit_packet(packet + "\n", False)
+        self._xmit_packet(packet + '\n', False)
         if self._is_telemetry_flush_time():
             telemetry = self._flush_telemetry()
             if self._xmit_packet(telemetry, True):
@@ -885,8 +880,7 @@ class DogStatsd(object):
                 log.debug(
                     "Packet size too big (size: %d): %s, dropping the packet",
                     len(packet.encode(self.encoding)),
-                    socket_err,
-                )
+                    socket_err)
             else:
                 log.warning(
                     "Error submitting packet: %s, dropping the packet and closing the socket",
@@ -950,17 +944,17 @@ class DogStatsd(object):
 
         # pylint: disable=undefined-variable
         if not is_p3k():
-            if not isinstance(title, unicode):  # noqa: F821
-                title = unicode(DogStatsd._escape_event_content(title), "utf8")  # noqa: F821
-            if not isinstance(message, unicode):  # noqa: F821
-                message = unicode(DogStatsd._escape_event_content(message), "utf8")  # noqa: F821
+            if not isinstance(title, unicode):                                       # noqa: F821
+                title = unicode(DogStatsd._escape_event_content(title), 'utf8')      # noqa: F821
+            if not isinstance(message, unicode):                                     # noqa: F821
+                message = unicode(DogStatsd._escape_event_content(message), 'utf8')  # noqa: F821
 
         # Append all client level tags to every event
         tags = self._add_constant_tags(tags)
 
-        string = "_e{{{},{}}}:{}|{}".format(
-            len(title.encode("utf8", "replace")),
-            len(message.encode("utf8", "replace")),
+        string = u"_e{{{},{}}}:{}|{}".format(
+            len(title.encode('utf8', 'replace')),
+            len(message.encode('utf8', 'replace')),
             title,
             message,
         )
@@ -983,7 +977,11 @@ class DogStatsd(object):
             string = "%s|c:%s" % (string, self._container_id)
 
         if len(string) > 8 * 1024:
-            raise ValueError('Event "{0}" payload is too big (>=8KB). Event discarded'.format(title))
+            raise ValueError(
+                u'Event "{0}" payload is too big (>=8KB). Event discarded'.format(
+                    title
+                )
+            )
 
         if self._telemetry:
             self.events_count += 1
@@ -1006,21 +1004,21 @@ class DogStatsd(object):
         """
         message = DogStatsd._escape_service_check_message(message) if message is not None else ""
 
-        string = "_sc|{0}|{1}".format(check_name, status)
+        string = u"_sc|{0}|{1}".format(check_name, status)
 
         # Append all client level tags to every status check
         tags = self._add_constant_tags(tags)
 
         if timestamp:
-            string = "{0}|d:{1}".format(string, timestamp)
+            string = u"{0}|d:{1}".format(string, timestamp)
         if hostname:
-            string = "{0}|h:{1}".format(string, hostname)
+            string = u"{0}|h:{1}".format(string, hostname)
         if tags:
-            string = "{0}|#{1}".format(string, ",".join(tags))
+            string = u"{0}|#{1}".format(string, ",".join(tags))
         if message:
-            string = "{0}|m:{1}".format(string, message)
+            string = u"{0}|m:{1}".format(string, message)
         if self._container_id:
-            string = "{0}|c:{1}".format(string, self._container_id)
+            string = u"{0}|c:{1}".format(string, self._container_id)
 
         if self._telemetry:
             self.service_checks_count += 1

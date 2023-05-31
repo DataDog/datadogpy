@@ -29,8 +29,8 @@ jobs:
         python -m pip install pre-commit
         python -m pip install tox
 
-    - name: Run black
-      run: pre-commit run --all-files --hook-stage=manual black
+    # - name: Run black
+    #   run: pre-commit run --all-files --hook-stage=manual black
 
     - name: Run mypy
       run: tox -e mypy

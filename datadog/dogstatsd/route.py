@@ -34,7 +34,7 @@ def get_default_route():
                     return socket.inet_ntoa(struct.pack("<L", int(fields[2], 16)))
     except IOError:
         raise NotImplementedError(
-            "Unable to open `/proc/net/route`. " "`use_default_route` option is available on Linux only."
+            u"Unable to open `/proc/net/route`. " u"`use_default_route` option is available on Linux only."
         )
 
-    raise UnresolvableDefaultRoute("Unable to resolve the system default's route.")
+    raise UnresolvableDefaultRoute(u"Unable to resolve the system default's route.")

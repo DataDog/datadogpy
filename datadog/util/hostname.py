@@ -102,7 +102,7 @@ def get_hostname(hostname_from_config):
                 hostname = unix_hostname
 
     # if we have an ec2 default hostname, see if there's an instance-id available
-    if hostname is not None and True in [hostname.lower().startswith(p) for p in ["ip-", "domu"]]:
+    if hostname is not None and True in [hostname.lower().startswith(p) for p in [u"ip-", u"domu"]]:
         instanceid = EC2.get_instance_id(config)
         if instanceid:
             hostname = instanceid
@@ -118,8 +118,8 @@ def get_hostname(hostname_from_config):
 
     if hostname is None:
         log.warning(
-            "Unable to reliably determine host name. You can define one in your `hosts` file, "
-            "or in `datadog.conf` file if you have Datadog Agent installed."
+            u"Unable to reliably determine host name. You can define one in your `hosts` file, "
+            u"or in `datadog.conf` file if you have Datadog Agent installed."
         )
 
     return hostname
@@ -224,7 +224,7 @@ class EC2(object):
             )
             instance_object = connection.get_only_instances([EC2.metadata["instance-id"]])[0]
 
-            EC2_tags = ["%s:%s" % (tag_key, tag_value) for tag_key, tag_value in iteritems(instance_object.tags)]
+            EC2_tags = [u"%s:%s" % (tag_key, tag_value) for tag_key, tag_value in iteritems(instance_object.tags)]
 
         except Exception:
             log.exception("Problem retrieving custom EC2 tags")

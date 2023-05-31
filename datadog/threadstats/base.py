@@ -463,7 +463,7 @@ class ThreadStats(object):
         return events
 
     def _start_flush_thread(self):
-        """Start a thread to flush metrics."""
+        """ Start a thread to flush metrics. """
         from datadog.threadstats.periodic_timer import PeriodicTimer
 
         if self._is_auto_flushing:

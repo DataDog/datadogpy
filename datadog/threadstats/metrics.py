@@ -20,16 +20,16 @@ class Metric(object):
     """
 
     def add_point(self, value):
-        """Add a point to the given metric."""
+        """ Add a point to the given metric. """
         raise NotImplementedError()
 
     def flush(self, timestamp, interval):
-        """Flush all metrics up to the given timestamp."""
+        """ Flush all metrics up to the given timestamp. """
         raise NotImplementedError()
 
 
 class Set(Metric):
-    """A set metric."""
+    """ A set metric. """
 
     stats_tag = "g"
 
@@ -47,7 +47,7 @@ class Set(Metric):
 
 
 class Gauge(Metric):
-    """A gauge metric."""
+    """ A gauge metric. """
 
     stats_tag = "g"
 
@@ -65,7 +65,7 @@ class Gauge(Metric):
 
 
 class Counter(Metric):
-    """A metric that tracks a counter value."""
+    """ A metric that tracks a counter value. """
 
     stats_tag = "c"
 
@@ -84,7 +84,7 @@ class Counter(Metric):
 
 
 class Distribution(Metric):
-    """A distribution metric."""
+    """ A distribution metric. """
 
     stats_tag = "d"
 
@@ -102,7 +102,7 @@ class Distribution(Metric):
 
 
 class Histogram(Metric):
-    """A histogram metric."""
+    """ A histogram metric. """
 
     stats_tag = "h"
 
@@ -188,7 +188,7 @@ class MetricsAggregator(object):
             self._metrics[interval][key].add_point(value)
 
     def flush(self, timestamp):
-        """Flush all metrics up to the given timestamp."""
+        """ Flush all metrics up to the given timestamp. """
         if timestamp == float("inf"):
             interval = float("inf")
         else:

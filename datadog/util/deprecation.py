@@ -15,7 +15,7 @@ def deprecated(message):
                 category=DeprecationWarning,
                 stacklevel=2,
             )
-            warnings.simplefilter("default", DeprecationWarning)
+            warnings.simplefilter('default', DeprecationWarning)
 
             return func(*args, **kwargs)
 

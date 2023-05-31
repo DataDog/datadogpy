@@ -199,9 +199,9 @@ class TimeboardClient(object):
             json.dump(dash_obj, f, indent=2)
 
             if format == "pretty":
-                print("Downloaded dashboard {0} to file {1}".format(dash_id, filename))
+                print(u"Downloaded dashboard {0} to file {1}".format(dash_id, filename))
             else:
-                print("{0} {1}".format(dash_id, filename))
+                print(u"{0} {1}".format(dash_id, filename))
 
     @classmethod
     def _push(cls, args):
