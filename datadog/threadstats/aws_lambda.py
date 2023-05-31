@@ -20,7 +20,7 @@ def my_lambda_handle(event, context):
 
 
 class _LambdaDecorator(object):
-    """ DEPRECATED Decorator to automatically init & flush metrics, created for Lambda functions"""
+    """DEPRECATED Decorator to automatically init & flush metrics, created for Lambda functions"""
 
     # Number of opened wrappers, flush when 0
     _counter = 0
@@ -91,7 +91,7 @@ def _get_lambda_stats():
 
 
 def lambda_metric(*args, **kw):
-    """ Alias to expose only distributions for lambda functions"""
+    """Alias to expose only distributions for lambda functions"""
     _get_lambda_stats().distribution(*args, **kw)
 
 

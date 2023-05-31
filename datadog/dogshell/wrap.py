@@ -113,7 +113,7 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout, proc_poll_interv
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     except Exception:
-        print(u"Failed to execute %s" % (repr(cmd)), file=sys.stderr)
+        print("Failed to execute %s" % (repr(cmd)), file=sys.stderr)
         raise
     try:
         # Let's that the threads collecting the output from the command in the
@@ -177,11 +177,11 @@ def trim_text(text, max_len):
         return text
 
     trimmed_text = (
-        u"{top_third}\n"
-        u"```\n"
-        u"*...trimmed...*\n"
-        u"```\n"
-        u"{bottom_two_third}\n".format(
+        "{top_third}\n"
+        "```\n"
+        "*...trimmed...*\n"
+        "```\n"
+        "{bottom_two_third}\n".format(
             top_third=text[: max_len // 3], bottom_two_third=text[len(text) - (2 * max_len) // 3 :]
         )
     )
@@ -195,34 +195,34 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
 
     Note: do not exceed MAX_EVENT_BODY_LENGTH length.
     """
-    fmt_stdout = u""
-    fmt_stderr = u""
-    fmt_notifications = u""
+    fmt_stdout = ""
+    fmt_stderr = ""
+    fmt_notifications = ""
 
     max_length = MAX_EVENT_BODY_LENGTH // 2 if stdout and stderr else MAX_EVENT_BODY_LENGTH
 
     if stdout:
-        fmt_stdout = u"**>>>> STDOUT <<<<**\n```\n{stdout} \n```\n".format(
+        fmt_stdout = "**>>>> STDOUT <<<<**\n```\n{stdout} \n```\n".format(
             stdout=trim_text(stdout.decode("utf-8", "replace"), max_length)
         )
 
     if stderr:
-        fmt_stderr = u"**>>>> STDERR <<<<**\n```\n{stderr} \n```\n".format(
+        fmt_stderr = "**>>>> STDERR <<<<**\n```\n{stderr} \n```\n".format(
             stderr=trim_text(stderr.decode("utf-8", "replace"), max_length)
         )
 
     if notifications:
         notifications = notifications.decode("utf-8", "replace") if isinstance(notifications, bytes) else notifications
-        fmt_notifications = u"**>>>> NOTIFICATIONS <<<<**\n\n {notifications}\n".format(notifications=notifications)
+        fmt_notifications = "**>>>> NOTIFICATIONS <<<<**\n\n {notifications}\n".format(notifications=notifications)
 
     return (
-        u"%%%\n"
-        u"**>>>> CMD <<<<**\n```\n{command} \n```\n"
-        u"**>>>> EXIT CODE <<<<**\n\n {returncode}\n\n\n"
-        u"{stdout}"
-        u"{stderr}"
-        u"{notifications}"
-        u"%%%\n".format(
+        "%%%\n"
+        "**>>>> CMD <<<<**\n```\n{command} \n```\n"
+        "**>>>> EXIT CODE <<<<**\n\n {returncode}\n\n\n"
+        "{stdout}"
+        "{stderr}"
+        "{notifications}"
+        "%%%\n".format(
             command=cmd,
             returncode=returncode,
             stdout=fmt_stdout,
@@ -440,7 +440,7 @@ def main():
     if returncode == 0:
         alert_type = SUCCESS
         event_priority = "low"
-        event_title = u"[%s] %s succeeded in %.2fs" % (host, options.name, duration)
+        event_title = "[%s] %s succeeded in %.2fs" % (host, options.name, duration)
     elif returncode != 0 and options.submit_mode == "warnings":
         if not warning_codes:
             # the list of warning codes is empty - the option was not specified
@@ -449,7 +449,7 @@ def main():
         elif returncode in warning_codes:
             alert_type = WARNING
             event_priority = "normal"
-            event_title = u"[%s] %s failed in %.2fs" % (host, options.name, duration)
+            event_title = "[%s] %s failed in %.2fs" % (host, options.name, duration)
         else:
             print("Command exited with a different exit code that the one(s) provided")
             sys.exit()
@@ -458,10 +458,10 @@ def main():
         event_priority = "normal"
 
         if returncode is Timeout:
-            event_title = u"[%s] %s timed out after %.2fs" % (host, options.name, duration)
+            event_title = "[%s] %s timed out after %.2fs" % (host, options.name, duration)
             returncode = -1
         else:
-            event_title = u"[%s] %s failed in %.2fs" % (host, options.name, duration)
+            event_title = "[%s] %s failed in %.2fs" % (host, options.name, duration)
 
     notifications = ""
 

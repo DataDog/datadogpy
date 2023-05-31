@@ -67,7 +67,7 @@ _date_fieldre = re.compile(r"(\d+)\s?(\w+) (ago|ahead)")
 
 
 def _midnight():
-    """ Truncate a date to midnight. Default to UTC midnight today."""
+    """Truncate a date to midnight. Default to UTC midnight today."""
     return datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
 
@@ -76,7 +76,7 @@ def parse_date_as_epoch_timestamp(date_str):
 
 
 def _parse_date_noop_formatter(d):
-    """ NOOP - only here for pylint """
+    """NOOP - only here for pylint"""
     return d
 
 
@@ -149,4 +149,4 @@ def parse_date(date_str, to_epoch_ts=False):
             return formatter(parse_func(date_str))
         except Exception:
             pass
-    raise DateParsingError(u"Could not parse {0} as date".format(date_str))
+    raise DateParsingError("Could not parse {0} as date".format(date_str))

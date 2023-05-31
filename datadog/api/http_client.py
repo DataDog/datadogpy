@@ -70,7 +70,7 @@ class HTTPClient(object):
         * `HttpTimeout`: connection timed out
         * `HTTPError`: unexpected HTTP response code
         """
-        raise NotImplementedError(u"Must be implemented by HTTPClient subclasses.")
+        raise NotImplementedError("Must be implemented by HTTPClient subclasses.")
 
 
 class RequestClient(HTTPClient):
@@ -113,9 +113,9 @@ class RequestClient(HTTPClient):
                 raise _remove_context(HTTPError(e.response.status_code, result.reason))
         except TypeError:
             raise TypeError(
-                u"Your installed version of `requests` library seems not compatible with"
-                u"Datadog's usage. We recommend upgrading it ('pip install -U requests')."
-                u"If you need help or have any question, please contact support@datadoghq.com"
+                "Your installed version of `requests` library seems not compatible with"
+                "Datadog's usage. We recommend upgrading it ('pip install -U requests')."
+                "If you need help or have any question, please contact support@datadoghq.com"
             )
 
         return result
@@ -183,13 +183,11 @@ def resolve_http_client():
     Resolve an appropriate HTTP client based the defined priority and user environment.
     """
     if requests:
-        log.debug(u"Use `requests` based HTTP client.")
+        log.debug("Use `requests` based HTTP client.")
         return RequestClient
 
     if urlfetch and urlfetch_errors:
-        log.debug(u"Use `urlfetch` based HTTP client.")
+        log.debug("Use `urlfetch` based HTTP client.")
         return URLFetchClient
 
-    raise ImportError(
-        u"Datadog API client was unable to resolve a HTTP client. " u" Please install `requests` library."
-    )
+    raise ImportError("Datadog API client was unable to resolve a HTTP client. " " Please install `requests` library.")

@@ -65,8 +65,8 @@ class MetricClient(object):
         if args.localhostname:
             # Warn about`--localhostname` command line flag deprecation
             res["warnings"].append(
-                u"`--localhostname` command line flag is deprecated, made default when no `--host` "
-                u"is specified. See the `--host` option for more information."
+                "`--localhostname` command line flag is deprecated, made default when no `--host` "
+                "is specified. See the `--host` option for more information."
             )
         report_warnings(res)
         report_errors(res)
