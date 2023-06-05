@@ -1,0 +1,11 @@
+repos:
+- repo: local
+  hooks:
+  - id: black
+    name: format with black
+    language: python
+    entry: tox -e black
+    stages: [manual]
+    pass_filenames: false
+    additional_dependencies:
+      - "tox"
