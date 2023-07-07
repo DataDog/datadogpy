@@ -286,8 +286,18 @@ as it should appear on your Datadog stream",
         action="store",
         type="choice",
         default="datadoghq.com",
-        choices=["datadoghq.com", "us", "datadoghq.eu", "eu", "us3.datadoghq.com", "us3", "us5.datadoghq.com", "us5",
-                 "ap1", "ap1.datadoghq.com"],
+        choices=[
+            "datadoghq.com",
+            "us",
+            "datadoghq.eu",
+            "eu",
+            "us3.datadoghq.com",
+            "us3",
+            "us5.datadoghq.com",
+            "us5",
+            "ap1.datadoghq.com",
+            "ap1"
+        ],
         help="The site to send data. Accepts us (datadoghq.com), eu (datadoghq.eu), \
 us3 (us3.datadoghq.com), us5 (us5.datadoghq.com), or ap1 (ap1.datadoghq.com). default: us",
     )
