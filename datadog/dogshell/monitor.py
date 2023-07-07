@@ -38,8 +38,8 @@ class MonitorClient(object):
         )
         post_parser.add_argument("--tags", help="comma-separated list of tags", default=None)
         post_parser.add_argument(
-            "--priority", 
-            help="Integer from 1 (high) to 5 (low) indicating alert severity.", 
+            "--priority",
+            help="Integer from 1 (high) to 5 (low) indicating alert severity.",
             default=None
         )
         post_parser.add_argument("--options", help="json options for the monitor", default=None)
