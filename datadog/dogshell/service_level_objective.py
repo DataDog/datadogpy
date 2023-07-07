@@ -147,7 +147,7 @@ class ServiceLevelObjectiveClient(object):
         delete_many_parser.add_argument("slo_ids", help="comma separated list of SLO IDs to delete", type=comma_set)
         delete_many_parser.set_defaults(func=cls._delete_many)
 
-        delete_timeframe_parser = verb_parsers.add_parser("delete_many", help="Delete a SLO timeframe")
+        delete_timeframe_parser = verb_parsers.add_parser("delete_many_timeframe", help="Delete a SLO timeframe")
         delete_timeframe_parser.add_argument("slo_id", help="SLO ID to update")
         delete_timeframe_parser.add_argument(
             "timeframes",

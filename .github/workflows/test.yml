@@ -13,6 +13,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint:
+    name: Lint datadopy files
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.8"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install pre-commit
+        python -m pip install tox
+
+    # - name: Run black
+    #   run: pre-commit run --all-files --hook-stage=manual black
+
+    - name: Run mypy
+      run: tox -e mypy
+
+    - name: Run flake8
+      run: tox -e flake8
+
   run:
     name: Python ${{ matrix.python-version }} on ${{ startsWith(matrix.os, 'macos-') && 'macOS' || startsWith(matrix.os, 'windows-') && 'Windows' || 'Linux' }}
     runs-on: ${{ matrix.os }}
@@ -20,7 +45,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ['pypy-2.7', 'pypy-3.8']
+        python-version: ['pypy2.7', '3.7', 'pypy3.8']
         # os: [ubuntu-latest, windows-latest, macos-latest]
         # python-version: ['2.7', '3.7', '3.8', '3.9', '3.10', 'pypy-2.7', 'pypy-3.8']
 
@@ -28,12 +53,15 @@ jobs:
       TOXENV: ${{ matrix.python-version }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+
+    - name: Install tox
+      run: pip install tox
 
     - name: Install tox
       run: pip install tox

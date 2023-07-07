@@ -16,18 +16,18 @@
 /tests/integration/dogshell/     @DataDog/integrations-tools-and-libraries
 
 # Dogstatd
-/datadog/dogstatsd/              @DataDog/integrations-tools-and-libraries @DataDog/agent-core
-/datadog/util/                   @DataDog/integrations-tools-and-libraries @DataDog/agent-core
-/tests/integration/dogstatsd/    @DataDog/integrations-tools-and-libraries @DataDog/agent-core
-/tests/unit/dogstatsd/           @DataDog/integrations-tools-and-libraries @DataDog/agent-core
-/tests/unit/util/                @DataDog/integrations-tools-and-libraries @DataDog/agent-core
-/tests/util/                     @DataDog/integrations-tools-and-libraries @DataDog/agent-core
-/tests/performance/test_statsd_* @DataDog/integrations-tools-and-libraries @DataDog/agent-core
+/datadog/dogstatsd/              @DataDog/integrations-tools-and-libraries @DataDog/agent-metrics-logs
+/datadog/util/                   @DataDog/integrations-tools-and-libraries @DataDog/agent-metrics-logs
+/tests/integration/dogstatsd/    @DataDog/integrations-tools-and-libraries @DataDog/agent-metrics-logs
+/tests/unit/dogstatsd/           @DataDog/integrations-tools-and-libraries @DataDog/agent-metrics-logs
+/tests/unit/util/                @DataDog/integrations-tools-and-libraries @DataDog/agent-metrics-logs
+/tests/util/                     @DataDog/integrations-tools-and-libraries @DataDog/agent-metrics-logs
+/tests/performance/test_statsd_* @DataDog/integrations-tools-and-libraries @DataDog/agent-metrics-logs
 
 # Threadstats
-/datadog/threadstats/            @DataDog/integrations-tools-and-libraries @DataDog/agent-core
-/tests/unit/threadstats/         @DataDog/integrations-tools-and-libraries @DataDog/agent-core
+/datadog/threadstats/            @DataDog/integrations-tools-and-libraries @DataDog/agent-metrics-logs
+/tests/unit/threadstats/         @DataDog/integrations-tools-and-libraries @DataDog/agent-metrics-logs
 
 # Documentation
-*.md                             @DataDog/baklava @DataDog/integrations-tools-and-libraries
-LICENSE                          @DataDog/baklava @DataDog/integrations-tools-and-libraries
+*.md                             @DataDog/documentation @DataDog/integrations-tools-and-libraries
+LICENSE                          @DataDog/documentation @DataDog/integrations-tools-and-libraries

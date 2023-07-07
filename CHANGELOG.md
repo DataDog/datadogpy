@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.45.0 / 2023-03-15
+
+* [Added] Add dogwrap site option to send to US3 site. See [#749](https://github.com/DataDog/datadogpy/pull/749). Thanks [holidayworking](https://github.com/holidayworking).
+* [Added] Add SLO search endpoint and update get_all. See [#744](https://github.com/DataDog/datadogpy/pull/744).
+* [Added] [statsd] Add origin detection with container ID field. See [#720](https://github.com/DataDog/datadogpy/pull/720).
+* [Fixed] Fix duplicate parsers in dogshell. See [#760](https://github.com/DataDog/datadogpy/pull/760).
+* [Changed] Use header for credentials everywhere. See [#754](https://github.com/DataDog/datadogpy/pull/754).
+* [Changed] [statsd] Raise ValueError instead of Exception when payload is too large. See [#730](https://github.com/DataDog/datadogpy/pull/730). Thanks [mlanicaputo](https://github.com/mlanicaputo).
+
 ## 0.44.0 / 2022-03-02
 
 * [Added] Update package metadata. See [#713](https://github.com/DataDog/datadogpy/pull/713).

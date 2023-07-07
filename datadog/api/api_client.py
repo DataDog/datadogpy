@@ -12,7 +12,7 @@ from datadog.api import _api_version, _max_timeouts, _backoff_period
 from datadog.api.exceptions import ClientError, ApiError, HttpBackoff, HttpTimeout, ApiNotInitialized
 from datadog.api.http_client import resolve_http_client
 from datadog.util.compat import is_p3k
-from datadog.util.format import construct_url, construct_path, normalize_tags
+from datadog.util.format import construct_url, normalize_tags
 
 
 log = logging.getLogger("datadog.api")
@@ -126,15 +126,6 @@ class APIClient(object):
             # Check if the api_version is provided
             if not api_version:
                 api_version = _api_version
-
-            # set api and app keys in params only for some endpoints and thus remove keys from headers
-            # as they cannot be set in both params and headers
-            if cls._set_api_and_app_keys_in_params(api_version, path):
-                params["api_key"] = _api_key
-                del headers["DD-API-KEY"]
-                if _application_key:
-                    params["application_key"] = _application_key
-                    del headers["DD-APPLICATION-KEY"]
 
             # Attach host name to body
             if attach_host_name and body:
@@ -297,24 +288,3 @@ class APIClient(object):
         backed_off_time = now - cls._backoff_timestamp
         backoff_time_left = cls._backoff_period - backed_off_time
         return round(backed_off_time, 2), round(backoff_time_left, 2)
-
-    @classmethod
-    def _set_api_and_app_keys_in_params(cls, api_version, path):
-        """
-        Some endpoints need api and app keys to be set in params only
-        For these endpoints, api and app keys in headers are ignored
-        :return: True if this endpoint needs api and app keys params set
-        """
-        constructed_path = construct_path(api_version, path)
-
-        set_of_paths = {
-            "v1/distribution_points",
-            "v1/series",
-            "v1/check_run",
-            "v1/events",
-            "v1/screen",
-        }
-        if constructed_path in set_of_paths:
-            return True
-
-        return False

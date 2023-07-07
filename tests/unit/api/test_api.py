@@ -179,31 +179,6 @@ class TestInitialization(DatadogAPINoInitialization):
         assert "api_key" not in options['params']
         assert "application_key" not in options['params']
 
-    def test_request_parameters_api_keys_in_params(self):
-        """
-        API parameters are set with `initialize` method.
-        """
-        # Test API, application keys, API host, and some HTTP client options
-        initialize(api_key=API_KEY, app_key=APP_KEY, api_host=API_HOST)
-
-        # Make a simple API call
-        MyParamsApiKeyCreatable.create()
-
-        _, options = self.request_mock.call_args()
-
-        # Assert `requests` parameters
-        self.assertIn('params', options)
-
-        self.assertIn('headers', options)
-
-        # for resources in MyParamsApiKey, api key and application key needs to be in url params
-        # any api and app keys in headers are ignored
-        self.assertEqual(options['headers']['Content-Type'], 'application/json')
-        self.assertEqual(options['params']['api_key'], API_KEY)
-        self.assertEqual(options['params']['application_key'], APP_KEY)
-        assert "DD-API-KEY" not in options['headers']
-        assert "DD-APPLICATION-KEY" not in options['headers']
-
     def test_initialize_options(self):
         """
         HTTP client and API options are set with `initialize` method.
