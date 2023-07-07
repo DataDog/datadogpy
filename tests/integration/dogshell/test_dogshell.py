@@ -399,11 +399,14 @@ class TestDogshell:
         # Create a monitor
         query = "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100"
         type_alert = "metric alert"
-        out, _, _ = dogshell(["monitor", "post", type_alert, query])
+        tags = "main,test"
+        priority = "5"
+        out, _, _ = dogshell(["monitor", "post", type_alert, query, "--tags", tags, "--priority", priority])
 
         out = json.loads(out)
         assert out["query"] == query
         assert out["type"] == type_alert
+        assert out["priority"] == int(priority)
         monitor_id = str(out["id"])
         monitor_name = out["name"]
 
@@ -439,12 +442,15 @@ class TestDogshell:
         assert monitor_name == out["name"]
         assert current_options == out["options"]
 
-        # Updating optional type and query
+        # Updating optional type, query, tags, and priority
         updated_query = "avg(last_15m):sum:system.net.bytes_rcvd{*} by {env} > 222"
         updated_type = "query alert"
+        updated_tags = "main"
+        updated_priority = "4"
 
         out, err, return_code = dogshell(
-            ["monitor", "update", monitor_id, "--type", updated_type, "--query", updated_query]
+            ["monitor", "update", monitor_id, "--type", updated_type, "--query", updated_query,
+             "--tags", updated_tags, "--priority", updated_priority]
         )
 
         out = json.loads(out)
@@ -453,6 +459,7 @@ class TestDogshell:
         assert updated_message in out["message"] # updated_message updated in previous step
         assert monitor_name in out["name"]
         assert current_options == out["options"]
+        assert int(updated_priority) == out["priority"]
 
         # Mute monitor
         out, _, _ = dogshell(["monitor", "mute", str(out["id"])])

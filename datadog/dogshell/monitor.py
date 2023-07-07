@@ -37,6 +37,11 @@ class MonitorClient(object):
             "--message", help="message to include with notifications" " for this monitor", default=None
         )
         post_parser.add_argument("--tags", help="comma-separated list of tags", default=None)
+        post_parser.add_argument(
+            "--priority", 
+            help="Integer from 1 (high) to 5 (low) indicating alert severity.", 
+            default=None
+        )
         post_parser.add_argument("--options", help="json options for the monitor", default=None)
         post_parser.set_defaults(func=cls._post)
 
@@ -69,8 +74,14 @@ class MonitorClient(object):
             dest="query_opt",
         )
         update_parser.add_argument("--name", help="name of the alert", default=None)
+        update_parser.add_argument("--tags", help="comma-separated list of tags", default=None)
         update_parser.add_argument(
             "--message", help="message to include with " "notifications for this monitor", default=None
+        )
+        update_parser.add_argument(
+            "--priority",
+            help="Integer from 1 (high) to 5 (low) indicating alert severity.",
+            default=None
         )
         update_parser.add_argument("--options", help="json options for the monitor", default=None)
         update_parser.set_defaults(func=cls._update)
@@ -158,7 +169,13 @@ class MonitorClient(object):
             tags = None
 
         res = api.Monitor.create(
-            type=args.type, query=args.query, name=args.name, message=args.message, tags=tags, options=options
+            type=args.type,
+            query=args.query,
+            name=args.name,
+            message=args.message,
+            tags=tags,
+            options=options,
+            priority=args.priority
         )
         report_warnings(res)
         report_errors(res)
@@ -218,6 +235,10 @@ class MonitorClient(object):
             to_update["type"] = args.type_opt
         if args.query_opt:
             to_update["query"] = args.query_opt
+        if args.tags:
+            to_update["tags"] = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
+        if args.priority:
+            to_update["priority"] = args.priority
 
         if args.options is not None:
             to_update["options"] = json.loads(args.options)
@@ -243,6 +264,8 @@ class MonitorClient(object):
             name=monitor["name"],
             message=monitor["message"],
             options=monitor["options"],
+            tags=monitor.get("tags", None),
+            priority=monitor.get("priority", None),
         )
         report_warnings(res)
         report_errors(res)

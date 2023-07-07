@@ -1385,4 +1385,5213 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"message": null, "name": null, "options": null, "priority": null, "query":
+      "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "tags": null, "type":
+      "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '174'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor
+  response:
+    body:
+      string: '{"id":124577109,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":[],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688756396000,"created":"2023-07-07T18:59:56.544289+00:00","modified":"2023-07-07T18:59:56.544289+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:56 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - post_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '497'
+      x-ratelimit-reset:
+      - '4'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/124577109
+  response:
+    body:
+      string: '{"id":124577109,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":[],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688756396000,"created":"2023-07-07T18:59:56.544289+00:00","modified":"2023-07-07T18:59:56.544289+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:56 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '3000'
+      x-ratelimit-name:
+      - get_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '2998'
+      x-ratelimit-reset:
+      - '4'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"options": {"no_data_timeframe": 20, "notify_no_data": true}, "query":
+      "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "type": "metric
+      alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '156'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124577109
+  response:
+    body:
+      string: '{"id":124577109,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":[],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688756396000,"created":"2023-07-07T18:59:56.544289+00:00","modified":"2023-07-07T18:59:56.907716+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:56 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '499'
+      x-ratelimit-reset:
+      - '4'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"message": "monitor updated"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '30'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124577109
+  response:
+    body:
+      string: '{"id":124577109,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":[],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*} by {host}
+        > 100","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688756396000,"created":"2023-07-07T18:59:56.544289+00:00","modified":"2023-07-07T18:59:57.098182+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:57 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '498'
+      x-ratelimit-reset:
+      - '3'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"query": "avg(last_15m):sum:system.net.bytes_rcvd{*} by {env} > 222",
+      "type": "query alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '93'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124577109
+  response:
+    body:
+      string: '{"id":124577109,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":[],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*} by
+        {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688756396000,"created":"2023-07-07T18:59:56.544289+00:00","modified":"2023-07-07T18:59:57.307054+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:57 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '497'
+      x-ratelimit-reset:
+      - '3'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"end": null, "scope": []}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '26'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/124577109/mute
+  response:
+    body:
+      string: '{"id":124577109,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":[],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*} by
+        {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{"*":null}},"multi":true,"created_at":1688756396000,"created":"2023-07-07T18:59:56.544289+00:00","modified":"2023-07-07T18:59:57.307054+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:57 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"all_scopes": true, "scope": []}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '33'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/124577109/unmute
+  response:
+    body:
+      string: '{"id":124577109,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":[],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*} by
+        {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688756396000,"created":"2023-07-07T18:59:56.544289+00:00","modified":"2023-07-07T18:59:57.307054+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:57 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"options": {"silenced": {"host:abcd1234": null, "host:abcd1235": null}},
+      "query": "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "type":
+      "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '167'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124577109
+  response:
+    body:
+      string: '{"id":124577109,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":[],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*} by {host}
+        > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{"host:abcd1235":null,"host:abcd1234":null}},"multi":true,"created_at":1688756396000,"created":"2023-07-07T18:59:56.544289+00:00","modified":"2023-07-07T18:59:57.933991+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:57 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '496'
+      x-ratelimit-reset:
+      - '3'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"all_scopes": true, "scope": []}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '33'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/124577109/unmute
+  response:
+    body:
+      string: '{"id":124577109,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":[],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*} by {host}
+        > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688756396000,"created":"2023-07-07T18:59:56.544289+00:00","modified":"2023-07-07T18:59:57.933991+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:58 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124577109
+  response:
+    body:
+      string: '{"data":{"ok":[124577109]},"errors":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:58 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '12000'
+      x-ratelimit-name:
+      - can_delete
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '11999'
+      x-ratelimit-reset:
+      - '2'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"monitor_ids": [124577109], "name": "test_slo", "thresholds": [{"target":
+      90.0, "timeframe": "7d"}], "type": "monitor"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '120'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/slo
+  response:
+    body:
+      string: '{"data":[{"id":"e0c9b5cb73f15d6cabd84b0c2283b1ab","name":"test_slo","tags":[],"monitor_tags":[],"thresholds":[{"timeframe":"7d","target":90.0,"target_display":"90."}],"type":"monitor","type_id":0,"description":"","timeframe":"7d","target_threshold":90.0,"monitor_ids":[124577109],"creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com"},"created_at":1688756398,"modified_at":1688756398}],"error":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:58 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '200'
+      x-ratelimit-name:
+      - slo_create
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '199'
+      x-ratelimit-reset:
+      - '2'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124577109
+  response:
+    body:
+      string: '{"data":{"ok":[]},"errors":{"124577109":["monitor [124577109,**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.] is referenced
+        in slos: [e0c9b5cb73f15d6cabd84b0c2283b1ab,test_slo]"]}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:58 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '12000'
+      x-ratelimit-name:
+      - can_delete
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '11998'
+      x-ratelimit-reset:
+      - '2'
+    status:
+      code: 409
+      message: Conflict
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '0'
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: DELETE
+    uri: https://api.datadoghq.com/api/v1/slo/e0c9b5cb73f15d6cabd84b0c2283b1ab?return_raw=True
+  response:
+    body:
+      string: '{"data":["e0c9b5cb73f15d6cabd84b0c2283b1ab"],"error":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:59 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '100'
+      x-ratelimit-name:
+      - slo_delete
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '99'
+      x-ratelimit-reset:
+      - '2'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124577109
+  response:
+    body:
+      string: '{"data":{"ok":[124577109]},"errors":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:59 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '12000'
+      x-ratelimit-name:
+      - can_delete
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '11997'
+      x-ratelimit-reset:
+      - '1'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '0'
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: DELETE
+    uri: https://api.datadoghq.com/api/v1/monitor/124577109
+  response:
+    body:
+      string: '{"deleted_monitor_id":124577109}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:59 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/124577109
+  response:
+    body:
+      string: '{"errors":["Monitor not found"]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:59 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '3000'
+      x-ratelimit-name:
+      - get_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '2997'
+      x-ratelimit-reset:
+      - '1'
+    status:
+      code: 404
+      message: Not Found
+- request:
+    body: '{}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/mute_all
+  response:
+    body:
+      string: '{"id":3077884255,"monitor_id":null,"org_id":321813,"start":1688756399,"end":null,"canceled":null,"created":1688756399,"modified":1688756399,"message":null,"active":true,"disabled":false,"recurrence":null,"timezone":"UTC","parent_id":null,"child_id":null,"creator_id":1445416,"updater_id":null,"downtime_type":0,"status":"active","monitor_tags":["*"],"mute_first_recovery_notification":false,"notify_end_types":["expired"],"notify_end_states":["alert","no
+        data","warn"],"uuid":"78b1e4f0-1cf8-11ee-9c65-da7ad0900002","scope":["*"]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 18:59:59 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/unmute_all
+  response:
+    body:
+      string: ''
+    headers:
+      Connection:
+      - keep-alive
+      Date:
+      - Fri, 07 Jul 2023 18:59:59 GMT
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 204
+      message: No Content
+- request:
+    body: '{}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/unmute_all
+  response:
+    body:
+      string: '{"errors":["Monitoring is not currently globally muted"]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:00:00 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"message": null, "name": null, "options": {"thresholds": {"critical":
+      200.0}}, "query": "THIS IS A BAD QUERY", "tags": null, "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '149'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/validate
+  response:
+    body:
+      string: '{"errors":["The value provided for parameter ''query'' is invalid"]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:00:00 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"message": null, "name": null, "options": {"thresholds": {"critical":
+      90.0}}, "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200",
+      "tags": null, "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '185'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/validate
+  response:
+    body:
+      string: '{"errors":["Alert threshold (90.0) does not match that used in the
+        query (200.0)."]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:00:00 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"message": null, "name": null, "options": {"thresholds": {"critical":
+      200.0}}, "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200",
+      "tags": null, "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '186'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/validate
+  response:
+    body:
+      string: '{}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '3'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:00:00 GMT
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"message": null, "name": null, "options": null, "priority": null, "query":
+      "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "tags": null, "type":
+      "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '174'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor
+  response:
+    body:
+      string: '{"id":124577408,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":[],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688756685000,"created":"2023-07-07T19:04:45.216595+00:00","modified":"2023-07-07T19:04:45.216595+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:45 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - post_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '499'
+      x-ratelimit-reset:
+      - '5'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/124577408
+  response:
+    body:
+      string: '{"id":124577408,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":[],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688756685000,"created":"2023-07-07T19:04:45.216595+00:00","modified":"2023-07-07T19:04:45.216595+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:45 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '3000'
+      x-ratelimit-name:
+      - get_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '2998'
+      x-ratelimit-reset:
+      - '5'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"options": {"no_data_timeframe": 20, "notify_no_data": true}, "query":
+      "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "type": "metric
+      alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '156'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124577408
+  response:
+    body:
+      string: '{"id":124577408,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":[],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688756685000,"created":"2023-07-07T19:04:45.216595+00:00","modified":"2023-07-07T19:04:45.601216+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:45 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '499'
+      x-ratelimit-reset:
+      - '5'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"message": "monitor updated"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '30'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124577408
+  response:
+    body:
+      string: '{"id":124577408,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":[],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*} by {host}
+        > 100","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688756685000,"created":"2023-07-07T19:04:45.216595+00:00","modified":"2023-07-07T19:04:45.805716+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:45 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '498'
+      x-ratelimit-reset:
+      - '5'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"query": "avg(last_15m):sum:system.net.bytes_rcvd{*} by {env} > 222",
+      "type": "query alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '93'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124577408
+  response:
+    body:
+      string: '{"id":124577408,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":[],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*} by
+        {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688756685000,"created":"2023-07-07T19:04:45.216595+00:00","modified":"2023-07-07T19:04:46.019470+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:46 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '497'
+      x-ratelimit-reset:
+      - '5'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"end": null, "scope": []}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '26'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/124577408/mute
+  response:
+    body:
+      string: '{"id":124577408,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":[],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*} by
+        {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{"*":null}},"multi":true,"created_at":1688756685000,"created":"2023-07-07T19:04:45.216595+00:00","modified":"2023-07-07T19:04:46.019470+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:46 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"all_scopes": true, "scope": []}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '33'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/124577408/unmute
+  response:
+    body:
+      string: '{"id":124577408,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":[],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*} by
+        {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688756685000,"created":"2023-07-07T19:04:45.216595+00:00","modified":"2023-07-07T19:04:46.019470+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:46 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"options": {"silenced": {"host:abcd1234": null, "host:abcd1235": null}},
+      "query": "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "type":
+      "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '167'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124577408
+  response:
+    body:
+      string: '{"id":124577408,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":[],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*} by {host}
+        > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{"host:abcd1234":null,"host:abcd1235":null}},"multi":true,"created_at":1688756685000,"created":"2023-07-07T19:04:45.216595+00:00","modified":"2023-07-07T19:04:46.625336+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:46 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '496'
+      x-ratelimit-reset:
+      - '4'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"all_scopes": true, "scope": []}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '33'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/124577408/unmute
+  response:
+    body:
+      string: '{"id":124577408,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":[],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*} by {host}
+        > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688756685000,"created":"2023-07-07T19:04:45.216595+00:00","modified":"2023-07-07T19:04:46.625336+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:46 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124577408
+  response:
+    body:
+      string: '{"data":{"ok":[124577408]},"errors":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:47 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '12000'
+      x-ratelimit-name:
+      - can_delete
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '11999'
+      x-ratelimit-reset:
+      - '13'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"monitor_ids": [124577408], "name": "test_slo", "thresholds": [{"target":
+      90.0, "timeframe": "7d"}], "type": "monitor"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '120'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/slo
+  response:
+    body:
+      string: '{"data":[{"id":"c1993304d69652fcaa620994b14db0e1","name":"test_slo","tags":[],"monitor_tags":[],"thresholds":[{"timeframe":"7d","target":90.0,"target_display":"90."}],"type":"monitor","type_id":0,"description":"","timeframe":"7d","target_threshold":90.0,"monitor_ids":[124577408],"creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com"},"created_at":1688756687,"modified_at":1688756687}],"error":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:47 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '200'
+      x-ratelimit-name:
+      - slo_create
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '199'
+      x-ratelimit-reset:
+      - '13'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124577408
+  response:
+    body:
+      string: '{"data":{"ok":[]},"errors":{"124577408":["monitor [124577408,**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.] is referenced
+        in slos: [c1993304d69652fcaa620994b14db0e1,test_slo]"]}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:47 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '12000'
+      x-ratelimit-name:
+      - can_delete
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '11998'
+      x-ratelimit-reset:
+      - '13'
+    status:
+      code: 409
+      message: Conflict
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '0'
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: DELETE
+    uri: https://api.datadoghq.com/api/v1/slo/c1993304d69652fcaa620994b14db0e1?return_raw=True
+  response:
+    body:
+      string: '{"data":["c1993304d69652fcaa620994b14db0e1"],"error":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:47 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '100'
+      x-ratelimit-name:
+      - slo_delete
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '99'
+      x-ratelimit-reset:
+      - '3'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124577408
+  response:
+    body:
+      string: '{"data":{"ok":[124577408]},"errors":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:48 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '12000'
+      x-ratelimit-name:
+      - can_delete
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '11997'
+      x-ratelimit-reset:
+      - '12'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '0'
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: DELETE
+    uri: https://api.datadoghq.com/api/v1/monitor/124577408
+  response:
+    body:
+      string: '{"deleted_monitor_id":124577408}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:48 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/124577408
+  response:
+    body:
+      string: '{"errors":["Monitor not found"]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:48 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '3000'
+      x-ratelimit-name:
+      - get_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '2997'
+      x-ratelimit-reset:
+      - '2'
+    status:
+      code: 404
+      message: Not Found
+- request:
+    body: '{}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/mute_all
+  response:
+    body:
+      string: '{"id":3077899632,"monitor_id":null,"org_id":321813,"start":1688756688,"end":null,"canceled":null,"created":1688756688,"modified":1688756688,"message":null,"active":true,"disabled":false,"recurrence":null,"timezone":"UTC","parent_id":null,"child_id":null,"creator_id":1445416,"updater_id":null,"downtime_type":0,"status":"active","monitor_tags":["*"],"mute_first_recovery_notification":false,"notify_end_types":["expired"],"notify_end_states":["alert","no
+        data","warn"],"uuid":"24e02f02-1cf9-11ee-95e7-da7ad0900002","scope":["*"]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:48 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/unmute_all
+  response:
+    body:
+      string: ''
+    headers:
+      Connection:
+      - keep-alive
+      Date:
+      - Fri, 07 Jul 2023 19:04:48 GMT
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 204
+      message: No Content
+- request:
+    body: '{}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/unmute_all
+  response:
+    body:
+      string: '{"errors":["Monitoring is not currently globally muted"]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:48 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"message": null, "name": null, "options": {"thresholds": {"critical":
+      200.0}}, "query": "THIS IS A BAD QUERY", "tags": null, "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '149'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/validate
+  response:
+    body:
+      string: '{"errors":["The value provided for parameter ''query'' is invalid"]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:49 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"message": null, "name": null, "options": {"thresholds": {"critical":
+      90.0}}, "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200",
+      "tags": null, "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '185'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/validate
+  response:
+    body:
+      string: '{"errors":["Alert threshold (90.0) does not match that used in the
+        query (200.0)."]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:49 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"message": null, "name": null, "options": {"thresholds": {"critical":
+      200.0}}, "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200",
+      "tags": null, "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '186'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/validate
+  response:
+    body:
+      string: '{}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '3'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:04:49 GMT
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"message": null, "name": null, "options": null, "priority": null, "query":
+      "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "tags": ["main",
+      "test"], "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '186'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor
+  response:
+    body:
+      string: '{"id":124579814,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688757385000,"created":"2023-07-07T19:16:25.381583+00:00","modified":"2023-07-07T19:16:25.381583+00:00","deleted":null,"restricted_roles":null,"priority":null,"overall_state_modified":null,"overall_state":"No
+        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:16:25 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - post_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '499'
+      x-ratelimit-reset:
+      - '5'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"message": null, "name": null, "options": null, "priority": "5", "query":
+      "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "tags": ["main",
+      "test"], "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '185'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor
+  response:
+    body:
+      string: '{"id":124580073,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688757549000,"created":"2023-07-07T19:19:09.458427+00:00","modified":"2023-07-07T19:19:09.458427+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:09 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - post_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '497'
+      x-ratelimit-reset:
+      - '1'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"message": null, "name": null, "options": null, "priority": "5", "query":
+      "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "tags": ["main",
+      "test"], "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '185'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor
+  response:
+    body:
+      string: '{"id":124580113,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688757593000,"created":"2023-07-07T19:19:53.660579+00:00","modified":"2023-07-07T19:19:53.660579+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:53 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - post_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '499'
+      x-ratelimit-reset:
+      - '7'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/124580113
+  response:
+    body:
+      string: '{"id":124580113,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688757593000,"created":"2023-07-07T19:19:53.660579+00:00","modified":"2023-07-07T19:19:53.660579+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:53 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '3000'
+      x-ratelimit-name:
+      - get_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '2999'
+      x-ratelimit-reset:
+      - '7'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"options": {"no_data_timeframe": 20, "notify_no_data": true}, "query":
+      "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "type": "metric
+      alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '156'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124580113
+  response:
+    body:
+      string: '{"id":124580113,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688757593000,"created":"2023-07-07T19:19:53.660579+00:00","modified":"2023-07-07T19:19:53.974440+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:54 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '499'
+      x-ratelimit-reset:
+      - '7'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"message": "monitor updated"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '30'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124580113
+  response:
+    body:
+      string: '{"id":124580113,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688757593000,"created":"2023-07-07T19:19:53.660579+00:00","modified":"2023-07-07T19:19:54.187262+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:54 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '498'
+      x-ratelimit-reset:
+      - '6'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"query": "avg(last_15m):sum:system.net.bytes_rcvd{*} by {env} > 222",
+      "type": "query alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '93'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124580113
+  response:
+    body:
+      string: '{"id":124580113,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":["main","test"],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*}
+        by {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688757593000,"created":"2023-07-07T19:19:53.660579+00:00","modified":"2023-07-07T19:19:54.394906+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:54 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '497'
+      x-ratelimit-reset:
+      - '6'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"end": null, "scope": []}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '26'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/124580113/mute
+  response:
+    body:
+      string: '{"id":124580113,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":["main","test"],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*}
+        by {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{"*":null}},"multi":true,"created_at":1688757593000,"created":"2023-07-07T19:19:53.660579+00:00","modified":"2023-07-07T19:19:54.394906+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:54 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"all_scopes": true, "scope": []}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '33'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/124580113/unmute
+  response:
+    body:
+      string: '{"id":124580113,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":["main","test"],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*}
+        by {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688757593000,"created":"2023-07-07T19:19:53.660579+00:00","modified":"2023-07-07T19:19:54.394906+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:54 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"options": {"silenced": {"host:abcd1234": null, "host:abcd1235": null}},
+      "query": "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "type":
+      "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '167'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124580113
+  response:
+    body:
+      string: '{"id":124580113,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{"host:abcd1234":null,"host:abcd1235":null}},"multi":true,"created_at":1688757593000,"created":"2023-07-07T19:19:53.660579+00:00","modified":"2023-07-07T19:19:54.965610+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:55 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '496'
+      x-ratelimit-reset:
+      - '6'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"all_scopes": true, "scope": []}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '33'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/124580113/unmute
+  response:
+    body:
+      string: '{"id":124580113,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688757593000,"created":"2023-07-07T19:19:53.660579+00:00","modified":"2023-07-07T19:19:54.965610+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:55 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124580113
+  response:
+    body:
+      string: '{"data":{"ok":[124580113]},"errors":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:55 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '12000'
+      x-ratelimit-name:
+      - can_delete
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '11999'
+      x-ratelimit-reset:
+      - '5'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"monitor_ids": [124580113], "name": "test_slo", "thresholds": [{"target":
+      90.0, "timeframe": "7d"}], "type": "monitor"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '120'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/slo
+  response:
+    body:
+      string: '{"data":[{"id":"ce1c59f26163546f8565500b02fe8599","name":"test_slo","tags":[],"monitor_tags":[],"thresholds":[{"timeframe":"7d","target":90.0,"target_display":"90."}],"type":"monitor","type_id":0,"description":"","timeframe":"7d","target_threshold":90.0,"monitor_ids":[124580113],"creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com"},"created_at":1688757595,"modified_at":1688757595}],"error":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:55 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '200'
+      x-ratelimit-name:
+      - slo_create
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '199'
+      x-ratelimit-reset:
+      - '5'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124580113
+  response:
+    body:
+      string: '{"data":{"ok":[]},"errors":{"124580113":["monitor [124580113,**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.] is referenced
+        in slos: [ce1c59f26163546f8565500b02fe8599,test_slo]"]}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:55 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '12000'
+      x-ratelimit-name:
+      - can_delete
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '11998'
+      x-ratelimit-reset:
+      - '5'
+    status:
+      code: 409
+      message: Conflict
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '0'
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: DELETE
+    uri: https://api.datadoghq.com/api/v1/slo/ce1c59f26163546f8565500b02fe8599?return_raw=True
+  response:
+    body:
+      string: '{"data":["ce1c59f26163546f8565500b02fe8599"],"error":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:56 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '100'
+      x-ratelimit-name:
+      - slo_delete
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '99'
+      x-ratelimit-reset:
+      - '4'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124580113
+  response:
+    body:
+      string: '{"data":{"ok":[124580113]},"errors":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:56 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '12000'
+      x-ratelimit-name:
+      - can_delete
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '11997'
+      x-ratelimit-reset:
+      - '4'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '0'
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: DELETE
+    uri: https://api.datadoghq.com/api/v1/monitor/124580113
+  response:
+    body:
+      string: '{"deleted_monitor_id":124580113}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:56 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/124580113
+  response:
+    body:
+      string: '{"errors":["Monitor not found"]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:56 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '3000'
+      x-ratelimit-name:
+      - get_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '2998'
+      x-ratelimit-reset:
+      - '4'
+    status:
+      code: 404
+      message: Not Found
+- request:
+    body: '{}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/mute_all
+  response:
+    body:
+      string: '{"id":3077944205,"monitor_id":null,"org_id":321813,"start":1688757597,"end":null,"canceled":null,"created":1688757597,"modified":1688757597,"message":null,"active":true,"disabled":false,"recurrence":null,"timezone":"UTC","parent_id":null,"child_id":null,"creator_id":1445416,"updater_id":null,"downtime_type":0,"status":"active","monitor_tags":["*"],"mute_first_recovery_notification":false,"notify_end_types":["expired"],"notify_end_states":["alert","no
+        data","warn"],"uuid":"42555ce0-1cfb-11ee-b7c4-da7ad0900002","scope":["*"]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:57 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/unmute_all
+  response:
+    body:
+      string: ''
+    headers:
+      Connection:
+      - keep-alive
+      Date:
+      - Fri, 07 Jul 2023 19:19:57 GMT
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 204
+      message: No Content
+- request:
+    body: '{}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/unmute_all
+  response:
+    body:
+      string: '{"errors":["Monitoring is not currently globally muted"]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:57 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"message": null, "name": null, "options": {"thresholds": {"critical":
+      200.0}}, "query": "THIS IS A BAD QUERY", "tags": null, "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '149'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/validate
+  response:
+    body:
+      string: '{"errors":["The value provided for parameter ''query'' is invalid"]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:57 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"message": null, "name": null, "options": {"thresholds": {"critical":
+      90.0}}, "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200",
+      "tags": null, "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '185'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/validate
+  response:
+    body:
+      string: '{"errors":["Alert threshold (90.0) does not match that used in the
+        query (200.0)."]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:57 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"message": null, "name": null, "options": {"thresholds": {"critical":
+      200.0}}, "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200",
+      "tags": null, "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '186'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/validate
+  response:
+    body:
+      string: '{}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '3'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:19:57 GMT
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"message": null, "name": null, "options": null, "priority": "5", "query":
+      "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "tags": ["main",
+      "test"], "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '185'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor
+  response:
+    body:
+      string: '{"id":124580946,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758000000,"created":"2023-07-07T19:26:40.440964+00:00","modified":"2023-07-07T19:26:40.440964+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:26:40 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - post_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '499'
+      x-ratelimit-reset:
+      - '10'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/124580946
+  response:
+    body:
+      string: '{"id":124580946,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758000000,"created":"2023-07-07T19:26:40.440964+00:00","modified":"2023-07-07T19:26:40.440964+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:26:40 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '3000'
+      x-ratelimit-name:
+      - get_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '2999'
+      x-ratelimit-reset:
+      - '10'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"options": {"no_data_timeframe": 20, "notify_no_data": true}, "query":
+      "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "type": "metric
+      alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '156'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124580946
+  response:
+    body:
+      string: '{"id":124580946,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758000000,"created":"2023-07-07T19:26:40.440964+00:00","modified":"2023-07-07T19:26:40.886229+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:26:40 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '499'
+      x-ratelimit-reset:
+      - '10'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"message": "monitor updated"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '30'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124580946
+  response:
+    body:
+      string: '{"id":124580946,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758000000,"created":"2023-07-07T19:26:40.440964+00:00","modified":"2023-07-07T19:26:41.114481+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:26:41 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '498'
+      x-ratelimit-reset:
+      - '9'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"message": null, "name": null, "options": null, "priority": "5", "query":
+      "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "tags": ["main",
+      "test"], "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '185'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor
+  response:
+    body:
+      string: '{"id":124581378,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758079000,"created":"2023-07-07T19:27:59.236896+00:00","modified":"2023-07-07T19:27:59.236896+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:27:59 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - post_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '497'
+      x-ratelimit-reset:
+      - '1'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/124581378
+  response:
+    body:
+      string: '{"id":124581378,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758079000,"created":"2023-07-07T19:27:59.236896+00:00","modified":"2023-07-07T19:27:59.236896+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:27:59 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '3000'
+      x-ratelimit-name:
+      - get_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '2998'
+      x-ratelimit-reset:
+      - '1'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"options": {"no_data_timeframe": 20, "notify_no_data": true}, "query":
+      "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "type": "metric
+      alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '156'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124581378
+  response:
+    body:
+      string: '{"id":124581378,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758079000,"created":"2023-07-07T19:27:59.236896+00:00","modified":"2023-07-07T19:27:59.620460+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:27:59 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '499'
+      x-ratelimit-reset:
+      - '1'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"message": "monitor updated"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '30'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124581378
+  response:
+    body:
+      string: '{"id":124581378,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758079000,"created":"2023-07-07T19:27:59.236896+00:00","modified":"2023-07-07T19:27:59.827935+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:27:59 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '498'
+      x-ratelimit-reset:
+      - '1'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"priority": "4", "query": "avg(last_15m):sum:system.net.bytes_rcvd{*}
+      by {env} > 222", "tags": ["main"], "type": "query alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '128'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124581378
+  response:
+    body:
+      string: '{"id":124581378,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":["main"],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*}
+        by {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758079000,"created":"2023-07-07T19:27:59.236896+00:00","modified":"2023-07-07T19:28:00.021489+00:00","deleted":null,"restricted_roles":null,"priority":4,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:00 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '497'
+      x-ratelimit-reset:
+      - '1'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"message": null, "name": null, "options": null, "priority": "5", "query":
+      "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "tags": ["main",
+      "test"], "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '185'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor
+  response:
+    body:
+      string: '{"id":124581390,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758108000,"created":"2023-07-07T19:28:28.904940+00:00","modified":"2023-07-07T19:28:28.904940+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:28 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - post_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '497'
+      x-ratelimit-reset:
+      - '2'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/124581390
+  response:
+    body:
+      string: '{"id":124581390,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758108000,"created":"2023-07-07T19:28:28.904940+00:00","modified":"2023-07-07T19:28:28.904940+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:29 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '3000'
+      x-ratelimit-name:
+      - get_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '2998'
+      x-ratelimit-reset:
+      - '1'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"options": {"no_data_timeframe": 20, "notify_no_data": true}, "query":
+      "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "type": "metric
+      alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '156'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124581390
+  response:
+    body:
+      string: '{"id":124581390,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758108000,"created":"2023-07-07T19:28:28.904940+00:00","modified":"2023-07-07T19:28:29.290295+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:29 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '499'
+      x-ratelimit-reset:
+      - '1'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"message": "monitor updated"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '30'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124581390
+  response:
+    body:
+      string: '{"id":124581390,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758108000,"created":"2023-07-07T19:28:28.904940+00:00","modified":"2023-07-07T19:28:29.493658+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:29 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '498'
+      x-ratelimit-reset:
+      - '1'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"priority": "4", "query": "avg(last_15m):sum:system.net.bytes_rcvd{*}
+      by {env} > 222", "tags": ["main"], "type": "query alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '128'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124581390
+  response:
+    body:
+      string: '{"id":124581390,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":["main"],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*}
+        by {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758108000,"created":"2023-07-07T19:28:28.904940+00:00","modified":"2023-07-07T19:28:29.677160+00:00","deleted":null,"restricted_roles":null,"priority":4,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:29 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '497'
+      x-ratelimit-reset:
+      - '1'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"end": null, "scope": []}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '26'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/124581390/mute
+  response:
+    body:
+      string: '{"id":124581390,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":["main"],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*}
+        by {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{"*":null}},"multi":true,"created_at":1688758108000,"created":"2023-07-07T19:28:28.904940+00:00","modified":"2023-07-07T19:28:29.677160+00:00","deleted":null,"restricted_roles":null,"priority":4,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:29 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"all_scopes": true, "scope": []}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '33'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/124581390/unmute
+  response:
+    body:
+      string: '{"id":124581390,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":["main"],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*}
+        by {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758108000,"created":"2023-07-07T19:28:28.904940+00:00","modified":"2023-07-07T19:28:29.677160+00:00","deleted":null,"restricted_roles":null,"priority":4,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:30 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"options": {"silenced": {"host:abcd1234": null, "host:abcd1235": null}},
+      "query": "avg(last_1h):sum:system.net.bytes_rcvd{*} by {host} > 100", "type":
+      "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '167'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v1/monitor/124581390
+  response:
+    body:
+      string: '{"id":124581390,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":["main"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{"host:abcd1235":null,"host:abcd1234":null}},"multi":true,"created_at":1688758108000,"created":"2023-07-07T19:28:28.904940+00:00","modified":"2023-07-07T19:28:30.289530+00:00","deleted":null,"restricted_roles":null,"priority":4,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:30 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '500'
+      x-ratelimit-name:
+      - put_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '499'
+      x-ratelimit-reset:
+      - '10'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"all_scopes": true, "scope": []}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '33'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/124581390/unmute
+  response:
+    body:
+      string: '{"id":124581390,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
+        updated","tags":["main"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
+        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758108000,"created":"2023-07-07T19:28:28.904940+00:00","modified":"2023-07-07T19:28:30.289530+00:00","deleted":null,"restricted_roles":null,"priority":4,"overall_state_modified":null,"overall_state":"No
+        Data"}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:30 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124581390
+  response:
+    body:
+      string: '{"data":{"ok":[124581390]},"errors":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:30 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '12000'
+      x-ratelimit-name:
+      - can_delete
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '11999'
+      x-ratelimit-reset:
+      - '30'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"monitor_ids": [124581390], "name": "test_slo", "thresholds": [{"target":
+      90.0, "timeframe": "7d"}], "type": "monitor"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '120'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/slo
+  response:
+    body:
+      string: '{"data":[{"id":"a564563e051c50188346eae4f2f5a477","name":"test_slo","tags":[],"monitor_tags":[],"thresholds":[{"timeframe":"7d","target":90.0,"target_display":"90."}],"type":"monitor","type_id":0,"description":"","timeframe":"7d","target_threshold":90.0,"monitor_ids":[124581390],"creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com"},"created_at":1688758111,"modified_at":1688758111}],"error":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:31 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '200'
+      x-ratelimit-name:
+      - slo_create
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '199'
+      x-ratelimit-reset:
+      - '30'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124581390
+  response:
+    body:
+      string: '{"data":{"ok":[]},"errors":{"124581390":["monitor [124581390,**system.net.bytes_rcvd**
+        over ***** was **> 100.0** on average during the **last 1h**.] is referenced
+        in slos: [a564563e051c50188346eae4f2f5a477,test_slo]"]}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:31 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '12000'
+      x-ratelimit-name:
+      - can_delete
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '11998'
+      x-ratelimit-reset:
+      - '29'
+    status:
+      code: 409
+      message: Conflict
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '0'
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: DELETE
+    uri: https://api.datadoghq.com/api/v1/slo/a564563e051c50188346eae4f2f5a477?return_raw=True
+  response:
+    body:
+      string: '{"data":["a564563e051c50188346eae4f2f5a477"],"error":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:31 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '100'
+      x-ratelimit-name:
+      - slo_delete
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '99'
+      x-ratelimit-reset:
+      - '9'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124581390
+  response:
+    body:
+      string: '{"data":{"ok":[124581390]},"errors":null}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:31 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '12000'
+      x-ratelimit-name:
+      - can_delete
+      x-ratelimit-period:
+      - '60'
+      x-ratelimit-remaining:
+      - '11997'
+      x-ratelimit-reset:
+      - '29'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '0'
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: DELETE
+    uri: https://api.datadoghq.com/api/v1/monitor/124581390
+  response:
+    body:
+      string: '{"deleted_monitor_id":124581390}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:31 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/monitor/124581390
+  response:
+    body:
+      string: '{"errors":["Monitor not found"]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:32 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '3000'
+      x-ratelimit-name:
+      - get_monitors
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '2999'
+      x-ratelimit-reset:
+      - '8'
+    status:
+      code: 404
+      message: Not Found
+- request:
+    body: '{}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/mute_all
+  response:
+    body:
+      string: '{"id":3077966268,"monitor_id":null,"org_id":321813,"start":1688758112,"end":null,"canceled":null,"created":1688758112,"modified":1688758112,"message":null,"active":true,"disabled":false,"recurrence":null,"timezone":"UTC","parent_id":null,"child_id":null,"creator_id":1445416,"updater_id":null,"downtime_type":0,"status":"active","monitor_tags":["*"],"mute_first_recovery_notification":false,"notify_end_types":["expired"],"notify_end_states":["alert","no
+        data","warn"],"uuid":"756d952e-1cfc-11ee-b74f-da7ad0900002","scope":["*"]}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:32 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/unmute_all
+  response:
+    body:
+      string: ''
+    headers:
+      Connection:
+      - keep-alive
+      Date:
+      - Fri, 07 Jul 2023 19:28:32 GMT
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 204
+      message: No Content
+- request:
+    body: '{}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/unmute_all
+  response:
+    body:
+      string: '{"errors":["Monitoring is not currently globally muted"]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:32 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"message": null, "name": null, "options": {"thresholds": {"critical":
+      200.0}}, "query": "THIS IS A BAD QUERY", "tags": null, "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '149'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/validate
+  response:
+    body:
+      string: '{"errors":["The value provided for parameter ''query'' is invalid"]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:32 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"message": null, "name": null, "options": {"thresholds": {"critical":
+      90.0}}, "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200",
+      "tags": null, "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '185'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/validate
+  response:
+    body:
+      string: '{"errors":["Alert threshold (90.0) does not match that used in the
+        query (200.0)."]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:32 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 400
+      message: Bad Request
+- request:
+    body: '{"message": null, "name": null, "options": {"thresholds": {"critical":
+      200.0}}, "query": "avg(last_1h):sum:system.net.bytes_rcvd{host:host0} > 200",
+      "tags": null, "type": "metric alert"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '186'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v1/monitor/validate
+  response:
+    body:
+      string: '{}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '3'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 07 Jul 2023 19:28:33 GMT
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
 version: 1
