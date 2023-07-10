@@ -200,10 +200,12 @@ class MonitorClient(object):
             "message": monitor["message"],
             "options": monitor["options"]
         }
-        if monitor.get("tags", None):
-            body["tags"] = monitor.get("tags", None)
-        if monitor.get("priority", None):
-            body["priority"] = args.priority
+        tags = monitor.get("tags", None)
+        if tags:
+            body["tags"] = tags
+        priority = monitor.get("priority", None)
+        if priority:
+            body["priority"] = priority
 
         res = api.Monitor.create(**body)
         report_warnings(res)
@@ -272,10 +274,12 @@ class MonitorClient(object):
             "message": monitor["message"],
             "options": monitor["options"]
         }
-        if monitor.get("tags", None):
-            body["tags"] = monitor.get("tags", None)
-        if monitor.get("priority", None):
-            body["priority"] = args.priority
+        tags = monitor.get("tags", None)
+        if tags:
+            body["tags"] = tags
+        priority = monitor.get("priority", None)
+        if priority:
+            body["priority"] = priority
 
         res = api.Monitor.update(monitor["id"], **body)
 
