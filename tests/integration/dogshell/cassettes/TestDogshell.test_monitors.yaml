@@ -15,24 +15,27 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: POST
     uri: https://api.datadoghq.com/api/v1/monitor
   response:
     body:
-      string: '{"id":124582421,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
-        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
-        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758822000,"created":"2023-07-07T19:40:22.396396+00:00","modified":"2023-07-07T19:40:22.396396+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
-        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEA4xSTWvcMBC991cInVrXMZLt3aQ6hBx67qm3UoRizdoCWdpI4w1m8X/vaB0IhRYy
+        J828+XjzRlfuLFey7e+7vm+PNY9p1CXUtfJBdjXH9Qxc8RkwuYEZDwl5zYOZS7Sq8poR5iYANs8r
+        QtZpuNiqYvECiVXF2KvJ9HpkUohGFCgwQ6gZgdkluTAynIAyvMnI5FRVDQ2YIWfKoBnkoBkzV7/4
+        bFwoLmTkv2v+skBaKcNcxs+lWMvpi8rLrP5J6lpt7Hll1ylm3NiNDvWKZ3QxUPcrDxHdadUhamvQ
+        cHUyPgOtuofNYh2+B+FVl0bagjfEoROi5i4MfrGgd7qYFqrOzkMYgAS9bhuttXh0XO3YkMAgWG2o
+        rzw+fBNCdq0gq/kbRMu1ou3uxP2dFD/lQYlWFRXpWF33VQhyilbRupMrMz6STYyBpnIVFu9rnkhM
+        umzhkaIHUmKPn5OLySHtdiCVyr281xmJsH6ft6f+hRKJH5F9Lwq+rRHTTd3bj9kLJhOsL7c9pTg+
+        FbVtHKeXZogzFQGd2f8PvP3Wvj/08rhtn/4AAAD//wMAFvm+2r4CAAA=
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:22 GMT
+      - Mon, 10 Jul 2023 15:02:00 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -56,7 +59,7 @@ interactions:
       x-ratelimit-remaining:
       - '499'
       x-ratelimit-reset:
-      - '8'
+      - '10'
     status:
       code: 200
       message: OK
@@ -70,24 +73,27 @@ interactions:
       Connection:
       - keep-alive
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: GET
-    uri: https://api.datadoghq.com/api/v1/monitor/124582421
+    uri: https://api.datadoghq.com/api/v1/monitor/124734426
   response:
     body:
-      string: '{"id":124582421,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
-        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
-        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758822000,"created":"2023-07-07T19:40:22.396396+00:00","modified":"2023-07-07T19:40:22.396396+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
-        Data","creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com","id":1445416}}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEA4xSTWvcMBC991cInVrXMZLt3aQ6hBx67qm3UoRizdoCWdpI4w1m8X/vaB0IhRYy
+        J828+XjzRlfuLFey7e+7vm+PNY9p1CXUtfJBdjXH9Qxc8RkwuYEZDwl5zYOZS7Sq8poR5iYANs8r
+        QtZpuNiqYvECiVXF2KvJ9HpkUohGFCgwQ6gZgdkluTAynIAyvMnI5FRVDQ2YIWfKoBnkoBkzV7/4
+        bFwoLmTkv2v+skBaKcNcxs+lWMvpi8rLrP5J6lpt7Hll1ylm3NiNDvWKZ3QxUPcrDxHdadUhamvQ
+        cHUyPgOtuofNYh2+B+FVl0bagjfEoROi5i4MfrGgd7qYFqrOzkMYgAS9bhuttXh0XO3YkMAgWG2o
+        rzw+fBNCdq0gq/kbRMu1ou3uxP2dFD/lQYlWFRXpWF33VQhyilbRupMrMz6STYyBpnIVFu9rnkhM
+        umzhkaIHUmKPn5OLySHtdiCVyr281xmJsH6ft6f+hRKJH5F9Lwq+rRHTTd3bj9kLJhOsL7c9pTg+
+        FbVtHKeXZogzFQGd2f8PvP3Wvj/08rhtn/4AAAD//wMAFvm+2r4CAAA=
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:22 GMT
+      - Mon, 10 Jul 2023 15:02:00 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -111,7 +117,7 @@ interactions:
       x-ratelimit-remaining:
       - '2999'
       x-ratelimit-reset:
-      - '8'
+      - '10'
     status:
       code: 200
       message: OK
@@ -131,24 +137,27 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: PUT
-    uri: https://api.datadoghq.com/api/v1/monitor/124582421
+    uri: https://api.datadoghq.com/api/v1/monitor/124734426
   response:
     body:
-      string: '{"id":124582421,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
-        over ***** was **> 100.0** on average during the **last 1h**.","message":"","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
-        by {host} > 100","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758822000,"created":"2023-07-07T19:40:22.396396+00:00","modified":"2023-07-07T19:40:22.763254+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
-        Data"}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEA2xRsW7cMAzd+xUCp9Z1DpJ9Sa4aOnXOlK0IBMXi+QTI0lWiLzAM/3upXJKiQDSJ
+        5CP53uMK3oFW3f6+3++7uxZSHk1N9Z06qL4FWs4IGiak7AdhA2aCFqKdarZpylIIp11E2j0vhMXk
+        4eKaRqQLZtHUJ15s4d9PoaTcyVqKwnLVjijcnH0cBZ2QEcEWEurUNDteMGEpjOAdHJAdC+jfMFkf
+        a4iF4KmFPzPmhRH2Mn6tzUadvukyT/pTUmuziedFrKdUaBOvdHhWOpNPkaevEJNxlqwhP+Exvwrs
+        JEtN5I+LeauCpjzjR9bOzhPoow2lJvHF1PHGYbDMrJfc7+MQZofmKuLaXXzAOCDbvG4bi50D+ffJ
+        Q0ZL6Izlueru8ENK1XeSXwtvJZbcya6/kfc3Sj6qWy07Xb3lE/b9dyk5qA4m54++7vgUvZcH2Xcf
+        aGaMvBV0nENoIbPFfO/KI6eA7M81f84+ZU+s7Za9q1cMwRRiwubfviv0vyqTeEjiF9sL25e/AAAA
+        //8DAIeMhIh0AgAA
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:22 GMT
+      - Mon, 10 Jul 2023 15:02:00 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -172,7 +181,7 @@ interactions:
       x-ratelimit-remaining:
       - '499'
       x-ratelimit-reset:
-      - '8'
+      - '10'
     status:
       code: 200
       message: OK
@@ -190,25 +199,27 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: PUT
-    uri: https://api.datadoghq.com/api/v1/monitor/124582421
+    uri: https://api.datadoghq.com/api/v1/monitor/124734426
   response:
     body:
-      string: '{"id":124582421,"org_id":321813,"type":"metric alert","name":"**system.net.bytes_rcvd**
-        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
-        updated","tags":["main","test"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
-        by {host} > 100","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758822000,"created":"2023-07-07T19:40:22.396396+00:00","modified":"2023-07-07T19:40:22.956408+00:00","deleted":null,"restricted_roles":null,"priority":5,"overall_state_modified":null,"overall_state":"No
-        Data"}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEA2xRy47cIBC85ysQp8TxjgDPY8Mhp5xzyi2KEGt6PEgYJtDMyrL872l2NhtFWk7Q
+        1VRXVa/cO66l2p+G/V4de57yZFppUPJRDj3H5Qpc8xkw+5HZABl5z6OdW7XrylIQ5l0E3D0tCMXk
+        8ea6jqUbZNa1w55todtXJoXYiQZFZgm1EzBXs48TwwtQR7AFmbx03Y4GzFAKdbTJKXpMmdWrswiO
+        MLRT4fonn62P7QkF+a+e/66QF/pgb9PHxmXk5ZMuddbvaly7jT0tbL2kght7UUdc6Yo+RWJfeUyG
+        BlqDfoZzfvGrBDlP6M+LeUW5xlzhrWqr88j12YbSivBsGr1xECwpGwT993EM1YG5m7j/Lj5AHMmb
+        XreNvNeA/i/zmKHZNpZ45fHxixByUIJOz18hsqyEGh7E6UGKH/KghdItatroMHwWgh4t0OT82bcZ
+        73Yf5eGgTm/dpBha2DrWEHqeKWJaf9ORUwDK516/Zp+yR/J2oOzaUkMwBUmw+Tfv3vofSiK+J/aN
+        4uXbhz8AAAD//wMADxO2TIMCAAA=
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:22 GMT
+      - Mon, 10 Jul 2023 15:02:00 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -232,7 +243,7 @@ interactions:
       x-ratelimit-remaining:
       - '498'
       x-ratelimit-reset:
-      - '8'
+      - '10'
     status:
       code: 200
       message: OK
@@ -251,25 +262,27 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: PUT
-    uri: https://api.datadoghq.com/api/v1/monitor/124582421
+    uri: https://api.datadoghq.com/api/v1/monitor/124734426
   response:
     body:
-      string: '{"id":124582421,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
-        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
-        updated","tags":["main"],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*}
-        by {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758822000,"created":"2023-07-07T19:40:22.396396+00:00","modified":"2023-07-07T19:40:23.152072+00:00","deleted":null,"restricted_roles":null,"priority":4,"overall_state_modified":null,"overall_state":"No
-        Data"}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEA2xRwW7cIBS89ysQp8R1VoA32YRDTjnn1FtVIWLeepEwbOB5I8vyv/dRp4kihZP9
+        Zpg3MyzcO66l2h+6/V7dtTzlwdRRp+S97FqO8xm45q8T5JnZABl5y6Md67BpylwQxl0E3L3MCMXk
+        /uKahqULZNbUw95soa9HJoXYiQpFZgm1AzA3ZR8HhicgRrAFmTw1zY4WjFAKMWjHmKLHlNl0dhbB
+        EYZ2KFz/5qP1kf9pN2vEtJfhqooYeTte6zKN+lt3S7Oyl5ktEC8re2RKKdJMZ/QpkuzCYzK0yRr0
+        Ixzzv6BKUOSE/jibd5RrzBN8TO3kPHJ9tKHUIbyZUyIjDoKdqUpB933sw+TAbO6328UHiD2F0su6
+        UugpoP+v3GeoeY0lXXl3/yCE7JSg0/J3iCIrobobcbiR4pe81ULp2jG9ZNf9FIJ+apPJ+aOvO75l
+        Hx4OXac+2OQYass6TiG0PEPB7PvqI6cA1M82P2efskfKtqfu6muGYAqSYfO5b6N+QcnEc2JPVC9f
+        f/wFAAD//wMAj+R8i3sCAAA=
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:23 GMT
+      - Mon, 10 Jul 2023 15:02:00 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -293,7 +306,7 @@ interactions:
       x-ratelimit-remaining:
       - '497'
       x-ratelimit-reset:
-      - '7'
+      - '10'
     status:
       code: 200
       message: OK
@@ -311,25 +324,27 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: POST
-    uri: https://api.datadoghq.com/api/v1/monitor/124582421/mute
+    uri: https://api.datadoghq.com/api/v1/monitor/124734426/mute
   response:
     body:
-      string: '{"id":124582421,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
-        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
-        updated","tags":["main"],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*}
-        by {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{"*":null}},"multi":true,"created_at":1688758822000,"created":"2023-07-07T19:40:22.396396+00:00","modified":"2023-07-07T19:40:23.152072+00:00","deleted":null,"restricted_roles":null,"priority":4,"overall_state_modified":null,"overall_state":"No
-        Data"}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEA2xRTU/jMBC976+w5rRkQ2U7hYIPnDhz4rZClkmmqSXH7tqToqjKf98xBVYr4VMy
+        73neh8/gBzBKb3fddqtvW0h5tHXUaXWnuhZoOSIY+DNjXoQLmAlaiG6qw6YpSyGcNhFp87oQFpv7
+        09A0Ip0wi6Ye8eYKfz0IJeVGVigKx6gbUQxz9nEUdEBmBFdIqEPTbFhgwlKYwRpTip5SFvNxcIQD
+        Y+TGAuY3TM5HeGkv1pjpTuPPusSqm+nKlHky37o7N6t4XcQZ42kVD0JrzTvTkXyKvPYMMVlWcpb8
+        hPv8HlRLjpzI7xf7gYKhPOPX1M2DJzB7F0od4ps9JDYyYHALVyn5vo99mAe0F/eX28UHjD2HYtkG
+        TJxDWFcOPwfynwp9xprbOt6vbu/upVSdlnxa+IA4upa6u5a7ayWf1Y2R2tSu+UW77peU/FMbTYPf
+        +6r1LXt3v+s6/cVm51jbfvfUQsZC2ffVR04BuafqtYVj9il74oxb7rC+agi2EBu2//Qu1P9QNvGU
+        xCPXDOuPvwAAAP//AwD3pXTGgwIAAA==
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:23 GMT
+      - Mon, 10 Jul 2023 15:02:00 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -361,25 +376,27 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: POST
-    uri: https://api.datadoghq.com/api/v1/monitor/124582421/unmute
+    uri: https://api.datadoghq.com/api/v1/monitor/124734426/unmute
   response:
     body:
-      string: '{"id":124582421,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
-        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
-        updated","tags":["main"],"query":"avg(last_15m):sum:system.net.bytes_rcvd{*}
-        by {env} > 222","options":{"no_data_timeframe":20,"notify_no_data":true,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758822000,"created":"2023-07-07T19:40:22.396396+00:00","modified":"2023-07-07T19:40:23.152072+00:00","deleted":null,"restricted_roles":null,"priority":4,"overall_state_modified":null,"overall_state":"No
-        Data"}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEA2xRwW7cIBS89ysQp8R1VoA32YRDTjnn1FtVIWLeepEwbOB5I8vyv/dRp4kihZP9
+        Zpg3MyzcO66l2h+6/V7dtTzlwdRRp+S97FqO8xm45q8T5JnZABl5y6Md67BpylwQxl0E3L3MCMXk
+        /uKahqULZNbUw95soa9HJoXYiQpFZgm1AzA3ZR8HhicgRrAFmTw1zY4WjFAKMWjHmKLHlNl0dhbB
+        EYZ2KFz/5qP1kf9pN2vEtJfhqooYeTte6zKN+lt3S7Oyl5ktEC8re2RKKdJMZ/QpkuzCYzK0yRr0
+        Ixzzv6BKUOSE/jibd5RrzBN8TO3kPHJ9tKHUIbyZUyIjDoKdqUpB933sw+TAbO6328UHiD2F0su6
+        UugpoP+v3GeoeY0lXXl3/yCE7JSg0/J3iCIrobobcbiR4pe81ULp2jG9ZNf9FIJ+apPJ+aOvO75l
+        Hx4OXac+2OQYass6TiG0PEPB7PvqI6cA1M82P2efskfKtqfu6muGYAqSYfO5b6N+QcnEc2JPVC9f
+        f/wFAAD//wMAj+R8i3sCAAA=
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:23 GMT
+      - Mon, 10 Jul 2023 15:02:01 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -413,25 +430,27 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: PUT
-    uri: https://api.datadoghq.com/api/v1/monitor/124582421
+    uri: https://api.datadoghq.com/api/v1/monitor/124734426
   response:
     body:
-      string: '{"id":124582421,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
-        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
-        updated","tags":["main"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
-        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{"host:abcd1234":null,"host:abcd1235":null}},"multi":true,"created_at":1688758822000,"created":"2023-07-07T19:40:22.396396+00:00","modified":"2023-07-07T19:40:23.806280+00:00","deleted":null,"restricted_roles":null,"priority":4,"overall_state_modified":null,"overall_state":"No
-        Data"}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEA2yRQW/cIBCF7/0ViFPqOhYYJ9lw6KnnnnqrKsSaWS8Shg2MN7JW/u8d6khppHCy
+        3zxm3nzcuHdcy354UsPQP7Y85clUSfXyIFXLcb0A1/xlgbwyGyAjb3m0cxWbpqwFYe4iYHdcEYrJ
+        49U1DUtXyKyph73aQl/fmRSiE7UUmaWqnYC5Jfs4MTwDOYItyOS5aToaMEMp5KAZc4oeU2bLxVkE
+        RzW0U+H6N5+tj/xPu0cjp71Od7WJkeevuiyz/jTcrdnYcWW3cyq4sX+xqGe6oE+R2t54TOhPq4nJ
+        0EDL9cmGArTyLtvFeXwX4dXURsZBsCtBE6LlPo5hcWD2nJgXul18gDhSfBpQL2h7HJ3s1QPXcQmh
+        /SAOu7htxGEJ6Lnem4wZKgJjKYB8PDwLIVUv6LT8rUQUetGre/F0L8Uv+aBFryt2elylvglBPxVu
+        cv7ka5hP3LJTsj/856bVoIJ/C5qhYPZjzZFTAEK2L3DJPmWPBGEgnPWBQzAFKbB5n7dbP1QpxM/E
+        flTU25e/AAAA//8DAEha3SuOAgAA
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:23 GMT
+      - Mon, 10 Jul 2023 15:02:01 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -455,7 +474,7 @@ interactions:
       x-ratelimit-remaining:
       - '496'
       x-ratelimit-reset:
-      - '7'
+      - '9'
     status:
       code: 200
       message: OK
@@ -473,25 +492,27 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: POST
-    uri: https://api.datadoghq.com/api/v1/monitor/124582421/unmute
+    uri: https://api.datadoghq.com/api/v1/monitor/124734426/unmute
   response:
     body:
-      string: '{"id":124582421,"org_id":321813,"type":"query alert","name":"**system.net.bytes_rcvd**
-        over ***** was **> 100.0** on average during the **last 1h**.","message":"monitor
-        updated","tags":["main"],"query":"avg(last_1h):sum:system.net.bytes_rcvd{*}
-        by {host} > 100","options":{"notify_no_data":false,"notify_audit":false,"new_host_delay":300,"include_tags":true,"silenced":{}},"multi":true,"created_at":1688758822000,"created":"2023-07-07T19:40:22.396396+00:00","modified":"2023-07-07T19:40:23.806280+00:00","deleted":null,"restricted_roles":null,"priority":4,"overall_state_modified":null,"overall_state":"No
-        Data"}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEA2xRwY7bIBS89ysQp9b1WmCn2ZRDTz33tLeqQqx5cZAwpPBIZFn+933UldJKywnP
+        jN+bGVbuLFeyPzwPh0N/bHlMk67Q0MuTHFqOyxW44r8LpIUZDwl5y4OZK9g0eckIcxcAu9cFIes0
+        3mzTsHiDxJp62N1kun1jUohOVCowQ6yZgNmSXJgYXoAU3mRk8tI0HS2YIWdS0I45BocxsXK1BsES
+        h2bKXP3ks3GB/2p3a6Q0t+ljHaLl5ZPKZVbvmlubjb0ubL3EjBv7Y4tmxiu6GGjsykNEd150iJoW
+        Gq7OxmegyDtsinX4AOGu6yBtwZuFShOi5S6MvljQu09Mhf7OzkMYyb5at43iFY+Oq50bE9Rk2tBc
+        eTx9FUIOvaDT8r8UhetFPzyJ5ycpXuQXJXpV26Q3G4bPQtBH7Sxad3Z1xztq2Q2yP/2jJsdQ+1Sh
+        eN/yBBmTG6uPFD1QEzt+TS4mh5TtQC3Vd/NeZyTD+rFvl/7HkokfkX2vDW4f3gAAAP//AwBslNUN
+        ZQIAAA==
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:24 GMT
+      - Mon, 10 Jul 2023 15:02:01 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -519,21 +540,21 @@ interactions:
       Connection:
       - keep-alive
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: GET
-    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124582421
+    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124734426
   response:
     body:
-      string: '{"data":{"ok":[124582421]},"errors":null}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEA6pWSkksSVSyqlbKz1ayijY0MjE3NjExMout1VFKLSrKLypWssorzcmp5QIAAAD/
+        /wMAcgluJSoAAAA=
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:24 GMT
+      - Mon, 10 Jul 2023 15:02:01 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -557,12 +578,12 @@ interactions:
       x-ratelimit-remaining:
       - '11999'
       x-ratelimit-reset:
-      - '36'
+      - '59'
     status:
       code: 200
       message: OK
 - request:
-    body: '{"monitor_ids": [124582421], "name": "test_slo", "thresholds": [{"target":
+    body: '{"monitor_ids": [124734426], "name": "test_slo", "thresholds": [{"target":
       90.0, "timeframe": "7d"}], "type": "monitor"}'
     headers:
       Accept:
@@ -576,21 +597,24 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: POST
     uri: https://api.datadoghq.com/api/v1/slo
   response:
     body:
-      string: '{"data":[{"id":"af94c6a55ca75b2fa10c3661b3e57925","name":"test_slo","tags":[],"monitor_tags":[],"thresholds":[{"timeframe":"7d","target":90.0,"target_display":"90."}],"type":"monitor","type_id":0,"description":"","timeframe":"7d","target_threshold":90.0,"monitor_ids":[124582421],"creator":{"name":null,"handle":"frog@datadoghq.com","email":"frog@datadoghq.com"},"created_at":1688758824,"modified_at":1688758824}],"error":null}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEA2yQzW6EMAyE730Mn9GK/79T36OqIi8xECkQmqSHFeLda7fQHrrHjJ35ZryDxojQ
+        v+1gNPTQtFXRFQPdqW6qbqjuBbY46rZuEauu0pDAigvxZqQQVbCOlYhTYIv3BBa3mui8+lPi7CnM
+        zmrZ2CGahUb/49CIW0Q/UYS+S2/p9VLahM3igyksw8HG8bEJ9PSXfywoicy/NIXBmy0at/KODJ9T
+        1G+Yi3flNd/xsrxsirLMawYOnpCbQL+fhddPaxOYcdVWkozeTa9yO+2m+eM2uIW5tKCxz4fHaUla
+        IdfN6rZL06zIMzmaNqP5N5Da5L1kEPbx8gUAAP//AwAhGwKArAEAAA==
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:24 GMT
+      - Mon, 10 Jul 2023 15:02:01 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -614,7 +638,7 @@ interactions:
       x-ratelimit-remaining:
       - '199'
       x-ratelimit-reset:
-      - '36'
+      - '59'
     status:
       code: 200
       message: OK
@@ -628,23 +652,23 @@ interactions:
       Connection:
       - keep-alive
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: GET
-    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124582421
+    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124734426
   response:
     body:
-      string: '{"data":{"ok":[]},"errors":{"124582421":["monitor [124582421,**system.net.bytes_rcvd**
-        over ***** was **> 100.0** on average during the **last 1h**.] is referenced
-        in slos: [af94c6a55ca75b2fa10c3661b3e57925,test_slo]"]}}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEAzyOzQqDMBCE732KJccgotX4d+iLiJTVbFupTWA3tUjx3RsvndMw33eYr7IYUHVf
+        5Z+q64c9UcTsWY4pP5d1UZbnKhL18m4OnqH/r4nWskmgV+oopOMWSK48rVZr8Csx6CPwQYntAnmW
+        pdmBHGCkeCewb57dHcKDorGgBMgfWqcDzAJMN2JyE1mYHcjipYO+bkzRFhONVNWmncxYYIM321QN
+        ommNTeKFcI3yoIZ9P/0AAAD//wMAjfxtN90AAAA=
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:24 GMT
+      - Mon, 10 Jul 2023 15:02:02 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -668,7 +692,7 @@ interactions:
       x-ratelimit-remaining:
       - '11998'
       x-ratelimit-reset:
-      - '36'
+      - '58'
     status:
       code: 409
       message: Conflict
@@ -684,21 +708,21 @@ interactions:
       Content-Length:
       - '0'
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: DELETE
-    uri: https://api.datadoghq.com/api/v1/slo/af94c6a55ca75b2fa10c3661b3e57925?return_raw=True
+    uri: https://api.datadoghq.com/api/v1/slo/785393cebe6759c5b3a8afd868aa595d?return_raw=True
   response:
     body:
-      string: '{"data":["af94c6a55ca75b2fa10c3661b3e57925"],"error":null}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEA6pWSkksSVSyilYytzA1tjROTk1KNTM3tUw2TTJOtEhMS7Ews0hMNLU0TVGK1VFK
+        LSrKL1KyyivNyanlAgAAAP//AwDFu/PTOwAAAA==
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:24 GMT
+      - Mon, 10 Jul 2023 15:02:02 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -722,7 +746,7 @@ interactions:
       x-ratelimit-remaining:
       - '99'
       x-ratelimit-reset:
-      - '6'
+      - '8'
     status:
       code: 200
       message: OK
@@ -736,21 +760,21 @@ interactions:
       Connection:
       - keep-alive
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: GET
-    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124582421
+    uri: https://api.datadoghq.com/api/v1/monitor/can_delete?monitor_ids=124734426
   response:
     body:
-      string: '{"data":{"ok":[124582421]},"errors":null}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEA6pWSkksSVSyqlbKz1ayijY0MjE3NjExMout1VFKLSrKLypWssorzcmp5QIAAAD/
+        /wMAcgluJSoAAAA=
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:25 GMT
+      - Mon, 10 Jul 2023 15:02:02 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -774,7 +798,7 @@ interactions:
       x-ratelimit-remaining:
       - '11997'
       x-ratelimit-reset:
-      - '35'
+      - '58'
     status:
       code: 200
       message: OK
@@ -790,21 +814,21 @@ interactions:
       Content-Length:
       - '0'
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: DELETE
-    uri: https://api.datadoghq.com/api/v1/monitor/124582421
+    uri: https://api.datadoghq.com/api/v1/monitor/124734426
   response:
     body:
-      string: '{"deleted_monitor_id":124582421}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEA6pWSknNSS1JTYnPzc/LLMkvis9MUbIyNDIxNzYxMTKr5QIAAAD//wMANj+8dCEA
+        AAA=
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:25 GMT
+      - Mon, 10 Jul 2023 15:02:02 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -832,19 +856,21 @@ interactions:
       Connection:
       - keep-alive
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: GET
-    uri: https://api.datadoghq.com/api/v1/monitor/124582421
+    uri: https://api.datadoghq.com/api/v1/monitor/124734426
   response:
     body:
-      string: '{"errors":["Monitor not found"]}'
+      string: !!binary |
+        H4sIAAAAAAAEA6pWSi0qyi8qVrKKVvLNz8ssyS9SyMsvUUjLL81LUYqtBQAAAP//AwC8H0oMIAAA
+        AA==
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:25 GMT
+      - Mon, 10 Jul 2023 15:02:02 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -868,7 +894,7 @@ interactions:
       x-ratelimit-remaining:
       - '2998'
       x-ratelimit-reset:
-      - '5'
+      - '8'
     status:
       code: 404
       message: Not Found
@@ -886,22 +912,25 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: POST
     uri: https://api.datadoghq.com/api/v1/monitor/mute_all
   response:
     body:
-      string: '{"id":3077996330,"monitor_id":null,"org_id":321813,"start":1688758825,"end":null,"canceled":null,"created":1688758825,"modified":1688758825,"message":null,"active":true,"disabled":false,"recurrence":null,"timezone":"UTC","parent_id":null,"child_id":null,"creator_id":1445416,"updater_id":null,"downtime_type":0,"status":"active","monitor_tags":["*"],"mute_first_recovery_notification":false,"notify_end_types":["expired"],"notify_end_states":["alert","no
-        data","warn"],"uuid":"1eadef98-1cfe-11ee-a347-da7ad0900002","scope":["*"]}
-
-        '
+      string: !!binary |
+        H4sIAAAAAAAEA2RRTU/DMAy98yuQj6iVkrZjH1f+ApwQqrzGHZG6pEqcjYH47zjRBpW45T079nvP
+        X2AN7Fq16baq04+bCo7eWfahz7xL01SBD4eC2kZvdFtBZAwMO+neKqXbRihyv90DuoEm+sOBkDNc
+        9h+9saP9x1KMeKDbXhzYngRxSFSBsRH3Ze6IUxQi0JBCINl2+8D2SJ/eCYaX5yeoYEap88LK8G4n
+        s8RZ3NWs7rqVRFBBmo0oXiZg/Nnl4T1fZpmuSgacoiy6ivzLjfEg/Cs8wJuQiakfbYjci1x/onDp
+        nWfxPiBb72B3NVPISy85lh1lAn3MNkhGMmdRlvSZSh0nkjvk4r0IRnmdMbjcnlK+HuxxZdb7jmo9
+        tk2tNVGN3bqrDa7RKDmeUo38ioPPrork77sfAAAA//8DAFkcfegSAgAA
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:25 GMT
+      - Mon, 10 Jul 2023 15:02:03 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -933,7 +962,7 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: POST
     uri: https://api.datadoghq.com/api/v1/monitor/unmute_all
   response:
@@ -943,7 +972,7 @@ interactions:
       Connection:
       - keep-alive
       Date:
-      - Fri, 07 Jul 2023 19:40:25 GMT
+      - Mon, 10 Jul 2023 15:02:03 GMT
       content-security-policy:
       - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
       strict-transport-security:
@@ -971,19 +1000,21 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: POST
     uri: https://api.datadoghq.com/api/v1/monitor/unmute_all
   response:
     body:
-      string: '{"errors":["Monitoring is not currently globally muted"]}'
+      string: !!binary |
+        H4sIAAAAAAAEA6pWSi0qyi8qVrKKVvLNz8ssyS/KzEtXyCxWyMsvUUguLSpKzSvJqVRIz8lPSswB
+        MnJLS1JTlGJrAQAAAP//AwAgKisAOQAAAA==
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:26 GMT
+      - Mon, 10 Jul 2023 15:02:03 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -1016,19 +1047,21 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: POST
     uri: https://api.datadoghq.com/api/v1/monitor/validate
   response:
     body:
-      string: '{"errors":["The value provided for parameter ''query'' is invalid"]}'
+      string: !!binary |
+        H4sIAAAAAAAEA6pWSi0qyi8qVrKKVgrJSFUoS8wpTVUoKMovy0xJTVFIyy9SKEgsSsxNLUktUlAv
+        LE0tqlRXyCxWyMwDqsxMUYqtBQAAAP//AwDyEmwTQgAAAA==
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:26 GMT
+      - Mon, 10 Jul 2023 15:02:03 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -1062,20 +1095,21 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: POST
     uri: https://api.datadoghq.com/api/v1/monitor/validate
   response:
     body:
-      string: '{"errors":["Alert threshold (90.0) does not match that used in the
-        query (200.0)."]}'
+      string: !!binary |
+        H4sIAAAAAAAEA6pWSi0qyi8qVrKKVnLMSS0qUSjJKEotzsjPSVHQsDTQM9BUSMlPLVbIyy9RyE0s
+        Sc4AyieWKJQWp6YoZOYBOakKhaWpRZUKGkYGINV6SrG1AAAAAP//AwARblSWVAAAAA==
     headers:
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:26 GMT
+      - Mon, 10 Jul 2023 15:02:03 GMT
       Transfer-Encoding:
       - chunked
       content-encoding:
@@ -1109,7 +1143,7 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - datadogpy/0.45.1.dev (python 3.11.0; os darwin; arch arm64)
+      - datadogpy/0.45.1.dev (python 3.8.16; os darwin; arch arm64)
     method: POST
     uri: https://api.datadoghq.com/api/v1/monitor/validate
   response:
@@ -1125,7 +1159,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 07 Jul 2023 19:40:26 GMT
+      - Mon, 10 Jul 2023 15:02:03 GMT
       content-security-policy:
       - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
       strict-transport-security:
