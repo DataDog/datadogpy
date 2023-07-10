@@ -168,15 +168,19 @@ class MonitorClient(object):
         else:
             tags = None
 
-        res = api.Monitor.create(
-            type=args.type,
-            query=args.query,
-            name=args.name,
-            message=args.message,
-            tags=tags,
-            options=options,
-            priority=args.priority
-        )
+        body = {
+            "type": args.type,
+            "query": args.query,
+            "name": args.name,
+            "message": args.message,
+            "options": options
+        }
+        if tags:
+            body["tags"] = tags
+        if args.priority:
+            body["priority"] = args.priority
+
+        res = api.Monitor.create(**body)
         report_warnings(res)
         report_errors(res)
         if format == "pretty":
@@ -189,15 +193,19 @@ class MonitorClient(object):
         api._timeout = args.timeout
         format = args.format
         monitor = json.load(args.file)
-        res = api.Monitor.create(
-            type=monitor["type"],
-            query=monitor["query"],
-            name=monitor["name"],
-            message=monitor["message"],
-            options=monitor["options"],
-            tags=monitor.get("tags", None),
-            priority=monitor.get("priority", None),
-        )
+        body = {
+            "type": monitor["type"],
+            "query": monitor["query"],
+            "name": monitor["name"],
+            "message": monitor["message"],
+            "options": monitor["options"]
+        }
+        if monitor.get("tags", None):
+            body["tags"] = monitor.get("tags", None)
+        if monitor.get("priority", None):
+            body["priority"] = args.priority
+
+        res = api.Monitor.create(**body)
         report_warnings(res)
         report_errors(res)
         if format == "pretty":
@@ -257,16 +265,20 @@ class MonitorClient(object):
         api._timeout = args.timeout
         format = args.format
         monitor = json.load(args.file)
-        res = api.Monitor.update(
-            monitor["id"],
-            type=monitor["type"],
-            query=monitor["query"],
-            name=monitor["name"],
-            message=monitor["message"],
-            options=monitor["options"],
-            tags=monitor.get("tags", None),
-            priority=monitor.get("priority", None),
-        )
+        body = {
+            "type": monitor["type"],
+            "query": monitor["query"],
+            "name": monitor["name"],
+            "message": monitor["message"],
+            "options": monitor["options"]
+        }
+        if monitor.get("tags", None):
+            body["tags"] = monitor.get("tags", None)
+        if monitor.get("priority", None):
+            body["priority"] = args.priority
+
+        res = api.Monitor.update(monitor["id"], **body)
+
         report_warnings(res)
         report_errors(res)
         if format == "pretty":
