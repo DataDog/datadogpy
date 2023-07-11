@@ -77,10 +77,23 @@ class DogshellConfig(IterableUserDict):
                                 "What is your api key? (Get it here: "
                                 "https://app.datadoghq.com/account/settings#api) "
                             )
+                            while not api_key.isalnum():
+                                print("Datadog api keys can only contain alphanumeric characters.")
+                                api_key = get_input(
+                                    "What is your api key? (Get it here: "
+                                    "https://app.datadoghq.com/account/settings#api) "
+                                )
+
                             app_key = get_input(
                                 "What is your application key? (Generate one here: "
                                 "https://app.datadoghq.com/account/settings#api) "
                             )
+                            while not app_key.isalnum():
+                                print("Datadog app keys can only contain alphanumeric characters.")
+                                app_key = get_input(
+                                    "What is your app key? (Get it here: "
+                                    "https://app.datadoghq.com/account/settings#api) "
+                                )
 
                             # Write the config file
                             config.add_section("Connection")
