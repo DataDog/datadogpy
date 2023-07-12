@@ -24,7 +24,7 @@ jobs:
 
       - name: Install datadog_checks_dev
         run: |
-          python -m pip install datadog_checks_dev[cli]
+          python -m pip install datadog_checks_dev[cli]==20.0.1
 
       - name: Set ddev pypi credentials
         run: |
