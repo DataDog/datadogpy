@@ -73,27 +73,22 @@ class DogshellConfig(IterableUserDict):
                         response = get_input("%s does not exist. Would you like to" " create it? [Y/n] " % config_file)
                         if response.strip().lower() in ["", "y"]:
                             # Read the api and app keys from stdin
-                            api_key = get_input(
-                                "What is your api key? (Get it here: "
-                                "https://app.datadoghq.com/account/settings#api) "
-                            )
-                            while not api_key.isalnum():
-                                print("Datadog api keys can only contain alphanumeric characters.")
+                            while True:
                                 api_key = get_input(
                                     "What is your api key? (Get it here: "
                                     "https://app.datadoghq.com/account/settings#api) "
                                 )
-
-                            app_key = get_input(
-                                "What is your application key? (Generate one here: "
-                                "https://app.datadoghq.com/account/settings#api) "
-                            )
-                            while not app_key.isalnum():
-                                print("Datadog app keys can only contain alphanumeric characters.")
+                                if api_key.isalnum():
+                                    break
+                                print("Datadog api keys can only contain alphanumeric characters.")
+                            while True:
                                 app_key = get_input(
                                     "What is your app key? (Get it here: "
                                     "https://app.datadoghq.com/account/settings#api) "
                                 )
+                                if app_key.isalnum():
+                                    break
+                                print("Datadog app keys can only contain alphanumeric characters.")
 
                             # Write the config file
                             config.add_section("Connection")
@@ -108,7 +103,7 @@ class DogshellConfig(IterableUserDict):
                             # Abort
                             print_err("Exiting\n")
                             sys.exit(1)
-                except KeyboardInterrupt:
+                except (KeyboardInterrupt, EOFError):
                     # Abort
                     print_err("\nExiting")
                     sys.exit(1)
