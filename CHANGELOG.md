@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.46.0 / 2023-07-12
+
+* [Added] Add tags and priority to the fpost monitor request. See [#739](https://github.com/DataDog/datadogpy/pull/739).
+* [Added] Add AP1 Datacenter. See [#779](https://github.com/DataDog/datadogpy/pull/779).
+* [Fixed] Add alphanumeric check to app/api key config creation. See [#781](https://github.com/DataDog/datadogpy/pull/781).
+* [Fixed] Add govcloud to site param descriptions, and add custom url fallback. See [#780](https://github.com/DataDog/datadogpy/pull/780).
+
 ## 0.45.0 / 2023-03-15
 
 * [Added] Add dogwrap site option to send to US3 site. See [#749](https://github.com/DataDog/datadogpy/pull/749). Thanks [holidayworking](https://github.com/holidayworking).
