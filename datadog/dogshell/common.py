@@ -47,17 +47,20 @@ class DogshellConfig(IterableUserDict):
         config = configparser.ConfigParser()
 
         if api_host is not None:
-            if api_host in ("us" or "datadoghq.com"):
-                self["api_host"] = "https://datadoghq.com"
+            if api_host in ("datadoghq.com", "us"):
+                self["api_host"] = "https://api.datadoghq.com"
             elif api_host in ("datadoghq.eu", "eu"):
-                self["api_host"] = "https://datadoghq.eu"
+                self["api_host"] = "https://api.datadoghq.eu"
             elif api_host in ("us3.datadoghq.com", "us3"):
-                self["api_host"] = "https://us3.datadoghq.com"
+                self["api_host"] = "https://api.us3.datadoghq.com"
             elif api_host in ("us5.datadoghq.com", "us5"):
-                self["api_host"] = "https://us5.datadoghq.com"
+                self["api_host"] = "https://api.us5.datadoghq.com"
             elif api_host in ("ap1.datadoghq.com", "ap1"):
-                self["api_host"] = "https://ap1.datadoghq.com"
-
+                self["api_host"] = "https://api.ap1.datadoghq.com"
+            elif api_host in ("ddog-gov.com", "gov"):
+                self["api_host"] = "https://api.ddog-gov.com"
+            else:
+                self["api_host"] = api_host
         if api_key is not None and app_key is not None:
             self["api_key"] = api_key
             self["app_key"] = app_key

@@ -284,22 +284,11 @@ as it should appear on your Datadog stream",
         "-s",
         "--site",
         action="store",
-        type="choice",
+        type="string",
         default="datadoghq.com",
-        choices=[
-            "datadoghq.com",
-            "us",
-            "datadoghq.eu",
-            "eu",
-            "us3.datadoghq.com",
-            "us3",
-            "us5.datadoghq.com",
-            "us5",
-            "ap1.datadoghq.com",
-            "ap1"
-        ],
         help="The site to send data. Accepts us (datadoghq.com), eu (datadoghq.eu), \
-us3 (us3.datadoghq.com), us5 (us5.datadoghq.com), or ap1 (ap1.datadoghq.com). default: us",
+us3 (us3.datadoghq.com), us5 (us5.datadoghq.com), or ap1 (ap1.datadoghq.com), \
+gov (ddog-gov.com), or custom url. default: us",
     )
     parser.add_option(
         "-m",
@@ -430,7 +419,9 @@ def main():
         options.buffer_outs,
     )
 
-    if options.site in ("datadoghq.eu", "eu"):
+    if options.site in ("datadoghq.com", "us"):
+        api_host = "https://api.datadoghq.com"
+    elif options.site in ("datadoghq.eu", "eu"):
         api_host = "https://api.datadoghq.eu"
     elif options.site in ("us3.datadoghq.com", "us3"):
         api_host = "https://api.us3.datadoghq.com"
@@ -438,8 +429,10 @@ def main():
         api_host = "https://api.us5.datadoghq.com"
     elif options.site in ("ap1.datadoghq.com", "ap1"):
         api_host = "https://api.ap1.datadoghq.com"
+    elif options.site in ("ddog-gov.com", "gov"):
+        api_host = "https://api.ddog-gov.com"
     else:
-        api_host = "https://api.datadoghq.com"
+        api_host = options.site
 
     initialize(api_key=options.api_key, api_host=api_host)
     host = api._host_name
