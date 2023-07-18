@@ -81,7 +81,7 @@ class EventClient(object):
         post_parser.add_argument("--handle", help="user to post as. if unset, submits " "as the generic API user.")
         post_parser.add_argument("--priority", help='"normal" or "low". defaults to "normal"', default="normal")
         post_parser.add_argument(
-            "--related_event_id", help="event to post as a child of." " if unset, posts a top-level event"
+            "--related_event_id", help="event to post as a child of." " if unset, posts a top-level event", type=int
         )
         post_parser.add_argument("--tags", help="comma separated list of tags")
         post_parser.add_argument("--host", help="related host (default to the local host name)", default="")
