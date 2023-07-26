@@ -98,7 +98,7 @@ class OverflownSocket(BrokenSocket):
         super(OverflownSocket, self).__init__(errno.EAGAIN)
 
 
-def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped=0, packets_sent=1, packets_dropped=0, transport="udp", tags=""):
+def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped=0, packets_sent=1, packets_dropped=0, transport="udp", tags="", bytes_dropped_queue=0, packets_dropped_queue=0):
     tags = "," + tags if tags else ""
 
     return "\n".join([
@@ -107,8 +107,10 @@ def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes
         "datadog.dogstatsd.client.service_checks:{}|c|#client:py,client_version:{},client_transport:{}{}".format(service_checks, version, transport, tags),
         "datadog.dogstatsd.client.bytes_sent:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_sent, version, transport, tags),
         "datadog.dogstatsd.client.bytes_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_dropped, version, transport, tags),
+        "datadog.dogstatsd.client.bytes_dropped_queue:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_dropped_queue, version, transport, tags),
         "datadog.dogstatsd.client.packets_sent:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_sent, version, transport, tags),
-        "datadog.dogstatsd.client.packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped, version, transport, tags)
+        "datadog.dogstatsd.client.packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped, version, transport, tags),
+        "datadog.dogstatsd.client.packets_dropped_queue:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped_queue, version, transport, tags),
     ]) + "\n"
 
 
@@ -1860,3 +1862,19 @@ async def print_foo():
             ),
         )
         self.statsd._container_id = None
+
+    def test_sender_mode(self):
+        statsd = DogStatsd(disable_sender=True)
+        self.assertIsNone(statsd._queue)
+
+        statsd = DogStatsd(disable_sender=False)
+        self.assertIsNotNone(statsd._queue)
+
+    def test_sender_calls_task_done(self):
+        statsd = DogStatsd(disable_sender=False)
+        statsd.socket = OverflownSocket()
+        statsd.increment("test.metric")
+        statsd.wait_for_pending()
+
+    def test_sender_queue_no_timeout(self):
+        statsd = DogStatsd(disable_sender=False, sender_queue_timeout=None)
