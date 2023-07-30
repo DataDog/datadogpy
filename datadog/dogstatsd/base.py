@@ -84,16 +84,13 @@ TELEMETRY_FORMATTING_STR = "\n".join(
 ) + "\n"
 
 
-# This method returns if a hostname is an IPv6 address
-def is_ipv6_hostname(hostname):
-    # type: (str) -> bool
+def addressfamily(hostname, port):
+    # type: (str, int) -> socket.AddressFamily
     if not isinstance(hostname, str):
-        return False
-    try:
-        socket.inet_pton(socket.AF_INET6, hostname)
-        return True
-    except socket.error:  # not a valid address
-        return False
+        return socket.AF_INET
+
+    # sort to prefer IPv4 address family for backwards compatibility
+    return sorted(i[0] for i in socket.getaddrinfo(hostname, port))[0]
 
 
 # pylint: disable=useless-object-inheritance,too-many-instance-attributes
@@ -534,8 +531,7 @@ class DogStatsd(object):
 
     @classmethod
     def _get_udp_socket(cls, host, port):
-        family = socket.AF_INET6 if is_ipv6_hostname(host) else socket.AF_INET
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock = socket.socket(addressfamily(host, port), socket.SOCK_DGRAM)
         sock.setblocking(0)
         cls._ensure_min_send_buffer_size(sock)
         sock.connect((host, port))
