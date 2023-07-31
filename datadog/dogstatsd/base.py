@@ -80,9 +80,11 @@ TELEMETRY_FORMATTING_STR = "\n".join(
         "datadog.dogstatsd.client.bytes_sent:%s|c|#%s",
         "datadog.dogstatsd.client.bytes_dropped:%s|c|#%s",
         "datadog.dogstatsd.client.bytes_dropped_queue:%s|c|#%s",
+        "datadog.dogstatsd.client.bytes_dropped_writer:%s|c|#%s",
         "datadog.dogstatsd.client.packets_sent:%s|c|#%s",
         "datadog.dogstatsd.client.packets_dropped:%s|c|#%s",
         "datadog.dogstatsd.client.packets_dropped_queue:%s|c|#%s",
+        "datadog.dogstatsd.client.packets_dropped_writer:%s|c|#%s",
     ]
 ) + "\n"
 
@@ -856,11 +858,12 @@ class DogStatsd(object):
         self.events_count = 0
         self.service_checks_count = 0
         self.bytes_sent = 0
-        self.bytes_dropped = 0
         self.bytes_dropped_queue = 0
+        self.bytes_dropped_writer = 0
         self.packets_sent = 0
         self.packets_dropped = 0
         self.packets_dropped_queue = 0
+        self.packets_dropped_writer = 0
         self._last_flush_time = time.time()
 
     def _flush_telemetry(self):
@@ -875,15 +878,19 @@ class DogStatsd(object):
             telemetry_tags,
             self.bytes_sent,
             telemetry_tags,
-            self.bytes_dropped,
+            self.bytes_dropped_queue + self.bytes_dropped_writer,
             telemetry_tags,
             self.bytes_dropped_queue,
             telemetry_tags,
+            self.bytes_dropped_writer,
+            telemetry_tags,
             self.packets_sent,
             telemetry_tags,
-            self.packets_dropped,
+            self.packets_dropped_queue + self.packets_dropped_writer,
             telemetry_tags,
             self.packets_dropped_queue,
+            telemetry_tags,
+            self.packets_dropped_writer,
             telemetry_tags,
         )
 
@@ -914,8 +921,8 @@ class DogStatsd(object):
             else:
                 # Telemetry packet has been dropped, keep telemetry data for the next flush
                 self._last_flush_time = time.time()
-                self.bytes_dropped += len(telemetry)
-                self.packets_dropped += 1
+                self.bytes_dropped_writer += len(telemetry)
+                self.packets_dropped_writer += 1
 
     def _xmit_packet(self, packet, is_telemetry):
         try:
@@ -962,8 +969,8 @@ class DogStatsd(object):
             log.error("Unexpected error: %s", str(exc))
 
         if not is_telemetry and self._telemetry:
-            self.bytes_dropped += len(packet)
-            self.packets_dropped += 1
+            self.bytes_dropped_writer += len(packet)
+            self.packets_dropped_writer += 1
 
         return False
 
