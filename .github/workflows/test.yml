@@ -60,6 +60,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Set constrains for python2.7
+      # Latest PyYaml supported version for python 2.7 is 5.4.1 which requires
+      # cython<3 to build. See: https://github.com/yaml/pyyaml/issues/724
       if: ${{ matrix.python-version == 'pypy2.7' }}
       run: |
         echo "cython<3" > /tmp/constraints.txt
