@@ -84,6 +84,15 @@ TELEMETRY_FORMATTING_STR = "\n".join(
 ) + "\n"
 
 
+def addressfamily(hostname, port):
+    # type: (str, int) -> socket.AddressFamily
+    if not isinstance(hostname, str):
+        return socket.AF_INET
+
+    # sort to prefer IPv4 address family for backwards compatibility
+    return sorted(i[0] for i in socket.getaddrinfo(hostname, port))[0]
+
+
 # pylint: disable=useless-object-inheritance,too-many-instance-attributes
 # pylint: disable=too-many-arguments,too-many-locals
 class DogStatsd(object):
@@ -522,7 +531,7 @@ class DogStatsd(object):
 
     @classmethod
     def _get_udp_socket(cls, host, port):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock = socket.socket(addressfamily(host, port), socket.SOCK_DGRAM)
         sock.setblocking(0)
         cls._ensure_min_send_buffer_size(sock)
         sock.connect((host, port))
