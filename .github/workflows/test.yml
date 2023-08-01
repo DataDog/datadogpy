@@ -59,14 +59,14 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install tox
-      run: pip install tox
-
     - name: Set constrains for python2.7
       if: ${{ matrix.python-version == 'pypy2.7' }}
       run: |
-        echo "cython<3" > constaints.txt
-        echo "PIP_CONSTRAINT=constraints.txt" >> $GITHUB_ENV
+        echo "cython<3" > /tmp/constraints.txt
+        echo "PIP_CONSTRAINT=/tmp/constraints.txt" >> $GITHUB_ENV
+
+    - name: Install tox
+      run: pip install tox
 
     - name: Run unit tests
       run: tox
