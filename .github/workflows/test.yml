@@ -48,7 +48,6 @@ jobs:
         python-version: ['pypy2.7', '3.7', 'pypy3.8']
         # os: [ubuntu-latest, windows-latest, macos-latest]
         # python-version: ['2.7', '3.7', '3.8', '3.9', '3.10', 'pypy-2.7', 'pypy-3.8']
-
     env:
       TOXENV: ${{ matrix.python-version }}
 
@@ -63,8 +62,11 @@ jobs:
     - name: Install tox
       run: pip install tox
 
-    - name: Install tox
-      run: pip install tox
+    - name: Set constrains for python2.7
+      if: ${{ matrix.python-version == 'pypy2.7' }}
+      run: |
+        echo "cython<3" > constaints.txt
+        echo "PIP_CONSTRAINT=constraints.txt" >> $GITHUB_ENV
 
     - name: Run unit tests
       run: tox
