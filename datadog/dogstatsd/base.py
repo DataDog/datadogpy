@@ -16,7 +16,12 @@ import errno
 import threading
 import time
 from threading import Lock, RLock
-import queue
+
+try:
+    import queue
+except ImportError:
+    # pypy has the same module, but capitalized.
+    import Queue as queue # type: ignore[no-redef]
 
 from typing import Optional, List, Text, Union
 
