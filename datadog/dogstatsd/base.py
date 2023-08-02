@@ -21,7 +21,7 @@ try:
     import queue
 except ImportError:
     # pypy has the same module, but capitalized.
-    import Queue as queue # type: ignore[no-redef]
+    import Queue as queue  # type: ignore[no-redef]
 
 from typing import Optional, List, Text, Union
 
