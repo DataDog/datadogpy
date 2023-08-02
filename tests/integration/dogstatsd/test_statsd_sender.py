@@ -8,7 +8,7 @@ from datadog.dogstatsd.base import DogStatsd
 
 @pytest.mark.parametrize(
     "disable_sender, disable_buffering, wait_for_pending, socket_timeout",
-    list(itertools.product(*[[True, False]]*3, [0, 1])),
+    list(itertools.product([True, False], [True, False], [True, False], [0, 1])),
 )
 def test_sender_mode(disable_sender, disable_buffering, wait_for_pending, socket_timeout):
     # Test basic sender operation with an assortment of options
