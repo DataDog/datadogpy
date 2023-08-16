@@ -268,6 +268,7 @@ class DogStatsd(object):
 
         :param disable_background_sender: Use a background thread to communicate with the dogstatsd server. Optional.
         When enabled, a background thread will be used to send metric payloads to the Agent.
+        Applications should call wait_for_pending() before exiting to make sure all pending payloads are sent.
         Default: True.
         :type disable_background_sender: boolean
 
