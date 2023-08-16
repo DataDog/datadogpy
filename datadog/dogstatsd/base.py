@@ -122,7 +122,7 @@ class DogStatsd(object):
         origin_detection_enabled=True,          # type: bool
         socket_timeout=0,                       # type: Optional[float]
         telemetry_socket_timeout=0,             # type: Optional[float]
-        disable_sender=True,                    # type: bool
+        disable_background_sender=True,         # type: bool
         sender_queue_size=0,                    # type: int
         sender_queue_timeout=0,                 # type: Optional[float]
     ):  # type: (...) -> None
@@ -266,10 +266,10 @@ class DogStatsd(object):
         This option does not affect hostname resolution when using UDP.
         :type telemetry_socket_timeout: float
 
-        :param disable_sender: Use a background thread to communicate with the dogstatsd server. Optional.
+        :param disable_background_sender: Use a background thread to communicate with the dogstatsd server. Optional.
         When enabled, a background thread will be used to send metric payloads to the Agent.
         Default: True.
-        :type disable_sender: boolean
+        :type disable_background_sender: boolean
 
         :param sender_queue_size: Set the maximum number of packets to queue for the sender. Optional
         How may packets to queue before blocking or dropping the packet if the packet queue is already full.
@@ -413,7 +413,7 @@ class DogStatsd(object):
         self._start_flush_thread(self._flush_interval)
 
         self._queue = None
-        if not disable_sender:
+        if not disable_background_sender:
             self._queue = queue.Queue(sender_queue_size)
             self._start_sender_thread()
             if sender_queue_timeout is None:
