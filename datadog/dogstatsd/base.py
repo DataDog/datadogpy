@@ -264,7 +264,7 @@ class DogStatsd(object):
         Effective only if either telemetry_host or telemetry_socket_path are set.
         If sets to zero, never wait if operation can not be completed immediately. If set to None, wait forever.
         This option does not affect hostname resolution when using UDP.
-        :type socket_timeout: float
+        :type telemetry_socket_timeout: float
 
         :param disable_sender: Use a background thread to communicate with the dogstatsd server. Optional.
         When enabled, a background thread will be used to send metric payloads to the Agent.
