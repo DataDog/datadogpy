@@ -1872,17 +1872,17 @@ async def print_foo():
         self.statsd._container_id = None
 
     def test_sender_mode(self):
-        statsd = DogStatsd(disable_sender=True)
+        statsd = DogStatsd(disable_background_sender=True)
         self.assertIsNone(statsd._queue)
 
-        statsd = DogStatsd(disable_sender=False)
+        statsd = DogStatsd(disable_background_sender=False)
         self.assertIsNotNone(statsd._queue)
 
     def test_sender_calls_task_done(self):
-        statsd = DogStatsd(disable_sender=False)
+        statsd = DogStatsd(disable_background_sender=False)
         statsd.socket = OverflownSocket()
         statsd.increment("test.metric")
         statsd.wait_for_pending()
 
     def test_sender_queue_no_timeout(self):
-        statsd = DogStatsd(disable_sender=False, sender_queue_timeout=None)
+        statsd = DogStatsd(disable_background_sender=False, sender_queue_timeout=None)

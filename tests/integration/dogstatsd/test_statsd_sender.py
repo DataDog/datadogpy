@@ -7,15 +7,15 @@ import pytest
 from datadog.dogstatsd.base import DogStatsd
 
 @pytest.mark.parametrize(
-    "disable_sender, disable_buffering, wait_for_pending, socket_timeout",
+    "disable_background_sender, disable_buffering, wait_for_pending, socket_timeout",
     list(itertools.product([True, False], [True, False], [True, False], [0, 1])),
 )
-def test_sender_mode(disable_sender, disable_buffering, wait_for_pending, socket_timeout):
+def test_sender_mode(disable_background_sender, disable_buffering, wait_for_pending, socket_timeout):
     # Test basic sender operation with an assortment of options
     foo, bar = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM, 0)
     statsd = DogStatsd(
         telemetry_min_flush_interval=0,
-        disable_sender=disable_sender,
+        disable_background_sender=disable_background_sender,
         disable_buffering=disable_buffering,
         socket_timeout=socket_timeout,
     )
