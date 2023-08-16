@@ -274,7 +274,7 @@ class DogStatsd(object):
         :param sender_queue_size: Set the maximum number of packets to queue for the sender. Optional
         How may packets to queue before blocking or dropping the packet if the packet queue is already full.
         Default: 0 (unlimited).
-        :type sender_queue_timeout: integer
+        :type sender_queue_size: integer
 
         :param sender_queue_timeout: Set timeout for packet queue operations, in seconds. Optional.
         How long the application thread is willing to wait for the queue clear up before dropping the metric packet.
