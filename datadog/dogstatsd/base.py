@@ -17,6 +17,12 @@ import threading
 import time
 from threading import Lock, RLock
 
+try:
+    import queue
+except ImportError:
+    # pypy has the same module, but capitalized.
+    import Queue as queue  # type: ignore[no-redef]
+
 from typing import Optional, List, Text, Union
 
 # Datadog libraries
@@ -78,8 +84,12 @@ TELEMETRY_FORMATTING_STR = "\n".join(
         "datadog.dogstatsd.client.service_checks:%s|c|#%s",
         "datadog.dogstatsd.client.bytes_sent:%s|c|#%s",
         "datadog.dogstatsd.client.bytes_dropped:%s|c|#%s",
+        "datadog.dogstatsd.client.bytes_dropped_queue:%s|c|#%s",
+        "datadog.dogstatsd.client.bytes_dropped_writer:%s|c|#%s",
         "datadog.dogstatsd.client.packets_sent:%s|c|#%s",
         "datadog.dogstatsd.client.packets_dropped:%s|c|#%s",
+        "datadog.dogstatsd.client.packets_dropped_queue:%s|c|#%s",
+        "datadog.dogstatsd.client.packets_dropped_writer:%s|c|#%s",
     ]
 ) + "\n"
 
@@ -110,6 +120,11 @@ class DogStatsd(object):
         max_buffer_len=0,                       # type: int
         container_id=None,                      # type: Optional[Text]
         origin_detection_enabled=True,          # type: bool
+        socket_timeout=0,                       # type: Optional[float]
+        telemetry_socket_timeout=0,             # type: Optional[float]
+        disable_background_sender=True,         # type: bool
+        sender_queue_size=0,                    # type: int
+        sender_queue_timeout=0,                 # type: Optional[float]
     ):  # type: (...) -> None
         """
         Initialize a DogStatsd object.
@@ -239,6 +254,35 @@ class DogStatsd(object):
         Default: True.
         More on this: https://docs.datadoghq.com/developers/dogstatsd/?tab=kubernetes#origin-detection-over-udp
         :type origin_detection_enabled: boolean
+
+        :param socket_timeout: Set timeout for socket operations, in seconds. Optional.
+        If sets to zero, never wait if operation can not be completed immediately. If set to None, wait forever.
+        This option does not affect hostname resolution when using UDP.
+        :type socket_timeout: float
+
+        :param telemetry_socket_timeout: Set timeout for the telemetry socket operations. Optional.
+        Effective only if either telemetry_host or telemetry_socket_path are set.
+        If sets to zero, never wait if operation can not be completed immediately. If set to None, wait forever.
+        This option does not affect hostname resolution when using UDP.
+        :type telemetry_socket_timeout: float
+
+        :param disable_background_sender: Use a background thread to communicate with the dogstatsd server. Optional.
+        When enabled, a background thread will be used to send metric payloads to the Agent.
+        Applications should call wait_for_pending() before exiting to make sure all pending payloads are sent.
+        Default: True.
+        :type disable_background_sender: boolean
+
+        :param sender_queue_size: Set the maximum number of packets to queue for the sender. Optional
+        How may packets to queue before blocking or dropping the packet if the packet queue is already full.
+        Default: 0 (unlimited).
+        :type sender_queue_size: integer
+
+        :param sender_queue_timeout: Set timeout for packet queue operations, in seconds. Optional.
+        How long the application thread is willing to wait for the queue clear up before dropping the metric packet.
+        If set to None, wait forever.
+        If set to zero drop the packet immediately if the queue is full.
+        Default: 0 (no wait)
+        :type sender_queue_timeout: float
         """
 
         self._socket_lock = Lock()
@@ -276,6 +320,7 @@ class DogStatsd(object):
 
         # Connection
         self._max_payload_size = max_buffer_len
+        self.socket_timeout = socket_timeout
         if socket_path is not None:
             self.socket_path = socket_path  # type: Optional[text]
             self.host = None
@@ -294,6 +339,7 @@ class DogStatsd(object):
         self.telemetry_socket_path = telemetry_socket_path
         self.telemetry_host = None
         self.telemetry_port = None
+        self.telemetry_socket_timeout = telemetry_socket_timeout
         if not telemetry_socket_path and telemetry_host:
             self.telemetry_socket_path = None
             self.telemetry_host = self.resolve_host(telemetry_host, use_default_route)
@@ -366,6 +412,17 @@ class DogStatsd(object):
         self._flush_interval = flush_interval
         self._flush_thread_stop = threading.Event()
         self._start_flush_thread(self._flush_interval)
+
+        self._queue = None
+        if not disable_background_sender:
+            self._queue = queue.Queue(sender_queue_size)
+            self._start_sender_thread()
+            if sender_queue_timeout is None:
+                self._queue_blocking = True
+                self._queue_timeout = None
+            else:
+                self._queue_blocking = sender_queue_timeout > 0
+                self._queue_timeout = max(0, sender_queue_timeout)
 
     def disable_telemetry(self):
         self._telemetry = False
@@ -479,22 +536,25 @@ class DogStatsd(object):
                     if self.telemetry_socket_path is not None:
                         self.telemetry_socket = self._get_uds_socket(
                             self.telemetry_socket_path,
+                            self.telemetry_socket_timeout,
                         )
                     else:
                         self.telemetry_socket = self._get_udp_socket(
                             self.telemetry_host,
                             self.telemetry_port,
+                            self.telemetry_socket_timeout,
                         )
 
                 return self.telemetry_socket
 
             if not self.socket:
                 if self.socket_path is not None:
-                    self.socket = self._get_uds_socket(self.socket_path)
+                    self.socket = self._get_uds_socket(self.socket_path, self.socket_timeout)
                 else:
                     self.socket = self._get_udp_socket(
                         self.host,
                         self.port,
+                        self.socket_timeout,
                     )
 
             return self.socket
@@ -513,17 +573,17 @@ class DogStatsd(object):
                 pass
 
     @classmethod
-    def _get_uds_socket(cls, socket_path):
+    def _get_uds_socket(cls, socket_path, timeout):
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-        sock.setblocking(0)
+        sock.settimeout(timeout)
         cls._ensure_min_send_buffer_size(sock)
         sock.connect(socket_path)
         return sock
 
     @classmethod
-    def _get_udp_socket(cls, host, port):
+    def _get_udp_socket(cls, host, port, timeout):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setblocking(0)
+        sock.settimeout(timeout)
         cls._ensure_min_send_buffer_size(sock)
         sock.connect((host, port))
 
@@ -804,9 +864,12 @@ class DogStatsd(object):
         self.events_count = 0
         self.service_checks_count = 0
         self.bytes_sent = 0
-        self.bytes_dropped = 0
+        self.bytes_dropped_queue = 0
+        self.bytes_dropped_writer = 0
         self.packets_sent = 0
         self.packets_dropped = 0
+        self.packets_dropped_queue = 0
+        self.packets_dropped_writer = 0
         self._last_flush_time = time.time()
 
     def _flush_telemetry(self):
@@ -821,11 +884,19 @@ class DogStatsd(object):
             telemetry_tags,
             self.bytes_sent,
             telemetry_tags,
-            self.bytes_dropped,
+            self.bytes_dropped_queue + self.bytes_dropped_writer,
+            telemetry_tags,
+            self.bytes_dropped_queue,
+            telemetry_tags,
+            self.bytes_dropped_writer,
             telemetry_tags,
             self.packets_sent,
             telemetry_tags,
-            self.packets_dropped,
+            self.packets_dropped_queue + self.packets_dropped_writer,
+            telemetry_tags,
+            self.packets_dropped_queue,
+            telemetry_tags,
+            self.packets_dropped_writer,
             telemetry_tags,
         )
 
@@ -834,7 +905,19 @@ class DogStatsd(object):
             self._last_flush_time + self._telemetry_flush_interval < time.time()
 
     def _send_to_server(self, packet):
-        self._xmit_packet(packet + '\n', False)
+        if self._queue is not None:
+            try:
+                self._queue.put(packet + '\n', self._queue_blocking, self._queue_timeout)
+            except queue.Full:
+                self.packets_dropped_queue += 1
+                self.bytes_dropped_queue += 1
+            return
+
+        self._xmit_packet_with_telemetry(packet + '\n')
+
+    def _xmit_packet_with_telemetry(self, packet):
+        self._xmit_packet(packet, False)
+
         if self._is_telemetry_flush_time():
             telemetry = self._flush_telemetry()
             if self._xmit_packet(telemetry, True):
@@ -844,8 +927,8 @@ class DogStatsd(object):
             else:
                 # Telemetry packet has been dropped, keep telemetry data for the next flush
                 self._last_flush_time = time.time()
-                self.bytes_dropped += len(telemetry)
-                self.packets_dropped += 1
+                self.bytes_dropped_writer += len(telemetry)
+                self.packets_dropped_writer += 1
 
     def _xmit_packet(self, packet, is_telemetry):
         try:
@@ -892,8 +975,8 @@ class DogStatsd(object):
             log.error("Unexpected error: %s", str(exc))
 
         if not is_telemetry and self._telemetry:
-            self.bytes_dropped += len(packet)
-            self.packets_dropped += 1
+            self.bytes_dropped_writer += len(packet)
+            self.packets_dropped_writer += 1
 
         return False
 
@@ -1065,6 +1148,29 @@ class DogStatsd(object):
             except Exception as e:
                 log.debug("Couldn't get container ID: %s", str(e))
                 self._container_id = None
+
+    def _start_sender_thread(self):
+        log.debug("Starting background sender thread")
+        self._sender_thread = threading.Thread(
+            name="{}_sender_thread".format(self.__class__.__name__),
+            target=self._sender_main_loop,
+        )
+        self._sender_thread.daemon = True
+        self._sender_thread.start()
+
+    def _sender_main_loop(self):
+        while True:
+            self._xmit_packet_with_telemetry(self._queue.get())
+            self._queue.task_done()
+
+    def wait_for_pending(self):
+        """
+        Flush the buffer and wait for all queued payloads to be written to the server.
+        """
+
+        self.flush()
+        if self._queue is not None:
+            self._queue.join()
 
 
 statsd = DogStatsd()

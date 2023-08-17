@@ -98,7 +98,7 @@ class OverflownSocket(BrokenSocket):
         super(OverflownSocket, self).__init__(errno.EAGAIN)
 
 
-def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped=0, packets_sent=1, packets_dropped=0, transport="udp", tags=""):
+def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped_writer=0, packets_sent=1, packets_dropped_writer=0, transport="udp", tags="", bytes_dropped_queue=0, packets_dropped_queue=0):
     tags = "," + tags if tags else ""
 
     return "\n".join([
@@ -106,9 +106,13 @@ def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes
         "datadog.dogstatsd.client.events:{}|c|#client:py,client_version:{},client_transport:{}{}".format(events, version, transport, tags),
         "datadog.dogstatsd.client.service_checks:{}|c|#client:py,client_version:{},client_transport:{}{}".format(service_checks, version, transport, tags),
         "datadog.dogstatsd.client.bytes_sent:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_sent, version, transport, tags),
-        "datadog.dogstatsd.client.bytes_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_dropped, version, transport, tags),
+        "datadog.dogstatsd.client.bytes_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_dropped_queue + bytes_dropped_writer, version, transport, tags),
+        "datadog.dogstatsd.client.bytes_dropped_queue:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_dropped_queue, version, transport, tags),
+        "datadog.dogstatsd.client.bytes_dropped_writer:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_dropped_writer, version, transport, tags),
         "datadog.dogstatsd.client.packets_sent:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_sent, version, transport, tags),
-        "datadog.dogstatsd.client.packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped, version, transport, tags)
+        "datadog.dogstatsd.client.packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped_queue + packets_dropped_writer, version, transport, tags),
+        "datadog.dogstatsd.client.packets_dropped_queue:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped_queue, version, transport, tags),
+        "datadog.dogstatsd.client.packets_dropped_writer:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped_writer, version, transport, tags),
     ]) + "\n"
 
 
@@ -147,6 +151,7 @@ class TestDogStatsd(unittest.TestCase):
         else:
             expected_payload = telemetry
 
+        self.maxDiff = None
         return self.assertEqual(expected_payload, actual_payload)
 
     def send_and_assert(
@@ -1248,9 +1253,12 @@ async def print_foo():
         self.statsd.events_count = 2
         self.statsd.service_checks_count = 3
         self.statsd.bytes_sent = 4
-        self.statsd.bytes_dropped = 5
+        self.statsd.bytes_dropped_writer = 5
         self.statsd.packets_sent = 6
-        self.statsd.packets_dropped = 7
+        self.statsd.packets_dropped_writer = 7
+        self.statsd.bytes_dropped_queue = 8
+        self.statsd.packets_dropped_queue = 9
+
 
         self.statsd.open_buffer()
         self.statsd.gauge('page.views', 123)
@@ -1258,7 +1266,7 @@ async def print_foo():
 
         payload = 'page.views:123|g\n'
         telemetry = telemetry_metrics(metrics=2, events=2, service_checks=3, bytes_sent=4 + len(payload),
-                                      bytes_dropped=5, packets_sent=7, packets_dropped=7)
+                                      bytes_dropped_writer=5, packets_sent=7, packets_dropped_writer=7, bytes_dropped_queue=8, packets_dropped_queue=9)
 
         self.assert_equal_telemetry(payload, self.recv(2), telemetry=telemetry)
 
@@ -1266,9 +1274,11 @@ async def print_foo():
         self.assertEqual(0, self.statsd.events_count)
         self.assertEqual(0, self.statsd.service_checks_count)
         self.assertEqual(len(telemetry), self.statsd.bytes_sent)
-        self.assertEqual(0, self.statsd.bytes_dropped)
+        self.assertEqual(0, self.statsd.bytes_dropped_writer)
         self.assertEqual(1, self.statsd.packets_sent)
-        self.assertEqual(0, self.statsd.packets_dropped)
+        self.assertEqual(0, self.statsd.packets_dropped_writer)
+        self.assertEqual(0, self.statsd.bytes_dropped_queue)
+        self.assertEqual(0, self.statsd.packets_dropped_queue)
 
     def test_telemetry_flush_interval(self):
         dogstatsd = DogStatsd(disable_buffering=False)
@@ -1860,3 +1870,19 @@ async def print_foo():
             ),
         )
         self.statsd._container_id = None
+
+    def test_sender_mode(self):
+        statsd = DogStatsd(disable_background_sender=True)
+        self.assertIsNone(statsd._queue)
+
+        statsd = DogStatsd(disable_background_sender=False)
+        self.assertIsNotNone(statsd._queue)
+
+    def test_sender_calls_task_done(self):
+        statsd = DogStatsd(disable_background_sender=False)
+        statsd.socket = OverflownSocket()
+        statsd.increment("test.metric")
+        statsd.wait_for_pending()
+
+    def test_sender_queue_no_timeout(self):
+        statsd = DogStatsd(disable_background_sender=False, sender_queue_timeout=None)
