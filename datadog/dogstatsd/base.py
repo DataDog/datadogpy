@@ -590,6 +590,18 @@ class DogStatsd(object):
 
             return self.socket
 
+    def set_socket_timeout(self, timeout):
+        """
+        Set timeout for socket operations, in seconds.
+
+        If set to zero, never wait if operation can not be completed immediately. If set to None, wait forever.
+        This option does not affect hostname resolution when using UDP.
+        """
+        with self._socket_lock:
+            self.socket_timeout = timeout
+            if self.socket:
+                self.socket.settimeout(timeout)
+
     @classmethod
     def _ensure_min_send_buffer_size(cls, sock, min_size=MIN_SEND_BUFFER_SIZE):
         # Increase the receiving buffer size where needed (e.g. MacOS has 4k RX
