@@ -1875,6 +1875,9 @@ async def print_foo():
         statsd = DogStatsd(disable_background_sender=True)
         self.assertIsNone(statsd._queue)
 
+        statsd.enable_background_sender()
+        self.assertIsNotNone(statsd._queue)
+
         statsd = DogStatsd(disable_background_sender=False)
         self.assertIsNotNone(statsd._queue)
 
