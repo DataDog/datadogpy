@@ -46,6 +46,7 @@ class FakeSocket(object):
 
         self._flush_interval = flush_interval
         self._flush_wait = False
+        self.timeout = () # unit tuple = settimeout was not called
 
     def send(self, payload):
         if is_p3k():
@@ -77,6 +78,8 @@ class FakeSocket(object):
     def __repr__(self):
         return str(self.payloads)
 
+    def settimeout(self, timeout):
+        self.timeout = timeout
 
 class BrokenSocket(FakeSocket):
     def __init__(self, error_number=None):
@@ -1875,6 +1878,9 @@ async def print_foo():
         statsd = DogStatsd(disable_background_sender=True)
         self.assertIsNone(statsd._queue)
 
+        statsd.enable_background_sender()
+        self.assertIsNotNone(statsd._queue)
+
         statsd = DogStatsd(disable_background_sender=False)
         self.assertIsNotNone(statsd._queue)
 
@@ -1886,3 +1892,10 @@ async def print_foo():
 
     def test_sender_queue_no_timeout(self):
         statsd = DogStatsd(disable_background_sender=False, sender_queue_timeout=None)
+
+    def test_set_socket_timeout(self):
+        statsd = DogStatsd(disable_background_sender=False)
+        statsd.socket = FakeSocket()
+        statsd.set_socket_timeout(1)
+        self.assertEqual(statsd.socket.timeout, 1)
+        self.assertEqual(statsd.socket_timeout, 1)

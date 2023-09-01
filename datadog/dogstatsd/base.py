@@ -415,6 +415,37 @@ class DogStatsd(object):
 
         self._queue = None
         if not disable_background_sender:
+            self.enable_background_sender(sender_queue_size, sender_queue_timeout)
+
+    def enable_background_sender(self, sender_queue_size=0, sender_queue_timeout=0):
+        """
+        Use a background thread to communicate with the dogstatsd server.
+        When enabled, a background thread will be used to send metric payloads to the Agent.
+
+        Applications should call wait_for_pending() before exiting to make sure all pending payloads are sent.
+
+        This method is not thread safe and should not be called concurrently with other methods on the current object.
+        Normally, this should be called shortly after process initialization (for example from a post-fork hook in a
+        forking server).
+
+        :param sender_queue_size: Set the maximum number of packets to queue for the sender. Optional
+        How may packets to queue before blocking or dropping the packet if the packet queue is already full.
+        Default: 0 (unlimited).
+        :type sender_queue_size: integer
+
+        :param sender_queue_timeout: Set timeout for packet queue operations, in seconds. Optional.
+        How long the application thread is willing to wait for the queue clear up before dropping the metric packet.
+        If set to None, wait forever.
+        If set to zero drop the packet immediately if the queue is full.
+        Default: 0 (no wait)
+        :type sender_queue_timeout: float
+        """
+
+        # Avoid a race on _queue with the background buffer flush thread that reads _queue.
+        with self._buffer_lock:
+            if self._queue is not None:
+                return
+
             self._queue = queue.Queue(sender_queue_size)
             self._start_sender_thread()
             if sender_queue_timeout is None:
@@ -558,6 +589,18 @@ class DogStatsd(object):
                     )
 
             return self.socket
+
+    def set_socket_timeout(self, timeout):
+        """
+        Set timeout for socket operations, in seconds.
+
+        If set to zero, never wait if operation can not be completed immediately. If set to None, wait forever.
+        This option does not affect hostname resolution when using UDP.
+        """
+        with self._socket_lock:
+            self.socket_timeout = timeout
+            if self.socket:
+                self.socket.settimeout(timeout)
 
     @classmethod
     def _ensure_min_send_buffer_size(cls, sock, min_size=MIN_SEND_BUFFER_SIZE):

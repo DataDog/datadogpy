@@ -37,3 +37,12 @@ def test_sender_mode(disable_background_sender, disable_buffering, wait_for_pend
 
     t.join(timeout=10)
     assert not t.is_alive()
+
+def test_set_socket_timeout():
+    statsd = DogStatsd(socket_timeout=0)
+    assert statsd.get_socket().gettimeout() == 0
+    statsd.set_socket_timeout(1)
+    assert statsd.get_socket().gettimeout() == 1
+    statsd.close_socket()
+    assert statsd.get_socket().gettimeout() == 1
+
