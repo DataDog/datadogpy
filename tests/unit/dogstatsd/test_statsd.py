@@ -697,7 +697,7 @@ class TestDogStatsd(unittest.TestCase):
         datadog.flush()
 
         # Sanity check
-        mock_socket_create.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
+        mock_socket_create.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 
         mock_socket.setsockopt.assert_called_once_with(
             socket.SOL_SOCKET,
@@ -1386,6 +1386,35 @@ async def print_foo():
                 port=12345,
                 telemetry_min_flush_interval=0,
                 telemetry_host="localhost",
+                telemetry_port=port,
+            )
+
+            server = threading.Thread(target=wait_for_data)
+            server.start()
+
+            dogstatsd.increment('abc')
+
+            server.join(3)
+
+            expected_telemetry = telemetry_metrics(metrics=1, packets_sent=1, bytes_sent=8)
+            self.assertEqual(udp_thread_telemetry_data, expected_telemetry)
+
+    def test_dedicated_udp6_telemetry_dest(self):
+        listener_sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+        listener_sock.bind(('localhost', 0))
+
+        def wait_for_data():
+            global udp_thread_telemetry_data
+            udp_thread_telemetry_data = listener_sock.recvfrom(UDP_OPTIMAL_PAYLOAD_LENGTH)[0].decode('utf-8')
+
+        with closing(listener_sock):
+            port = listener_sock.getsockname()[1]
+
+            dogstatsd = DogStatsd(
+                host="localhost",
+                port=12345,
+                telemetry_min_flush_interval=0,
+                telemetry_host="::1", # use explicit address, localhost may resolve to v4.
                 telemetry_port=port,
             )
 
