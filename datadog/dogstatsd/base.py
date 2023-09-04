@@ -635,8 +635,8 @@ class DogStatsd(object):
         log.debug("Connecting to %s:%s", host, port)
         addrinfo = socket.getaddrinfo(host, port, type=socket.SOCK_DGRAM)
         # Override gai.conf order for backwrads compatibility: prefer
-        # v4, so that v4-only service on hosts with both addresses
-        # still work.
+        # v4, so that a v4-only service on hosts with both addresses
+        # still works.
         addrinfo.sort(key=lambda v: v[0] == socket.AF_INET, reverse=True)
         lastaddr = len(addrinfo) - 1
         for i, (af, ty, proto, _, addr) in enumerate(addrinfo):
