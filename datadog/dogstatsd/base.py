@@ -625,12 +625,31 @@ class DogStatsd(object):
 
     @classmethod
     def _get_udp_socket(cls, host, port, timeout):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.settimeout(timeout)
-        cls._ensure_min_send_buffer_size(sock)
-        sock.connect((host, port))
-
-        return sock
+        log.debug("Connecting to %s:%s", host, port)
+        addrinfo = socket.getaddrinfo(host, port, 0, socket.SOCK_DGRAM)
+        # Override gai.conf order for backwrads compatibility: prefer
+        # v4, so that a v4-only service on hosts with both addresses
+        # still works.
+        addrinfo.sort(key=lambda v: v[0] == socket.AF_INET, reverse=True)
+        lastaddr = len(addrinfo) - 1
+        for i, (af, ty, proto, _, addr) in enumerate(addrinfo):
+            sock = None
+            try:
+                sock = socket.socket(af, ty, proto)
+                sock.settimeout(timeout)
+                cls._ensure_min_send_buffer_size(sock)
+                sock.connect(addr)
+                log.debug("Connected to: %s", addr)
+                return sock
+            except Exception as e:
+                if sock is not None:
+                    sock.close()
+                log.debug("Failed to connect to %s: %s", addr, e)
+                if i < lastaddr:
+                    continue
+                raise e
+        else:
+            raise ValueError("getaddrinfo returned no addresses to connect to")
 
     def open_buffer(self, max_buffer_size=None):
         """
