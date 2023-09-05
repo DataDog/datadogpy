@@ -625,13 +625,6 @@ class DogStatsd(object):
 
     @classmethod
     def _get_udp_socket(cls, host, port, timeout):
-        sock = cls._create_udp_conn(host, port)
-        sock.settimeout(timeout)
-        cls._ensure_min_send_buffer_size(sock)
-        return sock
-
-    @classmethod
-    def _create_udp_conn(cls, host, port):
         log.debug("Connecting to %s:%s", host, port)
         addrinfo = socket.getaddrinfo(host, port, 0, socket.SOCK_DGRAM)
         # Override gai.conf order for backwrads compatibility: prefer
@@ -643,6 +636,8 @@ class DogStatsd(object):
             sock = None
             try:
                 sock = socket.socket(af, ty, proto)
+                sock.settimeout(timeout)
+                cls._ensure_min_send_buffer_size(sock)
                 sock.connect(addr)
                 log.debug("Connected to: %s", addr)
                 return sock
