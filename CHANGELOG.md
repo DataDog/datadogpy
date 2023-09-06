@@ -2,7 +2,7 @@
 
 ## 0.47.0 / 2023-09-06
 
-* [Added] Add ipv6 support for dogstatsd. See [#791](https://github.com/DataDog/datadogpy/pull/791).
+* [Added] Add IPv6 support for dogstatsd. See [#791](https://github.com/DataDog/datadogpy/pull/791).
 * [Added] Add blocking socket mode and background sender. See [#787](https://github.com/DataDog/datadogpy/pull/787).
 
 ## 0.46.0 / 2023-07-12
