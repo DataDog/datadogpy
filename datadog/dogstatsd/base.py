@@ -929,17 +929,10 @@ class DogStatsd(object):
         self.bytes_dropped_queue = 0
         self.bytes_dropped_writer = 0
         self.packets_sent = 0
+        self.packets_dropped = 0
         self.packets_dropped_queue = 0
         self.packets_dropped_writer = 0
         self._last_flush_time = time.time()
-
-    # Aliases for backwards compatibility.
-    @property
-    def packets_dropped(self):
-        return self.packets_dropped_queue + self.packets_dropped_writer
-    @property
-    def bytes_dropped(self):
-        return self.bytes_dropped_queue + self.bytes_dropped_writer
 
     def _flush_telemetry(self):
         telemetry_tags = ",".join(self._add_constant_tags(self._client_tags))
