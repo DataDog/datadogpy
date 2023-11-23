@@ -145,9 +145,9 @@ class TestDogStatsd(unittest.TestCase):
         """
         self._procfs_mock.stop()
 
-    def assert_equal_telemetry(self, expected_payload, actual_payload, telemetry=None):
+    def assert_equal_telemetry(self, expected_payload, actual_payload, telemetry=None, **kwargs):
         if telemetry is None:
-            telemetry = telemetry_metrics(bytes_sent=len(expected_payload))
+            telemetry = telemetry_metrics(bytes_sent=len(expected_payload), **kwargs)
 
         if expected_payload:
             expected_payload = "\n".join([expected_payload, telemetry])
@@ -704,6 +704,14 @@ class TestDogStatsd(unittest.TestCase):
             socket.SO_SNDBUF,
             MIN_SEND_BUFFER_SIZE,
         )
+
+    def test_socket_path_updates_telemetry(self):
+        self.statsd.gauge("foo", 1)
+        self.assert_equal_telemetry("foo:1|g\n", self.recv(2), transport="udp")
+        self.statsd.socket_path = "/fake/path"
+        self.statsd._reset_telemetry()
+        self.statsd.gauge("foo", 2)
+        self.assert_equal_telemetry("foo:2|g\n", self.recv(2), transport="uds")
 
     def test_distributed(self):
         """
