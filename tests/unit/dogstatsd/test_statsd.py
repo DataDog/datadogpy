@@ -1928,3 +1928,18 @@ async def print_foo():
         statsd.set_socket_timeout(1)
         self.assertEqual(statsd.socket.timeout, 1)
         self.assertEqual(statsd.socket_timeout, 1)
+
+    def test_telemetry_api(self):
+        statsd = DogStatsd(disable_background_sender=False)
+
+        self.assertEqual(statsd.metrics_count, 0)
+        self.assertEqual(statsd.events_count, 0)
+        self.assertEqual(statsd.service_checks_count, 0)
+        self.assertEqual(statsd.bytes_sent, 0)
+        self.assertEqual(statsd.bytes_dropped, 0)
+        self.assertEqual(statsd.bytes_dropped_queue, 0)
+        self.assertEqual(statsd.bytes_dropped_writer, 0)
+        self.assertEqual(statsd.packets_sent, 0)
+        self.assertEqual(statsd.packets_dropped, 0)
+        self.assertEqual(statsd.packets_dropped_queue, 0)
+        self.assertEqual(statsd.packets_dropped_writer, 0)
