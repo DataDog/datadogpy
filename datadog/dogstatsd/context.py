@@ -86,3 +86,14 @@ class DistributedContextManagerDecorator(TimedContextManagerDecorator):
     def __init__(self, statsd, metric=None, tags=None, sample_rate=1, use_ms=None):
         super(DistributedContextManagerDecorator, self).__init__(statsd, metric, tags, sample_rate, use_ms)
         self.timing_func = statsd.distribution
+
+
+class HistogrammedContextManagerDecorator(TimedContextManagerDecorator):
+    """
+    A context manager and a decorator which will report the elapsed time in
+    the context OR in a function call using the custom histogram metric.
+    """
+
+    def __init__(self, statsd, metric=None, tags=None, sample_rate=1, use_ms=None):
+        super(HistogrammedContextManagerDecorator, self).__init__(statsd, metric, tags, sample_rate, use_ms)
+        self.timing_func = statsd.histogram

@@ -29,6 +29,7 @@ from typing import Optional, List, Text, Union
 from datadog.dogstatsd.context import (
     TimedContextManagerDecorator,
     DistributedContextManagerDecorator,
+    HistogrammedContextManagerDecorator,
 )
 from datadog.dogstatsd.route import get_default_route
 from datadog.dogstatsd.container import ContainerID
@@ -853,6 +854,34 @@ class DogStatsd(object):
                 statsd.distribution("user.query.time", time.time() - start)
         """
         return DistributedContextManagerDecorator(self, metric, tags, sample_rate, use_ms)
+
+    def histogrammed(self, metric=None, tags=None, sample_rate=None, use_ms=None):
+        """
+        A decorator or context manager that will measure the histogram of a
+        function's/context's run time using custom metric histogram.
+        Optionally specify a list of tags or a sample rate. If the metric is not
+        defined as a decorator, the module name and function name will be used.
+        The metric is required as a context manager.
+        ::
+
+            @statsd.histogrammed("user.query.time", sample_rate=0.5)
+            def get_user(user_id):
+                # Do what you need to ...
+                pass
+
+            # Is equivalent to ...
+            with statsd.histogrammed("user.query.time", sample_rate=0.5):
+                # Do what you need to ...
+                pass
+
+            # Is equivalent to ...
+            start = time.time()
+            try:
+                get_user(user_id)
+            finally:
+                statsd.histogram("user.query.time", time.time() - start)
+        """
+        return HistogrammedContextManagerDecorator(self, metric, tags, sample_rate, use_ms)
 
     def set(self, metric, value, tags=None, sample_rate=None):
         """
