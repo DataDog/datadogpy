@@ -325,14 +325,12 @@ class DogStatsd(object):
             self.socket_path = socket_path  # type: Optional[text]
             self.host = None
             self.port = None
-            transport = "uds"
             if not self._max_payload_size:
                 self._max_payload_size = UDS_OPTIMAL_PAYLOAD_LENGTH
         else:
             self.socket_path = None
             self.host = self.resolve_host(host, use_default_route)
             self.port = int(port)
-            transport = "udp"
             if not self._max_payload_size:
                 self._max_payload_size = UDP_OPTIMAL_PAYLOAD_LENGTH
 
@@ -381,7 +379,6 @@ class DogStatsd(object):
         self._client_tags = [
             "client:py",
             "client_version:{}".format(__version__),
-            "client_transport:{}".format(transport),
         ]
         self._reset_telemetry()
         self._telemetry_flush_interval = telemetry_min_flush_interval
@@ -416,6 +413,15 @@ class DogStatsd(object):
         self._queue = None
         if not disable_background_sender:
             self.enable_background_sender(sender_queue_size, sender_queue_timeout)
+
+    @property
+    def socket_path(self):
+        return self._socket_path
+
+    @socket_path.setter
+    def socket_path(self, path):
+        self._socket_path = path
+        self._transport = "udp" if path is None else "uds"
 
     def enable_background_sender(self, sender_queue_size=0, sender_queue_timeout=0):
         """
@@ -943,7 +949,10 @@ class DogStatsd(object):
         return self.bytes_dropped_queue + self.bytes_dropped_writer
 
     def _flush_telemetry(self):
-        telemetry_tags = ",".join(self._add_constant_tags(self._client_tags))
+        tags = self._client_tags[:]
+        tags.append("client_transport:{}".format(self._transport))
+        tags.extend(self.constant_tags)
+        telemetry_tags = ",".join(tags)
 
         return TELEMETRY_FORMATTING_STR % (
             self.metrics_count,
