@@ -1362,5 +1362,18 @@ class DogStatsd(object):
         self._start_flush_thread(self._flush_interval)
         self._start_sender_thread()
 
+    def stop(self):
+        """Stop the client.
+
+        Disable buffering, background sender and flush any pending payloads to the server.
+
+        Client remains usable after this method, but sending metrics may block if socket_timeout is enabled.
+        """
+
+        self.disable_background_sender()
+        self.disable_buffering = True
+        self.flush()
+        self.close_socket()
+
 
 statsd = DogStatsd()
