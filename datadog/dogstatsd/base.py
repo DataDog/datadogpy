@@ -431,6 +431,10 @@ class DogStatsd(object):
 
         self._queue = None
         self._sender_thread = None
+        self._sender_enabled = False
+        self._sender_lock = RLock()
+        # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
+        self._forking = False
 
         if not disable_background_sender:
             self.enable_background_sender(sender_queue_size, sender_queue_timeout)
@@ -471,19 +475,26 @@ class DogStatsd(object):
         :type sender_queue_timeout: float
         """
 
-        # Avoid a race on _queue with the background buffer flush thread that reads _queue.
-        with self._buffer_lock:
-            if self._queue is not None:
-                return
-
-            self._queue = queue.Queue(sender_queue_size)
-            self._start_sender_thread()
+        with self._sender_lock:
+            self._sender_enabled = True
+            self._sender_queue_size = sender_queue_size
             if sender_queue_timeout is None:
                 self._queue_blocking = True
                 self._queue_timeout = None
             else:
                 self._queue_blocking = sender_queue_timeout > 0
                 self._queue_timeout = max(0, sender_queue_timeout)
+
+            self._start_sender_thread()
+
+    def disable_background_sender(self):
+        """Disable background sender mode.
+
+        This call will block until all previously queued payloads are sent.
+        """
+        with self._sender_lock:
+            self._sender_enabled = False
+            self._stop_sender_thread()
 
     def disable_telemetry(self):
         self._telemetry = False
@@ -1008,13 +1019,15 @@ class DogStatsd(object):
             self._last_flush_time + self._telemetry_flush_interval < time.time()
 
     def _send_to_server(self, packet):
-        if self._queue is not None:
-            try:
-                self._queue.put(packet + '\n', self._queue_blocking, self._queue_timeout)
-            except queue.Full:
-                self.packets_dropped_queue += 1
-                self.bytes_dropped_queue += 1
-            return
+        # Prevent a race with disable_background_sender
+        with self._buffer_lock:
+            if self._queue is not None:
+                try:
+                    self._queue.put(packet + '\n', self._queue_blocking, self._queue_timeout)
+                except queue.Full:
+                    self.packets_dropped_queue += 1
+                    self.bytes_dropped_queue += 1
+                return
 
         self._xmit_packet_with_telemetry(packet + '\n')
 
@@ -1253,27 +1266,51 @@ class DogStatsd(object):
                 self._container_id = None
 
     def _start_sender_thread(self):
-        log.debug("Starting background sender thread")
-        self._sender_thread = threading.Thread(
-            name="{}_sender_thread".format(self.__class__.__name__),
-            target=self._sender_main_loop,
-        )
-        self._sender_thread.daemon = True
-        self._sender_thread.start()
+        # This method should be reentrant and idempotent.
+
+        # Prevent races with disable_background_sender and post_fork.
+        with self._sender_lock:
+            if not self._sender_enabled or self._forking:
+                return
+
+            # Avoid race on _queue with _send_to_server.
+            with self._buffer_lock:
+                if self._queue is not None:
+                    return
+                self._queue = queue.Queue(self._sender_queue_size)
+
+            log.debug("Starting background sender thread")
+            self._sender_thread = threading.Thread(
+                name="{}_sender_thread".format(self.__class__.__name__),
+                target=self._sender_main_loop,
+                args=(self._queue,)
+            )
+            self._sender_thread.daemon = True
+            self._sender_thread.start()
 
     def _stop_sender_thread(self):
-        self._queue.put(Stop)
-        self._sender_thread.join()
-        self._sender_thread = None
+        # This method should be reentrant and idempotent.
 
-    def _sender_main_loop(self):
+        # Avoid race with _start_sender_thread on _sender_thread.
+        with self._sender_lock:
+            # Lock ensures that nothing gets added to the queue after we disable it.
+            with self._buffer_lock:
+                if not self._queue:
+                    return
+                self._queue.put(Stop)
+                self._queue = None
+
+            self._sender_thread.join()
+            self._sender_thread = None
+
+    def _sender_main_loop(self, queue):
         while True:
-            item = self._queue.get()
+            item = queue.get()
             if item is Stop:
-                self._queue.task_done()
+                queue.task_done()
                 return
             self._xmit_packet_with_telemetry(item)
-            self._queue.task_done()
+            queue.task_done()
 
     def wait_for_pending(self):
         """
@@ -1281,8 +1318,15 @@ class DogStatsd(object):
         """
 
         self.flush()
-        if self._queue is not None:
-            self._queue.join()
+
+        queue = None
+        # Avoid race with disable_background_sender.
+        with self._buffer_lock:
+            queue = self._queue
+
+        # Do join outside of the lock so we don't block other threads from sending metrics.
+        if queue is not None:
+            queue.join()
 
     def pre_fork(self):
         """Prepare client for a process fork.
@@ -1295,12 +1339,12 @@ class DogStatsd(object):
         """
         log.debug("[%d] pre_fork for %s", os.getpid(), self)
 
+        self._forking = True
+
         if self._flush_thread is not None:
             self._stop_flush_thread()
 
-        if self._sender_thread is not None:
-            self._stop_sender_thread()
-
+        self._stop_sender_thread()
         self.close_socket()
 
     def post_fork(self):
@@ -1313,9 +1357,10 @@ class DogStatsd(object):
                 log.warning("Open socket detected after fork. Call pre_fork() before os.fork().")
                 self.close_socket()
 
+        self._forking = False
+
         self._start_flush_thread(self._flush_interval)
-        if self._queue:
-            self._start_sender_thread()
+        self._start_sender_thread()
 
 
 statsd = DogStatsd()
