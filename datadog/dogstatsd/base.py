@@ -16,6 +16,7 @@ import errno
 import threading
 import time
 from threading import Lock, RLock
+import weakref
 
 try:
     import queue
@@ -93,11 +94,28 @@ TELEMETRY_FORMATTING_STR = "\n".join(
     ]
 ) + "\n"
 
+Stop = object()
+
+SUPPORTS_FORKING = hasattr(os, "register_at_fork")
+
+_instances = weakref.WeakSet()
+
+def pre_fork():
+    for c in _instances:
+        c.pre_fork()
+
+def post_fork():
+    for c in _instances:
+        c.post_fork()
+
+if SUPPORTS_FORKING:
+    os.register_at_fork(before=pre_fork, after_in_child=post_fork, after_in_parent=post_fork)
 
 # pylint: disable=useless-object-inheritance,too-many-instance-attributes
 # pylint: disable=too-many-arguments,too-many-locals
 class DogStatsd(object):
     OK, WARNING, CRITICAL, UNKNOWN = (0, 1, 2, 3)
+
 
     def __init__(
         self,
@@ -408,11 +426,17 @@ class DogStatsd(object):
         # as a value for disabling the automatic flush timer as well.
         self._flush_interval = flush_interval
         self._flush_thread_stop = threading.Event()
+        self._flush_thread = None
         self._start_flush_thread(self._flush_interval)
 
         self._queue = None
+        self._sender_thread = None
+
         if not disable_background_sender:
             self.enable_background_sender(sender_queue_size, sender_queue_timeout)
+
+        if SUPPORTS_FORKING:
+            _instances.add(self)
 
     @property
     def socket_path(self):
@@ -1237,9 +1261,18 @@ class DogStatsd(object):
         self._sender_thread.daemon = True
         self._sender_thread.start()
 
+    def _stop_sender_thread(self):
+        self._queue.put(Stop)
+        self._sender_thread.join()
+        self._sender_thread = None
+
     def _sender_main_loop(self):
         while True:
-            self._xmit_packet_with_telemetry(self._queue.get())
+            item = self._queue.get()
+            if item is Stop:
+                self._queue.task_done()
+                return
+            self._xmit_packet_with_telemetry(item)
             self._queue.task_done()
 
     def wait_for_pending(self):
@@ -1250,6 +1283,39 @@ class DogStatsd(object):
         self.flush()
         if self._queue is not None:
             self._queue.join()
+
+    def pre_fork(self):
+        """Prepare client for a process fork.
+
+        Flush any pending payloads, stop all background threads and
+        close the connection. Once the function returns.
+
+        The client should not be used from this point until
+        post_fork() is called.
+        """
+        log.debug("[%d] pre_fork for %s", os.getpid(), self)
+
+        if self._flush_thread is not None:
+            self._stop_flush_thread()
+
+        if self._sender_thread is not None:
+            self._stop_sender_thread()
+
+        self.close_socket()
+
+    def post_fork(self):
+        """Restore the client state after a fork."""
+
+        log.debug("[%d] post_fork for %s", os.getpid(), self)
+
+        with self._socket_lock:
+            if self.socket or self.telemetry_socket:
+                log.warning("Open socket detected after fork. Call pre_fork() before os.fork().")
+                self.close_socket()
+
+        self._start_flush_thread(self._flush_interval)
+        if self._queue:
+            self._start_sender_thread()
 
 
 statsd = DogStatsd()
