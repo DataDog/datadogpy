@@ -99,7 +99,7 @@ Stop = object()
 SUPPORTS_FORKING = hasattr(os, "register_at_fork") and not os.environ.get("DD_DOGSTATSD_DISABLE_FORK_SUPPORT", None)
 TRACK_INSTANCES = not os.environ.get("DD_DOGSTATSD_DISABLE_INSTANCE_TRACKING", None)
 
-_instances = weakref.WeakSet()
+_instances = weakref.WeakSet() # type: weakref.WeakSet
 
 def pre_fork():
     """Prepare all client instances for a process fork.
