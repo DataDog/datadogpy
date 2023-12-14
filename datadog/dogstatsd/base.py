@@ -96,7 +96,7 @@ TELEMETRY_FORMATTING_STR = "\n".join(
 
 Stop = object()
 
-SUPPORTS_FORKING = hasattr(os, "register_at_fork")
+SUPPORTS_FORKING = hasattr(os, "register_at_fork") and not os.environ.get("DD_DOGSTATSD_DISABLE_FORK_SUPPORT", None)
 
 _instances = weakref.WeakSet()
 
