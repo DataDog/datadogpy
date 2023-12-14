@@ -505,6 +505,9 @@ class DogStatsd(object):
             log.debug("Statsd periodic buffer flush is disabled")
             return
 
+        if self._flush_thread is not None:
+            return
+
         def _flush_thread_loop(self, flush_interval):
             while not self._flush_thread_stop.is_set():
                 time.sleep(flush_interval)
@@ -1263,42 +1266,34 @@ class DogStatsd(object):
                 self._container_id = None
 
     def _start_sender_thread(self):
-        # This method should be reentrant and idempotent.
+        if not self._sender_enabled or self._forking:
+            return
 
-        # Prevent races with disable_background_sender and post_fork.
-        with self._config_lock:
-            if not self._sender_enabled or self._forking:
+        # Avoid race on _queue with _send_to_server.
+        with self._buffer_lock:
+            if self._queue is not None:
                 return
+            self._queue = queue.Queue(self._sender_queue_size)
 
-            # Avoid race on _queue with _send_to_server.
-            with self._buffer_lock:
-                if self._queue is not None:
-                    return
-                self._queue = queue.Queue(self._sender_queue_size)
-
-            log.debug("Starting background sender thread")
-            self._sender_thread = threading.Thread(
-                name="{}_sender_thread".format(self.__class__.__name__),
-                target=self._sender_main_loop,
-                args=(self._queue,)
-            )
-            self._sender_thread.daemon = True
-            self._sender_thread.start()
+        log.debug("Starting background sender thread")
+        self._sender_thread = threading.Thread(
+            name="{}_sender_thread".format(self.__class__.__name__),
+            target=self._sender_main_loop,
+            args=(self._queue,)
+        )
+        self._sender_thread.daemon = True
+        self._sender_thread.start()
 
     def _stop_sender_thread(self):
-        # This method should be reentrant and idempotent.
+        # Lock ensures that nothing gets added to the queue after we disable it.
+        with self._buffer_lock:
+            if not self._queue:
+                return
+            self._queue.put(Stop)
+            self._queue = None
 
-        # Avoid race with _start_sender_thread on _sender_thread.
-        with self._config_lock:
-            # Lock ensures that nothing gets added to the queue after we disable it.
-            with self._buffer_lock:
-                if not self._queue:
-                    return
-                self._queue.put(Stop)
-                self._queue = None
-
-            self._sender_thread.join()
-            self._sender_thread = None
+        self._sender_thread.join()
+        self._sender_thread = None
 
     def _sender_main_loop(self, queue):
         while True:
@@ -1338,10 +1333,9 @@ class DogStatsd(object):
 
         self._forking = True
 
-        if self._flush_thread is not None:
+        with self._config_lock:
             self._stop_flush_thread()
-
-        self._stop_sender_thread()
+            self._stop_sender_thread()
         self.close_socket()
 
     def post_fork(self):
@@ -1356,8 +1350,9 @@ class DogStatsd(object):
 
         self._forking = False
 
-        self._start_flush_thread(self._flush_interval)
-        self._start_sender_thread()
+        with self._config_lock:
+            self._start_flush_thread(self._flush_interval)
+            self._start_sender_thread()
 
     def stop(self):
         """Stop the client.
