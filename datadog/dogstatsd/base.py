@@ -97,6 +97,7 @@ TELEMETRY_FORMATTING_STR = "\n".join(
 Stop = object()
 
 SUPPORTS_FORKING = hasattr(os, "register_at_fork") and not os.environ.get("DD_DOGSTATSD_DISABLE_FORK_SUPPORT", None)
+TRACK_INSTANCES = not os.environ.get("DD_DOGSTATSD_DISABLE_INSTANCE_TRACKING", None)
 
 _instances = weakref.WeakSet()
 
@@ -143,6 +144,7 @@ class DogStatsd(object):
         disable_background_sender=True,         # type: bool
         sender_queue_size=0,                    # type: int
         sender_queue_timeout=0,                 # type: Optional[float]
+        track_instance=True,                    # type: bool
     ):  # type: (...) -> None
         """
         Initialize a DogStatsd object.
@@ -301,6 +303,10 @@ class DogStatsd(object):
         If set to zero drop the packet immediately if the queue is full.
         Default: 0 (no wait)
         :type sender_queue_timeout: float
+
+        :param track_instance: Keep track of this instance and automatically handle cleanup when os.fork() is called, if supported.
+        Default: True.
+        :type track_instance: boolean
         """
 
         self._socket_lock = Lock()
@@ -437,7 +443,7 @@ class DogStatsd(object):
         if not disable_background_sender:
             self.enable_background_sender(sender_queue_size, sender_queue_timeout)
 
-        if SUPPORTS_FORKING:
+        if TRACK_INSTANCES and track_instance:
             _instances.add(self)
 
     @property
