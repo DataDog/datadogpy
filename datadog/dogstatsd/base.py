@@ -118,7 +118,7 @@ def post_fork():
         c.post_fork()
 
 if SUPPORTS_FORKING:
-    os.register_at_fork(before=pre_fork, after_in_child=post_fork, after_in_parent=post_fork)
+    os.register_at_fork(before=pre_fork, after_in_child=post_fork, after_in_parent=post_fork) # type: ignore
 
 # pylint: disable=useless-object-inheritance,too-many-instance-attributes
 # pylint: disable=too-many-arguments,too-many-locals
