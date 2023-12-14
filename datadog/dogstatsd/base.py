@@ -409,10 +409,8 @@ class DogStatsd(object):
 
         self._reset_buffer()
 
-        # This lock is used for all cases where buffering functionality is
-        # being toggled (by `open_buffer()`, `close_buffer()`, or
-        # `self._disable_buffering` calls).
-        self._buffering_toggle_lock = RLock()
+        # This lock is used for all cases where client configuration is being changed: buffering, sender mode.
+        self._config_lock = RLock()
 
         # If buffering is disabled, we bypass the buffer function.
         self._send = self._send_to_buffer
@@ -432,7 +430,6 @@ class DogStatsd(object):
         self._queue = None
         self._sender_thread = None
         self._sender_enabled = False
-        self._sender_lock = RLock()
         # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
         self._forking = False
 
@@ -475,7 +472,7 @@ class DogStatsd(object):
         :type sender_queue_timeout: float
         """
 
-        with self._sender_lock:
+        with self._config_lock:
             self._sender_enabled = True
             self._sender_queue_size = sender_queue_size
             if sender_queue_timeout is None:
@@ -492,7 +489,7 @@ class DogStatsd(object):
 
         This call will block until all previously queued payloads are sent.
         """
-        with self._sender_lock:
+        with self._config_lock:
             self._sender_enabled = False
             self._stop_sender_thread()
 
@@ -558,12 +555,12 @@ class DogStatsd(object):
 
     @property
     def disable_buffering(self):
-        with self._buffering_toggle_lock:
+        with self._config_lock:
             return self._disable_buffering
 
     @disable_buffering.setter
     def disable_buffering(self, is_disabled):
-        with self._buffering_toggle_lock:
+        with self._config_lock:
             # If the toggle didn't change anything, this method is a noop
             if self._disable_buffering == is_disabled:
                 return
@@ -705,7 +702,7 @@ class DogStatsd(object):
         Note: This method must be called before close_buffer() matching invocation.
         """
 
-        self._buffering_toggle_lock.acquire()
+        self._config_lock.acquire()
 
         # XXX Remove if `disable_buffering` default is changed to False
         self._send = self._send_to_buffer
@@ -729,7 +726,7 @@ class DogStatsd(object):
             if self._disable_buffering:
                 self._send = self._send_to_server
 
-            self._buffering_toggle_lock.release()
+            self._config_lock.release()
 
     def _reset_buffer(self):
         with self._buffer_lock:
@@ -1269,7 +1266,7 @@ class DogStatsd(object):
         # This method should be reentrant and idempotent.
 
         # Prevent races with disable_background_sender and post_fork.
-        with self._sender_lock:
+        with self._config_lock:
             if not self._sender_enabled or self._forking:
                 return
 
@@ -1292,7 +1289,7 @@ class DogStatsd(object):
         # This method should be reentrant and idempotent.
 
         # Avoid race with _start_sender_thread on _sender_thread.
-        with self._sender_lock:
+        with self._config_lock:
             # Lock ensures that nothing gets added to the queue after we disable it.
             with self._buffer_lock:
                 if not self._queue:
