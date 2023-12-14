@@ -102,10 +102,18 @@ TRACK_INSTANCES = not os.environ.get("DD_DOGSTATSD_DISABLE_INSTANCE_TRACKING", N
 _instances = weakref.WeakSet()
 
 def pre_fork():
+    """Prepare all client instances for a process fork.
+
+    If SUPPORTS_FORKING is true, this will be called automatically before os.fork().
+    """
     for c in _instances:
         c.pre_fork()
 
 def post_fork():
+    """Restore all client instances after a fork.
+
+    If SUPPORTS_FORKING is true, this will be called automatically before os.fork().
+    """
     for c in _instances:
         c.post_fork()
 
