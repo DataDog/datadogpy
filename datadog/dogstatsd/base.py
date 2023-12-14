@@ -1036,15 +1036,17 @@ class DogStatsd(object):
             self._last_flush_time + self._telemetry_flush_interval < time.time()
 
     def _send_to_server(self, packet):
-        # Prevent a race with disable_background_sender
-        with self._buffer_lock:
-            if self._queue is not None:
-                try:
-                    self._queue.put(packet + '\n', self._queue_blocking, self._queue_timeout)
-                except queue.Full:
-                    self.packets_dropped_queue += 1
-                    self.bytes_dropped_queue += 1
-                return
+        # Skip the lock if the queue is None. There is no race with enable_background_sender.
+        if self._queue is not None:
+            # Prevent a race with disable_background_sender.
+            with self._buffer_lock:
+                if self._queue is not None:
+                    try:
+                        self._queue.put(packet + '\n', self._queue_blocking, self._queue_timeout)
+                    except queue.Full:
+                        self.packets_dropped_queue += 1
+                        self.bytes_dropped_queue += 1
+                    return
 
         self._xmit_packet_with_telemetry(packet + '\n')
 
@@ -1286,11 +1288,10 @@ class DogStatsd(object):
         if not self._sender_enabled or self._forking:
             return
 
-        # Avoid race on _queue with _send_to_server.
-        with self._buffer_lock:
-            if self._queue is not None:
-                return
-            self._queue = queue.Queue(self._sender_queue_size)
+        if self._queue is not None:
+            return
+
+        self._queue = queue.Queue(self._sender_queue_size)
 
         log.debug("Starting background sender thread")
         self._sender_thread = threading.Thread(
@@ -1328,12 +1329,11 @@ class DogStatsd(object):
 
         self.flush()
 
-        queue = None
-        # Avoid race with disable_background_sender.
-        with self._buffer_lock:
-            queue = self._queue
+        # Avoid race with disable_background_sender. We don't need a
+        # lock, just copy the value so it doesn't change between the
+        # check and join later.
+        queue = self._queue
 
-        # Do join outside of the lock so we don't block other threads from sending metrics.
         if queue is not None:
             queue.join()
 
