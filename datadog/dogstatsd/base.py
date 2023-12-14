@@ -419,6 +419,9 @@ class DogStatsd(object):
             self._send = self._send_to_server
             log.debug("Statsd buffering is disabled")
 
+        # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
+        self._forking = False
+
         # Start the flush thread if buffering is enabled and the interval is above
         # a reasonable range. This both prevents thrashing and allow us to use "0.0"
         # as a value for disabling the automatic flush timer as well.
@@ -430,8 +433,6 @@ class DogStatsd(object):
         self._queue = None
         self._sender_thread = None
         self._sender_enabled = False
-        # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
-        self._forking = False
 
         if not disable_background_sender:
             self.enable_background_sender(sender_queue_size, sender_queue_timeout)
@@ -503,6 +504,9 @@ class DogStatsd(object):
     def _start_flush_thread(self, flush_interval):
         if self._disable_buffering or self._flush_interval <= MIN_FLUSH_INTERVAL:
             log.debug("Statsd periodic buffer flush is disabled")
+            return
+
+        if self._forking:
             return
 
         if self._flush_thread is not None:
