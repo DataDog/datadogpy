@@ -547,7 +547,6 @@ class DogStatsd(object):
     # Note: Invocations of this method should be thread-safe
     def _stop_flush_thread(self):
         if not self._flush_thread:
-            log.warning("No statsd flush thread to stop")
             return
 
         try:
