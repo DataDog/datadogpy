@@ -99,7 +99,8 @@ Stop = object()
 SUPPORTS_FORKING = hasattr(os, "register_at_fork") and not os.environ.get("DD_DOGSTATSD_DISABLE_FORK_SUPPORT", None)
 TRACK_INSTANCES = not os.environ.get("DD_DOGSTATSD_DISABLE_INSTANCE_TRACKING", None)
 
-_instances = weakref.WeakSet() # type: weakref.WeakSet
+_instances = weakref.WeakSet()  # type: weakref.WeakSet
+
 
 def pre_fork():
     """Prepare all client instances for a process fork.
@@ -109,6 +110,7 @@ def pre_fork():
     for c in _instances:
         c.pre_fork()
 
+
 def post_fork():
     """Restore all client instances after a fork.
 
@@ -117,14 +119,15 @@ def post_fork():
     for c in _instances:
         c.post_fork()
 
+
 if SUPPORTS_FORKING:
-    os.register_at_fork(before=pre_fork, after_in_child=post_fork, after_in_parent=post_fork) # type: ignore
+    os.register_at_fork(before=pre_fork, after_in_child=post_fork, after_in_parent=post_fork)  # type: ignore
+
 
 # pylint: disable=useless-object-inheritance,too-many-instance-attributes
 # pylint: disable=too-many-arguments,too-many-locals
 class DogStatsd(object):
     OK, WARNING, CRITICAL, UNKNOWN = (0, 1, 2, 3)
-
 
     def __init__(
         self,
@@ -312,7 +315,8 @@ class DogStatsd(object):
         Default: 0 (no wait)
         :type sender_queue_timeout: float
 
-        :param track_instance: Keep track of this instance and automatically handle cleanup when os.fork() is called, if supported.
+        :param track_instance: Keep track of this instance and automatically handle cleanup when os.fork() is called,
+        if supported.
         Default: True.
         :type track_instance: boolean
         """
