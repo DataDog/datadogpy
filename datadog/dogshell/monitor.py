@@ -77,6 +77,9 @@ class MonitorClient(object):
             dest="query_opt",
         )
         update_parser.add_argument("--name", help="name of the alert", default=None)
+        update_parser.add_argument(
+            "--restricted_roles", help="list of unique role identifiers allowed to edit the monitor", default=None
+        )
         update_parser.add_argument("--tags", help="comma-separated list of tags", default=None)
         update_parser.add_argument(
             "--message", help="message to include with " "notifications for this monitor", default=None
