@@ -36,6 +36,9 @@ class MonitorClient(object):
         post_parser.add_argument(
             "--message", help="message to include with notifications" " for this monitor", default=None
         )
+        post_parser.add_argument(
+            "--restricted_roles", help="list of unique role identifiers allowed to edit the monitor", default=None
+        )
         post_parser.add_argument("--tags", help="comma-separated list of tags", default=None)
         post_parser.add_argument(
             "--priority",
@@ -151,6 +154,9 @@ class MonitorClient(object):
         validate_parser.add_argument(
             "--message", help="message to include with notifications" " for this monitor", default=None
         )
+        validate_parser.add_argument(
+            "--restricted_roles", help="list of unique role identifiers allowed to edit the monitor", default=None
+        )
         validate_parser.add_argument("--tags", help="comma-separated list of tags", default=None)
         validate_parser.add_argument("--options", help="json options for the monitor", default=None)
         validate_parser.set_defaults(func=cls._validate)
@@ -175,6 +181,11 @@ class MonitorClient(object):
             "message": args.message,
             "options": options
         }
+        if args.restricted_roles:
+            restricted_roles = sorted(set([rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()]))
+            body["restricted_roles"] = restricted_roles
+        else:
+            restricted_roles = None
         if tags:
             body["tags"] = tags
         if args.priority:
@@ -200,6 +211,9 @@ class MonitorClient(object):
             "message": monitor["message"],
             "options": monitor["options"]
         }
+        restricted_roles = monitor.get("restricted_roles", None)
+        if restricted_roles:
+            body["restricted_roles"] = restricted_roles
         tags = monitor.get("tags", None)
         if tags:
             body["tags"] = tags
@@ -245,6 +259,8 @@ class MonitorClient(object):
             to_update["type"] = args.type_opt
         if args.query_opt:
             to_update["query"] = args.query_opt
+        if args.restricted_roles:
+            to_update["restricted_roles"] = sorted(set([rr.strip() for rr in args.tags.split(",") if rr.strip()]))
         if args.tags:
             to_update["tags"] = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
         if args.priority:
@@ -274,6 +290,9 @@ class MonitorClient(object):
             "message": monitor["message"],
             "options": monitor["options"]
         }
+        restricted_roles = monitor.get("restricted_roles", None)
+        if restricted_roles:
+            body["restricted_roles"] = restricted_roles
         tags = monitor.get("tags", None)
         if tags:
             body["tags"] = tags
@@ -414,7 +433,10 @@ class MonitorClient(object):
         options = None
         if args.options is not None:
             options = json.loads(args.options)
-
+        if args.restricted_roles:
+            to_update["restricted_roles"] = sorted(set([rr.strip() for rr in args.tags.split(",") if rr.strip()]))
+        else:
+            restricted_roles = None
         if args.tags:
             tags = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
         else:
