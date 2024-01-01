@@ -98,10 +98,9 @@ class DogshellConfig(IterableUserDict):
                             config.set("Connection", "apikey", api_key)
                             config.set("Connection", "appkey", app_key)
 
-                            f = open(config_file, "w")
-                            config.write(f)
-                            f.close()
-                            print("Wrote %s" % config_file)
+                            with open(config_file, "w") as f:
+                                config.write(f)
+                                print("Wrote %s" % config_file)
                         elif response.strip().lower() == "n":
                             # Abort
                             print_err("Exiting\n")
