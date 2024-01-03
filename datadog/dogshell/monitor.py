@@ -37,7 +37,8 @@ class MonitorClient(object):
             "--message", help="message to include with notifications" " for this monitor", default=None
         )
         post_parser.add_argument(
-            "--restricted_roles", help="comma-separated list of unique role identifiers allowed to edit the monitor", default=None
+            "--restricted_roles", help="comma-separated list of unique role identifiers allowed to edit the monitor", 
+            default=None
         )
         post_parser.add_argument("--tags", help="comma-separated list of tags", default=None)
         post_parser.add_argument(
@@ -78,7 +79,8 @@ class MonitorClient(object):
         )
         update_parser.add_argument("--name", help="name of the alert", default=None)
         update_parser.add_argument(
-            "--restricted_roles", help="comma-separated list of unique role identifiers allowed to edit the monitor", default=None
+            "--restricted_roles", help="comma-separated list of unique role identifiers allowed to edit the monitor", 
+            default=None
         )
         update_parser.add_argument("--tags", help="comma-separated list of tags", default=None)
         update_parser.add_argument(
@@ -158,7 +160,8 @@ class MonitorClient(object):
             "--message", help="message to include with notifications" " for this monitor", default=None
         )
         validate_parser.add_argument(
-            "--restricted_roles", help="comma-separated list of unique role identifiers allowed to edit the monitor", default=None
+            "--restricted_roles", help="comma-separated list of unique role identifiers allowed to edit the monitor", 
+            default=None
         )
         validate_parser.add_argument("--tags", help="comma-separated list of tags", default=None)
         validate_parser.add_argument("--options", help="json options for the monitor", default=None)
