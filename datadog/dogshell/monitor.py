@@ -434,8 +434,6 @@ class MonitorClient(object):
         options = None
         if args.options is not None:
             options = json.loads(args.options)
-        if args.restricted_roles:
-            to_update["restricted_roles"] = sorted(set([rr.strip() for rr in args.tags.split(",") if rr.strip()]))
         if args.tags:
             tags = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
         else:
