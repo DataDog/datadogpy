@@ -355,20 +355,16 @@ class DogStatsd(object):
             self._enabled = False
 
         # Connection
-        self._max_payload_size = max_buffer_len
+        self._max_buffer_len = max_buffer_len
         self.socket_timeout = socket_timeout
         if socket_path is not None:
             self.socket_path = socket_path  # type: Optional[text]
             self.host = None
             self.port = None
-            if not self._max_payload_size:
-                self._max_payload_size = UDS_OPTIMAL_PAYLOAD_LENGTH
         else:
             self.socket_path = None
             self.host = self.resolve_host(host, use_default_route)
             self.port = int(port)
-            if not self._max_payload_size:
-                self._max_payload_size = UDP_OPTIMAL_PAYLOAD_LENGTH
 
         self.telemetry_socket_path = telemetry_socket_path
         self.telemetry_host = None
@@ -464,8 +460,14 @@ class DogStatsd(object):
 
     @socket_path.setter
     def socket_path(self, path):
-        self._socket_path = path
-        self._transport = "udp" if path is None else "uds"
+        with self._socket_lock:
+            self._socket_path = path
+            if path is None:
+                self._transport = "udp"
+                self._max_payload_size = self._max_buffer_len or UDP_OPTIMAL_PAYLOAD_LENGTH
+            else:
+                self._transport = "uds"
+                self._max_payload_size = self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH
 
     def enable_background_sender(self, sender_queue_size=0, sender_queue_timeout=0):
         """
