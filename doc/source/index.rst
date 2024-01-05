@@ -188,6 +188,15 @@ Usage
     >>> initialize(statsd_host="localhost", statsd_port=8125)
     >>> statsd.increment("home.page.hits")
 
+.. data:: datadog.dogstatsd.base.SUPPORTS_FORKING
+
+    Indicates whether the Python runtime supports os.register_at_fork(). When
+    true, buffering and background sender can be safely used in applications
+    that use os.fork().
+
+.. autofunction:: datadog.dogstatsd.base.pre_fork
+.. autofunction:: datadog.dogstatsd.base.post_fork
+
 
 Get in Touch
 ============

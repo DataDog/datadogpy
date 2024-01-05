@@ -479,17 +479,15 @@ class DogStatsd(object):
         Compatible with os.fork() starting with Python 3.7. On earlier versions, compatible if applications
         arrange to call pre_fork() and post_fork() module functions around calls to os.fork().
 
-        :param sender_queue_size: Set the maximum number of packets to queue for the sender. Optional
-        How may packets to queue before blocking or dropping the packet if the packet queue is already full.
-        Default: 0 (unlimited).
-        :type sender_queue_size: integer
-
-        :param sender_queue_timeout: Set timeout for packet queue operations, in seconds. Optional.
-        How long the application thread is willing to wait for the queue clear up before dropping the metric packet.
-        If set to None, wait forever.
-        If set to zero drop the packet immediately if the queue is full.
-        Default: 0 (no wait)
-        :type sender_queue_timeout: float
+        :param sender_queue_size: Set the maximum number of packets to queue for the sender.
+            How many packets to queue before blocking or dropping the packet if the packet queue is already full.
+            Default: 0 (unlimited).
+        :type sender_queue_size: integer, optional
+        :param sender_queue_timeout: Set timeout for packet queue operations, in seconds.
+            How long the application thread is willing to wait for the queue clear up before dropping the metric packet.
+            If set to None, wait forever. If set to zero drop the packet immediately if the queue is full.
+            Default: 0 (no wait).
+        :type sender_queue_timeout: float, optional
         """
 
         with self._config_lock:
