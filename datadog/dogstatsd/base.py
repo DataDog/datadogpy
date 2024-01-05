@@ -114,7 +114,7 @@ def pre_fork():
 def post_fork():
     """Restore all client instances after a fork.
 
-    If SUPPORTS_FORKING is true, this will be called automatically before os.fork().
+    If SUPPORTS_FORKING is true, this will be called automatically after os.fork().
     """
     for c in _instances:
         c.post_fork()
