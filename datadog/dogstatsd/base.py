@@ -203,6 +203,13 @@ class DogStatsd(object):
         for origin detection.
         :type DD_ORIGIN_DETECTION_ENABLED: boolean
 
+        :envvar DD_DOGSTATSD_DISABLE_FORK_SUPPORT: Don't install global fork hooks with os.register_at_fork.
+        Global fork hooks then need to be called manually before and after calling os.fork.
+        :type DD_DOGSTATSD_DISABLE_FORK_SUPPORT: boolean
+
+        :envvar DD_DOGSTATSD_DISABLE_INSTANCE_TRACKING: Don't register instances of this class with global fork hooks.
+        :type DD_DOGSTATSD_DISABLE_INSTANCE_TRACKING: boolean
+
         :param host: the host of the DogStatsd server.
         :type host: string
 
