@@ -285,6 +285,12 @@ class TestDogStatsd(unittest.TestCase):
         self.assertEqual(dogstatsd.host, "myenvvarhost")
         self.assertEqual(dogstatsd.port, 4321)
 
+    def test_initialization_closes_socket(self):
+        statsd.socket = FakeSocket()
+        self.assertIsNotNone(statsd.socket)
+        initialize()
+        self.assertIsNone(statsd.socket)
+
     def test_default_route(self):
         """
         Dogstatsd host can be dynamically set to the default route.
