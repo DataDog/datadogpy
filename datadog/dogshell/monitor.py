@@ -179,7 +179,7 @@ class MonitorClient(object):
             tags = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
         else:
             tags = None
-        
+
         if args.restricted_roles:
             restricted_roles = sorted(set([rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()]))
         else:
@@ -456,8 +456,13 @@ class MonitorClient(object):
             restricted_roles = None
 
         res = api.Monitor.validate(
-            type=args.type, query=args.query, name=args.name, message=args.message, tags=tags, 
-            restricted_roles=restricted_roles, options=options
+            type=args.type,
+            query=args.query,
+            name=args.name,
+            message=args.message,
+            tags=tags,
+            restricted_roles=restricted_roles,
+            options=options
         )
         # report_warnings(res)
         # report_errors(res)
