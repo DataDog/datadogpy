@@ -179,6 +179,11 @@ class MonitorClient(object):
             tags = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
         else:
             tags = None
+        
+        if args.restricted_roles:
+            restricted_roles = sorted(set([rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()]))
+        else:
+            restricted_roles = None
 
         body = {
             "type": args.type,
@@ -187,11 +192,10 @@ class MonitorClient(object):
             "message": args.message,
             "options": options
         }
-        if args.restricted_roles:
-            restricted_roles = sorted(set([rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()]))
-            body["restricted_roles"] = restricted_roles
         if tags:
             body["tags"] = tags
+        if restricted_roles:
+            body["restricted_roles"] = restricted_roles
         if args.priority:
             body["priority"] = args.priority
 
@@ -264,7 +268,11 @@ class MonitorClient(object):
         if args.query_opt:
             to_update["query"] = args.query_opt
         if args.restricted_roles:
-            to_update["restricted_roles"] = sorted(set([rr.strip() for rr in args.tags.split(",") if rr.strip()]))
+            if args.restricted_roles == ",":
+                to_update["restricted_roles"] = None
+            else:
+                to_update["restricted_roles"] = sorted(
+                    set([rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()]))
         if args.tags:
             to_update["tags"] = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
         if args.priority:
@@ -442,8 +450,14 @@ class MonitorClient(object):
         else:
             tags = None
 
+        if args.restricted_roles:
+            restricted_roles = sorted(set([rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()]))
+        else:
+            restricted_roles = None
+
         res = api.Monitor.validate(
-            type=args.type, query=args.query, name=args.name, message=args.message, tags=tags, options=options
+            type=args.type, query=args.query, name=args.name, message=args.message, tags=tags, 
+            restricted_roles=restricted_roles, options=options
         )
         # report_warnings(res)
         # report_errors(res)
