@@ -12,12 +12,12 @@ jobs:
     runs-on: ubuntu-20.04
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         # Include all history and tags, needed for building the right version
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v5
         name: Install Python
         with:
           python-version: '3.9'
