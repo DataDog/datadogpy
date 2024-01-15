@@ -10,7 +10,7 @@ Tests for container.py
 import mock
 import pytest
 
-from datadog.dogstatsd.container import ContainerID
+from datadog.dogstatsd.container import Cgroup
 
 
 def get_mock_open(read_data=None):
@@ -125,12 +125,22 @@ def get_mock_open(read_data=None):
         ),
     ),
 )
-def test_container_id(file_contents, expected_container_id):
+def test_container_id_from_cgroup(file_contents, expected_container_id):
     with get_mock_open(read_data=file_contents) as mock_open:
         if file_contents is None:
             mock_open.side_effect = IOError
 
-        reader = ContainerID()
+        with mock.patch("os.stat", mock.MagicMock(return_value=mock.Mock(st_ino="0xEFFFFFFBL"))):
+            reader = Cgroup()
         assert expected_container_id == reader.container_id
 
+        mock_open.assert_called_once_with("/proc/self/cgroup", mode="r")
+
+
+def test_container_id_inode():
+    """Test that the inode is returned when the container ID cannot be found."""
+    with mock.patch("datadog.dogstatsd.container.open", mock.mock_open(read_data="0::/")) as mock_open:
+        with mock.patch("os.stat", mock.MagicMock(return_value=mock.Mock(st_ino="1234"))):
+            reader = Cgroup()
+        assert reader.container_id == "in-1234"
         mock_open.assert_called_once_with("/proc/self/cgroup", mode="r")
