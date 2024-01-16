@@ -94,7 +94,7 @@ class Cgroup(object):
             self.CGROUPV1_BASE_CONTROLLER,
             self.CGROUPV2_BASE_CONTROLLER,
         ]:
-            if controller in cgroup_controllers_paths:
+            if controller, cpath in cgroup_controllers_paths.values():
                 inode_path = os.path.join(
                     self.DEFAULT_CGROUP_MOUNT_PATH,
                     controller,
