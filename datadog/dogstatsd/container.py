@@ -29,7 +29,7 @@ class Cgroup(object):
     """
 
     CGROUP_PATH = "/proc/self/cgroup"
-    DEFAULT_CGROUP_MOUNT_PATH = "/sys/fs/cgroup"  # default cgroup mount path.
+    CGROUP_MOUNT_PATH = "/sys/fs/cgroup"  # cgroup mount path.
     CGROUP_NS_PATH = "/proc/self/ns/cgroup"  # path to the cgroup namespace file.
     CGROUPV1_BASE_CONTROLLER = "memory"  # controller used to identify the container-id in cgroup v1 (memory).
     CGROUPV2_BASE_CONTROLLER = ""  # controller used to identify the container-id in cgroup v2.
