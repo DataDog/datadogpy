@@ -86,7 +86,7 @@ class Cgroup(object):
                 tokens = line.strip().split(":")
                 if len(tokens) != 3:
                     continue
-                if tokens[1] == self.CGROUPV1_BASE_CONTROLLER or tokens[1] == "":
+                if tokens[1] == self.CGROUPV1_BASE_CONTROLLER or tokens[1] == self.CGROUPV2_BASE_CONTROLLER:
                     cgroup_controllers_paths[tokens[1]] = tokens[2]
 
         # Retrieve the cgroup inode from "/sys/fs/cgroup + controller + cgroupNodePath"
