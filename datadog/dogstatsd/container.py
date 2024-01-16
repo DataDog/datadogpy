@@ -94,12 +94,13 @@ class Cgroup(object):
             self.CGROUPV1_BASE_CONTROLLER,
             self.CGROUPV2_BASE_CONTROLLER,
         ]:
-            if controller, cpath in cgroup_controllers_paths.values():
+            if controller in cgroup_controllers_paths:
                 inode_path = os.path.join(
-                    self.DEFAULT_CGROUP_MOUNT_PATH,
+                    self.CGROUP_MOUNT_PATH,
                     controller,
-                    cpath if cpath != "/" else "",
+                    cgroup_controllers_paths[controller] if cgroup_controllers_paths[controller] != "/" else "",
                 )
-                return "in-{0}".format(os.stat(inode_path).st_ino)
+                inode = os.stat(inode_path).st_ino
+                return "in-{0}".format(inode) if int(inode) > 2 else None
 
         return None
