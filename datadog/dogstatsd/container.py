@@ -98,7 +98,7 @@ class Cgroup(object):
                 inode_path = os.path.join(
                     self.DEFAULT_CGROUP_MOUNT_PATH,
                     controller,
-                    cgroup_controllers_paths[controller] if cgroup_controllers_paths[controller] != "/" else "",
+                    cpath if cpath != "/" else "",
                 )
                 return "in-{0}".format(os.stat(inode_path).st_ino)
 
