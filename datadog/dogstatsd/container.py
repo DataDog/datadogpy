@@ -49,11 +49,14 @@ class Cgroup(object):
 
     def _is_host_cgroup_namespace(self):
         """Check if the current process is in a host cgroup namespace."""
-        return (
-            os.stat(self.CGROUP_NS_PATH).st_ino == self.HOST_CGROUP_NAMESPACE_INODE
-            if os.path.exists(self.CGROUP_NS_PATH)
-            else False
-        )
+        try:
+            return (
+                os.stat(self.CGROUP_NS_PATH).st_ino == self.HOST_CGROUP_NAMESPACE_INODE
+                if os.path.exists(self.CGROUP_NS_PATH)
+                else False
+            )
+        except Exception:
+            return False
 
     def _read_cgroup_path(self):
         """Read the container ID from the cgroup file."""
