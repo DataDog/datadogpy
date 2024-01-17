@@ -42,12 +42,12 @@ class Cgroup(object):
     CONTAINER_RE = re.compile(r"(?:.+)?({0}|{1}|{2})(?:\.scope)?$".format(UUID_SOURCE, CONTAINER_SOURCE, TASK_SOURCE))
 
     def __init__(self):
-        if self._is_cgroup_namespace():
+        if self._is_host_cgroup_namespace():
             self.container_id = self._read_cgroup_path()
             return
         self.container_id = self._get_cgroup_from_inode()
 
-    def _is_cgroup_namespace(self):
+    def _is_host_cgroup_namespace(self):
         """Check if the current process is in a host cgroup namespace."""
         return (
             os.stat(self.CGROUP_NS_PATH).st_ino == self.HOST_CGROUP_NAMESPACE_INODE
@@ -101,6 +101,7 @@ class Cgroup(object):
                     cgroup_controllers_paths[controller] if cgroup_controllers_paths[controller] != "/" else "",
                 )
                 inode = os.stat(inode_path).st_ino
+                # 0 is not a valid inode. 1 is a bad block inode and 2 is the root of a filesystem.
                 return "in-{0}".format(inode) if int(inode) > 2 else None
 
         return None
