@@ -33,7 +33,7 @@ class Cgroup(object):
     CGROUP_NS_PATH = "/proc/self/ns/cgroup"  # path to the cgroup namespace file.
     CGROUPV1_BASE_CONTROLLER = "memory"  # controller used to identify the container-id in cgroup v1 (memory).
     CGROUPV2_BASE_CONTROLLER = ""  # controller used to identify the container-id in cgroup v2.
-    HOST_CGROUP_NAMESPACE_INODE = "0xEFFFFFFBL"  # inode of the host cgroup namespace.
+    HOST_CGROUP_NAMESPACE_INODE = 0xEFFFFFFB  # inode of the host cgroup namespace.
 
     UUID_SOURCE = r"[0-9a-f]{8}[-_][0-9a-f]{4}[-_][0-9a-f]{4}[-_][0-9a-f]{4}[-_][0-9a-f]{12}"
     CONTAINER_SOURCE = r"[0-9a-f]{64}"
@@ -105,6 +105,7 @@ class Cgroup(object):
                 )
                 inode = os.stat(inode_path).st_ino
                 # 0 is not a valid inode. 1 is a bad block inode and 2 is the root of a filesystem.
-                return "in-{0}".format(inode) if int(inode) > 2 else None
+                if inode > 2:
+                    return "in-{0}".format(inode)
 
         return None
