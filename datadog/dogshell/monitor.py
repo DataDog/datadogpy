@@ -451,11 +451,10 @@ class MonitorClient(object):
         else:
             tags = None
 
-        if args.restricted_roles is not None:
-            if args.restricted_roles == "":
-                restricted_roles = None
-            else:
-                restricted_roles = sorted(set([rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()]))
+        if args.restricted_roles:
+            restricted_roles = sorted(set([rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()]))
+        else:
+            restricted_roles = None
 
         res = api.Monitor.validate(
             type=args.type,
