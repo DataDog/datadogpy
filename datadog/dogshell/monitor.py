@@ -267,8 +267,8 @@ class MonitorClient(object):
             to_update["type"] = args.type_opt
         if args.query_opt:
             to_update["query"] = args.query_opt
-        if args.restricted_roles:
-            if args.restricted_roles == ",":
+        if args.restricted_roles != None:
+            if args.restricted_roles == "":
                 to_update["restricted_roles"] = None
             else:
                 to_update["restricted_roles"] = sorted(
@@ -302,8 +302,9 @@ class MonitorClient(object):
             "message": monitor["message"],
             "options": monitor["options"]
         }
-        restricted_roles = monitor.get("restricted_roles", None)
-        if restricted_roles:
+        # Default value is False to defferentiate between explicit None and not set
+        restricted_roles = monitor.get("restricted_roles", False)
+        if restricted_roles != False:
             body["restricted_roles"] = restricted_roles
         tags = monitor.get("tags", None)
         if tags:
@@ -450,10 +451,11 @@ class MonitorClient(object):
         else:
             tags = None
 
-        if args.restricted_roles:
-            restricted_roles = sorted(set([rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()]))
-        else:
-            restricted_roles = None
+        if args.restricted_roles != None:
+            if args.restricted_roles == "":
+                restricted_roles = None
+            else:
+                restricted_roles = sorted(set([rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()]))
 
         res = api.Monitor.validate(
             type=args.type,
