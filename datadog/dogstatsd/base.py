@@ -32,7 +32,7 @@ from datadog.dogstatsd.context import (
     DistributedContextManagerDecorator,
 )
 from datadog.dogstatsd.route import get_default_route
-from datadog.dogstatsd.container import ContainerID
+from datadog.dogstatsd.container import Cgroup
 from datadog.util.compat import is_p3k, text
 from datadog.util.format import normalize_tags
 from datadog.version import __version__
@@ -1288,7 +1288,7 @@ class DogStatsd(object):
             return
         if origin_detection_enabled:
             try:
-                reader = ContainerID()
+                reader = Cgroup()
                 self._container_id = reader.container_id
             except Exception as e:
                 log.debug("Couldn't get container ID: %s", str(e))
