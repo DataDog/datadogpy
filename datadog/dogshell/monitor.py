@@ -267,7 +267,7 @@ class MonitorClient(object):
             to_update["type"] = args.type_opt
         if args.query_opt:
             to_update["query"] = args.query_opt
-        if args.restricted_roles != None:
+        if args.restricted_roles is not None:
             if args.restricted_roles == "":
                 to_update["restricted_roles"] = None
             else:
@@ -304,7 +304,7 @@ class MonitorClient(object):
         }
         # Default value is False to defferentiate between explicit None and not set
         restricted_roles = monitor.get("restricted_roles", False)
-        if restricted_roles != False:
+        if restricted_roles is not False:
             body["restricted_roles"] = restricted_roles
         tags = monitor.get("tags", None)
         if tags:
@@ -451,7 +451,7 @@ class MonitorClient(object):
         else:
             tags = None
 
-        if args.restricted_roles != None:
+        if args.restricted_roles is not None:
             if args.restricted_roles == "":
                 restricted_roles = None
             else:
