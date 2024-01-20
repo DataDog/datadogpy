@@ -5,7 +5,7 @@
 
 Wraps shell commands and sends the result to Datadog as events. Ex:
 
-dogwrap -n test-job -k $API_KEY --submit_mode all "ls -lah"
+dogwrap -n test-job -k $API_KEY --submit_mode=all "ls -lah"
 
 Note that you need to enclose your command in quotes to prevent python
 from thinking the command line arguments belong to the python command
@@ -13,7 +13,7 @@ instead of the wrapped command.
 
 You can also have the script only send events if they fail:
 
-dogwrap -n test-job -k $API_KEY --submit_mode errors "ls -lah"
+dogwrap -n test-job -k $API_KEY --submit_mode=errors "ls -lah"
 
 And you can give the command a timeout too:
 
