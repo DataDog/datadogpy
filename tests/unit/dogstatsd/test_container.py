@@ -10,7 +10,7 @@ Tests for container.py
 import mock
 import pytest
 
-from datadog.dogstatsd.container import ContainerID
+from datadog.dogstatsd.container import Cgroup
 
 
 def get_mock_open(read_data=None):
@@ -125,12 +125,59 @@ def get_mock_open(read_data=None):
         ),
     ),
 )
-def test_container_id(file_contents, expected_container_id):
+def test_container_id_from_cgroup(file_contents, expected_container_id):
     with get_mock_open(read_data=file_contents) as mock_open:
         if file_contents is None:
             mock_open.side_effect = IOError
 
-        reader = ContainerID()
+        with mock.patch("os.stat", mock.MagicMock(return_value=mock.Mock(st_ino=0xEFFFFFFB))):
+            reader = Cgroup()
         assert expected_container_id == reader.container_id
 
+        mock_open.assert_called_once_with("/proc/self/cgroup", mode="r")
+
+
+def test_container_id_inode():
+    """Test that the inode is returned when the container ID cannot be found."""
+    with mock.patch("datadog.dogstatsd.container.open", mock.mock_open(read_data="0::/")) as mock_open:
+        with mock.patch("os.stat", mock.MagicMock(return_value=mock.Mock(st_ino=1234))):
+            reader = Cgroup()
+        assert reader.container_id == "in-1234"
+        mock_open.assert_called_once_with("/proc/self/cgroup", mode="r")
+
+    cgroupv1_priority = """
+12:cpu,cpuacct:/
+11:hugetlb:/
+10:devices:/
+9:rdma:/
+8:net_cls,net_prio:/
+7:memory:/
+6:cpuset:/
+5:pids:/
+4:freezer:/
+3:perf_event:/
+2:blkio:/
+1:name=systemd:/
+0::/
+"""
+
+    paths_checked = []
+
+    def inode_stat_mock(path):
+        paths_checked.append(path)
+
+        # The cgroupv1 controller is mounted on inode 0. This will cause a fallback to the cgroupv2 controller.
+        if path == "/sys/fs/cgroup/memory/":
+            return mock.Mock(st_ino=0)
+        elif path == "/sys/fs/cgroup/":
+            return mock.Mock(st_ino=1234)
+
+    with mock.patch("datadog.dogstatsd.container.open", mock.mock_open(read_data=cgroupv1_priority)) as mock_open:
+        with mock.patch("os.stat", mock.MagicMock(side_effect=inode_stat_mock)):
+            reader = Cgroup()
+        assert reader.container_id == "in-1234"
+        assert paths_checked[-2:] == [
+            "/sys/fs/cgroup/memory/",
+            "/sys/fs/cgroup/"
+        ]
         mock_open.assert_called_once_with("/proc/self/cgroup", mode="r")

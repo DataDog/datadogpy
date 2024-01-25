@@ -285,6 +285,12 @@ class TestDogStatsd(unittest.TestCase):
         self.assertEqual(dogstatsd.host, "myenvvarhost")
         self.assertEqual(dogstatsd.port, 4321)
 
+    def test_initialization_closes_socket(self):
+        statsd.socket = FakeSocket()
+        self.assertIsNotNone(statsd.socket)
+        initialize()
+        self.assertIsNone(statsd.socket)
+
     def test_default_route(self):
         """
         Dogstatsd host can be dynamically set to the default route.
@@ -1951,3 +1957,9 @@ async def print_foo():
         self.assertEqual(statsd.packets_dropped, 0)
         self.assertEqual(statsd.packets_dropped_queue, 0)
         self.assertEqual(statsd.packets_dropped_writer, 0)
+
+    def test_max_payload_size(self):
+        statsd = DogStatsd(socket_path=None, port=8125)
+        self.assertEqual(statsd._max_payload_size, UDP_OPTIMAL_PAYLOAD_LENGTH)
+        statsd.socket_path = "/foo"
+        self.assertEqual(statsd._max_payload_size, UDS_OPTIMAL_PAYLOAD_LENGTH)

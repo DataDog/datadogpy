@@ -122,6 +122,7 @@ def initialize(
             statsd.host = statsd.resolve_host(statsd_host, statsd_use_default_route)
         if statsd_port:
             statsd.port = int(statsd_port)
+    statsd.close_socket()
     if statsd_namespace:
         statsd.namespace = text(statsd_namespace)
     if statsd_constant_tags:
