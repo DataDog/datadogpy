@@ -446,6 +446,7 @@ class MonitorClient(object):
         options = None
         if args.options is not None:
             options = json.loads(args.options)
+
         if args.tags:
             tags = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
         else:
