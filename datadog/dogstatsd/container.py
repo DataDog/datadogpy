@@ -35,6 +35,8 @@ class Cgroup(object):
     CGROUPV2_BASE_CONTROLLER = ""  # controller used to identify the container-id in cgroup v2.
     HOST_CGROUP_NAMESPACE_INODE = 0xEFFFFFFB  # inode of the host cgroup namespace.
 
+    ENTITY_ID_ENV_VAR = "DD_ENTITY_ID"
+
     UUID_SOURCE = r"[0-9a-f]{8}[-_][0-9a-f]{4}[-_][0-9a-f]{4}[-_][0-9a-f]{4}[-_][0-9a-f]{12}"
     CONTAINER_SOURCE = r"[0-9a-f]{64}"
     TASK_SOURCE = r"[0-9a-f]{32}-\d+"
@@ -45,7 +47,8 @@ class Cgroup(object):
         if self._is_host_cgroup_namespace():
             self.container_id = self._read_cgroup_path()
             return
-        self.container_id = self._get_cgroup_from_inode()
+
+        self.container_id = "/".join(filter(None, [self._get_cgroup_from_inode(), self._get_entity_id()])).strip("/")
 
     def _is_host_cgroup_namespace(self):
         """Check if the current process is in a host cgroup namespace."""
@@ -109,3 +112,7 @@ class Cgroup(object):
                     return "in-{0}".format(inode)
 
         return None
+
+    def _get_entity_id(self):
+        """Return the Entity ID."""
+        return "en-{0}".format(os.environ[self.ENTITY_ID_ENV_VAR]) if os.environ.get(self.ENTITY_ID_ENV_VAR) else None

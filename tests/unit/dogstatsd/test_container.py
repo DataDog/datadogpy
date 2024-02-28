@@ -7,6 +7,8 @@
 Tests for container.py
 """
 
+import os
+
 import mock
 import pytest
 
@@ -180,4 +182,23 @@ def test_container_id_inode():
             "/sys/fs/cgroup/memory/",
             "/sys/fs/cgroup/"
         ]
+        mock_open.assert_called_once_with("/proc/self/cgroup", mode="r")
+
+
+@mock.patch.dict(os.environ, {"DD_ENTITY_ID": "init/1234-pod-uid/5678-container-name"})
+def test_container_id_entity_id():
+    """Test that the entity_id is returned when the container ID cannot be found."""
+
+    # Test that the entity_id is returned when the container ID cannot be found and there is no inode.
+    with mock.patch("datadog.dogstatsd.container.open", mock.mock_open(read_data="")) as mock_open:
+        with mock.patch("os.stat", mock.MagicMock(return_value=mock.Mock(st_ino=1234))):
+            reader = Cgroup()
+        assert reader.container_id == "en-init/1234-pod-uid/5678-container-name"
+        mock_open.assert_called_once_with("/proc/self/cgroup", mode="r")
+
+    # Test that the both inode and entity_id are returned when they are both found.
+    with mock.patch("datadog.dogstatsd.container.open", mock.mock_open(read_data="0::/")) as mock_open:
+        with mock.patch("os.stat", mock.MagicMock(return_value=mock.Mock(st_ino=1234))):
+            reader = Cgroup()
+        assert reader.container_id == "in-1234/en-init/1234-pod-uid/5678-container-name"
         mock_open.assert_called_once_with("/proc/self/cgroup", mode="r")
