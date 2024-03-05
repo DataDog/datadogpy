@@ -1963,3 +1963,16 @@ async def print_foo():
         self.assertEqual(statsd._max_payload_size, UDP_OPTIMAL_PAYLOAD_LENGTH)
         statsd.socket_path = "/foo"
         self.assertEqual(statsd._max_payload_size, UDS_OPTIMAL_PAYLOAD_LENGTH)
+
+    def test_post_fork_locks(self):
+        def inner():
+            statsd = DogStatsd(socket_path=None, port=8125)
+            # Statsd should survive this sequence of events
+            statsd.pre_fork()
+            statsd.get_socket()
+            statsd.post_fork()
+        t = Thread(target=inner)
+        t.daemon = True
+        t.start()
+        t.join(timeout=5)
+        self.assertFalse(t.is_alive())
