@@ -1370,10 +1370,7 @@ class DogStatsd(object):
 
         log.debug("[%d] post_fork for %s", os.getpid(), self)
 
-        with self._socket_lock:
-            if self.socket or self.telemetry_socket:
-                log.warning("Open socket detected after fork. Call pre_fork() before os.fork().")
-                self.close_socket()
+        self.close_socket()
 
         self._forking = False
 
