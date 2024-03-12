@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.49.0 / 2024-03-12
+
+* [Added] Add --restricted_roles option to Monitors API. See [#809](https://github.com/DataDog/datadogpy/pull/809).
+* [Added] Support inode resolution mechanism for Origin Detection. See [#813](https://github.com/DataDog/datadogpy/pull/813).
+* [Fixed] Fix potential deadlock during process fork. See [#817](https://github.com/DataDog/datadogpy/pull/817).
+
 ## 0.48.0 / 2024-01-12
 
 * [Added] Improve forking support. See [#804](https://github.com/DataDog/datadogpy/pull/804).
