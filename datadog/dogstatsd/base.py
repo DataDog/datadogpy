@@ -734,7 +734,6 @@ class DogStatsd(object):
 
         self._config_lock.acquire()
 
-        # XXX Remove if `disable_buffering` default is changed to False
         self._send = self._send_to_buffer
 
         if max_buffer_size is not None:
@@ -750,7 +749,6 @@ class DogStatsd(object):
         try:
             self.flush()
         finally:
-            # XXX Remove if `disable_buffering` default is changed to False
             if self._disable_buffering:
                 self._send = self._send_to_server
 
