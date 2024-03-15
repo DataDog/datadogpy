@@ -740,8 +740,6 @@ class DogStatsd(object):
         if max_buffer_size is not None:
             log.warning("The parameter max_buffer_size is now deprecated and is not used anymore")
 
-        self._reset_buffer()
-
     def close_buffer(self):
         """
         Flush the buffer and switch back to single metric packets.
