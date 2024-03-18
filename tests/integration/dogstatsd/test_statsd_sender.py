@@ -83,3 +83,21 @@ def test_fork_hooks(disable_background_sender, disable_buffering):
 
     foo.close()
     bar.close()
+
+
+def test_buffering_with_context():
+    statsd = DogStatsd(
+        telemetry_min_flush_interval=0,
+        disable_buffering=False,
+    )
+
+    foo, bar = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM, 0)
+    statsd.socket = foo
+
+    statsd.increment("first")
+    with statsd: # should not erase previously buffered metrics
+        pass
+
+    bar.settimeout(5)
+    msg = bar.recv(8192)
+    assert msg == b"first:1|c\n"

@@ -734,13 +734,10 @@ class DogStatsd(object):
 
         self._config_lock.acquire()
 
-        # XXX Remove if `disable_buffering` default is changed to False
         self._send = self._send_to_buffer
 
         if max_buffer_size is not None:
             log.warning("The parameter max_buffer_size is now deprecated and is not used anymore")
-
-        self._reset_buffer()
 
     def close_buffer(self):
         """
@@ -752,7 +749,6 @@ class DogStatsd(object):
         try:
             self.flush()
         finally:
-            # XXX Remove if `disable_buffering` default is changed to False
             if self._disable_buffering:
                 self._send = self._send_to_server
 
