@@ -1,5 +1,6 @@
 # The Datadog Python library
 
+[![CI - Test](https://github.com/DataDog/datadogpy/actions/workflows/test.yml/badge.svg)](https://github.com/DataDog/datadogpy/actions/workflows/test.yml)
 [![Documentation Status](https://readthedocs.org/projects/datadogpy/badge/?version=latest)](https://readthedocs.org/projects/datadogpy/?badge=latest)
 [![PyPI - Version](https://img.shields.io/pypi/v/datadog.svg)](https://pypi.org/project/datadog)
 [![PyPI - Downloads](https://pepy.tech/badge/datadog)](https://pepy.tech/project/datadog)
