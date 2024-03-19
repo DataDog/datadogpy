@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.49.1 / 2024-03-18
+
+* [Fixed] Fix potential metric loss when open_buffer is combined with disable_buffering=False. See [#820](https://github.com/DataDog/datadogpy/pull/820).
+
 ## 0.49.0 / 2024-03-12
 
 * [Added] Add --restricted_roles option to Monitors API. See [#809](https://github.com/DataDog/datadogpy/pull/809).
