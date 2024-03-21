@@ -173,6 +173,9 @@ class DogStatsd(object):
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by dogstatsd client.
         :type DATADOG_TAGS: comma-delimited string
 
+        :envvar DD_TAGS: Additional tags to attach to every metric reported by dogstatsd client.
+        :type DD_TAGS: comma-delimited string
+
         :envvar DD_ENTITY_ID: Tag to identify the client entity.
         :type DD_ENTITY_ID: string
 
@@ -388,7 +391,7 @@ class DogStatsd(object):
         self.encoding = "utf-8"
 
         # Options
-        env_tags = [tag for tag in os.environ.get("DATADOG_TAGS", "").split(",") if tag]
+        env_tags = [tag for tag in os.environ.get("DATADOG_TAGS", os.environ.get("DD_TAGS", "")).split(",") if tag]
         # Inject values of DD_* environment variables as global tags.
         has_entity_id = False
         for var, tag_name in DD_ENV_TAGS_MAPPING.items():

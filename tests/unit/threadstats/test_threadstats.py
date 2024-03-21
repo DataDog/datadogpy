@@ -773,6 +773,97 @@ class TestUnitThreadStats(unittest.TestCase):
         assert event['tags'] == [event1_tag] + constant_tags + test_tags
         dog.start(flush_interval=1, roll_up_interval=1)
 
+    def test_tags_from_environment_dd_tags(self):
+        test_tags = ['country:china', 'age:45', 'blue']
+        with preserve_environment_variable('DD_TAGS'):
+            os.environ['DD_TAGS'] = ','.join(test_tags)
+            dog = ThreadStats()
+        dog.start(roll_up_interval=10, flush_in_thread=False)
+        reporter = dog.reporter = MemoryReporter()
+
+        # Add two events
+        event1_title = "Event 1 title"
+        event2_title = "Event 1 title"
+        event1_text = "Event 1 text"
+        event2_text = "Event 2 text"
+        dog.event(event1_title, event1_text)
+        dog.event(event2_title, event2_text)
+
+        # Flush and test
+        dog.flush()
+        event1, event2 = reporter.events
+        assert event1['title'] == event1_title
+        assert event1['text'] == event1_text
+        assert event1['tags'] == test_tags
+        assert event2['title'] == event2_title
+        assert event2['text'] == event2_text
+        assert event2['text'] == event2_text
+        assert event2['tags'] == test_tags
+
+        # Test more parameters
+        reporter.events = []
+        event1_priority = "low"
+        event1_date_happened = 1375296969
+        event1_tag = "Event 2 tag"
+        dog.event(event1_title, event1_text, priority=event1_priority,
+                  date_happened=event1_date_happened, tags=[event1_tag])
+
+        # Flush and test
+        dog.flush()
+        event, = reporter.events
+        assert event['title'] == event1_title
+        assert event['text'] == event1_text
+        assert event['priority'] == event1_priority
+        assert event['date_happened'] == event1_date_happened
+        assert event['tags'] == [event1_tag] + test_tags
+        dog.start(flush_interval=1, roll_up_interval=1)
+
+    def test_tags_from_environment_and_constant_dd_tags(self):
+        test_tags = ['country:china', 'age:45', 'blue']
+        constant_tags = ['country:canada', 'red']
+        with preserve_environment_variable('DD_TAGS'):
+            os.environ['DD_TAGS'] = ','.join(test_tags)
+            dog = ThreadStats(constant_tags=constant_tags)
+        dog.start(roll_up_interval=10, flush_in_thread=False)
+        reporter = dog.reporter = MemoryReporter()
+
+        # Add two events
+        event1_title = "Event 1 title"
+        event2_title = "Event 1 title"
+        event1_text = "Event 1 text"
+        event2_text = "Event 2 text"
+        dog.event(event1_title, event1_text)
+        dog.event(event2_title, event2_text)
+
+        # Flush and test
+        dog.flush()
+        event1, event2 = reporter.events
+        assert event1['title'] == event1_title
+        assert event1['text'] == event1_text
+        assert event1['tags'] == constant_tags + test_tags
+        assert event2['title'] == event2_title
+        assert event2['text'] == event2_text
+        assert event2['text'] == event2_text
+        assert event2['tags'] == constant_tags + test_tags
+
+        # Test more parameters
+        reporter.events = []
+        event1_priority = "low"
+        event1_date_happened = 1375296969
+        event1_tag = "Event 2 tag"
+        dog.event(event1_title, event1_text, priority=event1_priority,
+                  date_happened=event1_date_happened, tags=[event1_tag])
+
+        # Flush and test
+        dog.flush()
+        event, = reporter.events
+        assert event['title'] == event1_title
+        assert event['text'] == event1_text
+        assert event['priority'] == event1_priority
+        assert event['date_happened'] == event1_date_happened
+        assert event['tags'] == [event1_tag] + constant_tags + test_tags
+        dog.start(flush_interval=1, roll_up_interval=1)
+
     def test_tags_from_environment_env_service_version(self):
         test_tags = set(['env:staging', 'service:food', 'version:1.2.3'])
         with EnvVars(

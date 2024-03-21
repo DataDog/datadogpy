@@ -1625,6 +1625,27 @@ async def print_foo():
         self.assertEqual(metric, dogstatsd.socket.recv())
         self.assertEqual(telemetry_metrics(tags=tags, bytes_sent=len(metric)), dogstatsd.socket.recv())
 
+    def test_tags_from_environment_dd_tags(self):
+        with preserve_environment_variable('DD_TAGS'):
+            os.environ['DD_TAGS'] = 'country:china,age:45,blue'
+            dogstatsd = DogStatsd(telemetry_min_flush_interval=0)
+        dogstatsd.socket = FakeSocket()
+        dogstatsd.gauge('gt', 123.4)
+        metric = 'gt:123.4|g|#country:china,age:45,blue\n'
+        self.assertEqual(metric, dogstatsd.socket.recv())
+        self.assertEqual(telemetry_metrics(tags="country:china,age:45,blue", bytes_sent=len(metric)), dogstatsd.socket.recv())
+
+    def test_tags_from_environment_and_constant_dd_tags(self):
+        with preserve_environment_variable('DD_TAGS'):
+            os.environ['DD_TAGS'] = 'country:china,age:45,blue'
+            dogstatsd = DogStatsd(constant_tags=['country:canada', 'red'], telemetry_min_flush_interval=0)
+        dogstatsd.socket = FakeSocket()
+        dogstatsd.gauge('gt', 123.4)
+        tags = "country:canada,red,country:china,age:45,blue"
+        metric = 'gt:123.4|g|#' + tags + '\n'
+        self.assertEqual(metric, dogstatsd.socket.recv())
+        self.assertEqual(telemetry_metrics(tags=tags, bytes_sent=len(metric)), dogstatsd.socket.recv())
+
     def test_entity_tag_from_environment(self):
         with preserve_environment_variable('DD_ENTITY_ID'):
             os.environ['DD_ENTITY_ID'] = '04652bb7-19b7-11e9-9cc6-42010a9c016d'
