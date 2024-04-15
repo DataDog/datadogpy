@@ -48,12 +48,6 @@ DEFAULT_PORT = 8125
 DEFAULT_FLUSH_INTERVAL = 0.3
 MIN_FLUSH_INTERVAL = 0.0001
 
-# Tag name of entity_id
-ENTITY_ID_TAG_NAME = "dd.internal.entity_id"
-
-# Env var name of entity_id
-ENTITY_ID_ENV_VAR = "DD_ENTITY_ID"
-
 # Env var to enable/disable sending the container ID field
 ORIGIN_DETECTION_ENABLED = "DD_ORIGIN_DETECTION_ENABLED"
 
@@ -66,7 +60,7 @@ MIN_SEND_BUFFER_SIZE = 32 * 1024
 
 # Mapping of each "DD_" prefixed environment variable to a specific tag name
 DD_ENV_TAGS_MAPPING = {
-    ENTITY_ID_ENV_VAR: ENTITY_ID_TAG_NAME,
+    "DD_ENTITY_ID": "dd.internal.entity_id",
     "DD_ENV": "env",
     "DD_SERVICE": "service",
     "DD_VERSION": "version",
@@ -277,7 +271,7 @@ class DogStatsd(object):
         metrics with container tags.
         This feature requires Datadog Agent version >=6.35.0 && <7.0.0 or Agent versions >=7.35.0.
         When configured, the provided container ID is prioritized over the container ID discovered
-        via Origin Detection. When DD_ENTITY_ID is set, this value is ignored.
+        via Origin Detection.
         Default: None.
         :type container_id: string
 
@@ -288,7 +282,6 @@ class DogStatsd(object):
         Origin detection can be disabled by configuring the environment variabe DD_ORIGIN_DETECTION_ENABLED=false
         The client tries to read the container ID by parsing the file /proc/self/cgroup.
         This is not supported on Windows.
-        The client prioritizes the value passed via DD_ENTITY_ID (if set) over the container ID.
         Default: True.
         More on this: https://docs.datadoghq.com/developers/dogstatsd/?tab=kubernetes#origin-detection-over-udp
         :type origin_detection_enabled: boolean
@@ -390,13 +383,10 @@ class DogStatsd(object):
         # Options
         env_tags = [tag for tag in os.environ.get("DATADOG_TAGS", "").split(",") if tag]
         # Inject values of DD_* environment variables as global tags.
-        has_entity_id = False
         for var, tag_name in DD_ENV_TAGS_MAPPING.items():
             value = os.environ.get(var, "")
             if value:
                 env_tags.append("{name}:{value}".format(name=tag_name, value=value))
-                if var == ENTITY_ID_ENV_VAR:
-                    has_entity_id = True
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
@@ -408,11 +398,10 @@ class DogStatsd(object):
 
         # Origin detection
         self._container_id = None
-        if not has_entity_id:
-            origin_detection_enabled = self._is_origin_detection_enabled(
-                container_id, origin_detection_enabled, has_entity_id
-            )
-            self._set_container_id(container_id, origin_detection_enabled)
+        origin_detection_enabled = self._is_origin_detection_enabled(
+            container_id, origin_detection_enabled
+        )
+        self._set_container_id(container_id, origin_detection_enabled)
 
         # init telemetry version
         self._client_tags = [
@@ -1257,18 +1246,15 @@ class DogStatsd(object):
             return self.constant_tags
         return tags
 
-    def _is_origin_detection_enabled(self, container_id, origin_detection_enabled, has_entity_id):
+    def _is_origin_detection_enabled(self, container_id, origin_detection_enabled):
         """
         Returns whether the client should fill the container field.
-        If DD_ENTITY_ID is set, we don't send the container ID
         If a user-defined container ID is provided, we don't ignore origin detection
         as dd.internal.entity_id is prioritized over the container field for backward compatibility.
-        If DD_ENTITY_ID is not set, we try to fill the container field automatically unless
-        DD_ORIGIN_DETECTION_ENABLED is explicitly set to false.
+        We try to fill the container field automatically unless DD_ORIGIN_DETECTION_ENABLED is explicitly set to false.
         """
-        if not origin_detection_enabled or has_entity_id or container_id is not None:
+        if not origin_detection_enabled or container_id is not None:
             # origin detection is explicitly disabled
-            # or DD_ENTITY_ID was found
             # or a user-defined container ID was provided
             return False
         value = os.environ.get(ORIGIN_DETECTION_ENABLED, "")

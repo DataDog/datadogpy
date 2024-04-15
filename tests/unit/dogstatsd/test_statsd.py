@@ -1625,6 +1625,20 @@ async def print_foo():
         self.assertEqual(metric, dogstatsd.socket.recv())
         self.assertEqual(telemetry_metrics(tags=tags, bytes_sent=len(metric)), dogstatsd.socket.recv())
 
+    def test_entity_id_and_container_id(self):
+        with preserve_environment_variable('DD_ENTITY_ID'):
+            os.environ['DD_ENTITY_ID'] = '04652bb7-19b7-11e9-9cc6-42010a9c016d'
+            dogstatsd = DogStatsd(telemetry_min_flush_interval=0)
+        dogstatsd.socket = FakeSocket()
+        dogstatsd._container_id = "fake-container-id"
+
+        dogstatsd.increment("page.views")
+        dogstatsd.flush()
+        tags = "dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d"
+        metric = 'page.views:1|c|#' + tags + '|c:fake-container-id\n'
+        self.assertEqual(metric, dogstatsd.socket.recv())
+        self.assertEqual(telemetry_metrics(tags=tags, bytes_sent=len(metric)), dogstatsd.socket.recv())
+
     def test_entity_tag_from_environment(self):
         with preserve_environment_variable('DD_ENTITY_ID'):
             os.environ['DD_ENTITY_ID'] = '04652bb7-19b7-11e9-9cc6-42010a9c016d'
