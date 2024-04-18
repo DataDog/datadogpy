@@ -764,6 +764,7 @@ class DogStatsd(object):
         value,  # type: float
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
+        timestamp=0,  # type:int
     ):  # type(...) -> None
         """
         Record the value of a gauge, optionally setting a list of tags and a
@@ -772,7 +773,7 @@ class DogStatsd(object):
         >>> statsd.gauge("users.online", 123)
         >>> statsd.gauge("active.connections", 1001, tags=["protocol:http"])
         """
-        return self._report(metric, "g", value, tags, sample_rate)
+        return self._report(metric, "g", value, tags, sample_rate, timestamp)
 
     def increment(
         self,
@@ -780,6 +781,7 @@ class DogStatsd(object):
         value=1,  # type: float
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
+        timestamp=0,  # type:int
     ):  # type: (...) -> None
         """
         Increment a counter, optionally setting a value, tags and a sample
@@ -788,7 +790,7 @@ class DogStatsd(object):
         >>> statsd.increment("page.views")
         >>> statsd.increment("files.transferred", 124)
         """
-        self._report(metric, "c", value, tags, sample_rate)
+        self._report(metric, "c", value, tags, sample_rate, timestamp)
 
     def decrement(
         self,
@@ -796,6 +798,7 @@ class DogStatsd(object):
         value=1,  # type: float
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
+        timestamp=0,  # type:int
     ):  # type(...) -> None
         """
         Decrement a counter, optionally setting a value, tags and a sample
@@ -805,7 +808,7 @@ class DogStatsd(object):
         >>> statsd.decrement("active.connections", 2)
         """
         metric_value = -value if value else value
-        self._report(metric, "c", metric_value, tags, sample_rate)
+        self._report(metric, "c", metric_value, tags, sample_rate, timestamp)
 
     def histogram(
         self,
@@ -934,23 +937,27 @@ class DogStatsd(object):
                     log.error("Unexpected error: %s", str(e))
                 self.telemetry_socket = None
 
-    def _serialize_metric(self, metric, metric_type, value, tags, sample_rate=1):
+    def _serialize_metric(
+        self, metric, metric_type, value, tags, sample_rate=1, timestamp=0
+    ):
         # Create/format the metric packet
-        return "%s%s:%s|%s%s%s%s" % (
+        return "%s%s:%s|%s%s%s%s%s" % (
             (self.namespace + ".") if self.namespace else "",
             metric,
             value,
             metric_type,
             ("|@" + text(sample_rate)) if sample_rate != 1 else "",
             ("|#" + ",".join(normalize_tags(tags))) if tags else "",
-            ("|c:" + self._container_id if self._container_id else "")
+            ("|c:" + self._container_id if self._container_id else ""),
+            ("|T" + text(timestamp)) if timestamp > 0 else "",
         )
 
-    def _report(self, metric, metric_type, value, tags, sample_rate):
+    def _report(self, metric, metric_type, value, tags, sample_rate, timestamp=0):
         """
         Create a metric packet and send it.
 
-        More information about the packets' format: http://docs.datadoghq.com/guides/dogstatsd/
+        More information about the packets' format:
+        https://docs.datadoghq.com/developers/dogstatsd/datagram_shell/?tab=metrics#the-dogstatsd-protocol
         """
         if value is None:
             return
@@ -967,9 +974,16 @@ class DogStatsd(object):
         if sample_rate != 1 and random() > sample_rate:
             return
 
+        # timestamps (protocol v1.3) only allowed on gauges and counts
+        allows_timestamp = metric_type == "g" or metric_type == "c"
+        if not allows_timestamp or timestamp < 0:
+            timestamp = 0
+
         # Resolve the full tag list
         tags = self._add_constant_tags(tags)
-        payload = self._serialize_metric(metric, metric_type, value, tags, sample_rate)
+        payload = self._serialize_metric(
+            metric, metric_type, value, tags, sample_rate, timestamp
+        )
 
         # Send it
         self._send(payload)
