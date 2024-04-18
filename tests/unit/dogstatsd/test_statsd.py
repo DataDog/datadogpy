@@ -308,6 +308,14 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.gauge('gauge', 123.4)
         self.assert_equal_telemetry('gauge:123.4|g\n', self.recv(2))
 
+    def test_gauge_with_ts(self):
+        self.statsd.gauge("gauge", 123.4, timestamp=1066)
+        self.assert_equal_telemetry("gauge:123.4|g|T1066\n", self.recv(2))
+
+    def test_gauge_with_invalid_ts_should_be_ignored(self):
+        self.statsd.gauge("gauge", 123.4, timestamp=-500)
+        self.assert_equal_telemetry("gauge:123.4|g\n", self.recv(2))
+
     def test_counter(self):
         self.statsd.increment('page.views')
         self.statsd.flush()
@@ -327,6 +335,21 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.decrement('page.views', 12)
         self.statsd.flush()
         self.assert_equal_telemetry('page.views:-12|c\n', self.recv(2))
+
+    def test_counter_with_ts(self):
+        self.statsd.increment("page.views", timestamp=1066)
+        self.statsd.flush()
+        self.assert_equal_telemetry("page.views:1|c|T1066\n", self.recv(2))
+
+        self.statsd._reset_telemetry()
+        self.statsd.increment("page.views", 11, timestamp=2121)
+        self.statsd.flush()
+        self.assert_equal_telemetry("page.views:11|c|T2121\n", self.recv(2))
+
+    def test_counter_with_invalid_ts_should_be_ignored(self):
+        self.statsd.increment("page.views", timestamp=-1066)
+        self.statsd.flush()
+        self.assert_equal_telemetry("page.views:1|c\n", self.recv(2))
 
     def test_histogram(self):
         self.statsd.histogram('histo', 123.4)
@@ -517,7 +540,6 @@ class TestDogStatsd(unittest.TestCase):
 
         # check that the method does not fail with a small payload
         self.statsd.event("title", "message")
-
 
     def test_service_check(self):
         now = int(time.time())
@@ -1106,7 +1128,6 @@ async def print_foo():
             self.recv(2),
             telemetry=expected_metrics1)
 
-
         expected2 = 'page.views:123|g\ntimer:123|ms\n'
         self.assert_equal_telemetry(
             expected2,
@@ -1276,7 +1297,6 @@ async def print_foo():
         self.statsd.bytes_dropped_queue = 8
         self.statsd.packets_dropped_queue = 9
 
-
         self.statsd.open_buffer()
         self.statsd.gauge('page.views', 123)
         self.statsd.close_buffer()
@@ -1382,7 +1402,6 @@ async def print_foo():
         self.assert_equal_telemetry(metric, fake_socket.recv(2), telemetry=telemetry_metrics(metrics=2, bytes_sent=len(metric)))
         # assert that _last_flush_time has been updated
         self.assertTrue(time1 < dogstatsd._last_flush_time)
-
 
     def test_dedicated_udp_telemetry_dest(self):
         listener_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
