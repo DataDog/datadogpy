@@ -309,11 +309,11 @@ class TestDogStatsd(unittest.TestCase):
         self.assert_equal_telemetry('gauge:123.4|g\n', self.recv(2))
 
     def test_gauge_with_ts(self):
-        self.statsd.gauge("gauge", 123.4, timestamp=1066)
+        self.statsd.gauge_with_timestamp("gauge", 123.4, timestamp=1066)
         self.assert_equal_telemetry("gauge:123.4|g|T1066\n", self.recv(2))
 
     def test_gauge_with_invalid_ts_should_be_ignored(self):
-        self.statsd.gauge("gauge", 123.4, timestamp=-500)
+        self.statsd.gauge_with_timestamp("gauge", 123.4, timestamp=-500)
         self.assert_equal_telemetry("gauge:123.4|g\n", self.recv(2))
 
     def test_counter(self):
@@ -337,17 +337,17 @@ class TestDogStatsd(unittest.TestCase):
         self.assert_equal_telemetry('page.views:-12|c\n', self.recv(2))
 
     def test_counter_with_ts(self):
-        self.statsd.increment("page.views", timestamp=1066)
+        self.statsd.increment_with_timestamp("page.views", timestamp=1066)
         self.statsd.flush()
         self.assert_equal_telemetry("page.views:1|c|T1066\n", self.recv(2))
 
         self.statsd._reset_telemetry()
-        self.statsd.increment("page.views", 11, timestamp=2121)
+        self.statsd.increment_with_timestamp("page.views", 11, timestamp=2121)
         self.statsd.flush()
         self.assert_equal_telemetry("page.views:11|c|T2121\n", self.recv(2))
 
     def test_counter_with_invalid_ts_should_be_ignored(self):
-        self.statsd.increment("page.views", timestamp=-1066)
+        self.statsd.increment_with_timestamp("page.views", timestamp=-1066)
         self.statsd.flush()
         self.assert_equal_telemetry("page.views:1|c\n", self.recv(2))
 

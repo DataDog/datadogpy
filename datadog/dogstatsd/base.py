@@ -775,13 +775,32 @@ class DogStatsd(object):
         """
         return self._report(metric, "g", value, tags, sample_rate, timestamp)
 
+    # Minimum Datadog Agent version: 7.40.0
+    def gauge_with_timestamp(
+        self,
+        metric,  # type: Text
+        value,  # type: float
+        timestamp,  # type: int
+        tags=None,  # type: Optional[List[str]]
+        sample_rate=None,  # type: Optional[float]
+    ):  # type(...) -> None
+        """u
+        Record the value of a gauge with a Unix timestamp (in seconds),
+        optionally setting a list of tags and a sample rate.
+
+        Minimum Datadog Agent version: 7.40.0
+
+        >>> statsd.gauge("users.online", 123, 1713804588)
+        >>> statsd.gauge("active.connections", 1001, 1713804588, tags=["protocol:http"])
+        """
+        return self._report(metric, "g", value, tags, sample_rate, timestamp)
+
     def increment(
         self,
         metric,  # type: Text
         value=1,  # type: float
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
-        timestamp=0,  # type:int
     ):  # type: (...) -> None
         """
         Increment a counter, optionally setting a value, tags and a sample
@@ -789,6 +808,26 @@ class DogStatsd(object):
 
         >>> statsd.increment("page.views")
         >>> statsd.increment("files.transferred", 124)
+        """
+        self._report(metric, "c", value, tags, sample_rate)
+
+    # Minimum Datadog Agent version: 7.40.0
+    def increment_with_timestamp(
+        self,
+        metric,  # type: Text
+        value=1,  # type: float
+        timestamp=0,  # type: int
+        tags=None,  # type: Optional[List[str]]
+        sample_rate=None,  # type: Optional[float]
+    ):  # type: (...) -> None
+        """
+        Increment a counter, optionally setting a value, a Unix timestamp
+        in seconds, tags and a sample rate.
+
+        Minimum Datadog Agent version: 7.40.0
+
+        >>> statsd.increment("page.views", timestamp=1713804588)
+        >>> statsd.increment("files.transferred", 124, timestamp=1713804588)
         """
         self._report(metric, "c", value, tags, sample_rate, timestamp)
 
@@ -798,11 +837,31 @@ class DogStatsd(object):
         value=1,  # type: float
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
-        timestamp=0,  # type:int
     ):  # type(...) -> None
         """
         Decrement a counter, optionally setting a value, tags and a sample
         rate.
+
+        >>> statsd.decrement("files.remaining")
+        >>> statsd.decrement("active.connections", 2)
+        """
+        metric_value = -value if value else value
+        self._report(metric, "c", metric_value, tags, sample_rate)
+
+    # Minimum Datadog Agent version: 7.40.0
+    def decrement_with_timestamp(
+        self,
+        metric,  # type: Text
+        value=1,  # type: float
+        timestamp=0,  # type:int
+        tags=None,  # type: Optional[List[str]]
+        sample_rate=None,  # type: Optional[float]
+    ):  # type(...) -> None
+        """
+        Decrement a counter, optionally setting a value, a Unix timestamp
+        in seconds, tags and a sample rate.
+
+        Minimum Datadog Agent version: 7.40.0
 
         >>> statsd.decrement("files.remaining")
         >>> statsd.decrement("active.connections", 2)
