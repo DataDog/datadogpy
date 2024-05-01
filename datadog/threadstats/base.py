@@ -55,6 +55,9 @@ class ThreadStats(object):
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by ThreadStats client
         :type DATADOG_TAGS: comma-delimited string
 
+        :envvar DD_TAGS: Additional tags to attach to every metric reported by ThreadStats client
+        :type DD_TAGS: comma-delimited string
+
         :envvar DD_ENV: the env of the service running the ThreadStats client.
         If set, it is appended to the constant (global) tags of the client.
         :type DD_ENV: string
@@ -69,7 +72,7 @@ class ThreadStats(object):
         """
         # Parameters
         self.namespace = namespace
-        env_tags = [tag for tag in os.environ.get("DATADOG_TAGS", "").split(",") if tag]
+        env_tags = [tag for tag in os.environ.get("DATADOG_TAGS", os.environ.get("DD_TAGS", "")).split(",") if tag]
         for var, tag_name in DD_ENV_TAGS_MAPPING.items():
             value = os.environ.get(var, "")
             if value:
