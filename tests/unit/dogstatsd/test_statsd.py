@@ -304,6 +304,19 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.set('set', 123)
         self.assert_equal_telemetry('set:123|s\n', self.recv(2))
 
+    def test_report(self):
+        self.statsd._report('report', 'g', 123.4, tags=None, sample_rate=None)
+        self.assert_equal_telemetry('report:123.4|g\n', self.recv(2))
+
+    def test_report_metric_with_unsupported_ts(self):
+        self.statsd._reset_telemetry()
+        self.statsd._report('report', 'h', 123.5, tags=None, sample_rate=None, timestamp=100)
+        self.assert_equal_telemetry('report:123.5|h\n', self.recv(2))
+
+        self.statsd._reset_telemetry()
+        self.statsd._report('set', 's', 123, tags=None, sample_rate=None, timestamp=100)
+        self.assert_equal_telemetry('set:123|s\n', self.recv(2))
+
     def test_gauge(self):
         self.statsd.gauge('gauge', 123.4)
         self.assert_equal_telemetry('gauge:123.4|g\n', self.recv(2))
