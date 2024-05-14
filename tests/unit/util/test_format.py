@@ -6,7 +6,7 @@ import unittest
 
 import pytest
 
-from datadog.util.format import construct_url, normalize_tags
+from datadog.util.format import construct_url, normalize_tags, normalize_metric_name
 
 
 class TestConstructURL:
@@ -52,3 +52,19 @@ class TestNormalizeTags:
     @pytest.mark.parametrize("original_tags,expected_tags", test_data)
     def test_normalize_tags(self, original_tags, expected_tags):
             assert normalize_tags(original_tags) == expected_tags
+
+class TestNormalizeMetricName:
+    """
+    Test of the format's `normalize_metric_name` functionality
+    """
+    test_data = [
+        ('', ''),
+        ('just a metric name', 'just_a_metric_name'),
+        ('xyz.abc!@#$%^&*()0987654321{}}{', 'xyz.abc__________0987654321____'),
+        ('xyz.abc_123', 'xyz.abc_123'),
+        ('абśжż西アطر', 'абśжż西アطر'),
+        ('a😃😃b', 'a__b'),
+    ]
+    @pytest.mark.parametrize("original_metric_name,expected_metric_name", test_data)
+    def test_normalize_metric_name(self, original_metric_name, expected_metric_name):
+            assert normalize_metric_name(original_metric_name) == expected_metric_name

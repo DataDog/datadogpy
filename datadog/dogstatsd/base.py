@@ -34,7 +34,7 @@ from datadog.dogstatsd.context import (
 from datadog.dogstatsd.route import get_default_route
 from datadog.dogstatsd.container import Cgroup
 from datadog.util.compat import is_p3k, text
-from datadog.util.format import normalize_tags
+from datadog.util.format import normalize_tags, normalize_metric_name
 from datadog.version import __version__
 
 # Logging
@@ -391,7 +391,7 @@ class DogStatsd(object):
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
         if namespace is not None:
-            namespace = text(namespace)
+            namespace = normalize_metric_name(text(namespace))
         self.namespace = namespace
         self.use_ms = use_ms
         self.default_sample_rate = default_sample_rate
@@ -938,7 +938,7 @@ class DogStatsd(object):
         # Create/format the metric packet
         return "%s%s:%s|%s%s%s%s" % (
             (self.namespace + ".") if self.namespace else "",
-            metric,
+            normalize_metric_name(metric),
             value,
             metric_type,
             ("|@" + text(sample_rate)) if sample_rate != 1 else "",

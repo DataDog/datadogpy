@@ -10,7 +10,8 @@ import re
 from datadog.util.compat import conditional_lru_cache
 
 TAG_INVALID_CHARS_RE = re.compile(r"[^\w\d_\-:/\.]", re.UNICODE)
-TAG_INVALID_CHARS_SUBS = "_"
+METRIC_NAME_INVALID_CHARS_RE = re.compile(r"[^\w\d_\.]", re.UNICODE)
+INVALID_CHARS_SUBS = "_"
 
 
 def pretty_json(obj):
@@ -33,10 +34,15 @@ def force_to_epoch_seconds(epoch_sec_or_dt):
 
 @conditional_lru_cache
 def _normalize_tags_with_cache(tag_list):
-    return [TAG_INVALID_CHARS_RE.sub(TAG_INVALID_CHARS_SUBS, tag) for tag in tag_list]
+    return [TAG_INVALID_CHARS_RE.sub(INVALID_CHARS_SUBS, tag) for tag in tag_list]
 
 
 def normalize_tags(tag_list):
     # We have to turn our input tag list into a non-mutable tuple for it to
     # be hashable (and thus usable) by the @lru_cache decorator.
     return _normalize_tags_with_cache(tuple(tag_list))
+
+
+@conditional_lru_cache
+def normalize_metric_name(metric_name):
+    return METRIC_NAME_INVALID_CHARS_RE.sub(INVALID_CHARS_SUBS, metric_name)
