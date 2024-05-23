@@ -304,9 +304,30 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.set('set', 123)
         self.assert_equal_telemetry('set:123|s\n', self.recv(2))
 
+    def test_report(self):
+        self.statsd._report('report', 'g', 123.4, tags=None, sample_rate=None)
+        self.assert_equal_telemetry('report:123.4|g\n', self.recv(2))
+
+    def test_report_metric_with_unsupported_ts(self):
+        self.statsd._reset_telemetry()
+        self.statsd._report('report', 'h', 123.5, tags=None, sample_rate=None, timestamp=100)
+        self.assert_equal_telemetry('report:123.5|h\n', self.recv(2))
+
+        self.statsd._reset_telemetry()
+        self.statsd._report('set', 's', 123, tags=None, sample_rate=None, timestamp=100)
+        self.assert_equal_telemetry('set:123|s\n', self.recv(2))
+
     def test_gauge(self):
         self.statsd.gauge('gauge', 123.4)
         self.assert_equal_telemetry('gauge:123.4|g\n', self.recv(2))
+
+    def test_gauge_with_ts(self):
+        self.statsd.gauge_with_timestamp("gauge", 123.4, timestamp=1066)
+        self.assert_equal_telemetry("gauge:123.4|g|T1066\n", self.recv(2))
+
+    def test_gauge_with_invalid_ts_should_be_ignored(self):
+        self.statsd.gauge_with_timestamp("gauge", 123.4, timestamp=-500)
+        self.assert_equal_telemetry("gauge:123.4|g\n", self.recv(2))
 
     def test_counter(self):
         self.statsd.increment('page.views')
@@ -327,6 +348,26 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.decrement('page.views', 12)
         self.statsd.flush()
         self.assert_equal_telemetry('page.views:-12|c\n', self.recv(2))
+
+    def test_count(self):
+        self.statsd.count('page.views', 11)
+        self.statsd.flush()
+        self.assert_equal_telemetry('page.views:11|c\n', self.recv(2))
+
+    def test_count_with_ts(self):
+        self.statsd.count_with_timestamp("page.views", 1, timestamp=1066)
+        self.statsd.flush()
+        self.assert_equal_telemetry("page.views:1|c|T1066\n", self.recv(2))
+
+        self.statsd._reset_telemetry()
+        self.statsd.count_with_timestamp("page.views", 11, timestamp=2121)
+        self.statsd.flush()
+        self.assert_equal_telemetry("page.views:11|c|T2121\n", self.recv(2))
+
+    def test_count_with_invalid_ts_should_be_ignored(self):
+        self.statsd.count_with_timestamp("page.views", 1, timestamp=-1066)
+        self.statsd.flush()
+        self.assert_equal_telemetry("page.views:1|c\n", self.recv(2))
 
     def test_histogram(self):
         self.statsd.histogram('histo', 123.4)
@@ -517,7 +558,6 @@ class TestDogStatsd(unittest.TestCase):
 
         # check that the method does not fail with a small payload
         self.statsd.event("title", "message")
-
 
     def test_service_check(self):
         now = int(time.time())
@@ -1106,7 +1146,6 @@ async def print_foo():
             self.recv(2),
             telemetry=expected_metrics1)
 
-
         expected2 = 'page.views:123|g\ntimer:123|ms\n'
         self.assert_equal_telemetry(
             expected2,
@@ -1276,7 +1315,6 @@ async def print_foo():
         self.statsd.bytes_dropped_queue = 8
         self.statsd.packets_dropped_queue = 9
 
-
         self.statsd.open_buffer()
         self.statsd.gauge('page.views', 123)
         self.statsd.close_buffer()
@@ -1382,7 +1420,6 @@ async def print_foo():
         self.assert_equal_telemetry(metric, fake_socket.recv(2), telemetry=telemetry_metrics(metrics=2, bytes_sent=len(metric)))
         # assert that _last_flush_time has been updated
         self.assertTrue(time1 < dogstatsd._last_flush_time)
-
 
     def test_dedicated_udp_telemetry_dest(self):
         listener_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
