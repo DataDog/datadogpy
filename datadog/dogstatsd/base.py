@@ -16,6 +16,7 @@ import errno
 import threading
 import time
 from threading import Lock, RLock
+import weakref
 
 try:
     import queue
@@ -31,7 +32,7 @@ from datadog.dogstatsd.context import (
     DistributedContextManagerDecorator,
 )
 from datadog.dogstatsd.route import get_default_route
-from datadog.dogstatsd.container import ContainerID
+from datadog.dogstatsd.container import Cgroup
 from datadog.util.compat import is_p3k, text
 from datadog.util.format import normalize_tags
 from datadog.version import __version__
@@ -47,12 +48,6 @@ DEFAULT_PORT = 8125
 DEFAULT_FLUSH_INTERVAL = 0.3
 MIN_FLUSH_INTERVAL = 0.0001
 
-# Tag name of entity_id
-ENTITY_ID_TAG_NAME = "dd.internal.entity_id"
-
-# Env var name of entity_id
-ENTITY_ID_ENV_VAR = "DD_ENTITY_ID"
-
 # Env var to enable/disable sending the container ID field
 ORIGIN_DETECTION_ENABLED = "DD_ORIGIN_DETECTION_ENABLED"
 
@@ -65,7 +60,7 @@ MIN_SEND_BUFFER_SIZE = 32 * 1024
 
 # Mapping of each "DD_" prefixed environment variable to a specific tag name
 DD_ENV_TAGS_MAPPING = {
-    ENTITY_ID_ENV_VAR: ENTITY_ID_TAG_NAME,
+    "DD_ENTITY_ID": "dd.internal.entity_id",
     "DD_ENV": "env",
     "DD_SERVICE": "service",
     "DD_VERSION": "version",
@@ -92,6 +87,35 @@ TELEMETRY_FORMATTING_STR = "\n".join(
         "datadog.dogstatsd.client.packets_dropped_writer:%s|c|#%s",
     ]
 ) + "\n"
+
+Stop = object()
+
+SUPPORTS_FORKING = hasattr(os, "register_at_fork") and not os.environ.get("DD_DOGSTATSD_DISABLE_FORK_SUPPORT", None)
+TRACK_INSTANCES = not os.environ.get("DD_DOGSTATSD_DISABLE_INSTANCE_TRACKING", None)
+
+_instances = weakref.WeakSet()  # type: weakref.WeakSet
+
+
+def pre_fork():
+    """Prepare all client instances for a process fork.
+
+    If SUPPORTS_FORKING is true, this will be called automatically before os.fork().
+    """
+    for c in _instances:
+        c.pre_fork()
+
+
+def post_fork():
+    """Restore all client instances after a fork.
+
+    If SUPPORTS_FORKING is true, this will be called automatically after os.fork().
+    """
+    for c in _instances:
+        c.post_fork()
+
+
+if SUPPORTS_FORKING:
+    os.register_at_fork(before=pre_fork, after_in_child=post_fork, after_in_parent=post_fork)  # type: ignore
 
 
 # pylint: disable=useless-object-inheritance,too-many-instance-attributes
@@ -125,6 +149,7 @@ class DogStatsd(object):
         disable_background_sender=True,         # type: bool
         sender_queue_size=0,                    # type: int
         sender_queue_timeout=0,                 # type: Optional[float]
+        track_instance=True,                    # type: bool
     ):  # type: (...) -> None
         """
         Initialize a DogStatsd object.
@@ -171,6 +196,13 @@ class DogStatsd(object):
         :envvar DD_ORIGIN_DETECTION_ENABLED: Enable/disable sending the container ID field
         for origin detection.
         :type DD_ORIGIN_DETECTION_ENABLED: boolean
+
+        :envvar DD_DOGSTATSD_DISABLE_FORK_SUPPORT: Don't install global fork hooks with os.register_at_fork.
+        Global fork hooks then need to be called manually before and after calling os.fork.
+        :type DD_DOGSTATSD_DISABLE_FORK_SUPPORT: boolean
+
+        :envvar DD_DOGSTATSD_DISABLE_INSTANCE_TRACKING: Don't register instances of this class with global fork hooks.
+        :type DD_DOGSTATSD_DISABLE_INSTANCE_TRACKING: boolean
 
         :param host: the host of the DogStatsd server.
         :type host: string
@@ -239,7 +271,7 @@ class DogStatsd(object):
         metrics with container tags.
         This feature requires Datadog Agent version >=6.35.0 && <7.0.0 or Agent versions >=7.35.0.
         When configured, the provided container ID is prioritized over the container ID discovered
-        via Origin Detection. When DD_ENTITY_ID is set, this value is ignored.
+        via Origin Detection.
         Default: None.
         :type container_id: string
 
@@ -250,7 +282,6 @@ class DogStatsd(object):
         Origin detection can be disabled by configuring the environment variabe DD_ORIGIN_DETECTION_ENABLED=false
         The client tries to read the container ID by parsing the file /proc/self/cgroup.
         This is not supported on Windows.
-        The client prioritizes the value passed via DD_ENTITY_ID (if set) over the container ID.
         Default: True.
         More on this: https://docs.datadoghq.com/developers/dogstatsd/?tab=kubernetes#origin-detection-over-udp
         :type origin_detection_enabled: boolean
@@ -268,7 +299,7 @@ class DogStatsd(object):
 
         :param disable_background_sender: Use a background thread to communicate with the dogstatsd server. Optional.
         When enabled, a background thread will be used to send metric payloads to the Agent.
-        Applications should call wait_for_pending() before exiting to make sure all pending payloads are sent.
+        Applications should call stop() before exiting to make sure all pending payloads are sent.
         Default: True.
         :type disable_background_sender: boolean
 
@@ -283,6 +314,11 @@ class DogStatsd(object):
         If set to zero drop the packet immediately if the queue is full.
         Default: 0 (no wait)
         :type sender_queue_timeout: float
+
+        :param track_instance: Keep track of this instance and automatically handle cleanup when os.fork() is called,
+        if supported.
+        Default: True.
+        :type track_instance: boolean
         """
 
         self._socket_lock = Lock()
@@ -319,22 +355,16 @@ class DogStatsd(object):
             self._enabled = False
 
         # Connection
-        self._max_payload_size = max_buffer_len
+        self._max_buffer_len = max_buffer_len
         self.socket_timeout = socket_timeout
         if socket_path is not None:
             self.socket_path = socket_path  # type: Optional[text]
             self.host = None
             self.port = None
-            transport = "uds"
-            if not self._max_payload_size:
-                self._max_payload_size = UDS_OPTIMAL_PAYLOAD_LENGTH
         else:
             self.socket_path = None
             self.host = self.resolve_host(host, use_default_route)
             self.port = int(port)
-            transport = "udp"
-            if not self._max_payload_size:
-                self._max_payload_size = UDP_OPTIMAL_PAYLOAD_LENGTH
 
         self.telemetry_socket_path = telemetry_socket_path
         self.telemetry_host = None
@@ -353,13 +383,10 @@ class DogStatsd(object):
         # Options
         env_tags = [tag for tag in os.environ.get("DATADOG_TAGS", "").split(",") if tag]
         # Inject values of DD_* environment variables as global tags.
-        has_entity_id = False
         for var, tag_name in DD_ENV_TAGS_MAPPING.items():
             value = os.environ.get(var, "")
             if value:
                 env_tags.append("{name}:{value}".format(name=tag_name, value=value))
-                if var == ENTITY_ID_ENV_VAR:
-                    has_entity_id = True
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
@@ -371,17 +398,15 @@ class DogStatsd(object):
 
         # Origin detection
         self._container_id = None
-        if not has_entity_id:
-            origin_detection_enabled = self._is_origin_detection_enabled(
-                container_id, origin_detection_enabled, has_entity_id
-            )
-            self._set_container_id(container_id, origin_detection_enabled)
+        origin_detection_enabled = self._is_origin_detection_enabled(
+            container_id, origin_detection_enabled
+        )
+        self._set_container_id(container_id, origin_detection_enabled)
 
         # init telemetry version
         self._client_tags = [
             "client:py",
             "client_version:{}".format(__version__),
-            "client_transport:{}".format(transport),
         ]
         self._reset_telemetry()
         self._telemetry_flush_interval = telemetry_min_flush_interval
@@ -394,10 +419,8 @@ class DogStatsd(object):
 
         self._reset_buffer()
 
-        # This lock is used for all cases where buffering functionality is
-        # being toggled (by `open_buffer()`, `close_buffer()`, or
-        # `self._disable_buffering` calls).
-        self._buffering_toggle_lock = RLock()
+        # This lock is used for all cases where client configuration is being changed: buffering, sender mode.
+        self._config_lock = RLock()
 
         # If buffering is disabled, we bypass the buffer function.
         self._send = self._send_to_buffer
@@ -406,54 +429,83 @@ class DogStatsd(object):
             self._send = self._send_to_server
             log.debug("Statsd buffering is disabled")
 
+        # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
+        self._forking = False
+
         # Start the flush thread if buffering is enabled and the interval is above
         # a reasonable range. This both prevents thrashing and allow us to use "0.0"
         # as a value for disabling the automatic flush timer as well.
         self._flush_interval = flush_interval
         self._flush_thread_stop = threading.Event()
+        self._flush_thread = None
         self._start_flush_thread(self._flush_interval)
 
         self._queue = None
+        self._sender_thread = None
+        self._sender_enabled = False
+
         if not disable_background_sender:
             self.enable_background_sender(sender_queue_size, sender_queue_timeout)
+
+        if TRACK_INSTANCES and track_instance:
+            _instances.add(self)
+
+    @property
+    def socket_path(self):
+        return self._socket_path
+
+    @socket_path.setter
+    def socket_path(self, path):
+        with self._socket_lock:
+            self._socket_path = path
+            if path is None:
+                self._transport = "udp"
+                self._max_payload_size = self._max_buffer_len or UDP_OPTIMAL_PAYLOAD_LENGTH
+            else:
+                self._transport = "uds"
+                self._max_payload_size = self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH
 
     def enable_background_sender(self, sender_queue_size=0, sender_queue_timeout=0):
         """
         Use a background thread to communicate with the dogstatsd server.
         When enabled, a background thread will be used to send metric payloads to the Agent.
 
-        Applications should call wait_for_pending() before exiting to make sure all pending payloads are sent.
+        Applications should call stop() before exiting to make sure all pending payloads are sent.
 
-        This method is not thread safe and should not be called concurrently with other methods on the current object.
-        Normally, this should be called shortly after process initialization (for example from a post-fork hook in a
-        forking server).
+        Compatible with os.fork() starting with Python 3.7. On earlier versions, compatible if applications
+        arrange to call pre_fork() and post_fork() module functions around calls to os.fork().
 
-        :param sender_queue_size: Set the maximum number of packets to queue for the sender. Optional
-        How may packets to queue before blocking or dropping the packet if the packet queue is already full.
-        Default: 0 (unlimited).
-        :type sender_queue_size: integer
-
-        :param sender_queue_timeout: Set timeout for packet queue operations, in seconds. Optional.
-        How long the application thread is willing to wait for the queue clear up before dropping the metric packet.
-        If set to None, wait forever.
-        If set to zero drop the packet immediately if the queue is full.
-        Default: 0 (no wait)
-        :type sender_queue_timeout: float
+        :param sender_queue_size: Set the maximum number of packets to queue for the sender.
+            How many packets to queue before blocking or dropping the packet if the packet queue is already full.
+            Default: 0 (unlimited).
+        :type sender_queue_size: integer, optional
+        :param sender_queue_timeout: Set timeout for packet queue operations, in seconds.
+            How long the application thread is willing to wait for the queue clear up before dropping the metric packet.
+            If set to None, wait forever. If set to zero drop the packet immediately if the queue is full.
+            Default: 0 (no wait).
+        :type sender_queue_timeout: float, optional
         """
 
-        # Avoid a race on _queue with the background buffer flush thread that reads _queue.
-        with self._buffer_lock:
-            if self._queue is not None:
-                return
-
-            self._queue = queue.Queue(sender_queue_size)
-            self._start_sender_thread()
+        with self._config_lock:
+            self._sender_enabled = True
+            self._sender_queue_size = sender_queue_size
             if sender_queue_timeout is None:
                 self._queue_blocking = True
                 self._queue_timeout = None
             else:
                 self._queue_blocking = sender_queue_timeout > 0
                 self._queue_timeout = max(0, sender_queue_timeout)
+
+            self._start_sender_thread()
+
+    def disable_background_sender(self):
+        """Disable background sender mode.
+
+        This call will block until all previously queued payloads are sent.
+        """
+        with self._config_lock:
+            self._sender_enabled = False
+            self._stop_sender_thread()
 
     def disable_telemetry(self):
         self._telemetry = False
@@ -465,6 +517,12 @@ class DogStatsd(object):
     def _start_flush_thread(self, flush_interval):
         if self._disable_buffering or self._flush_interval <= MIN_FLUSH_INTERVAL:
             log.debug("Statsd periodic buffer flush is disabled")
+            return
+
+        if self._forking:
+            return
+
+        if self._flush_thread is not None:
             return
 
         def _flush_thread_loop(self, flush_interval):
@@ -488,7 +546,6 @@ class DogStatsd(object):
     # Note: Invocations of this method should be thread-safe
     def _stop_flush_thread(self):
         if not self._flush_thread:
-            log.warning("No statsd flush thread to stop")
             return
 
         try:
@@ -517,12 +574,12 @@ class DogStatsd(object):
 
     @property
     def disable_buffering(self):
-        with self._buffering_toggle_lock:
+        with self._config_lock:
             return self._disable_buffering
 
     @disable_buffering.setter
     def disable_buffering(self, is_disabled):
-        with self._buffering_toggle_lock:
+        with self._config_lock:
             # If the toggle didn't change anything, this method is a noop
             if self._disable_buffering == is_disabled:
                 return
@@ -664,15 +721,12 @@ class DogStatsd(object):
         Note: This method must be called before close_buffer() matching invocation.
         """
 
-        self._buffering_toggle_lock.acquire()
+        self._config_lock.acquire()
 
-        # XXX Remove if `disable_buffering` default is changed to False
         self._send = self._send_to_buffer
 
         if max_buffer_size is not None:
             log.warning("The parameter max_buffer_size is now deprecated and is not used anymore")
-
-        self._reset_buffer()
 
     def close_buffer(self):
         """
@@ -684,11 +738,10 @@ class DogStatsd(object):
         try:
             self.flush()
         finally:
-            # XXX Remove if `disable_buffering` default is changed to False
             if self._disable_buffering:
                 self._send = self._send_to_server
 
-            self._buffering_toggle_lock.release()
+            self._config_lock.release()
 
     def _reset_buffer(self):
         with self._buffer_lock:
@@ -721,13 +774,67 @@ class DogStatsd(object):
         """
         return self._report(metric, "g", value, tags, sample_rate)
 
+    # Minimum Datadog Agent version: 7.40.0
+    def gauge_with_timestamp(
+        self,
+        metric,  # type: Text
+        value,  # type: float
+        timestamp,  # type: int
+        tags=None,  # type: Optional[List[str]]
+        sample_rate=None,  # type: Optional[float]
+    ):  # type(...) -> None
+        """u
+        Record the value of a gauge with a Unix timestamp (in seconds),
+        optionally setting a list of tags and a sample rate.
+
+        Minimum Datadog Agent version: 7.40.0
+
+        >>> statsd.gauge("users.online", 123, 1713804588)
+        >>> statsd.gauge("active.connections", 1001, 1713804588, tags=["protocol:http"])
+        """
+        return self._report(metric, "g", value, tags, sample_rate, timestamp)
+
+    def count(
+        self,
+        metric,  # type: Text
+        value,  # type: float
+        tags=None,  # type: Optional[List[str]]
+        sample_rate=None,  # type: Optional[float]
+    ):  # type(...) -> None
+        """
+        Count tracks how many times something happened per second, tags and a sample
+        rate.
+
+        >>> statsd.count("page.views", 123)
+        """
+        self._report(metric, "c", value, tags, sample_rate)
+
+    # Minimum Datadog Agent version: 7.40.0
+    def count_with_timestamp(
+        self,
+        metric,  # type: Text
+        value,  # type: float
+        timestamp=0,  # type: int
+        tags=None,  # type: Optional[List[str]]
+        sample_rate=None,  # type: Optional[float]
+    ):  # type(...) -> None
+        """
+        Count how many times something happened at a given Unix timestamp in seconds,
+        tags and a sample rate.
+
+        Minimum Datadog Agent version: 7.40.0
+
+        >>> statsd.count("files.transferred", 124, timestamp=1713804588)
+        """
+        self._report(metric, "c", value, tags, sample_rate, timestamp)
+
     def increment(
         self,
         metric,  # type: Text
         value=1,  # type: float
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
-    ):  # type: (...) -> None
+    ):  # type(...) -> None
         """
         Increment a counter, optionally setting a value, tags and a sample
         rate.
@@ -881,23 +988,27 @@ class DogStatsd(object):
                     log.error("Unexpected error: %s", str(e))
                 self.telemetry_socket = None
 
-    def _serialize_metric(self, metric, metric_type, value, tags, sample_rate=1):
+    def _serialize_metric(
+        self, metric, metric_type, value, tags, sample_rate=1, timestamp=0
+    ):
         # Create/format the metric packet
-        return "%s%s:%s|%s%s%s%s" % (
+        return "%s%s:%s|%s%s%s%s%s" % (
             (self.namespace + ".") if self.namespace else "",
             metric,
             value,
             metric_type,
             ("|@" + text(sample_rate)) if sample_rate != 1 else "",
             ("|#" + ",".join(normalize_tags(tags))) if tags else "",
-            ("|c:" + self._container_id if self._container_id else "")
+            ("|c:" + self._container_id if self._container_id else ""),
+            ("|T" + text(timestamp)) if timestamp > 0 else "",
         )
 
-    def _report(self, metric, metric_type, value, tags, sample_rate):
+    def _report(self, metric, metric_type, value, tags, sample_rate, timestamp=0):
         """
         Create a metric packet and send it.
 
-        More information about the packets' format: http://docs.datadoghq.com/guides/dogstatsd/
+        More information about the packets' format:
+        https://docs.datadoghq.com/developers/dogstatsd/datagram_shell/?tab=metrics#the-dogstatsd-protocol
         """
         if value is None:
             return
@@ -914,9 +1025,16 @@ class DogStatsd(object):
         if sample_rate != 1 and random() > sample_rate:
             return
 
+        # timestamps (protocol v1.3) only allowed on gauges and counts
+        allows_timestamp = metric_type == "g" or metric_type == "c"
+        if not allows_timestamp or timestamp < 0:
+            timestamp = 0
+
         # Resolve the full tag list
         tags = self._add_constant_tags(tags)
-        payload = self._serialize_metric(metric, metric_type, value, tags, sample_rate)
+        payload = self._serialize_metric(
+            metric, metric_type, value, tags, sample_rate, timestamp
+        )
 
         # Send it
         self._send(payload)
@@ -929,13 +1047,24 @@ class DogStatsd(object):
         self.bytes_dropped_queue = 0
         self.bytes_dropped_writer = 0
         self.packets_sent = 0
-        self.packets_dropped = 0
         self.packets_dropped_queue = 0
         self.packets_dropped_writer = 0
         self._last_flush_time = time.time()
 
+    # Aliases for backwards compatibility.
+    @property
+    def packets_dropped(self):
+        return self.packets_dropped_queue + self.packets_dropped_writer
+
+    @property
+    def bytes_dropped(self):
+        return self.bytes_dropped_queue + self.bytes_dropped_writer
+
     def _flush_telemetry(self):
-        telemetry_tags = ",".join(self._add_constant_tags(self._client_tags))
+        tags = self._client_tags[:]
+        tags.append("client_transport:{}".format(self._transport))
+        tags.extend(self.constant_tags)
+        telemetry_tags = ",".join(tags)
 
         return TELEMETRY_FORMATTING_STR % (
             self.metrics_count,
@@ -967,13 +1096,17 @@ class DogStatsd(object):
             self._last_flush_time + self._telemetry_flush_interval < time.time()
 
     def _send_to_server(self, packet):
+        # Skip the lock if the queue is None. There is no race with enable_background_sender.
         if self._queue is not None:
-            try:
-                self._queue.put(packet + '\n', self._queue_blocking, self._queue_timeout)
-            except queue.Full:
-                self.packets_dropped_queue += 1
-                self.bytes_dropped_queue += 1
-            return
+            # Prevent a race with disable_background_sender.
+            with self._buffer_lock:
+                if self._queue is not None:
+                    try:
+                        self._queue.put(packet + '\n', self._queue_blocking, self._queue_timeout)
+                    except queue.Full:
+                        self.packets_dropped_queue += 1
+                        self.bytes_dropped_queue += 1
+                    return
 
         self._xmit_packet_with_telemetry(packet + '\n')
 
@@ -1178,18 +1311,15 @@ class DogStatsd(object):
             return self.constant_tags
         return tags
 
-    def _is_origin_detection_enabled(self, container_id, origin_detection_enabled, has_entity_id):
+    def _is_origin_detection_enabled(self, container_id, origin_detection_enabled):
         """
         Returns whether the client should fill the container field.
-        If DD_ENTITY_ID is set, we don't send the container ID
         If a user-defined container ID is provided, we don't ignore origin detection
         as dd.internal.entity_id is prioritized over the container field for backward compatibility.
-        If DD_ENTITY_ID is not set, we try to fill the container field automatically unless
-        DD_ORIGIN_DETECTION_ENABLED is explicitly set to false.
+        We try to fill the container field automatically unless DD_ORIGIN_DETECTION_ENABLED is explicitly set to false.
         """
-        if not origin_detection_enabled or has_entity_id or container_id is not None:
+        if not origin_detection_enabled or container_id is not None:
             # origin detection is explicitly disabled
-            # or DD_ENTITY_ID was found
             # or a user-defined container ID was provided
             return False
         value = os.environ.get(ORIGIN_DETECTION_ENABLED, "")
@@ -1205,25 +1335,49 @@ class DogStatsd(object):
             return
         if origin_detection_enabled:
             try:
-                reader = ContainerID()
+                reader = Cgroup()
                 self._container_id = reader.container_id
             except Exception as e:
                 log.debug("Couldn't get container ID: %s", str(e))
                 self._container_id = None
 
     def _start_sender_thread(self):
+        if not self._sender_enabled or self._forking:
+            return
+
+        if self._queue is not None:
+            return
+
+        self._queue = queue.Queue(self._sender_queue_size)
+
         log.debug("Starting background sender thread")
         self._sender_thread = threading.Thread(
             name="{}_sender_thread".format(self.__class__.__name__),
             target=self._sender_main_loop,
+            args=(self._queue,)
         )
         self._sender_thread.daemon = True
         self._sender_thread.start()
 
-    def _sender_main_loop(self):
+    def _stop_sender_thread(self):
+        # Lock ensures that nothing gets added to the queue after we disable it.
+        with self._buffer_lock:
+            if not self._queue:
+                return
+            self._queue.put(Stop)
+            self._queue = None
+
+        self._sender_thread.join()
+        self._sender_thread = None
+
+    def _sender_main_loop(self, queue):
         while True:
-            self._xmit_packet_with_telemetry(self._queue.get())
-            self._queue.task_done()
+            item = queue.get()
+            if item is Stop:
+                queue.task_done()
+                return
+            self._xmit_packet_with_telemetry(item)
+            queue.task_done()
 
     def wait_for_pending(self):
         """
@@ -1231,8 +1385,58 @@ class DogStatsd(object):
         """
 
         self.flush()
-        if self._queue is not None:
-            self._queue.join()
+
+        # Avoid race with disable_background_sender. We don't need a
+        # lock, just copy the value so it doesn't change between the
+        # check and join later.
+        queue = self._queue
+
+        if queue is not None:
+            queue.join()
+
+    def pre_fork(self):
+        """Prepare client for a process fork.
+
+        Flush any pending payloads, stop all background threads and
+        close the connection. Once the function returns.
+
+        The client should not be used from this point until
+        post_fork() is called.
+        """
+        log.debug("[%d] pre_fork for %s", os.getpid(), self)
+
+        self._forking = True
+
+        with self._config_lock:
+            self._stop_flush_thread()
+            self._stop_sender_thread()
+        self.close_socket()
+
+    def post_fork(self):
+        """Restore the client state after a fork."""
+
+        log.debug("[%d] post_fork for %s", os.getpid(), self)
+
+        self.close_socket()
+
+        self._forking = False
+
+        with self._config_lock:
+            self._start_flush_thread(self._flush_interval)
+            self._start_sender_thread()
+
+    def stop(self):
+        """Stop the client.
+
+        Disable buffering, background sender and flush any pending payloads to the server.
+
+        Client remains usable after this method, but sending metrics may block if socket_timeout is enabled.
+        """
+
+        self.disable_background_sender()
+        self.disable_buffering = True
+        self.flush()
+        self.close_socket()
 
 
 statsd = DogStatsd()

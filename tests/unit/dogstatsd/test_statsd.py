@@ -145,9 +145,9 @@ class TestDogStatsd(unittest.TestCase):
         """
         self._procfs_mock.stop()
 
-    def assert_equal_telemetry(self, expected_payload, actual_payload, telemetry=None):
+    def assert_equal_telemetry(self, expected_payload, actual_payload, telemetry=None, **kwargs):
         if telemetry is None:
-            telemetry = telemetry_metrics(bytes_sent=len(expected_payload))
+            telemetry = telemetry_metrics(bytes_sent=len(expected_payload), **kwargs)
 
         if expected_payload:
             expected_payload = "\n".join([expected_payload, telemetry])
@@ -285,6 +285,12 @@ class TestDogStatsd(unittest.TestCase):
         self.assertEqual(dogstatsd.host, "myenvvarhost")
         self.assertEqual(dogstatsd.port, 4321)
 
+    def test_initialization_closes_socket(self):
+        statsd.socket = FakeSocket()
+        self.assertIsNotNone(statsd.socket)
+        initialize()
+        self.assertIsNone(statsd.socket)
+
     def test_default_route(self):
         """
         Dogstatsd host can be dynamically set to the default route.
@@ -298,9 +304,30 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.set('set', 123)
         self.assert_equal_telemetry('set:123|s\n', self.recv(2))
 
+    def test_report(self):
+        self.statsd._report('report', 'g', 123.4, tags=None, sample_rate=None)
+        self.assert_equal_telemetry('report:123.4|g\n', self.recv(2))
+
+    def test_report_metric_with_unsupported_ts(self):
+        self.statsd._reset_telemetry()
+        self.statsd._report('report', 'h', 123.5, tags=None, sample_rate=None, timestamp=100)
+        self.assert_equal_telemetry('report:123.5|h\n', self.recv(2))
+
+        self.statsd._reset_telemetry()
+        self.statsd._report('set', 's', 123, tags=None, sample_rate=None, timestamp=100)
+        self.assert_equal_telemetry('set:123|s\n', self.recv(2))
+
     def test_gauge(self):
         self.statsd.gauge('gauge', 123.4)
         self.assert_equal_telemetry('gauge:123.4|g\n', self.recv(2))
+
+    def test_gauge_with_ts(self):
+        self.statsd.gauge_with_timestamp("gauge", 123.4, timestamp=1066)
+        self.assert_equal_telemetry("gauge:123.4|g|T1066\n", self.recv(2))
+
+    def test_gauge_with_invalid_ts_should_be_ignored(self):
+        self.statsd.gauge_with_timestamp("gauge", 123.4, timestamp=-500)
+        self.assert_equal_telemetry("gauge:123.4|g\n", self.recv(2))
 
     def test_counter(self):
         self.statsd.increment('page.views')
@@ -321,6 +348,26 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.decrement('page.views', 12)
         self.statsd.flush()
         self.assert_equal_telemetry('page.views:-12|c\n', self.recv(2))
+
+    def test_count(self):
+        self.statsd.count('page.views', 11)
+        self.statsd.flush()
+        self.assert_equal_telemetry('page.views:11|c\n', self.recv(2))
+
+    def test_count_with_ts(self):
+        self.statsd.count_with_timestamp("page.views", 1, timestamp=1066)
+        self.statsd.flush()
+        self.assert_equal_telemetry("page.views:1|c|T1066\n", self.recv(2))
+
+        self.statsd._reset_telemetry()
+        self.statsd.count_with_timestamp("page.views", 11, timestamp=2121)
+        self.statsd.flush()
+        self.assert_equal_telemetry("page.views:11|c|T2121\n", self.recv(2))
+
+    def test_count_with_invalid_ts_should_be_ignored(self):
+        self.statsd.count_with_timestamp("page.views", 1, timestamp=-1066)
+        self.statsd.flush()
+        self.assert_equal_telemetry("page.views:1|c\n", self.recv(2))
 
     def test_histogram(self):
         self.statsd.histogram('histo', 123.4)
@@ -511,7 +558,6 @@ class TestDogStatsd(unittest.TestCase):
 
         # check that the method does not fail with a small payload
         self.statsd.event("title", "message")
-
 
     def test_service_check(self):
         now = int(time.time())
@@ -704,6 +750,14 @@ class TestDogStatsd(unittest.TestCase):
             socket.SO_SNDBUF,
             MIN_SEND_BUFFER_SIZE,
         )
+
+    def test_socket_path_updates_telemetry(self):
+        self.statsd.gauge("foo", 1)
+        self.assert_equal_telemetry("foo:1|g\n", self.recv(2), transport="udp")
+        self.statsd.socket_path = "/fake/path"
+        self.statsd._reset_telemetry()
+        self.statsd.gauge("foo", 2)
+        self.assert_equal_telemetry("foo:2|g\n", self.recv(2), transport="uds")
 
     def test_distributed(self):
         """
@@ -1092,7 +1146,6 @@ async def print_foo():
             self.recv(2),
             telemetry=expected_metrics1)
 
-
         expected2 = 'page.views:123|g\ntimer:123|ms\n'
         self.assert_equal_telemetry(
             expected2,
@@ -1262,7 +1315,6 @@ async def print_foo():
         self.statsd.bytes_dropped_queue = 8
         self.statsd.packets_dropped_queue = 9
 
-
         self.statsd.open_buffer()
         self.statsd.gauge('page.views', 123)
         self.statsd.close_buffer()
@@ -1368,7 +1420,6 @@ async def print_foo():
         self.assert_equal_telemetry(metric, fake_socket.recv(2), telemetry=telemetry_metrics(metrics=2, bytes_sent=len(metric)))
         # assert that _last_flush_time has been updated
         self.assertTrue(time1 < dogstatsd._last_flush_time)
-
 
     def test_dedicated_udp_telemetry_dest(self):
         listener_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -1608,6 +1659,20 @@ async def print_foo():
         dogstatsd.gauge('gt', 123.4)
         tags = "country:canada,red,country:china,age:45,blue"
         metric = 'gt:123.4|g|#' + tags + '\n'
+        self.assertEqual(metric, dogstatsd.socket.recv())
+        self.assertEqual(telemetry_metrics(tags=tags, bytes_sent=len(metric)), dogstatsd.socket.recv())
+
+    def test_entity_id_and_container_id(self):
+        with preserve_environment_variable('DD_ENTITY_ID'):
+            os.environ['DD_ENTITY_ID'] = '04652bb7-19b7-11e9-9cc6-42010a9c016d'
+            dogstatsd = DogStatsd(telemetry_min_flush_interval=0)
+        dogstatsd.socket = FakeSocket()
+        dogstatsd._container_id = "fake-container-id"
+
+        dogstatsd.increment("page.views")
+        dogstatsd.flush()
+        tags = "dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d"
+        metric = 'page.views:1|c|#' + tags + '|c:fake-container-id\n'
         self.assertEqual(metric, dogstatsd.socket.recv())
         self.assertEqual(telemetry_metrics(tags=tags, bytes_sent=len(metric)), dogstatsd.socket.recv())
 
@@ -1928,3 +1993,37 @@ async def print_foo():
         statsd.set_socket_timeout(1)
         self.assertEqual(statsd.socket.timeout, 1)
         self.assertEqual(statsd.socket_timeout, 1)
+
+    def test_telemetry_api(self):
+        statsd = DogStatsd(disable_background_sender=False)
+
+        self.assertEqual(statsd.metrics_count, 0)
+        self.assertEqual(statsd.events_count, 0)
+        self.assertEqual(statsd.service_checks_count, 0)
+        self.assertEqual(statsd.bytes_sent, 0)
+        self.assertEqual(statsd.bytes_dropped, 0)
+        self.assertEqual(statsd.bytes_dropped_queue, 0)
+        self.assertEqual(statsd.bytes_dropped_writer, 0)
+        self.assertEqual(statsd.packets_sent, 0)
+        self.assertEqual(statsd.packets_dropped, 0)
+        self.assertEqual(statsd.packets_dropped_queue, 0)
+        self.assertEqual(statsd.packets_dropped_writer, 0)
+
+    def test_max_payload_size(self):
+        statsd = DogStatsd(socket_path=None, port=8125)
+        self.assertEqual(statsd._max_payload_size, UDP_OPTIMAL_PAYLOAD_LENGTH)
+        statsd.socket_path = "/foo"
+        self.assertEqual(statsd._max_payload_size, UDS_OPTIMAL_PAYLOAD_LENGTH)
+
+    def test_post_fork_locks(self):
+        def inner():
+            statsd = DogStatsd(socket_path=None, port=8125)
+            # Statsd should survive this sequence of events
+            statsd.pre_fork()
+            statsd.get_socket()
+            statsd.post_fork()
+        t = Thread(target=inner)
+        t.daemon = True
+        t.start()
+        t.join(timeout=5)
+        self.assertFalse(t.is_alive())

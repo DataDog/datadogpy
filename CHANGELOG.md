@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.49.1 / 2024-03-18
+
+* [Fixed] Fix potential metric loss when open_buffer is combined with disable_buffering=False. See [#820](https://github.com/DataDog/datadogpy/pull/820).
+
+## 0.49.0 / 2024-03-12
+
+* [Added] Add --restricted_roles option to Monitors API. See [#809](https://github.com/DataDog/datadogpy/pull/809).
+* [Added] Support inode resolution mechanism for Origin Detection. See [#813](https://github.com/DataDog/datadogpy/pull/813).
+* [Fixed] Fix potential deadlock during process fork. See [#817](https://github.com/DataDog/datadogpy/pull/817).
+
+## 0.48.0 / 2024-01-12
+
+* [Added] Improve forking support. See [#804](https://github.com/DataDog/datadogpy/pull/804).
+* [Fixed] Close socket during initialization. See [#808](https://github.com/DataDog/datadogpy/pull/808).
+* [Fixed] Update payload size when updating socket path. See [#807](https://github.com/DataDog/datadogpy/pull/807).
+* [Fixed] Fix stale client_transport tag. See [#802](https://github.com/DataDog/datadogpy/pull/802).
+* [Fixed] Provide backwards compatible telemetry counters. See [#801](https://github.com/DataDog/datadogpy/pull/801).
+
 ## 0.47.0 / 2023-09-06
 
 * [Added] Add IPv6 support for dogstatsd. See [#791](https://github.com/DataDog/datadogpy/pull/791).
