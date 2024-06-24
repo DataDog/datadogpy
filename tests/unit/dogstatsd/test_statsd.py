@@ -2021,7 +2021,7 @@ async def print_foo():
             # Statsd should survive this sequence of events
             statsd.pre_fork()
             statsd.get_socket()
-            statsd.post_fork()
+            statsd.post_fork_parent()
         t = Thread(target=inner)
         t.daemon = True
         t.start()

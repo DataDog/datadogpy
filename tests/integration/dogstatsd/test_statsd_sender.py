@@ -76,7 +76,7 @@ def test_fork_hooks(disable_background_sender, disable_buffering):
     assert statsd._queue is None or statsd._queue.empty()
     assert len(statsd._buffer) == 0
 
-    statsd.post_fork()
+    statsd.post_fork_parent()
 
     assert disable_buffering or statsd._flush_thread.is_alive()
     assert disable_background_sender or statsd._sender_thread.is_alive()
