@@ -1,11 +1,11 @@
 from threading import Lock
 
-class MetricAggregator:
+class MetricAggregator(object):
     def __init__(self, name, tags, rate):
         self.name = name
         self.tags = tags
         self.rate = rate
-
+ 
     def aggregate(self, value):
         raise NotImplementedError("Subclasses should implement this method.")
 
@@ -14,7 +14,7 @@ class MetricAggregator:
 
 class CountMetric(MetricAggregator):
     def __init__(self, name, value, tags, rate):
-        super().__init__(name, tags, rate)
+        super(CountMetric, self).__init__(name, tags, rate)
         self.value = value
 
     def aggregate(self, v):
@@ -31,7 +31,7 @@ class CountMetric(MetricAggregator):
 
 class GaugeMetric(MetricAggregator):
     def __init__(self, name, value, tags, rate):
-        super().__init__(name, tags, rate)
+        super(GaugeMetric, self).__init__(name, tags, rate)
         self.value = value
 
     def aggregate(self, v):
@@ -48,7 +48,7 @@ class GaugeMetric(MetricAggregator):
 
 class SetMetric(MetricAggregator):
     def __init__(self, name, value, tags, rate):
-        super().__init__(name, tags, rate)
+        super(SetMetric, self).__init__(name, tags, rate)
         self.data = set()
         self.data.add(value)
         self.lock = Lock()
