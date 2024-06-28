@@ -8,7 +8,7 @@ class MetricAggregator(object):
         raise NotImplementedError("Subclasses should implement this method.")
 
     # TODO: This may be implemented once flushing aggregated metrics is supported
-    def unsafe_flush():
+    def unsafe_flush(self):
         pass
 
 
@@ -21,7 +21,7 @@ class CountMetric(MetricAggregator):
         self.value += v
 
     # TODO: This may be implemented once flushing aggregated metrics is supported
-    def unsafe_flush():
+    def unsafe_flush(self):
         pass
 
 
@@ -34,7 +34,7 @@ class GaugeMetric(MetricAggregator):
         self.value = v
 
     # TODO: This may be implemented once flushing aggregated metrics is supported
-    def unsafe_flush():
+    def unsafe_flush(self):
         pass
 
 
@@ -48,5 +48,5 @@ class SetMetric(MetricAggregator):
         self.data.add(v)
 
     # TODO: This may be implemented once flushing aggregated metrics is supported
-    def unsafe_flush():
+    def unsafe_flush(self):
         pass
