@@ -1,4 +1,5 @@
-from threading import Lock
+# TODO: potentially add locks
+# from threading import Lock
 
 
 class MetricAggregator(object):
@@ -10,8 +11,9 @@ class MetricAggregator(object):
     def aggregate(self, value):
         raise NotImplementedError("Subclasses should implement this method.")
 
-    def flush_unsafe(self):
-        raise NotImplementedError("Subclasses should implement this method.")
+    # TODO: potentially add this function
+    # def flush_unsafe(self):
+    #     raise NotImplementedError("Subclasses should implement this method.")
 
 
 class CountMetric(MetricAggregator):
@@ -22,14 +24,15 @@ class CountMetric(MetricAggregator):
     def aggregate(self, v):
         self.value += v
 
-    def flush_unsafe(self):
-        return {
-            "metric_type": "count",
-            "name": self.name,
-            "tags": self.tags,
-            "rate": self.rate,
-            "ivalue": self.value,
-        }
+    # TODO: potentially add this function
+    # def flush_unsafe(self):
+    #     return {
+    #         "metric_type": "count",
+    #         "name": self.name,
+    #         "tags": self.tags,
+    #         "rate": self.rate,
+    #         "ivalue": self.value,
+    #     }
 
 
 class GaugeMetric(MetricAggregator):
@@ -40,14 +43,15 @@ class GaugeMetric(MetricAggregator):
     def aggregate(self, v):
         self.value = v
 
-    def flush_unsafe(self):
-        return {
-            "metric_type": "gauge",
-            "name": self.name,
-            "tags": self.tags,
-            "rate": self.rate,
-            "fvalue": self.value,
-        }
+    # TODO: potentially add this function
+    # def flush_unsafe(self):
+    #     return {
+    #         "metric_type": "gauge",
+    #         "name": self.name,
+    #         "tags": self.tags,
+    #         "rate": self.rate,
+    #         "fvalue": self.value,
+    #     }
 
 
 class SetMetric(MetricAggregator):
@@ -55,23 +59,25 @@ class SetMetric(MetricAggregator):
         super(SetMetric, self).__init__(name, tags, rate)
         self.data = set()
         self.data.add(value)
-        self.lock = Lock()
+        # TODO: potentially locks
+        # self.lock = Lock()
 
     def aggregate(self, v):
-        with self.lock:
-            self.data.add(v)
+        # with self.lock:
+        #     self.data.add(v)
+        self.data.add(v)
 
-    def flush_unsafe(self):
-        with self.lock:
-            if not self.data:
-                return []
-            return [
-                {
-                    "metric_type": "set",
-                    "name": self.name,
-                    "tags": self.tags,
-                    "rate": self.rate,
-                    "svalue": value,
-                }
-                for value in self.data
-            ]
+    # def flush_unsafe(self):
+    #     with self.lock:
+    #         if not self.data:
+    #             return []
+    #         return [
+    #             {
+    #                 "metric_type": "set",
+    #                 "name": self.name,
+    #                 "tags": self.tags,
+    #                 "rate": self.rate,
+    #                 "svalue": value,
+    #             }
+    #             for value in self.data
+    #         ]
