@@ -1,8 +1,9 @@
 class MetricAggregator(object):
-    def __init__(self, name, tags, rate):
+    def __init__(self, name, tags, rate, timestamp=0):
         self.name = name
         self.tags = tags
         self.rate = rate
+        self.timestamp = timestamp
 
     def aggregate(self, value):
         raise NotImplementedError("Subclasses should implement this method.")
@@ -13,8 +14,8 @@ class MetricAggregator(object):
 
 
 class CountMetric(MetricAggregator):
-    def __init__(self, name, value, tags, rate):
-        super(CountMetric, self).__init__(name, tags, rate)
+    def __init__(self, name, value, tags, rate, timestamp=0):
+        super(CountMetric, self).__init__(name, tags, rate, timestamp)
         self.value = value
 
     def aggregate(self, v):
@@ -26,8 +27,8 @@ class CountMetric(MetricAggregator):
 
 
 class GaugeMetric(MetricAggregator):
-    def __init__(self, name, value, tags, rate):
-        super(GaugeMetric, self).__init__(name, tags, rate)
+    def __init__(self, name, value, tags, rate, timestamp=0):
+        super(GaugeMetric, self).__init__(name, tags, rate, timestamp)
         self.value = value
 
     def aggregate(self, v):
@@ -39,8 +40,8 @@ class GaugeMetric(MetricAggregator):
 
 
 class SetMetric(MetricAggregator):
-    def __init__(self, name, value, tags, rate):
-        super(SetMetric, self).__init__(name, tags, rate)
+    def __init__(self, name, value, tags, rate, timestamp=0):
+        super(SetMetric, self).__init__(name, tags, rate, timestamp)
         self.data = set()
         self.data.add(value)
 
