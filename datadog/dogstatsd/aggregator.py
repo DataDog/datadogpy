@@ -23,7 +23,7 @@ class Aggregator(object):
 
     def start(self, flush_interval):
         self.flush_interval = flush_interval
-        self.ticker = threading.Timer(self.flush_interval, self._tick)
+        self.ticker = threading.Timer(self.flush_interval, self.tick)
         self.ticker.start()
 
     def tick(self):
@@ -34,6 +34,7 @@ class Aggregator(object):
 
     def send_metrics(self):
         for metric in self.flush_metrics():
+            # TODO: change the _report function in base.py to handle new data type
             self.client.send(metric)
 
     def stop(self):
