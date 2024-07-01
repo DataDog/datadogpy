@@ -10,7 +10,7 @@ class TestMetrics(unittest.TestCase):
         self.assertEqual(c.tags, ["tag1", "tag2"])
         self.assertEqual(c.rate, 1.0)
         self.assertEqual(c.timestamp, 1713804588)
-
+        # Testing for default timestamp may be unecessary
         c_default_timestamp = CountMetric("test", 21, ["tag1", "tag2"], 1)
         self.assertEqual(c_default_timestamp.value, 21)
         self.assertEqual(c_default_timestamp.name, "test")
