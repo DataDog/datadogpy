@@ -72,7 +72,7 @@ class Cgroup(object):
                     if len(parts):
                         match = self.CONTAINER_RE.match(parts.pop())
                         if match:
-                            return match.group(1)
+                            return "ci-{0}".format(match.group(1))
         except IOError as e:
             if e.errno != errno.ENOENT:
                 raise NotImplementedError("Unable to open {}.".format(self.CGROUP_PATH))
