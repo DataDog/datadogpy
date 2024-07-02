@@ -1,21 +1,27 @@
 import threading
 import time
+from enum import Enum
 
 from datadog.dogstatsd.metrics import CountMetric, GaugeMetric, SetMetric
+
+class MetricType(Enum):
+    COUNT = 'counts'
+    GAUGE = 'gauges'
+    SET = 'sets'
 
 class Aggregator(object):
     def __init__(self, client):
         self.client = client
 
         self.metrics_map = {
-            'counts': {},
-            'gauges': {},
-            'sets': {}
+            MetricType.COUNT: {},
+            MetricType.GAUGE: {},
+            MetricType.SET: {}
         }
         self.locks = {
-            'counts': threading.RLock(),
-            'gauges': threading.RLock(),
-            'sets': threading.RLock()
+            MetricType.COUNT: threading.RLock(),
+            MetricType.GAUGE: threading.RLock(),
+            MetricType.SET: threading.RLock()
         }
 
         self.closed = threading.Event()
@@ -34,7 +40,7 @@ class Aggregator(object):
 
     def send_metrics(self):
         for metric in self.flush_metrics():
-            # TODO: change the _report function in base.py to handle new data type
+            # TODO: change the _report function in base.py to handle new data
             self.client.send(metric)
 
     def stop(self):
@@ -46,7 +52,7 @@ class Aggregator(object):
     def flush_metrics(self):
         metrics = []
 
-        for metric_type in self.metrics_maps.keys():
+        for metric_type in self.metrics_map.keys():
             with self.locks[metric_type]:
                 current_metrics = self.metrics_map[metric_type]
                 self.metrics_map[metric_type] = {}
@@ -60,15 +66,14 @@ class Aggregator(object):
     def get_context(self, name, tags):
         return "{}:{}".format(name, ",".join(tags))
 
-    # This function may not be necessary, can just call add_metric directly
     def count(self, name, value, tags, rate, timestamp=0):
-        return self.add_metric('counts', CountMetric, name, value, tags, rate, timestamp)
-    # This function may not be necessary, can just call add_metric directly
+        return self.add_metric(MetricType.COUNT, CountMetric, name, value, tags, rate, timestamp)
+
     def gauge(self, name, value, tags, rate, timestamp=0):
-        return self.add_metric('gauges', GaugeMetric, name, value, tags, rate, timestamp)
-    # This function may not be necessary, can just call add_metric directly
+        return self.add_metric(MetricType.GAUGE, GaugeMetric, name, value, tags, rate, timestamp)
+
     def set(self, name, value, tags, rate, timestamp=0):
-        return self.add_metric('sets', SetMetric, name, value, tags, rate, timestamp)
+        return self.add_metric(MetricType.SET, SetMetric, name, value, tags, rate, timestamp)
 
     def add_metric(self, metric_type, metric_class, name, value, tags, rate, timestamp=0):
         context = self.get_context(name, tags)
@@ -77,4 +82,3 @@ class Aggregator(object):
                 self.metrics_map[metric_type][context].aggregate(value)
             else:
                 self.metrics_map[metric_type][context] = metric_class(name, value, tags, rate, timestamp)
-        return None
