@@ -51,6 +51,9 @@ MIN_FLUSH_INTERVAL = 0.0001
 # Env var to enable/disable sending the container ID field
 ORIGIN_DETECTION_ENABLED = "DD_ORIGIN_DETECTION_ENABLED"
 
+# Environment variable containing external data used for Origin Detection.
+EXTERNAL_DATA_ENV_VAR = "DD_EXTERNAL_ENV"
+
 # Default buffer settings based on socket type
 UDP_OPTIMAL_PAYLOAD_LENGTH = 1432
 UDS_OPTIMAL_PAYLOAD_LENGTH = 8192
@@ -402,6 +405,7 @@ class DogStatsd(object):
             container_id, origin_detection_enabled
         )
         self._set_container_id(container_id, origin_detection_enabled)
+        self._external_data = os.environ.get(EXTERNAL_DATA_ENV_VAR, None)
 
         # init telemetry version
         self._client_tags = [
@@ -992,7 +996,7 @@ class DogStatsd(object):
         self, metric, metric_type, value, tags, sample_rate=1, timestamp=0
     ):
         # Create/format the metric packet
-        return "%s%s:%s|%s%s%s%s%s" % (
+        return "%s%s:%s|%s%s%s%s%s%s" % (
             (self.namespace + ".") if self.namespace else "",
             metric,
             value,
@@ -1000,6 +1004,7 @@ class DogStatsd(object):
             ("|@" + text(sample_rate)) if sample_rate != 1 else "",
             ("|#" + ",".join(normalize_tags(tags))) if tags else "",
             ("|c:" + self._container_id if self._container_id else ""),
+            ("|e:" + self._external_data if self._external_data else ""),
             ("|T" + text(timestamp)) if timestamp > 0 else "",
         )
 
