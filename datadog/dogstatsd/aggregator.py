@@ -1,11 +1,10 @@
 import threading
 import time
 from datadog.dogstatsd.metrics import MetricAggregator, CountMetric, GaugeMetric, SetMetric
-from datadog.dogstatsd import DogStatsd
 from datadog.dogstatsd.metric_types import MetricType
 
 class Aggregator(object):
-    def __init__(self, client: DogStatsd):
+    def __init__(self, client):
         self.client = client
 
         self.metrics_map = {
@@ -69,7 +68,7 @@ class Aggregator(object):
     def set(self, name, value, tags, rate, timestamp=0):
         return self.add_metric(MetricType.SET, SetMetric, name, value, tags, rate, timestamp)
 
-    def add_metric(self, metric_type: MetricType, metric_class: MetricAggregator, name, value, tags, rate, timestamp=0):
+    def add_metric(self, metric_type, metric_class, name, value, tags, rate, timestamp=0):
         context = self.get_context(name, tags)
         with self.locks[metric_type]:
             if context in self.metrics_map[metric_type]:
