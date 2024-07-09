@@ -1024,7 +1024,7 @@ class DogStatsd(object):
 
         if sample_rate != 1 and random() > sample_rate:
             return
-
+        # TODO: use metric_types enum
         # timestamps (protocol v1.3) only allowed on gauges and counts
         allows_timestamp = metric_type == "g" or metric_type == "c"
         if not allows_timestamp or timestamp < 0:

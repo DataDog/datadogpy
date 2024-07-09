@@ -35,10 +35,8 @@ class Aggregator(object):
 
     def send_metrics(self):
         for metric in self.flush_metrics():
-            # TODO: change the _report function in base.py to handle new data
-            serialized_metric = self.client._serialize_metric(metric.name, metric.type, metric.value, metric.tags, 
+            self.client._report(metric.name, metric.type, metric.value, metric.tags, 
                 timestamp=metric.timestamp if metric.timestamp else 0)
-            self.client._report(serialized_metric)
 
     def stop(self):
         self.closed.set()
