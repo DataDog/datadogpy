@@ -1,14 +1,8 @@
 import threading
 import time
-from enum import Enum
-
 from datadog.dogstatsd.metrics import MetricAggregator, CountMetric, GaugeMetric, SetMetric
 from datadog.dogstatsd import DogStatsd
-
-class MetricType(Enum):
-    COUNT = 'c'
-    GAUGE = 'g'
-    SET = 's'
+from datadog.dogstatsd.metric_types import MetricType
 
 class Aggregator(object):
     def __init__(self, client: DogStatsd):
@@ -42,7 +36,8 @@ class Aggregator(object):
     def send_metrics(self):
         for metric in self.flush_metrics():
             # TODO: change the _report function in base.py to handle new data
-            serialized_metric = self.client._serialize_metric(metric.name, metric.type, metric.value, metric.tags, metric)
+            serialized_metric = self.client._serialize_metric(metric.name, metric.type, metric.value, metric.tags, 
+                timestamp=metric.timestamp if metric.timestamp else 0)
             self.client._report(serialized_metric)
 
     def stop(self):
@@ -59,9 +54,8 @@ class Aggregator(object):
                 current_metrics = self.metrics_map[metric_type]
                 self.metrics_map[metric_type] = {}
 
-            # TODO: the data type for unsafe_flush still needs to be decided.
             for metric in current_metrics.values():
-                metrics.extend(metric if isinstance(metric, SetMetric) else [metric])
+                metrics.extend(metric.unsafe_flush() if isinstance(metric, SetMetric) else [metric.unsafe_flush()])
 
         return metrics
 

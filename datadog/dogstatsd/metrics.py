@@ -1,3 +1,6 @@
+from threading import Lock
+from datadog.dogstatsd.metric_types import MetricType
+
 class MetricAggregator(object):
     def __init__(self, name, tags, rate, timestamp=0):
         self.name = name
@@ -8,9 +11,8 @@ class MetricAggregator(object):
     def aggregate(self, value):
         raise NotImplementedError("Subclasses should implement this method.")
 
-    # TODO: This may be implemented if flushing aggregated metrics is supported
     def unsafe_flush(self):
-        pass
+        raise NotImplementedError("Subclasses should implement this method.")
 
 
 class CountMetric(MetricAggregator):
@@ -21,9 +23,15 @@ class CountMetric(MetricAggregator):
     def aggregate(self, v):
         self.value += v
 
-    # TODO: This may be implemented if flushing aggregated metrics is supported
     def unsafe_flush(self):
-        pass
+        return {
+            'metric_type': MetricType.COUNT,
+            'name': self.name,
+            'tags': self.tags,
+            'rate': self.rate,
+            'value': self.value,
+            'timestamp': self.timestamp
+        }
 
 
 class GaugeMetric(MetricAggregator):
@@ -34,9 +42,15 @@ class GaugeMetric(MetricAggregator):
     def aggregate(self, v):
         self.value = v
 
-    # TODO: This may be implemented once flushing aggregated metrics is supported
     def unsafe_flush(self):
-        pass
+        return {
+            'metric_type': MetricType.GAUGE,
+            'name': self.name,
+            'tags': self.tags,
+            'rate': self.rate,
+            'value': self.value,
+            'timestamp': self.timestamp
+        }
 
 
 class SetMetric(MetricAggregator):
@@ -44,10 +58,23 @@ class SetMetric(MetricAggregator):
         super(SetMetric, self).__init__(name, tags, rate, timestamp)
         self.data = set()
         self.data.add(value)
+        self.lock = Lock()
 
     def aggregate(self, v):
-        self.data.add(v)
+        with self.lock:
+            self.data.add(v)
 
-    # TODO: This may be implemented once flushing aggregated metrics is supported
     def unsafe_flush(self):
-        pass
+        with self.lock:
+            if not self.data:
+                return []
+            return [
+                {
+                    'metric_type': MetricType.SET,
+                    'name': self.name,
+                    'tags': self.tags,
+                    'rate': self.rate,
+                    'value': value,
+                }
+                for value in self.data
+            ]
