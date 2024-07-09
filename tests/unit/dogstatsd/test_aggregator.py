@@ -59,9 +59,6 @@ class TestAggregator(unittest.TestCase):
         self.assertEqual(len(self.aggregator.metrics_map[MetricType.SET]), 0)
 
         self.assertEqual(len(metrics), 7)
-        for metric in metrics:
-            print("raymond", metric)
-            print("andrew", metric['metric_type'])
         metrics.sort(key=lambda m: (m['metric_type'], m['name'], m['value']))
         expected_metrics = [
             {"metric_type": MetricType.COUNT, "name": "countTest1", "tags": tags, "rate": 1, "value": 31, "timestamp": 0},
