@@ -70,8 +70,7 @@ class Aggregator(object):
 
     def add_metric(self, metric_type, metric_class, name, value, tags, rate, timestamp=0):
         context = self.get_context(name, tags)
-        with self.locks[metric_type]:
-            if context in self.metrics_map[metric_type]:
-                self.metrics_map[metric_type][context].aggregate(value)
-            else:
-                self.metrics_map[metric_type][context] = metric_class(name, value, tags, rate, timestamp)
+        if context in self.metrics_map[metric_type]:
+            self.metrics_map[metric_type][context].aggregate(value)
+        else:
+            self.metrics_map[metric_type][context] = metric_class(name, value, tags, rate, timestamp)
