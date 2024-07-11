@@ -65,8 +65,6 @@ class SetMetric(MetricAggregator):
             self.data.add(v)
 
     def unsafe_flush(self):
-        if not self.data:
-            return []
         return [
             {
                 'metric_type': MetricType.SET,
