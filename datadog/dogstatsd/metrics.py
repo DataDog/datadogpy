@@ -65,16 +65,15 @@ class SetMetric(MetricAggregator):
             self.data.add(v)
 
     def unsafe_flush(self):
-        with self.lock:
-            if not self.data:
-                return []
-            return [
-                {
-                    'metric_type': MetricType.SET,
-                    'name': self.name,
-                    'tags': self.tags,
-                    'rate': self.rate,
-                    'value': value,
-                }
-                for value in self.data
-            ]
+        if not self.data:
+            return []
+        return [
+            {
+                'metric_type': MetricType.SET,
+                'name': self.name,
+                'tags': self.tags,
+                'rate': self.rate,
+                'value': value,
+            }
+            for value in self.data
+        ]
