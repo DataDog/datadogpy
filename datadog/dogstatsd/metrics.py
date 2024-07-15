@@ -1,77 +1,49 @@
-from threading import Lock
 from datadog.dogstatsd.metric_types import MetricType
 
 class MetricAggregator(object):
-    def __init__(self, name, tags, rate, timestamp=0):
+    def __init__(self, name, tags, rate, metric_type: MetricType, value=0, timestamp=0):
         self.name = name
         self.tags = tags
         self.rate = rate
+        self.metric_type = metric_type
+        self.value = value
         self.timestamp = timestamp
 
     def aggregate(self, value):
         raise NotImplementedError("Subclasses should implement this method.")
 
-    def unsafe_flush(self):
-        raise NotImplementedError("Subclasses should implement this method.")
-
-
 class CountMetric(MetricAggregator):
     def __init__(self, name, value, tags, rate, timestamp=0):
-        super(CountMetric, self).__init__(name, tags, rate, timestamp)
-        self.value = value
+        super(CountMetric, self).__init__(name, tags, rate, MetricType.COUNT, value, timestamp)
 
     def aggregate(self, v):
         self.value += v
 
-    def unsafe_flush(self):
-        return {
-            'metric_type': MetricType.COUNT,
-            'name': self.name,
-            'tags': self.tags,
-            'rate': self.rate,
-            'value': self.value,
-            'timestamp': self.timestamp
-        }
-
-
 class GaugeMetric(MetricAggregator):
     def __init__(self, name, value, tags, rate, timestamp=0):
-        super(GaugeMetric, self).__init__(name, tags, rate, timestamp)
-        self.value = value
+        super(GaugeMetric, self).__init__(name, tags, rate, MetricType.GAUGE, value, timestamp)
 
     def aggregate(self, v):
         self.value = v
 
-    def unsafe_flush(self):
-        return {
-            'metric_type': MetricType.GAUGE,
-            'name': self.name,
-            'tags': self.tags,
-            'rate': self.rate,
-            'value': self.value,
-            'timestamp': self.timestamp
-        }
-
-
 class SetMetric(MetricAggregator):
     def __init__(self, name, value, tags, rate, timestamp=0):
-        super(SetMetric, self).__init__(name, tags, rate, timestamp)
+        default_value = 0
+        super(SetMetric, self).__init__(name, tags, rate, MetricType.SET, default_value, default_value)
         self.data = set()
         self.data.add(value)
-        self.lock = Lock()
 
     def aggregate(self, v):
-        with self.lock:
-            self.data.add(v)
+        self.data.add(v)
 
-    def unsafe_flush(self):
+    def get_data(self):
         return [
-            {
-                'metric_type': MetricType.SET,
-                'name': self.name,
-                'tags': self.tags,
-                'rate': self.rate,
-                'value': value,
-            }
+            MetricAggregator(
+                self.name,
+                self.tags,
+                self.rate,
+                MetricType.SET,
+                value
+            )
             for value in self.data
         ]

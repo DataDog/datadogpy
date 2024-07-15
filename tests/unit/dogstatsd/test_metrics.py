@@ -58,7 +58,7 @@ class TestMetrics(unittest.TestCase):
         self.assertEqual(s.tags, ["tag1", "tag2"])
         self.assertEqual(s.rate, 1)
         self.assertEqual(s.timestamp, 1713804588)
-
+        print("huh?", s.timestamp)
         s_default_timestamp = SetMetric("test", "value1", ["tag1", "tag2"], 1)
         self.assertEqual(s_default_timestamp.data, {"value1"})
         self.assertEqual(s_default_timestamp.name, "test")
