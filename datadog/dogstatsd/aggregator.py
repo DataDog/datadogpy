@@ -51,7 +51,7 @@ class Aggregator(object):
         self.send_metrics()
 
     def flush_metrics(self):
-        metrics: list[MetricAggregator] = []
+        metrics = []
 
         for metric_type in self.metrics_map.keys():
             with self.locks[metric_type]:
