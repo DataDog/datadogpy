@@ -1,7 +1,6 @@
 import threading
 import time
 from datadog.dogstatsd.metrics import (
-    MetricAggregator,
     CountMetric,
     GaugeMetric,
     SetMetric,
