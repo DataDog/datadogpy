@@ -34,8 +34,7 @@ class Aggregator(object):
 
     def send_metrics(self):
         for metric in self.flush_metrics():
-            self.client._report(metric.name, metric.type, metric.value, metric.tags, 
-                timestamp=metric.timestamp if metric.timestamp else 0)
+            self.client._report(metric.name, metric.type, metric.value, metric.tags, metric.timestamp)
 
     def stop(self):
         self.closed.set()
@@ -44,7 +43,7 @@ class Aggregator(object):
         self.send_metrics()
 
     def flush_metrics(self):
-        metrics = []
+        metrics: list[MetricAggregator] = []
 
         for metric_type in self.metrics_map.keys():
             with self.locks[metric_type]:
@@ -52,7 +51,7 @@ class Aggregator(object):
                 self.metrics_map[metric_type] = {}
 
             for metric in current_metrics.values():
-                metrics.extend(metric.unsafe_flush() if isinstance(metric, SetMetric) else [metric.unsafe_flush()])
+                metrics.extend(metric.get_data() if isinstance(metric, SetMetric) else [metric])
 
         return metrics
 
