@@ -1,5 +1,4 @@
-class MetricType():
-    COUNT = 'c'
-    GAUGE = 'g'
-    SET = 's'
-    
+class MetricType:
+    COUNT = "c"
+    GAUGE = "g"
+    SET = "s"
