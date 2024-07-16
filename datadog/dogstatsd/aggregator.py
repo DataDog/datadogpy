@@ -26,8 +26,7 @@ class Aggregator(object):
         self.client._start_flush_thread(flush_interval, self.send_metrics)
 
     def stop(self):
-        self.client._stop_flush_thread()
-        self.send_metrics()
+        self.client._stop_flush_thread(self.send_metrics)
 
     def send_metrics(self):
         for metric in self.flush_metrics():

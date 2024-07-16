@@ -544,12 +544,12 @@ class DogStatsd(object):
         )
 
     # Note: Invocations of this method should be thread-safe
-    def _stop_flush_thread(self):
+    def _stop_flush_thread(self, flush_function):
         if not self._flush_thread:
             return
 
         try:
-            self.flush()
+            flush_function()
         finally:
             pass
 
@@ -590,7 +590,7 @@ class DogStatsd(object):
             # otherwise start up the flushing thread and enable the buffering.
             if is_disabled:
                 self._send = self._send_to_server
-                self._stop_flush_thread()
+                self._stop_flush_thread(self.flush)
                 log.debug("Statsd buffering is disabled")
             else:
                 self._send = self._send_to_buffer
@@ -1408,7 +1408,7 @@ class DogStatsd(object):
         self._forking = True
 
         with self._config_lock:
-            self._stop_flush_thread()
+            self._stop_flush_thread(self.flush)
             self._stop_sender_thread()
         self.close_socket()
 
