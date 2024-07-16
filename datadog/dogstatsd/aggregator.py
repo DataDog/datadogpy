@@ -15,7 +15,7 @@ class Aggregator(object):
             MetricType.GAUGE: {},
             MetricType.SET: {},
         }
-        self.locks = {
+        self._locks = {
             MetricType.COUNT: threading.RLock(),
             MetricType.GAUGE: threading.RLock(),
             MetricType.SET: threading.RLock(),
@@ -37,7 +37,7 @@ class Aggregator(object):
     def flush_metrics(self):
         metrics = []
         for metric_type in self.metrics_map.keys():
-            with self.locks[metric_type]:
+            with self._locks[metric_type]:
                 current_metrics = self.metrics_map[metric_type]
                 self.metrics_map[metric_type] = {}
             for metric in current_metrics.values():
@@ -66,7 +66,7 @@ class Aggregator(object):
         self, metric_type, metric_class, name, value, tags, rate, timestamp=0
     ):
         context = self.get_context(name, tags)
-        with self.locks[metric_type]:
+        with self._locks[metric_type]:
             if context in self.metrics_map[metric_type]:
                 self.metrics_map[metric_type][context].aggregate(value)
             else:
