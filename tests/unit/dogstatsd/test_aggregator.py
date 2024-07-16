@@ -2,7 +2,7 @@ import unittest
 from mock import Mock
 from datadog.dogstatsd import DogStatsd
 from datadog.dogstatsd.metric_types import MetricType
-from datadog.dogstatsd.aggregator import Aggregator  # Update with the correct module name
+from datadog.dogstatsd.aggregator import Aggregator
 
 
 class TestAggregator(unittest.TestCase):

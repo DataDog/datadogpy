@@ -7,11 +7,9 @@ from datadog.dogstatsd.metrics import (
 )
 from datadog.dogstatsd.metric_types import MetricType
 
-
 class Aggregator(object):
     def __init__(self, client):
         self.client = client
-
         self.metrics_map = {
             MetricType.COUNT: {},
             MetricType.GAUGE: {},
@@ -23,19 +21,13 @@ class Aggregator(object):
             MetricType.SET: threading.RLock(),
         }
 
-        self.closed = threading.Event()
-        self.exited = threading.Event()
-
     def start(self, flush_interval):
         self.flush_interval = flush_interval
-        self.ticker = threading.Timer(self.flush_interval, self.tick)
-        self.ticker.start()
-
-    def tick(self):
-        while not self.closed.is_set():
-            self.send_metrics()
-            time.sleep(self.flush_interval)
-        self.exited.set()
+        self.client._start_flush_thread(flush_interval, self.send_metrics)
+    
+    def stop(self):
+        self.client._stop_flush_thread()
+        self.send_metrics()
 
     def send_metrics(self):
         for metric in self.flush_metrics():
@@ -43,25 +35,14 @@ class Aggregator(object):
                 metric.name, metric.type, metric.value, metric.tags, metric.timestamp
             )
 
-    def stop(self):
-        self.closed.set()
-        self.ticker.cancel()
-        self.exited.wait()
-        self.send_metrics()
-
     def flush_metrics(self):
         metrics = []
-
         for metric_type in self.metrics_map.keys():
             with self.locks[metric_type]:
                 current_metrics = self.metrics_map[metric_type]
                 self.metrics_map[metric_type] = {}
-
             for metric in current_metrics.values():
-                metrics.extend(
-                    metric.get_data() if isinstance(metric, SetMetric) else [metric]
-                )
-
+                metrics.extend(metric.get_data() if isinstance(metric, SetMetric) else [metric])
         return metrics
 
     def get_context(self, name, tags):

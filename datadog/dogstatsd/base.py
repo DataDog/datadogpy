@@ -438,7 +438,7 @@ class DogStatsd(object):
         self._flush_interval = flush_interval
         self._flush_thread_stop = threading.Event()
         self._flush_thread = None
-        self._start_flush_thread(self._flush_interval)
+        self._start_flush_thread(self._flush_interval, self.flush)
 
         self._queue = None
         self._sender_thread = None
@@ -514,7 +514,7 @@ class DogStatsd(object):
         self._telemetry = True
 
     # Note: Invocations of this method should be thread-safe
-    def _start_flush_thread(self, flush_interval):
+    def _start_flush_thread(self, flush_interval, flush_function):
         if self._disable_buffering or self._flush_interval <= MIN_FLUSH_INTERVAL:
             log.debug("Statsd periodic buffer flush is disabled")
             return
@@ -528,7 +528,7 @@ class DogStatsd(object):
         def _flush_thread_loop(self, flush_interval):
             while not self._flush_thread_stop.is_set():
                 time.sleep(flush_interval)
-                self.flush()
+                flush_function()
 
         self._flush_thread = threading.Thread(
             name="{}_flush_thread".format(self.__class__.__name__),
@@ -594,7 +594,7 @@ class DogStatsd(object):
                 log.debug("Statsd buffering is disabled")
             else:
                 self._send = self._send_to_buffer
-                self._start_flush_thread(self._flush_interval)
+                self._start_flush_thread(self._flush_interval, self.flush)
 
     @staticmethod
     def resolve_host(host, use_default_route):
@@ -1422,7 +1422,7 @@ class DogStatsd(object):
         self._forking = False
 
         with self._config_lock:
-            self._start_flush_thread(self._flush_interval)
+            self._start_flush_thread(self._flush_interval, self.flush)
             self._start_sender_thread()
 
     def stop(self):
