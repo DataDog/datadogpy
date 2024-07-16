@@ -1,14 +1,11 @@
 import unittest
-from mock import Mock
-from datadog.dogstatsd import DogStatsd
 from datadog.dogstatsd.metric_types import MetricType
 from datadog.dogstatsd.aggregator import Aggregator
 
 
 class TestAggregator(unittest.TestCase):
     def setUp(self):
-        self.client = Mock(spec=DogStatsd)
-        self.aggregator = Aggregator(self.client)
+        self.aggregator = Aggregator()
 
     def test_aggregator_sample(self):
         tags = ["tag1", "tag2"]

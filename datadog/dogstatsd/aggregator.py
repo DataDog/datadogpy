@@ -8,8 +8,7 @@ from datadog.dogstatsd.metric_types import MetricType
 
 
 class Aggregator(object):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self):
         self.metrics_map = {
             MetricType.COUNT: {},
             MetricType.GAUGE: {},
@@ -20,19 +19,6 @@ class Aggregator(object):
             MetricType.GAUGE: threading.RLock(),
             MetricType.SET: threading.RLock(),
         }
-
-    def start(self, flush_interval):
-        self.flush_interval = flush_interval
-        self.client._start_flush_thread(flush_interval, self.send_metrics)
-
-    def stop(self):
-        self.client._stop_flush_thread(self.send_metrics)
-
-    def send_metrics(self):
-        for metric in self.flush_metrics():
-            self.client._report(
-                metric.name, metric.type, metric.value, metric.tags, metric.timestamp
-            )
 
     def flush_metrics(self):
         metrics = []
