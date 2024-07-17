@@ -27,6 +27,8 @@ except ImportError:
 from typing import Optional, List, Text, Union
 
 # Datadog libraries
+from datadog.dogstatsd.aggregator import Aggregator
+from datadog.dogstatsd.metric_types import MetricType
 from datadog.dogstatsd.context import (
     TimedContextManagerDecorator,
     DistributedContextManagerDecorator,
@@ -440,6 +442,10 @@ class DogStatsd(object):
         self._flush_thread = None
         self._start_flush_thread(self._flush_interval, self.flush)
 
+        # TODO: should we have a different flush interval then the one used for batching
+        self.aggregator = Aggregator()
+        self._start_flush_thread(self._flush_interval, self.aggregator.flush_metrics)
+
         self._queue = None
         self._sender_thread = None
         self._sender_enabled = False
@@ -772,7 +778,7 @@ class DogStatsd(object):
         >>> statsd.gauge("users.online", 123)
         >>> statsd.gauge("active.connections", 1001, tags=["protocol:http"])
         """
-        return self._report(metric, "g", value, tags, sample_rate)
+        self.aggregator.gauge(metric, value, tags, sample_rate)
 
     # Minimum Datadog Agent version: 7.40.0
     def gauge_with_timestamp(
@@ -792,7 +798,7 @@ class DogStatsd(object):
         >>> statsd.gauge("users.online", 123, 1713804588)
         >>> statsd.gauge("active.connections", 1001, 1713804588, tags=["protocol:http"])
         """
-        return self._report(metric, "g", value, tags, sample_rate, timestamp)
+        self.aggregator.gauge(metric, value, tags, sample_rate, timestamp)
 
     def count(
         self,
@@ -807,7 +813,7 @@ class DogStatsd(object):
 
         >>> statsd.count("page.views", 123)
         """
-        self._report(metric, "c", value, tags, sample_rate)
+        self.aggregator.count(metric, value, tags, sample_rate)
 
     # Minimum Datadog Agent version: 7.40.0
     def count_with_timestamp(
@@ -826,7 +832,7 @@ class DogStatsd(object):
 
         >>> statsd.count("files.transferred", 124, timestamp=1713804588)
         """
-        self._report(metric, "c", value, tags, sample_rate, timestamp)
+        self.aggregator.count(metric, value, tags, sample_rate, timestamp)
 
     def increment(
         self,
@@ -859,7 +865,7 @@ class DogStatsd(object):
         >>> statsd.decrement("active.connections", 2)
         """
         metric_value = -value if value else value
-        self._report(metric, "c", metric_value, tags, sample_rate)
+        self.aggregator.count(metric, metric_value, tags, sample_rate)
 
     def histogram(
         self,
@@ -967,7 +973,7 @@ class DogStatsd(object):
 
         >>> statsd.set("visitors.uniques", 999)
         """
-        self._report(metric, "s", value, tags, sample_rate)
+        self.aggregator.set(metric, value, tags, sample_rate)
 
     def close_socket(self):
         """
@@ -1026,7 +1032,7 @@ class DogStatsd(object):
             return
         # TODO: use metric_types enum
         # timestamps (protocol v1.3) only allowed on gauges and counts
-        allows_timestamp = metric_type == "g" or metric_type == "c"
+        allows_timestamp = metric_type == MetricType.GAUGE or metric_type == MetricType.COUNT
         if not allows_timestamp or timestamp < 0:
             timestamp = 0
 
