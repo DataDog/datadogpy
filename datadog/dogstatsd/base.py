@@ -461,7 +461,7 @@ class DogStatsd(object):
             self._aggregation_flush_interval = aggregation_flush_interval
             self._aggregation_flush_thread_stop = threading.Event()
             self._aggregation_flush_thread = [None]
-            self._start_flush_thread(self._aggregation_flush_interval, MIN_AGGREGATION_FLUSH_INTERVAL, self.aggregator.flush_aggregated_metrics, 
+            self._start_flush_thread(self._aggregation_flush_interval, MIN_AGGREGATION_FLUSH_INTERVAL, self.flush_aggregated_metrics, 
                 self._aggregation_flush_thread, self._aggregation_flush_thread_stop)
 
         self._queue = None
@@ -591,7 +591,7 @@ class DogStatsd(object):
         if not self._aggregation_flush_thread:
             return
         try:
-            self.aggregator.flush_aggregated_metrics()
+            self.flush_aggregated_metrics()
         finally:
             pass
 
@@ -800,6 +800,14 @@ class DogStatsd(object):
             if self._buffer:
                 self._send_to_server("\n".join(self._buffer))
                 self._reset_buffer()
+    
+    def flush_aggregated_metrics(self):
+        """
+        Flush the aggregated metrics
+        """
+        metrics = self.aggregator.flush_aggregated_metrics()
+        for m in metrics:
+            self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp)
 
     def gauge(
         self,
@@ -1481,7 +1489,7 @@ class DogStatsd(object):
         self.disable_buffering = True
         self.disable_aggregating = True
         self.flush_buffered_metrics()
-        self.aggregator.flush_aggregated_metrics()
+        self.flush_aggregated_metrics()
         self.close_socket()
 
 
