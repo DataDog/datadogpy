@@ -436,31 +436,33 @@ class DogStatsd(object):
         self._send = self._send_to_buffer
         self._disable_buffering = disable_buffering
         self._disable_aggregating = disable_aggregating
+
+        # Currently, we do not allow both aggregation and buffering, we may revisit this in the future
         if self._disable_buffering and self._disable_aggregating:
             self._send = self._send_to_server
             log.debug("Statsd buffering is disabled")
-        
-
-        # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
-        self._forking = False
-
-        # Start the flush thread if buffering is enabled and the interval is above
-        # a reasonable range. This both prevents thrashing and allow us to use "0.0"
-        # as a value for disabling the automatic flush timer as well.
-        self._buffer_flush_interval = buffer_flush_interval
-        self._batching_flush_thread_stop = threading.Event()
-        # We make the _batching_flush_thread and _aggregation_flush_thread a list so that it is a mutable object, which allows us to mutate it in the 
-        # _start_flush_thread function
-        self._batching_flush_thread = [None]
-        self._start_flush_thread(self._buffer_flush_interval, MIN_BUFFERING_FLUSH_INTERVAL, self.flush_buffered_metrics, self._batching_flush_thread,
-            self._batching_flush_thread_stop)
-
-        self.aggregator = Aggregator()
-        self._aggregation_flush_interval = aggregation_flush_interval
-        self._aggregation_flush_thread_stop = threading.Event()
-        self._aggregation_flush_thread = [None]
-        self._start_flush_thread(self._aggregation_flush_interval, MIN_AGGREGATION_FLUSH_INTERVAL, self.aggregator.flush_aggregated_metrics, 
-            self._aggregation_flush_thread, self._aggregation_flush_thread_stop)
+        elif self._disable_aggregating:
+            # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
+            self._forking = False
+             # Start the flush thread if buffering is enabled and the interval is above
+            # a reasonable range. This both prevents thrashing and allow us to use "0.0"
+            # as a value for disabling the automatic flush timer as well.
+            self._buffer_flush_interval = buffer_flush_interval
+            self._batching_flush_thread_stop = threading.Event()
+            # We make the _batching_flush_thread and _aggregation_flush_thread a list so that it is a mutable object, which allows us to mutate it in the 
+            # _start_flush_thread function
+            self._batching_flush_thread = [None]
+            self._start_flush_thread(self._buffer_flush_interval, MIN_BUFFERING_FLUSH_INTERVAL, self.flush_buffered_metrics, self._batching_flush_thread,
+                self._batching_flush_thread_stop)
+        else:
+            self._forking = False
+            self._disable_buffering = True
+            self.aggregator = Aggregator()
+            self._aggregation_flush_interval = aggregation_flush_interval
+            self._aggregation_flush_thread_stop = threading.Event()
+            self._aggregation_flush_thread = [None]
+            self._start_flush_thread(self._aggregation_flush_interval, MIN_AGGREGATION_FLUSH_INTERVAL, self.aggregator.flush_aggregated_metrics, 
+                self._aggregation_flush_thread, self._aggregation_flush_thread_stop)
 
         self._queue = None
         self._sender_thread = None
