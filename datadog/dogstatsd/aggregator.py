@@ -20,7 +20,7 @@ class Aggregator(object):
             MetricType.SET: threading.RLock(),
         }
 
-    def flush_metrics(self):
+    def flush_aggregated_metrics(self):
         metrics = []
         for metric_type in self.metrics_map.keys():
             with self._locks[metric_type]:
