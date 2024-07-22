@@ -539,11 +539,21 @@ class DogStatsd(object):
 
     # Note: Invocations of this method should be thread-safe
     def _start_flush_thread(self, flush_interval, min_flush_interval, flush_function, flush_thread_container, flush_thread_stop):
-        if self._disable_buffering:
+        if self._disable_buffering and flush_function == self.flush_buffered_metrics:
             log.debug("Statsd periodic buffer flush is disabled")
             return
+        if self._disable_aggregating and flush_function == self.flush_aggregated_metrics:
+            log.debug("Statsd periodic aggregating flush is disabled")
+            return
+        
+        flush_type = ''
+        if self._disable_buffering:
+            flush_type = 'aggregation'
+        else:
+            flush_type = 'buffering'
+
         if flush_interval <= min_flush_interval:
-            log.debug("flush_interval for either buffering or aggregation is less then the min_flush_interval")
+            log.debug("the set flush interval for %s is less then the minimum", flush_type)
             return
 
         if self._forking:
@@ -566,7 +576,8 @@ class DogStatsd(object):
         new_thread.start()
         flush_thread_container[0] = new_thread
         log.debug(
-            "Statsd flush thread registered with period of %s",
+            "Statsd %s flush thread registered with period of %s",
+            flush_type,
             flush_interval,
         )
 
