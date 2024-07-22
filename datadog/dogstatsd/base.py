@@ -666,12 +666,11 @@ class DogStatsd(object):
 
             # If aggregation has been disabled, flush and kill the background thread
             # otherwise start up the flushing thread and enable aggregation.
+            self._send = self._send_to_server
             if is_disabled:
-                self._send = self._send_to_server
                 self._stop_aggregation_flush_thread()
                 log.debug("Statsd aggregation is disabled")
             else:
-                self._send = self._send_to_aggregator
                 self._start_flush_thread(self._aggregation_flush_interval, MIN_AGGREGATION_FLUSH_INTERVAL, self.flush_aggregated_metrics, self._aggregation_flush_thread,
                     self._aggregation_flush_thread_stop)
 
