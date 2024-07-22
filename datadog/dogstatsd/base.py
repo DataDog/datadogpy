@@ -429,7 +429,7 @@ class DogStatsd(object):
 
         self._reset_buffer()
 
-        # This lock is used for all cases where client configuration is being changed: buffering, sender mode.
+        # This lock is used for all cases where client configuration is being changed: buffering, aggregation sender mode.
         self._config_lock = RLock()
 
         # If buffering is disabled, we bypass the buffer function.
@@ -649,6 +649,31 @@ class DogStatsd(object):
                 self._send = self._send_to_buffer
                 self._start_flush_thread(self._buffer_flush_interval, MIN_BUFFERING_FLUSH_INTERVAL, self.flush_buffered_metrics, self._batching_flush_thread,
                     self._batching_flush_thread_stop)
+    
+    @property
+    def disable_aggregation(self):
+        with self._config_lock:
+            return self._disable_aggregating
+
+    @disable_aggregation.setter
+    def disable_aggregation(self, is_disabled):
+        with self._config_lock:
+            # If the toggle didn't change anything, this method is a noop
+            if self._disable_aggregating == is_disabled:
+                return
+
+            self.disable_aggregating = is_disabled
+
+            # If aggregation has been disabled, flush and kill the background thread
+            # otherwise start up the flushing thread and enable aggregation.
+            if is_disabled:
+                self._send = self._send_to_server
+                self._stop_aggregation_flush_thread()
+                log.debug("Statsd aggregation is disabled")
+            else:
+                self._send = self._send_to_aggregator
+                self._start_flush_thread(self._aggregation_flush_interval, MIN_AGGREGATION_FLUSH_INTERVAL, self.flush_aggregated_metrics, self._aggregation_flush_thread,
+                    self._aggregation_flush_thread_stop)
 
     @staticmethod
     def resolve_host(host, use_default_route):
