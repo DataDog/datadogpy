@@ -438,7 +438,8 @@ class DogStatsd(object):
 
         self._reset_buffer()
 
-        # This lock is used for all cases where client configuration is being changed: buffering, aggregation sender mode.
+        # This lock is used for all cases where client configuration is being changed: buffering,
+        # aggregation, sender mode.
         self._config_lock = RLock()
 
         self._disable_buffering = disable_buffering
@@ -457,7 +458,8 @@ class DogStatsd(object):
             self._buffer_flush_interval = buffer_flush_interval
             self._batching_flush_thread_stop = threading.Event()
             self._send = self._send_to_buffer
-            # We make the _batching_flush_thread and _aggregation_flush_thread a list so that it is a mutable object, which allows us to mutate it in the
+            # We make the _batching_flush_thread and _aggregation_flush_thread a list so that it is a mutable object,
+            # which allows us to mutate it in the
             # _start_flush_thread function
             self._batching_flush_thread = [None]
             self._start_flush_thread(
