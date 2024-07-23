@@ -432,8 +432,6 @@ class DogStatsd(object):
         # This lock is used for all cases where client configuration is being changed: buffering, aggregation sender mode.
         self._config_lock = RLock()
 
-        # If buffering is disabled, we bypass the buffer function.
-        self._send = self._send_to_buffer
         self._disable_buffering = disable_buffering
         self._disable_aggregating = disable_aggregating
 
@@ -449,12 +447,14 @@ class DogStatsd(object):
             # as a value for disabling the automatic flush timer as well.
             self._buffer_flush_interval = buffer_flush_interval
             self._batching_flush_thread_stop = threading.Event()
+            self._send = self._send_to_buffer
             # We make the _batching_flush_thread and _aggregation_flush_thread a list so that it is a mutable object, which allows us to mutate it in the 
             # _start_flush_thread function
             self._batching_flush_thread = [None]
             self._start_flush_thread(self._buffer_flush_interval, MIN_BUFFERING_FLUSH_INTERVAL, self.flush_buffered_metrics, self._batching_flush_thread,
                 self._batching_flush_thread_stop)
         else:
+            self._send = self._send_to_server
             self._forking = False
             self._disable_buffering = True
             self.aggregator = Aggregator()
@@ -1515,7 +1515,7 @@ class DogStatsd(object):
     def stop(self):
         """Stop the client.
 
-        Disable buffering, background sender and flush any pending payloads to the server.
+        Disable buffering, aggregation, background sender and flush any pending payloads to the server.
 
         Client remains usable after this method, but sending metrics may block if socket_timeout is enabled.
         """
