@@ -634,8 +634,8 @@ class DogStatsd(object):
             pass
 
         self._buffering_flush_thread_stop.set()
-
-        self._buffering_flush_thread[0].join()
+        if self._buffering_flush_thread[0]:
+            self._buffering_flush_thread[0].join()
         self._buffering_flush_thread = [None]
 
         self._buffering_flush_thread_stop.clear()
@@ -650,8 +650,8 @@ class DogStatsd(object):
             pass
 
         self._aggregation_flush_thread_stop.set()
-
-        self._aggregation_flush_thread[0].join()
+        if self._aggregation_flush_thread[0]:
+            self._aggregation_flush_thread[0].join()
         self._aggregation_flush_thread = [None]
 
         self._aggregation_flush_thread_stop.clear()
