@@ -236,7 +236,7 @@ class DogStatsd(object):
         it overrides the default value.
         :type buffer_flush_interval: float
 
-        :disable_aggregating: If set, metrics (Count, Guage, Set) are no longered aggregated by the client
+        :disable_aggregating: If true, metrics (Count, Guage, Set) are no longered aggregated by the client
         :type disable_aggregating: bool
 
         :disable_buffering: If set, metrics are no longered buffered by the client and
@@ -448,39 +448,38 @@ class DogStatsd(object):
 
         self._disable_buffering = disable_buffering
         self._disable_aggregating = disable_aggregating
-
+        self._buffer_flush_interval = buffer_flush_interval
+        self._aggregation_flush_interval = aggregation_flush_interval
+        # We make the _buffering_flush_thread and _aggregation_flush_thread a list so that it is a mutable object,
+        # which allows us to mutate it in the
+        # _start_flush_thread function
+        self._buffering_flush_thread = [None]
+        self._aggregation_flush_thread = [None]
+        self._buffering_flush_thread_stop = threading.Event()
+        self.aggregator = Aggregator()
+        self._aggregation_flush_thread_stop = threading.Event()
+        # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
+        self._forking = False
         # Currently, we do not allow both aggregation and buffering, we may revisit this in the future
         if self._disable_buffering and self._disable_aggregating:
             self._send = self._send_to_server
-            log.debug("Statsd buffering is disabled")
+            log.debug("Statsd buffering and aggregation is disabled")
         elif self._disable_aggregating:
-            # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
-            self._forking = False
+            
             # Start the flush thread if buffering is enabled and the interval is above
             # a reasonable range. This both prevents thrashing and allow us to use "0.0"
             # as a value for disabling the automatic flush timer as well.
-            self._buffer_flush_interval = buffer_flush_interval
-            self._batching_flush_thread_stop = threading.Event()
             self._send = self._send_to_buffer
-            # We make the _batching_flush_thread and _aggregation_flush_thread a list so that it is a mutable object,
-            # which allows us to mutate it in the
-            # _start_flush_thread function
-            self._batching_flush_thread = [None]
             self._start_flush_thread(
                 self._buffer_flush_interval,
                 MIN_BUFFERING_FLUSH_INTERVAL,
                 self.flush_buffered_metrics,
-                self._batching_flush_thread,
-                self._batching_flush_thread_stop,
+                self._buffering_flush_thread,
+                self._buffering_flush_thread_stop,
             )
         else:
             self._send = self._send_to_server
-            self._forking = False
             self._disable_buffering = True
-            self.aggregator = Aggregator()
-            self._aggregation_flush_interval = aggregation_flush_interval
-            self._aggregation_flush_thread_stop = threading.Event()
-            self._aggregation_flush_thread = [None]
             self._start_flush_thread(
                 self._aggregation_flush_interval,
                 MIN_AGGREGATION_FLUSH_INTERVAL,
@@ -627,19 +626,19 @@ class DogStatsd(object):
 
     # Note: Invocations of this method should be thread-safe
     def _stop_buffering_flush_thread(self):
-        if not self._batching_flush_thread:
+        if not self._buffering_flush_thread:
             return
         try:
             self.flush_buffered_metrics()
         finally:
             pass
 
-        self._batching_flush_thread_stop.set()
+        self._buffering_flush_thread_stop.set()
 
-        self._batching_flush_thread[0].join()
-        self._batching_flush_thread = [None]
+        self._buffering_flush_thread[0].join()
+        self._buffering_flush_thread = [None]
 
-        self._batching_flush_thread_stop.clear()
+        self._buffering_flush_thread_stop.clear()
 
     # Note: Invocations of this method should be thread-safe
     def _stop_aggregation_flush_thread(self):
@@ -695,8 +694,8 @@ class DogStatsd(object):
                     self._buffer_flush_interval,
                     MIN_BUFFERING_FLUSH_INTERVAL,
                     self.flush_buffered_metrics,
-                    self._batching_flush_thread,
-                    self._batching_flush_thread_stop,
+                    self._buffering_flush_thread,
+                    self._buffering_flush_thread_stop,
                 )
 
     @property
@@ -916,7 +915,10 @@ class DogStatsd(object):
         >>> statsd.gauge("users.online", 123)
         >>> statsd.gauge("active.connections", 1001, tags=["protocol:http"])
         """
-        self.aggregator.gauge(metric, value, tags, sample_rate)
+        if self._disable_aggregating:
+            self._report(metric, "g", value, tags, sample_rate)
+        else:
+            self.aggregator.gauge(metric, value, tags, sample_rate)
 
     # Minimum Datadog Agent version: 7.40.0
     def gauge_with_timestamp(
@@ -936,7 +938,10 @@ class DogStatsd(object):
         >>> statsd.gauge("users.online", 123, 1713804588)
         >>> statsd.gauge("active.connections", 1001, 1713804588, tags=["protocol:http"])
         """
-        self.aggregator.gauge(metric, value, tags, sample_rate, timestamp)
+        if self._disable_aggregating:
+            self._report(metric, "g", value, tags, sample_rate, timestamp)
+        else:
+            self.aggregator.gauge(metric, value, tags, sample_rate, timestamp)
 
     def count(
         self,
@@ -951,7 +956,10 @@ class DogStatsd(object):
 
         >>> statsd.count("page.views", 123)
         """
-        self.aggregator.count(metric, value, tags, sample_rate)
+        if self._disable_aggregating:
+            self._report(metric, "c", value, tags, sample_rate)
+        else:
+            self.aggregator.count(metric, value, tags, sample_rate)
 
     # Minimum Datadog Agent version: 7.40.0
     def count_with_timestamp(
@@ -970,7 +978,10 @@ class DogStatsd(object):
 
         >>> statsd.count("files.transferred", 124, timestamp=1713804588)
         """
-        self.aggregator.count(metric, value, tags, sample_rate, timestamp)
+        if self._disable_aggregating:
+            self._report(metric, "c", value, tags, sample_rate, timestamp)
+        else:
+            self.aggregator.count(metric, value, tags, sample_rate, timestamp)
 
     def increment(
         self,
@@ -1003,7 +1014,10 @@ class DogStatsd(object):
         >>> statsd.decrement("active.connections", 2)
         """
         metric_value = -value if value else value
-        self.aggregator.count(metric, metric_value, tags, sample_rate)
+        if self._disable_aggregating:
+            self._report(metric, "c", metric_value, tags, sample_rate)
+        else:
+            self.aggregator.count(metric, metric_value, tags, sample_rate)
 
     def histogram(
         self,
@@ -1113,7 +1127,10 @@ class DogStatsd(object):
 
         >>> statsd.set("visitors.uniques", 999)
         """
-        self.aggregator.set(metric, value, tags, sample_rate)
+        if self._disable_aggregating:
+            self._report(metric, "s", value, tags, sample_rate)
+        else:
+            self.aggregator.set(metric, value, tags, sample_rate)
 
     def close_socket(self):
         """
@@ -1590,8 +1607,8 @@ class DogStatsd(object):
                 self._buffer_flush_interval,
                 MIN_BUFFERING_FLUSH_INTERVAL,
                 self.flush_buffered_metrics,
-                self._batching_flush_thread,
-                self._batching_flush_thread_stop,
+                self._buffering_flush_thread,
+                self._buffering_flush_thread_stop,
             )
             self._start_sender_thread()
 
@@ -1604,8 +1621,8 @@ class DogStatsd(object):
         """
 
         self.disable_background_sender()
-        self.disable_buffering = True
-        self.disable_aggregating = True
+        self._disable_buffering = True
+        self._disable_aggregating = True
         self.flush_buffered_metrics()
         self.flush_aggregated_metrics()
         self.close_socket()

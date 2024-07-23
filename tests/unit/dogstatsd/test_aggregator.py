@@ -50,7 +50,7 @@ class TestAggregator(unittest.TestCase):
         self.aggregator.set("setTest1", "value2", tags, 1)
         self.aggregator.set("setTest2", "value1", tags, 1)
 
-        metrics = self.aggregator.flush_metrics()
+        metrics = self.aggregator.flush_aggregated_metrics()
         self.assertEqual(len(self.aggregator.metrics_map[MetricType.GAUGE]), 0)
         self.assertEqual(len(self.aggregator.metrics_map[MetricType.COUNT]), 0)
         self.assertEqual(len(self.aggregator.metrics_map[MetricType.SET]), 0)
