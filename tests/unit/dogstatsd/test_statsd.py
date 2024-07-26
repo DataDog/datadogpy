@@ -1666,12 +1666,27 @@ async def print_foo():
             os.environ['DD_ENTITY_ID'] = '04652bb7-19b7-11e9-9cc6-42010a9c016d'
             dogstatsd = DogStatsd(telemetry_min_flush_interval=0)
         dogstatsd.socket = FakeSocket()
-        dogstatsd._container_id = "fake-container-id"
+        dogstatsd._container_id = "ci-fake-container-id"
 
         dogstatsd.increment("page.views")
         dogstatsd.flush_buffered_metrics()
         tags = "dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d"
-        metric = 'page.views:1|c|#' + tags + '|c:fake-container-id\n'
+        metric = 'page.views:1|c|#' + tags + '|c:ci-fake-container-id\n'
+        self.assertEqual(metric, dogstatsd.socket.recv())
+        self.assertEqual(telemetry_metrics(tags=tags, bytes_sent=len(metric)), dogstatsd.socket.recv())
+
+    def test_entity_id_and_container_id_and_external_env(self):
+        with preserve_environment_variable('DD_ENTITY_ID'), preserve_environment_variable('DD_EXTERNAL_ENV'):
+            os.environ['DD_ENTITY_ID'] = '04652bb7-19b7-11e9-9cc6-42010a9c016d'
+            os.environ['DD_EXTERNAL_ENV'] = 'it-false,cn-container-name,pu-04652bb7-19b7-11e9-9cc6-42010a9c016d'
+            dogstatsd = DogStatsd(telemetry_min_flush_interval=0)
+        dogstatsd.socket = FakeSocket()
+        dogstatsd._container_id = "ci-fake-container-id"
+
+        dogstatsd.increment("page.views")
+        dogstatsd.flush_buffered_metrics()
+        tags = "dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d"
+        metric = 'page.views:1|c|#' + tags + '|c:ci-fake-container-id' + '|e:it-false,cn-container-name,pu-04652bb7-19b7-11e9-9cc6-42010a9c016d' + '\n'
         self.assertEqual(metric, dogstatsd.socket.recv())
         self.assertEqual(telemetry_metrics(tags=tags, bytes_sent=len(metric)), dogstatsd.socket.recv())
 
@@ -1861,62 +1876,62 @@ async def print_foo():
         self.assertIsNone(self.recv())
 
     def test_set_with_container_field(self):
-        self.statsd._container_id = "fake-container-id"
+        self.statsd._container_id = "ci-fake-container-id"
         self.statsd.set("set", 123)
-        self.assert_equal_telemetry("set:123|s|c:fake-container-id\n", self.recv(2))
+        self.assert_equal_telemetry("set:123|s|c:ci-fake-container-id\n", self.recv(2))
         self.statsd._container_id = None
 
     def test_gauge_with_container_field(self):
-        self.statsd._container_id = "fake-container-id"
+        self.statsd._container_id = "ci-fake-container-id"
         self.statsd.gauge("gauge", 123.4)
-        self.assert_equal_telemetry("gauge:123.4|g|c:fake-container-id\n", self.recv(2))
+        self.assert_equal_telemetry("gauge:123.4|g|c:ci-fake-container-id\n", self.recv(2))
         self.statsd._container_id = None
 
     def test_counter_with_container_field(self):
-        self.statsd._container_id = "fake-container-id"
+        self.statsd._container_id = "ci-fake-container-id"
 
         self.statsd.increment("page.views")
         self.statsd.flush_buffered_metrics()
-        self.assert_equal_telemetry("page.views:1|c|c:fake-container-id\n", self.recv(2))
+        self.assert_equal_telemetry("page.views:1|c|c:ci-fake-container-id\n", self.recv(2))
 
         self.statsd._reset_telemetry()
         self.statsd.increment("page.views", 11)
         self.statsd.flush_buffered_metrics()
-        self.assert_equal_telemetry("page.views:11|c|c:fake-container-id\n", self.recv(2))
+        self.assert_equal_telemetry("page.views:11|c|c:ci-fake-container-id\n", self.recv(2))
 
         self.statsd._reset_telemetry()
         self.statsd.decrement("page.views")
         self.statsd.flush_buffered_metrics()
-        self.assert_equal_telemetry("page.views:-1|c|c:fake-container-id\n", self.recv(2))
+        self.assert_equal_telemetry("page.views:-1|c|c:ci-fake-container-id\n", self.recv(2))
 
         self.statsd._reset_telemetry()
         self.statsd.decrement("page.views", 12)
         self.statsd.flush_buffered_metrics()
-        self.assert_equal_telemetry("page.views:-12|c|c:fake-container-id\n", self.recv(2))
+        self.assert_equal_telemetry("page.views:-12|c|c:ci-fake-container-id\n", self.recv(2))
 
         self.statsd._container_id = None
 
     def test_histogram_with_container_field(self):
-        self.statsd._container_id = "fake-container-id"
+        self.statsd._container_id = "ci-fake-container-id"
         self.statsd.histogram("histo", 123.4)
-        self.assert_equal_telemetry("histo:123.4|h|c:fake-container-id\n", self.recv(2))
+        self.assert_equal_telemetry("histo:123.4|h|c:ci-fake-container-id\n", self.recv(2))
         self.statsd._container_id = None
 
     def test_timing_with_container_field(self):
-        self.statsd._container_id = "fake-container-id"
+        self.statsd._container_id = "ci-fake-container-id"
         self.statsd.timing("t", 123)
-        self.assert_equal_telemetry("t:123|ms|c:fake-container-id\n", self.recv(2))
+        self.assert_equal_telemetry("t:123|ms|c:ci-fake-container-id\n", self.recv(2))
         self.statsd._container_id = None
 
     def test_event_with_container_field(self):
-        self.statsd._container_id = "fake-container-id"
+        self.statsd._container_id = "ci-fake-container-id"
         self.statsd.event(
             "Title",
             "L1\nL2",
             priority="low",
             date_happened=1375296969,
         )
-        event2 = u"_e{5,6}:Title|L1\\nL2|d:1375296969|p:low|c:fake-container-id\n"
+        event2 = u"_e{5,6}:Title|L1\\nL2|d:1375296969|p:low|c:ci-fake-container-id\n"
         self.assert_equal_telemetry(
             event2,
             self.recv(2),
@@ -1930,7 +1945,7 @@ async def print_foo():
         self.statsd._reset_telemetry()
 
         self.statsd.event("Title", u"♬ †øU †øU ¥ºu T0µ ♪", aggregation_key="key", tags=["t1", "t2:v2"])
-        event3 = u"_e{5,32}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2|c:fake-container-id\n"
+        event3 = u"_e{5,32}:Title|♬ †øU †øU ¥ºu T0µ ♪|k:key|#t1,t2:v2|c:ci-fake-container-id\n"
         self.assert_equal_telemetry(
             event3,
             self.recv(2, reset_wait=True),
@@ -1943,7 +1958,7 @@ async def print_foo():
         self.statsd._container_id = None
 
     def test_service_check_with_container_field(self):
-        self.statsd._container_id = "fake-container-id"
+        self.statsd._container_id = "ci-fake-container-id"
         now = int(time.time())
         self.statsd.service_check(
             "my_check.name",
@@ -1953,7 +1968,7 @@ async def print_foo():
             hostname=u"i-abcd1234",
             message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪",
         )
-        check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}|c:fake-container-id\n'.format(
+        check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}|c:ci-fake-container-id\n'.format(
             self.statsd.WARNING, now, u'♬ †øU \\n†øU ¥ºu|m\\: T0µ ♪'
         )
         self.assert_equal_telemetry(
