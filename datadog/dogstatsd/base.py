@@ -1414,7 +1414,7 @@ class DogStatsd(object):
         # Append all client level tags to every event
         tags = self._add_constant_tags(tags)
 
-        string = "_e{{{},{}}}:{}|{}".format(
+        string = u"_e{{{},{}}}:{}|{}".format(
             len(title.encode("utf8", "replace")),
             len(message.encode("utf8", "replace")),
             title,
@@ -1468,21 +1468,21 @@ class DogStatsd(object):
             else ""
         )
 
-        string = "_sc|{0}|{1}".format(check_name, status)
+        string = u"_sc|{0}|{1}".format(check_name, status)
 
         # Append all client level tags to every status check
         tags = self._add_constant_tags(tags)
 
         if timestamp:
-            string = "{0}|d:{1}".format(string, timestamp)
+            string = u"{0}|d:{1}".format(string, timestamp)
         if hostname:
-            string = "{0}|h:{1}".format(string, hostname)
+            string = u"{0}|h:{1}".format(string, hostname)
         if tags:
-            string = "{0}|#{1}".format(string, ",".join(tags))
+            string = u"{0}|#{1}".format(string, ",".join(tags))
         if message:
-            string = "{0}|m:{1}".format(string, message)
+            string = u"{0}|m:{1}".format(string, message)
         if self._container_id:
-            string = "{0}|c:{1}".format(string, self._container_id)
+            string = u"{0}|c:{1}".format(string, self._container_id)
 
         if self._telemetry:
             self.service_checks_count += 1
