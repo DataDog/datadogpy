@@ -1413,7 +1413,6 @@ async def print_foo():
         time1 = time.time()
         # setting the last flush time in the past to trigger a telemetry flush
         dogstatsd._last_flush_time = time1 - statsd._telemetry_flush_interval -1
-
         dogstatsd.close_buffer()
 
         metric = 'gauge1:1|g\ngauge2:2|g\n'
