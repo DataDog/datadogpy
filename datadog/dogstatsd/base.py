@@ -103,9 +103,7 @@ TELEMETRY_FORMATTING_STR = (
 
 Stop = object()
 
-SUPPORTS_FORKING = hasattr(os, "register_at_fork") and not os.environ.get(
-    "DD_DOGSTATSD_DISABLE_FORK_SUPPORT", None
-)
+SUPPORTS_FORKING = hasattr(os, "register_at_fork") and not os.environ.get("DD_DOGSTATSD_DISABLE_FORK_SUPPORT", None)
 TRACK_INSTANCES = not os.environ.get("DD_DOGSTATSD_DISABLE_INSTANCE_TRACKING", None)
 
 _instances = weakref.WeakSet()  # type: weakref.WeakSet
@@ -130,9 +128,7 @@ def post_fork():
 
 
 if SUPPORTS_FORKING:
-    os.register_at_fork(
-        before=pre_fork, after_in_child=post_fork, after_in_parent=post_fork
-    )  # type: ignore
+    os.register_at_fork(before=pre_fork, after_in_child=post_fork, after_in_parent=post_fork)  # type: ignore
 
 
 # pylint: disable=useless-object-inheritance,too-many-instance-attributes
