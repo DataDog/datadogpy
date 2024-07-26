@@ -465,7 +465,6 @@ class DogStatsd(object):
             self._send = self._send_to_server
             log.debug("Statsd buffering and aggregation is disabled")
         elif self._disable_aggregating:
-            
             # Start the flush thread if buffering is enabled and the interval is above
             # a reasonable range. This both prevents thrashing and allow us to use "0.0"
             # as a value for disabling the automatic flush timer as well.
@@ -1398,14 +1397,10 @@ class DogStatsd(object):
 
         # pylint: disable=undefined-variable
         if not is_p3k():
-            if not isinstance(title, unicode):  # noqa: F821
-                title = unicode(
-                    DogStatsd._escape_event_content(title), "utf8"
-                )  # noqa: F821
-            if not isinstance(message, unicode):  # noqa: F821
-                message = unicode(
-                    DogStatsd._escape_event_content(message), "utf8"
-                )  # noqa: F821
+            if not isinstance(title, unicode):                                       # noqa: F821
+                title = unicode(DogStatsd._escape_event_content(title), 'utf8')      # noqa: F821
+            if not isinstance(message, unicode):                                     # noqa: F821
+                message = unicode(DogStatsd._escape_event_content(message), 'utf8')  # noqa: F821
 
         # Append all client level tags to every event
         tags = self._add_constant_tags(tags)

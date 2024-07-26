@@ -914,7 +914,7 @@ class TestDogStatsd(unittest.TestCase):
         name, value = name_value.split(':')
 
         self.assertEqual('ms', type_)
-        self.assertEqual('unit.dogstatsd.test_statsd.func', name)
+        self.assertEqual('tests.unit.dogstatsd.test_statsd.func', name)
         self.assert_almost_equal(0.5, float(value), 0.1)
 
     @unittest.skipIf(not is_higher_py35(), reason="Coroutines are supported on Python 3.5 or higher.")
