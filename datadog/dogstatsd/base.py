@@ -996,7 +996,10 @@ class DogStatsd(object):
         >>> statsd.increment("page.views")
         >>> statsd.increment("files.transferred", 124)
         """
-        self._report(metric, "c", value, tags, sample_rate)
+        if self._disable_aggregating:
+            self._report(metric, "c", value, tags, sample_rate)
+        else:
+            self.aggregator.count(metric, value, tags, sample_rate)
 
     def decrement(
         self,
