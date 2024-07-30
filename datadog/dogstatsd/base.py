@@ -53,7 +53,7 @@ DEFAULT_BUFFERING_FLUSH_INTERVAL = 0.3
 MIN_BUFFERING_FLUSH_INTERVAL = 0.0001
 
 # Aggregation-related values (in seconds)
-DEFAULT_AGGREGATION_FLUSH_INTERVAL = 60
+DEFAULT_AGGREGATION_FLUSH_INTERVAL = 3
 MIN_AGGREGATION_FLUSH_INTERVAL = 0.01
 # Env var to enable/disable sending the container ID field
 ORIGIN_DETECTION_ENABLED = "DD_ORIGIN_DETECTION_ENABLED"
@@ -348,8 +348,6 @@ class DogStatsd(object):
             log.warning(
                 "The parameter max_buffer_size is now deprecated and is not used anymore"
             )
-        print("BASE.PY buffering is ????", disable_buffering)
-        print("BASE.PY disable_aggregating is ????", disable_aggregating)
         # Check host and port env vars
         agent_host = os.environ.get("DD_AGENT_HOST")
         if agent_host and host == DEFAULT_HOST:
@@ -700,18 +698,18 @@ class DogStatsd(object):
                 )
 
     @property
-    def disable_aggregation(self):
+    def disable_aggregating(self):
         with self._config_lock:
             return self._disable_aggregating
 
-    @disable_aggregation.setter
-    def disable_aggregation(self, is_disabled):
+    @disable_aggregating.setter
+    def disable_aggregating(self, is_disabled):
         with self._config_lock:
             # If the toggle didn't change anything, this method is a noop
             if self._disable_aggregating == is_disabled:
                 return
 
-            self.disable_aggregating = is_disabled
+            self._disable_aggregating = is_disabled
 
             # If aggregation has been disabled, flush and kill the background thread
             # otherwise start up the flushing thread and enable aggregation.
@@ -958,11 +956,8 @@ class DogStatsd(object):
         >>> statsd.count("page.views", 123)
         """
         if self._disable_aggregating:
-            print("AGGREGATION DISABLED")
             self._report(metric, "c", value, tags, sample_rate)
         else:
-            print("AGGREGATION ENABLED")
-            print("FLUSH THREAD IS ", self._aggregation_flush_thread[0])
             self.aggregator.count(metric, value, tags, sample_rate)
 
     # Minimum Datadog Agent version: 7.40.0
@@ -1002,10 +997,8 @@ class DogStatsd(object):
         >>> statsd.increment("files.transferred", 124)
         """
         if self._disable_aggregating:
-            print("NO aggregation")
             self._report(metric, "c", value, tags, sample_rate)
         else:
-            print("YES we are aggregating")
             self.aggregator.count(metric, value, tags, sample_rate)
 
     def decrement(
