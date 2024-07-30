@@ -141,7 +141,7 @@ class DogStatsd(object):
         host=DEFAULT_HOST,  # type: Text
         port=DEFAULT_PORT,  # type: int
         max_buffer_size=None,  # type: None
-        buffer_flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL,  # type: float
+        flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL,  # type: float
         disable_aggregating=True,  # type: bool
         disable_buffering=True,  # type: bool
         namespace=None,  # type: Optional[Text]
@@ -230,10 +230,10 @@ class DogStatsd(object):
         :max_buffer_size: Deprecated option, do not use it anymore.
         :type max_buffer_type: None
 
-        :buffer_flush_interval: Amount of time in seconds that the flush thread will
+        :flush_interval: Amount of time in seconds that the flush thread will
         wait before trying to flush the buffered metrics to the server. If set,
         it overrides the default value.
-        :type buffer_flush_interval: float
+        :type flush_interval: float
 
         :disable_aggregating: If true, metrics (Count, Guage, Set) are no longered aggregated by the client
         :type disable_aggregating: bool
@@ -450,7 +450,7 @@ class DogStatsd(object):
         self._disable_buffering = disable_buffering
         self._disable_aggregating = disable_aggregating
         
-        self._buffer_flush_interval = buffer_flush_interval
+        self._flush_interval = flush_interval
         self._aggregation_flush_interval = aggregation_flush_interval
         # We make the _buffering_flush_thread and _aggregation_flush_thread a list so that it is a mutable object,
         # which allows us to mutate it in the
@@ -472,7 +472,7 @@ class DogStatsd(object):
             # as a value for disabling the automatic flush timer as well.
             self._send = self._send_to_buffer
             self._start_flush_thread(
-                self._buffer_flush_interval,
+                self._flush_interval,
                 MIN_BUFFERING_FLUSH_INTERVAL,
                 self.flush_buffered_metrics,
                 self._buffering_flush_thread,
@@ -692,7 +692,7 @@ class DogStatsd(object):
             else:
                 self._send = self._send_to_buffer
                 self._start_flush_thread(
-                    self._buffer_flush_interval,
+                    self._flush_interval,
                     MIN_BUFFERING_FLUSH_INTERVAL,
                     self.flush_buffered_metrics,
                     self._buffering_flush_thread,
@@ -1609,7 +1609,7 @@ class DogStatsd(object):
 
         with self._config_lock:
             self._start_flush_thread(
-                self._buffer_flush_interval,
+                self._flush_interval,
                 MIN_BUFFERING_FLUSH_INTERVAL,
                 self.flush_buffered_metrics,
                 self._buffering_flush_thread,

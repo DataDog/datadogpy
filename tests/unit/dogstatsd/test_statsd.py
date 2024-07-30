@@ -1072,7 +1072,7 @@ async def print_foo():
         self.assert_equal_telemetry('page.views:1|c\n', fake_socket.recv(2))
 
     def test_flush_interval(self):
-        dogstatsd = DogStatsd(disable_buffering=False, buffer_flush_interval=1, telemetry_min_flush_interval=0)
+        dogstatsd = DogStatsd(disable_buffering=False, flush_interval=1, telemetry_min_flush_interval=0)
         fake_socket = FakeSocket()
         dogstatsd.socket = fake_socket
 
@@ -1102,7 +1102,7 @@ async def print_foo():
     def test_flush_disable(self):
         dogstatsd = DogStatsd(
             disable_buffering=False,
-            buffer_flush_interval=0,
+            flush_interval=0,
             telemetry_min_flush_interval=0
         )
         fake_socket = FakeSocket()
@@ -1798,7 +1798,7 @@ async def print_foo():
             )
 
     def test_default_max_udp_packet_size(self):
-        dogstatsd = DogStatsd(disable_buffering=False, buffer_flush_interval=10000, disable_telemetry=True)
+        dogstatsd = DogStatsd(disable_buffering=False, flush_interval=10000, disable_telemetry=True)
         dogstatsd.socket = FakeSocket()
 
         for _ in range(10000):
@@ -1817,7 +1817,7 @@ async def print_foo():
         dogstatsd = DogStatsd(
             disable_buffering=False,
             socket_path="fake",
-            buffer_flush_interval=10000,
+            flush_interval=10000,
             disable_telemetry=True,
         )
         dogstatsd.socket = FakeSocket()
@@ -1838,7 +1838,7 @@ async def print_foo():
         dogstatsd = DogStatsd(
             disable_buffering=False,
             max_buffer_len=4000,
-            buffer_flush_interval=10000,
+            flush_interval=10000,
             disable_telemetry=True,
         )
         dogstatsd.socket = FakeSocket()
