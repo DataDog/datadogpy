@@ -962,6 +962,7 @@ class DogStatsd(object):
             self._report(metric, "c", value, tags, sample_rate)
         else:
             print("AGGREGATION ENABLED")
+            print("FLUSH THREAD IS ", self._aggregation_flush_thread[0])
             self.aggregator.count(metric, value, tags, sample_rate)
 
     # Minimum Datadog Agent version: 7.40.0
