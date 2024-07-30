@@ -447,7 +447,7 @@ class DogStatsd(object):
 
         self._disable_buffering = disable_buffering
         self._disable_aggregating = disable_aggregating
-        
+
         self._flush_interval = flush_interval
         self._aggregation_flush_interval = aggregation_flush_interval
         # We make the _buffering_flush_thread and _aggregation_flush_thread a list so that it is a mutable object,
