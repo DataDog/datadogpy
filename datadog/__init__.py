@@ -139,8 +139,8 @@ def initialize(
         statsd.constant_tags += statsd_constant_tags
 
     statsd._aggregation_flush_interval = statsd_aggregation_flush_interval
-    statsd.disable_buffering = statsd_disable_buffering
     statsd.disable_aggregating = statsd_disable_aggregating
+    statsd.disable_buffering = statsd_disable_buffering
     api._return_raw_response = return_raw_response
 
     # HTTP client and API options
