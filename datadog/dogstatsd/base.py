@@ -53,7 +53,7 @@ DEFAULT_BUFFERING_FLUSH_INTERVAL = 0.3
 MIN_BUFFERING_FLUSH_INTERVAL = 0.0001
 
 # Aggregation-related values (in seconds)
-DEFAULT_AGGREGATION_FLUSH_INTERVAL = 3
+DEFAULT_AGGREGATION_FLUSH_INTERVAL = 60
 MIN_AGGREGATION_FLUSH_INTERVAL = 0.01
 # Env var to enable/disable sending the container ID field
 ORIGIN_DETECTION_ENABLED = "DD_ORIGIN_DETECTION_ENABLED"
@@ -348,7 +348,8 @@ class DogStatsd(object):
             log.warning(
                 "The parameter max_buffer_size is now deprecated and is not used anymore"
             )
-
+        print("BASE.PY buffering is ????", disable_buffering)
+        print("BASE.PY disable_aggregating is ????", disable_aggregating)
         # Check host and port env vars
         agent_host = os.environ.get("DD_AGENT_HOST")
         if agent_host and host == DEFAULT_HOST:
@@ -448,6 +449,7 @@ class DogStatsd(object):
 
         self._disable_buffering = disable_buffering
         self._disable_aggregating = disable_aggregating
+        
         self._buffer_flush_interval = buffer_flush_interval
         self._aggregation_flush_interval = aggregation_flush_interval
         # We make the _buffering_flush_thread and _aggregation_flush_thread a list so that it is a mutable object,
@@ -956,8 +958,10 @@ class DogStatsd(object):
         >>> statsd.count("page.views", 123)
         """
         if self._disable_aggregating:
+            print("AGGREGATION DISABLED")
             self._report(metric, "c", value, tags, sample_rate)
         else:
+            print("AGGREGATION ENABLED")
             self.aggregator.count(metric, value, tags, sample_rate)
 
     # Minimum Datadog Agent version: 7.40.0
@@ -997,8 +1001,10 @@ class DogStatsd(object):
         >>> statsd.increment("files.transferred", 124)
         """
         if self._disable_aggregating:
+            print("NO aggregation")
             self._report(metric, "c", value, tags, sample_rate)
         else:
+            print("YES we are aggregating")
             self.aggregator.count(metric, value, tags, sample_rate)
 
     def decrement(
