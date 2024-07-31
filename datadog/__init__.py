@@ -138,8 +138,10 @@ def initialize(
     if statsd_constant_tags:
         statsd.constant_tags += statsd_constant_tags
 
-    statsd._aggregation_flush_interval = statsd_aggregation_flush_interval
-    statsd.disable_aggregating = statsd_disable_aggregating
+    if statsd_disable_aggregating:
+        statsd.disable_aggregation()
+    else:
+        statsd.enable_aggregation(statsd_aggregation_flush_interval)
     statsd.disable_buffering = statsd_disable_buffering
     api._return_raw_response = return_raw_response
 

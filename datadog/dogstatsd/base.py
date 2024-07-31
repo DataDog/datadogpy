@@ -697,34 +697,42 @@ class DogStatsd(object):
                     self._buffering_flush_thread_stop,
                 )
 
-    @property
-    def disable_aggregating(self):
-        with self._config_lock:
-            return self._disable_aggregating
-
-    @disable_aggregating.setter
-    def disable_aggregating(self, is_disabled):
+    def disable_aggregation(self):
         with self._config_lock:
             # If the toggle didn't change anything, this method is a noop
-            if self._disable_aggregating == is_disabled:
+            if self._disable_aggregating:
                 return
 
-            self._disable_aggregating = is_disabled
+            self._disable_aggregating = True
 
             # If aggregation has been disabled, flush and kill the background thread
             # otherwise start up the flushing thread and enable aggregation.
             self._send = self._send_to_server
-            if is_disabled:
-                self._stop_aggregation_flush_thread()
-                log.debug("Statsd aggregation is disabled")
-            else:
-                self._start_flush_thread(
-                    self._aggregation_flush_interval,
-                    MIN_AGGREGATION_FLUSH_INTERVAL,
-                    self.flush_aggregated_metrics,
-                    self._aggregation_flush_thread,
-                    self._aggregation_flush_thread_stop,
-                )
+            self._stop_aggregation_flush_thread()
+            log.debug("Statsd aggregation is disabled")
+            
+            self._start_flush_thread(
+                self._aggregation_flush_interval,
+                MIN_AGGREGATION_FLUSH_INTERVAL,
+                self.flush_aggregated_metrics,
+                self._aggregation_flush_thread,
+                self._aggregation_flush_thread_stop,
+            )
+    
+    def enable_aggregation(self, aggregation_flush_interval):
+        with self._config_lock:
+            if not self._disable_aggregating:
+                    return
+            self._disable_aggregating = False
+            self._aggregation_flush_interval = aggregation_flush_interval
+            self._send = self._send_to_server
+            self._start_flush_thread(
+                self._aggregation_flush_interval,
+                MIN_AGGREGATION_FLUSH_INTERVAL,
+                self.flush_aggregated_metrics,
+                self._aggregation_flush_thread,
+                self._aggregation_flush_thread_stop,
+            )
 
     @staticmethod
     def resolve_host(host, use_default_route):
