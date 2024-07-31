@@ -719,7 +719,7 @@ class DogStatsd(object):
                 self._aggregation_flush_thread_stop,
             )
     
-    def enable_aggregation(self, aggregation_flush_interval):
+    def enable_aggregation(self, aggregation_flush_interval=DEFAULT_AGGREGATION_FLUSH_INTERVAL):
         with self._config_lock:
             if not self._disable_aggregating:
                     return
