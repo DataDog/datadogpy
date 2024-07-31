@@ -710,7 +710,7 @@ class DogStatsd(object):
             self._send = self._send_to_server
             self._stop_aggregation_flush_thread()
             log.debug("Statsd aggregation is disabled")
-            
+
             self._start_flush_thread(
                 self._aggregation_flush_interval,
                 MIN_AGGREGATION_FLUSH_INTERVAL,
@@ -718,7 +718,7 @@ class DogStatsd(object):
                 self._aggregation_flush_thread,
                 self._aggregation_flush_thread_stop,
             )
-    
+
     def enable_aggregation(self, aggregation_flush_interval=DEFAULT_AGGREGATION_FLUSH_INTERVAL):
         with self._config_lock:
             if not self._disable_aggregating:
