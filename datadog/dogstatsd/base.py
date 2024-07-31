@@ -573,7 +573,7 @@ class DogStatsd(object):
         flush_thread_container,
         flush_thread_stop,
     ):
-        if self._disable_buffering and flush_function == self.flush_buffered_metrics:
+        if (self._disable_buffering or not self._disable_aggregating) and flush_function == self.flush_buffered_metrics:
             log.debug("Statsd periodic buffer flush is disabled")
             return
         if (
