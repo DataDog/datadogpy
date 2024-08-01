@@ -712,9 +712,9 @@ class DogStatsd(object):
             log.debug("Statsd aggregation is disabled")
 
     def enable_aggregation(self, aggregation_flush_interval=DEFAULT_AGGREGATION_FLUSH_INTERVAL):
-        # print("andrewqian")
-        # log.info("andrewqian")
-        # log.debug("andrewqian")
+        print("andrewqian")
+        log.info("andrewqian")
+        log.debug("andrewqian")
         with self._config_lock:
             if not self._disable_aggregating:
                 return
