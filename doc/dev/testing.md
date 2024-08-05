@@ -1,0 +1,74 @@
+# Setting up local testing environment
+
+Inside the repo, set up a virtual environment and install dependencies
+Commands:
+* `python -m venv .venv`  
+* `source .venv/bin/activate`
+* `pip install -e .`
+* `pip install pytest`
+* `pip install mock`
+
+Create a folder called `./vscode`
+Inside the folder, create a file called `launch.json` with the following settings
+```
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        }
+    ]
+}
+```
+and also create a file a called settings.json with the following settings
+```
+{
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./tests",
+        "-p",
+        "test_*.py"
+    ],
+    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": true
+}
+```
+
+You should now be able to run the unit tests locally
+<img width="604" alt="image" src="https://github.com/user-attachments/assets/ea5c74c5-ee56-4fc3-83c8-73a00c9cab1e">
+
+Create a folder and a file inside the folder for testing with the following code
+
+e.g testapp/main.py
+```
+from datadog import initialize, statsd
+import time
+
+options = {
+    "statsd_host": "127.0.0.1",
+    "statsd_port": 8125,
+}
+
+initialize(**options)
+
+
+while(1):
+  statsd.increment('example_metric.increment', tags=["environment:dev"])
+  statsd.decrement('example_metric.decrement', tags=["environment:dev"])
+  time.sleep(10)
+```
+
+Install and run the agent (https://github.com/DataDog/datadog-agent)
+
+Command to run agent: `./bin/agent/agent run -c bin/agent/dist/datadog.yaml`
+
+Inside the main.py file that you just created, run the debugger to send logs to the agent.
+
