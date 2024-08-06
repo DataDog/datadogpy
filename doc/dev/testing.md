@@ -1,7 +1,6 @@
 # Setting up a local testing environment
 
 Inside the repo, set up a virtual environment and install dependencies from the command line:
-Commands:
 * `python -m venv .venv`  
 * `source .venv/bin/activate`
 * `pip install -e .`
@@ -42,12 +41,10 @@ Create a file called `settings.json` with the following settings:
 }
 ```
 
-You should now be able to run the unit tests locally
+You should now be able to run the unit tests locally:
 <img width="604" alt="image" src="https://github.com/user-attachments/assets/ea5c74c5-ee56-4fc3-83c8-73a00c9cab1e">
 
-Create a folder and a file inside the folder for testing with the following code
-
-e.g testapp/main.py
+Create a folder for testing, such as `testapp/main.py`. Create a file inside the folder with the following code:
 ```
 from datadog import initialize, statsd
 import time
@@ -68,7 +65,9 @@ while(1):
 
 [Install the Agent](https://github.com/DataDog/datadog-agent).
 
-Command to run agent: `./bin/agent/agent run -c bin/agent/dist/datadog.yaml`
+Run the Agent: `./bin/agent/agent run -c bin/agent/dist/datadog.yaml`
 
-Inside the main.py file that you just created, run the debugger to send logs to the agent.
+Inside the `main.py` file that you just created, run the debugger to send logs to the agent.
+
+Those logs should appear in the [Log Explorer](https://dddev.datadoghq.com/logs?query=&agg_m=count&agg_m_source=base&agg_t=count&cols=host%2Cservice&fromUser=true&messageDisplay=inline&refresh_mode=sliding&storage=hot&stream_sort=desc&viz=stream&from_ts=1722966102377&to_ts=1722967002377&live=true) in Datadog
 
