@@ -66,7 +66,7 @@ while(1):
   time.sleep(10)
 ```
 
-Install and run the agent (https://github.com/DataDog/datadog-agent)
+[Install the Agent](https://github.com/DataDog/datadog-agent).
 
 Command to run agent: `./bin/agent/agent run -c bin/agent/dist/datadog.yaml`
 
