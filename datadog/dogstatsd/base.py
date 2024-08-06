@@ -1205,7 +1205,6 @@ class DogStatsd(object):
         )
 
         # Send it
-        print("payload sent", payload)
         self._send(payload)
 
     def _reset_telemetry(self):
