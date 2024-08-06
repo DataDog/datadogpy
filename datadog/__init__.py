@@ -39,7 +39,7 @@ def initialize(
     statsd_port=None,  # type: Optional[int]
     statsd_disable_aggregating=False,  # type: bool
     statsd_disable_buffering=True,  # type: bool
-    statsd_aggregation_flush_interval=3,  # type: float
+    statsd_aggregation_flush_interval=2,  # type: float
     statsd_use_default_route=False,  # type: bool
     statsd_socket_path=None,  # type: Optional[str]
     statsd_namespace=None,  # type: Optional[str]

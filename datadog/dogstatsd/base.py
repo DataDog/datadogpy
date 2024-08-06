@@ -53,7 +53,7 @@ DEFAULT_BUFFERING_FLUSH_INTERVAL = 0.3
 MIN_BUFFERING_FLUSH_INTERVAL = 0.0001
 
 # Aggregation-related values (in seconds)
-DEFAULT_AGGREGATION_FLUSH_INTERVAL = 3
+DEFAULT_AGGREGATION_FLUSH_INTERVAL = 2
 MIN_AGGREGATION_FLUSH_INTERVAL = 0.01
 # Env var to enable/disable sending the container ID field
 ORIGIN_DETECTION_ENABLED = "DD_ORIGIN_DETECTION_ENABLED"
@@ -235,7 +235,7 @@ class DogStatsd(object):
         it overrides the default value.
         :type flush_interval: float
 
-        :disable_aggregating: If true, metrics (Count, Guage, Set) are no longered aggregated by the client
+        :disable_aggregating: If true, metrics (Count, Gauge, Set) are no longered aggregated by the client
         :type disable_aggregating: bool
 
         :disable_buffering: If set, metrics are no longered buffered by the client and
@@ -1205,6 +1205,7 @@ class DogStatsd(object):
         )
 
         # Send it
+        print("payload sent", payload)
         self._send(payload)
 
     def _reset_telemetry(self):
