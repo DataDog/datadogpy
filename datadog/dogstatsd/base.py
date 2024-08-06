@@ -50,11 +50,10 @@ DEFAULT_PORT = 8125
 
 # Buffering-related values (in seconds)
 DEFAULT_BUFFERING_FLUSH_INTERVAL = 0.3
-MIN_BUFFERING_FLUSH_INTERVAL = 0.0001
+MIN__FLUSH_INTERVAL = 0.0001
 
 # Aggregation-related values (in seconds)
 DEFAULT_AGGREGATION_FLUSH_INTERVAL = 2
-MIN_AGGREGATION_FLUSH_INTERVAL = 0.01
 # Env var to enable/disable sending the container ID field
 ORIGIN_DETECTION_ENABLED = "DD_ORIGIN_DETECTION_ENABLED"
 
@@ -82,24 +81,21 @@ DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL = 10
 # Telemetry pre-computed formatting string. Pre-computation
 # increases throughput of composing the result by 2-15% from basic
 # '%'-based formatting with a `join`.
-TELEMETRY_FORMATTING_STR = (
-    "\n".join(
-        [
-            "datadog.dogstatsd.client.metrics:%s|c|#%s",
-            "datadog.dogstatsd.client.events:%s|c|#%s",
-            "datadog.dogstatsd.client.service_checks:%s|c|#%s",
-            "datadog.dogstatsd.client.bytes_sent:%s|c|#%s",
-            "datadog.dogstatsd.client.bytes_dropped:%s|c|#%s",
-            "datadog.dogstatsd.client.bytes_dropped_queue:%s|c|#%s",
-            "datadog.dogstatsd.client.bytes_dropped_writer:%s|c|#%s",
-            "datadog.dogstatsd.client.packets_sent:%s|c|#%s",
-            "datadog.dogstatsd.client.packets_dropped:%s|c|#%s",
-            "datadog.dogstatsd.client.packets_dropped_queue:%s|c|#%s",
-            "datadog.dogstatsd.client.packets_dropped_writer:%s|c|#%s",
-        ]
-    )
-    + "\n"
-)
+TELEMETRY_FORMATTING_STR = "\n".join(
+    [
+        "datadog.dogstatsd.client.metrics:%s|c|#%s",
+        "datadog.dogstatsd.client.events:%s|c|#%s",
+        "datadog.dogstatsd.client.service_checks:%s|c|#%s",
+        "datadog.dogstatsd.client.bytes_sent:%s|c|#%s",
+        "datadog.dogstatsd.client.bytes_dropped:%s|c|#%s",
+        "datadog.dogstatsd.client.bytes_dropped_queue:%s|c|#%s",
+        "datadog.dogstatsd.client.bytes_dropped_writer:%s|c|#%s",
+        "datadog.dogstatsd.client.packets_sent:%s|c|#%s",
+        "datadog.dogstatsd.client.packets_dropped:%s|c|#%s",
+        "datadog.dogstatsd.client.packets_dropped_queue:%s|c|#%s",
+        "datadog.dogstatsd.client.packets_dropped_writer:%s|c|#%s",
+    ]
+) + "\n"
 
 Stop = object()
 
@@ -138,34 +134,32 @@ class DogStatsd(object):
 
     def __init__(
         self,
-        host=DEFAULT_HOST,  # type: Text
-        port=DEFAULT_PORT,  # type: int
-        max_buffer_size=None,  # type: None
+        host=DEFAULT_HOST,                      # type: Text
+        port=DEFAULT_PORT,                      # type: int
+        max_buffer_size=None,                   # type: None
         flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL,  # type: float
-        disable_aggregating=True,  # type: bool
-        disable_buffering=True,  # type: bool
-        namespace=None,  # type: Optional[Text]
-        constant_tags=None,  # type: Optional[List[str]]
-        use_ms=False,  # type: bool
-        use_default_route=False,  # type: bool
-        socket_path=None,  # type: Optional[Text]
-        default_sample_rate=1,  # type: float
-        disable_telemetry=False,  # type: bool
-        telemetry_min_flush_interval=(
-            DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL
-        ),  # type: int
-        telemetry_host=None,  # type: Text
-        telemetry_port=None,  # type: Union[str, int]
-        telemetry_socket_path=None,  # type: Text
-        max_buffer_len=0,  # type: int
-        container_id=None,  # type: Optional[Text]
-        origin_detection_enabled=True,  # type: bool
-        socket_timeout=0,  # type: Optional[float]
-        telemetry_socket_timeout=0,  # type: Optional[float]
-        disable_background_sender=True,  # type: bool
-        sender_queue_size=0,  # type: int
-        sender_queue_timeout=0,  # type: Optional[float]
-        track_instance=True,  # type: bool
+        disable_aggregating=True,               # type: bool
+        disable_buffering=True,                 # type: bool
+        namespace=None,                         # type: Optional[Text]
+        constant_tags=None,                     # type: Optional[List[str]]
+        use_ms=False,                           # type: bool
+        use_default_route=False,                # type: bool
+        socket_path=None,                       # type: Optional[Text]
+        default_sample_rate=1,                  # type: float
+        disable_telemetry=False,                # type: bool
+        telemetry_min_flush_interval=(DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL),  # type: int
+        telemetry_host=None,                    # type: Text
+        telemetry_port=None,                    # type: Union[str, int]
+        telemetry_socket_path=None,             # type: Text
+        max_buffer_len=0,                       # type: int
+        container_id=None,                      # type: Optional[Text]
+        origin_detection_enabled=True,          # type: bool
+        socket_timeout=0,                       # type: Optional[float]
+        telemetry_socket_timeout=0,             # type: Optional[float]
+        disable_background_sender=True,         # type: bool
+        sender_queue_size=0,                    # type: int
+        sender_queue_timeout=0,                 # type: Optional[float]
+        track_instance=True,                    # type: bool
         aggregation_flush_interval=DEFAULT_AGGREGATION_FLUSH_INTERVAL,  # type: float
     ):  # type: (...) -> None
         """
@@ -345,9 +339,7 @@ class DogStatsd(object):
 
         # Check for deprecated option
         if max_buffer_size is not None:
-            log.warning(
-                "The parameter max_buffer_size is now deprecated and is not used anymore"
-            )
+            log.warning("The parameter max_buffer_size is now deprecated and is not used anymore")
         # Check host and port env vars
         agent_host = os.environ.get("DD_AGENT_HOST")
         if agent_host and host == DEFAULT_HOST:
@@ -471,7 +463,7 @@ class DogStatsd(object):
             self._send = self._send_to_buffer
             self._start_flush_thread(
                 self._flush_interval,
-                MIN_BUFFERING_FLUSH_INTERVAL,
+                MIN__FLUSH_INTERVAL,
                 self.flush_buffered_metrics,
                 self._buffering_flush_thread,
                 self._buffering_flush_thread_stop,
@@ -481,7 +473,7 @@ class DogStatsd(object):
             self._disable_buffering = True
             self._start_flush_thread(
                 self._aggregation_flush_interval,
-                MIN_AGGREGATION_FLUSH_INTERVAL,
+                MIN__FLUSH_INTERVAL,
                 self.flush_aggregated_metrics,
                 self._aggregation_flush_thread,
                 self._aggregation_flush_thread_stop,
@@ -691,7 +683,7 @@ class DogStatsd(object):
                 self._send = self._send_to_buffer
                 self._start_flush_thread(
                     self._flush_interval,
-                    MIN_BUFFERING_FLUSH_INTERVAL,
+                    MIN__FLUSH_INTERVAL,
                     self.flush_buffered_metrics,
                     self._buffering_flush_thread,
                     self._buffering_flush_thread_stop,
@@ -720,7 +712,7 @@ class DogStatsd(object):
             self._send = self._send_to_server
             self._start_flush_thread(
                 self._aggregation_flush_interval,
-                MIN_AGGREGATION_FLUSH_INTERVAL,
+                MIN__FLUSH_INTERVAL,
                 self.flush_aggregated_metrics,
                 self._aggregation_flush_thread,
                 self._aggregation_flush_thread_stop,
@@ -1604,7 +1596,7 @@ class DogStatsd(object):
         with self._config_lock:
             self._start_flush_thread(
                 self._flush_interval,
-                MIN_BUFFERING_FLUSH_INTERVAL,
+                MIN__FLUSH_INTERVAL,
                 self.flush_buffered_metrics,
                 self._buffering_flush_thread,
                 self._buffering_flush_thread_stop,
