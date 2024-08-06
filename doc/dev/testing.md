@@ -1,6 +1,6 @@
 # Setting up local testing environment
 
-Inside the repo, set up a virtual environment and install dependencies
+Inside the repo, set up a virtual environment and install dependencies from the command line:
 Commands:
 * `python -m venv .venv`  
 * `source .venv/bin/activate`
