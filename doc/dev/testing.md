@@ -8,7 +8,7 @@ Commands:
 * `pip install pytest`
 * `pip install mock`
 
-Create a folder called `./vscode`
+Create a folder called `./vscode`.
 Inside the folder, create a file called `launch.json` with the following settings
 ```
 {
