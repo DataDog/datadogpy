@@ -27,7 +27,7 @@ Inside the folder, create a file called `launch.json` with the following setting
     ]
 }
 ```
-and also create a file a called settings.json with the following settings
+Create a file called `settings.json` with the following settings:
 ```
 {
     "python.testing.unittestArgs": [
