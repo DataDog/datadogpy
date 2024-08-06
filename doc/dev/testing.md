@@ -1,5 +1,6 @@
 # Setting up a local testing environment
 
+### Install dependencies
 Inside the repo, set up a virtual environment and install dependencies from the command line:
 * `python -m venv .venv`  
 * `source .venv/bin/activate`
@@ -7,6 +8,7 @@ Inside the repo, set up a virtual environment and install dependencies from the 
 * `pip install pytest`
 * `pip install mock`
 
+### Create config files
 Create a folder called `./vscode`.
 Inside the folder, create a file called `launch.json` with the following settings:
 ```
@@ -40,10 +42,12 @@ Create a file called `settings.json` with the following settings:
     "python.testing.unittestEnabled": true
 }
 ```
-
+### Run unit tests locally in VS Code
 You should now be able to run the unit tests locally:
+
 <img width="604" alt="image" src="https://github.com/user-attachments/assets/ea5c74c5-ee56-4fc3-83c8-73a00c9cab1e">
 
+### Send logs to the agent
 Create a folder for testing, such as `testapp/main.py`. Create a file inside the folder with the following code:
 ```
 from datadog import initialize, statsd
