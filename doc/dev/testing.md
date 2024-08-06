@@ -9,7 +9,7 @@ Commands:
 * `pip install mock`
 
 Create a folder called `./vscode`.
-Inside the folder, create a file called `launch.json` with the following settings
+Inside the folder, create a file called `launch.json` with the following settings:
 ```
 {
     // Use IntelliSense to learn about possible attributes.
