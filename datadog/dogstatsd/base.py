@@ -50,7 +50,7 @@ DEFAULT_PORT = 8125
 
 # Buffering-related values (in seconds)
 DEFAULT_BUFFERING_FLUSH_INTERVAL = 0.3
-MIN__FLUSH_INTERVAL = 0.0001
+MIN_FLUSH_INTERVAL = 0.0001
 
 # Aggregation-related values (in seconds)
 DEFAULT_AGGREGATION_FLUSH_INTERVAL = 2
@@ -160,7 +160,6 @@ class DogStatsd(object):
         sender_queue_size=0,                    # type: int
         sender_queue_timeout=0,                 # type: Optional[float]
         track_instance=True,                    # type: bool
-        aggregation_flush_interval=DEFAULT_AGGREGATION_FLUSH_INTERVAL,  # type: float
     ):  # type: (...) -> None
         """
         Initialize a DogStatsd object.
@@ -441,15 +440,9 @@ class DogStatsd(object):
         self._disable_aggregating = disable_aggregating
 
         self._flush_interval = flush_interval
-        self._aggregation_flush_interval = aggregation_flush_interval
-        # We make the _buffering_flush_thread and _aggregation_flush_thread a list so that it is a mutable object,
-        # which allows us to mutate it in the
-        # _start_flush_thread function
-        self._buffering_flush_thread = [None]
-        self._aggregation_flush_thread = [None]
-        self._buffering_flush_thread_stop = threading.Event()
+        self._flush_thread = None
+        self._flush_thread_stop = threading.Event()
         self.aggregator = Aggregator()
-        self._aggregation_flush_thread_stop = threading.Event()
         # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
         self._forking = False
         # Currently, we do not allow both aggregation and buffering, we may revisit this in the future
@@ -463,20 +456,14 @@ class DogStatsd(object):
             self._send = self._send_to_buffer
             self._start_flush_thread(
                 self._flush_interval,
-                MIN__FLUSH_INTERVAL,
                 self.flush_buffered_metrics,
-                self._buffering_flush_thread,
-                self._buffering_flush_thread_stop,
             )
         else:
             self._send = self._send_to_server
             self._disable_buffering = True
             self._start_flush_thread(
-                self._aggregation_flush_interval,
-                MIN__FLUSH_INTERVAL,
+                self._flush_interval,
                 self.flush_aggregated_metrics,
-                self._aggregation_flush_thread,
-                self._aggregation_flush_thread_stop,
             )
 
         self._queue = None
@@ -560,10 +547,7 @@ class DogStatsd(object):
     def _start_flush_thread(
         self,
         flush_interval,
-        min_flush_interval,
         flush_function,
-        flush_thread_container,
-        flush_thread_stop,
     ):
         if (self._disable_buffering or not self._disable_aggregating) and flush_function == self.flush_buffered_metrics:
             log.debug("Statsd periodic buffer flush is disabled")
@@ -581,7 +565,7 @@ class DogStatsd(object):
         else:
             flush_type = "buffering"
 
-        if flush_interval <= min_flush_interval:
+        if flush_interval <= MIN_FLUSH_INTERVAL:
             log.debug(
                 "the set flush interval for %s is less then the minimum", flush_type
             )
@@ -590,25 +574,21 @@ class DogStatsd(object):
         if self._forking:
             return
 
-        if flush_thread_container[0] is not None:
+        if self._flush_thread is not None:
             return
 
         def _flush_thread_loop(self, flush_interval):
-            while not flush_thread_stop.is_set():
+            while not self._flush_thread_stop.is_set():
                 time.sleep(flush_interval)
                 flush_function()
 
-        new_thread = threading.Thread(
+        self._flush_thread = threading.Thread(
             name="{}_flush_thread".format(self.__class__.__name__),
             target=_flush_thread_loop,
-            args=(
-                self,
-                flush_interval,
-            ),
+            args=(self, flush_interval,),
         )
-        new_thread.daemon = True
-        new_thread.start()
-        flush_thread_container[0] = new_thread
+        self._flush_thread.daemon = True
+        self._flush_thread.start()
         log.debug(
             "Statsd %s flush thread registered with period of %s",
             flush_type,
@@ -616,36 +596,21 @@ class DogStatsd(object):
         )
 
     # Note: Invocations of this method should be thread-safe
-    def _stop_buffering_flush_thread(self):
-        if not self._buffering_flush_thread:
+    def _stop_flush_thread(self):
+        if not self._flush_thread:
             return
         try:
-            self.flush_buffered_metrics()
+            if self.disable_aggregation:
+                self.flush_buffered_metrics()
+            else:
+                self.flush_aggregated_metrics
         finally:
             pass
 
-        self._buffering_flush_thread_stop.set()
-        if self._buffering_flush_thread[0]:
-            self._buffering_flush_thread[0].join()
-        self._buffering_flush_thread = [None]
-
-        self._buffering_flush_thread_stop.clear()
-
-    # Note: Invocations of this method should be thread-safe
-    def _stop_aggregation_flush_thread(self):
-        if not self._aggregation_flush_thread:
-            return
-        try:
-            self.flush_aggregated_metrics()
-        finally:
-            pass
-
-        self._aggregation_flush_thread_stop.set()
-        if self._aggregation_flush_thread[0]:
-            self._aggregation_flush_thread[0].join()
-        self._aggregation_flush_thread = [None]
-
-        self._aggregation_flush_thread_stop.clear()
+        self._flush_thread_stop.set()
+        self._flush_thread.join()
+        self._flush_thread = None
+        self._flush_thread_stop.clear()
 
     def _dedicated_telemetry_destination(self):
         return bool(self.telemetry_socket_path or self.telemetry_host)
@@ -677,16 +642,13 @@ class DogStatsd(object):
             # otherwise start up the flushing thread and enable the buffering.
             if is_disabled:
                 self._send = self._send_to_server
-                self._stop_buffering_flush_thread()
+                self._stop_flush_thread()
                 log.debug("Statsd buffering is disabled")
             else:
                 self._send = self._send_to_buffer
                 self._start_flush_thread(
                     self._flush_interval,
-                    MIN__FLUSH_INTERVAL,
                     self.flush_buffered_metrics,
-                    self._buffering_flush_thread,
-                    self._buffering_flush_thread_stop,
                 )
 
     def disable_aggregation(self):
@@ -700,7 +662,7 @@ class DogStatsd(object):
             # If aggregation has been disabled, flush and kill the background thread
             # otherwise start up the flushing thread and enable aggregation.
             self._send = self._send_to_server
-            self._stop_aggregation_flush_thread()
+            self._stop_flush_thread()
             log.debug("Statsd aggregation is disabled")
 
     def enable_aggregation(self, aggregation_flush_interval=DEFAULT_AGGREGATION_FLUSH_INTERVAL):
@@ -708,14 +670,11 @@ class DogStatsd(object):
             if not self._disable_aggregating:
                 return
             self._disable_aggregating = False
-            self._aggregation_flush_interval = aggregation_flush_interval
+            self._flush_interval = aggregation_flush_interval
             self._send = self._send_to_server
             self._start_flush_thread(
-                self._aggregation_flush_interval,
-                MIN__FLUSH_INTERVAL,
-                self.flush_aggregated_metrics,
-                self._aggregation_flush_thread,
-                self._aggregation_flush_thread_stop,
+                self._flush_interval,
+                self.flush_aggregated_metrics, 
             )
 
     @staticmethod
@@ -1596,10 +1555,7 @@ class DogStatsd(object):
         with self._config_lock:
             self._start_flush_thread(
                 self._flush_interval,
-                MIN__FLUSH_INTERVAL,
                 self.flush_buffered_metrics,
-                self._buffering_flush_thread,
-                self._buffering_flush_thread_stop,
             )
             self._start_sender_thread()
 
