@@ -24,10 +24,6 @@ except ImportError:
     # pypy has the same module, but capitalized.
     import Queue as queue  # type: ignore[no-redef]
 
-# pylint: disable=unused-import
-from typing import Optional, List, Text, Union
-# pylint: enable=unused-import
-
 # Datadog libraries
 from datadog.dogstatsd.aggregator import Aggregator
 from datadog.dogstatsd.metric_types import MetricType
@@ -486,14 +482,10 @@ class DogStatsd(object):
             self._socket_path = path
             if path is None:
                 self._transport = "udp"
-                self._max_payload_size = (
-                    self._max_buffer_len or UDP_OPTIMAL_PAYLOAD_LENGTH
-                )
+                self._max_payload_size = (self._max_buffer_len or UDP_OPTIMAL_PAYLOAD_LENGTH)
             else:
                 self._transport = "uds"
-                self._max_payload_size = (
-                    self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH
-                )
+                self._max_payload_size = (self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH)
 
     def enable_background_sender(self, sender_queue_size=0, sender_queue_timeout=0):
         """
@@ -603,7 +595,7 @@ class DogStatsd(object):
             if self.disable_aggregation:
                 self.flush_buffered_metrics()
             else:
-                self.flush_aggregated_metrics
+                self.flush_aggregated_metrics()
         finally:
             pass
 
@@ -661,7 +653,6 @@ class DogStatsd(object):
 
             # If aggregation has been disabled, flush and kill the background thread
             # otherwise start up the flushing thread and enable aggregation.
-            self._send = self._send_to_server
             self._stop_flush_thread()
             log.debug("Statsd aggregation is disabled")
 
@@ -674,7 +665,7 @@ class DogStatsd(object):
             self._send = self._send_to_server
             self._start_flush_thread(
                 self._flush_interval,
-                self.flush_aggregated_metrics, 
+                self.flush_aggregated_metrics,
             )
 
     @staticmethod
@@ -718,9 +709,7 @@ class DogStatsd(object):
 
             if not self.socket:
                 if self.socket_path is not None:
-                    self.socket = self._get_uds_socket(
-                        self.socket_path, self.socket_timeout
-                    )
+                    self.socket = self._get_uds_socket(self.socket_path, self.socket_timeout)
                 else:
                     self.socket = self._get_udp_socket(
                         self.host,
@@ -746,7 +735,7 @@ class DogStatsd(object):
     def _ensure_min_send_buffer_size(cls, sock, min_size=MIN_SEND_BUFFER_SIZE):
         # Increase the receiving buffer size where needed (e.g. MacOS has 4k RX
         # buffers which is half of the max packet size that the client will send.
-        if os.name == "posix":
+        if os.name == 'posix':
             try:
                 recv_buff_size = sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
                 if recv_buff_size <= min_size:
@@ -809,9 +798,7 @@ class DogStatsd(object):
         self._send = self._send_to_buffer
 
         if max_buffer_size is not None:
-            log.warning(
-                "The parameter max_buffer_size is now deprecated and is not used anymore"
-            )
+            log.warning("The parameter max_buffer_size is now deprecated and is not used anymore")
 
     def close_buffer(self):
         """
@@ -1070,9 +1057,7 @@ class DogStatsd(object):
             finally:
                 statsd.distribution("user.query.time", time.time() - start)
         """
-        return DistributedContextManagerDecorator(
-            self, metric, tags, sample_rate, use_ms
-        )
+        return DistributedContextManagerDecorator(self, metric, tags, sample_rate, use_ms)
 
     def set(self, metric, value, tags=None, sample_rate=None):
         """
@@ -1143,9 +1128,8 @@ class DogStatsd(object):
             return
         # TODO: use metric_types enum
         # timestamps (protocol v1.3) only allowed on gauges and counts
-        allows_timestamp = (
-            metric_type == MetricType.GAUGE or metric_type == MetricType.COUNT
-        )
+        allows_timestamp = metric_type == MetricType.GAUGE or metric_type == MetricType.COUNT
+
         if not allows_timestamp or timestamp < 0:
             timestamp = 0
 
@@ -1211,10 +1195,8 @@ class DogStatsd(object):
         )
 
     def _is_telemetry_flush_time(self):
-        return (
-            self._telemetry
-            and self._last_flush_time + self._telemetry_flush_interval < time.time()
-        )
+        return self._telemetry and \
+            self._last_flush_time + self._telemetry_flush_interval < time.time()
 
     def _send_to_server(self, packet):
         # Skip the lock if the queue is None. There is no race with enable_background_sender.
@@ -1223,15 +1205,13 @@ class DogStatsd(object):
             with self._buffer_lock:
                 if self._queue is not None:
                     try:
-                        self._queue.put(
-                            packet + "\n", self._queue_blocking, self._queue_timeout
-                        )
+                        self._queue.put(packet + '\n', self._queue_blocking, self._queue_timeout)
                     except queue.Full:
                         self.packets_dropped_queue += 1
                         self.bytes_dropped_queue += 1
                     return
 
-        self._xmit_packet_with_telemetry(packet + "\n")
+        self._xmit_packet_with_telemetry(packet + '\n')
 
     def _xmit_packet_with_telemetry(self, packet):
         self._xmit_packet(packet, False)
@@ -1274,17 +1254,14 @@ class DogStatsd(object):
             self.close_socket()
         except socket.error as socket_err:
             if socket_err.errno == errno.EAGAIN:
-                log.debug(
-                    "Socket send would block: %s, dropping the packet", socket_err
-                )
+                log.debug("Socket send would block: %s, dropping the packet", socket_err)
             elif socket_err.errno == errno.ENOBUFS:
                 log.debug("Socket buffer full: %s, dropping the packet", socket_err)
             elif socket_err.errno == errno.EMSGSIZE:
                 log.debug(
                     "Packet size too big (size: %d): %s, dropping the packet",
                     len(packet.encode(self.encoding)),
-                    socket_err,
-                )
+                    socket_err)
             else:
                 log.warning(
                     "Error submitting packet: %s, dropping the packet and closing the socket",
@@ -1312,10 +1289,7 @@ class DogStatsd(object):
             self._current_buffer_total_size += len(packet) + 1
 
     def _should_flush(self, length_to_be_added):
-        if (
-            self._current_buffer_total_size + length_to_be_added + 1
-            > self._max_payload_size
-        ):
+        if self._current_buffer_total_size + length_to_be_added + 1 > self._max_payload_size:
             return True
         return False
 
@@ -1360,8 +1334,8 @@ class DogStatsd(object):
         tags = self._add_constant_tags(tags)
 
         string = u"_e{{{},{}}}:{}|{}".format(
-            len(title.encode("utf8", "replace")),
-            len(message.encode("utf8", "replace")),
+            len(title.encode('utf8', 'replace')),
+            len(message.encode('utf8', 'replace')),
             title,
             message,
         )
@@ -1385,7 +1359,9 @@ class DogStatsd(object):
 
         if len(string) > 8 * 1024:
             raise ValueError(
-                'Event "{0}" payload is too big (>=8KB). Event discarded'.format(title)
+                u'Event "{0}" payload is too big (>=8KB). Event discarded'.format(
+                    title
+                )
             )
 
         if self._telemetry:
@@ -1407,11 +1383,7 @@ class DogStatsd(object):
 
         >>> statsd.service_check("my_service.check_name", DogStatsd.WARNING)
         """
-        message = (
-            DogStatsd._escape_service_check_message(message)
-            if message is not None
-            else ""
-        )
+        message = DogStatsd._escape_service_check_message(message) if message is not None else ""
 
         string = u"_sc|{0}|{1}".format(check_name, status)
 
@@ -1485,7 +1457,7 @@ class DogStatsd(object):
         self._sender_thread = threading.Thread(
             name="{}_sender_thread".format(self.__class__.__name__),
             target=self._sender_main_loop,
-            args=(self._queue,),
+            args=(self._queue,)
         )
         self._sender_thread.daemon = True
         self._sender_thread.start()
