@@ -1515,7 +1515,7 @@ class DogStatsd(object):
         self._forking = True
 
         with self._config_lock:
-            self._stop_buffering_flush_thread()
+            self._stop_flush_thread()
             self._stop_sender_thread()
         self.close_socket()
 

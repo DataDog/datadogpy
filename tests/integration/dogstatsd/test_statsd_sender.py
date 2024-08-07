@@ -66,19 +66,19 @@ def test_fork_hooks(disable_background_sender, disable_buffering):
 
     statsd.increment("test.metric")
 
-    assert disable_buffering or statsd._buffering_flush_thread[0].is_alive()
+    assert disable_buffering or statsd._flush_thread.is_alive()
     assert disable_background_sender or statsd._sender_thread.is_alive()
 
     statsd.pre_fork()
 
-    assert statsd._buffering_flush_thread[0] is None
+    assert statsd._flush_thread is None
     assert statsd._sender_thread is None
     assert statsd._queue is None or statsd._queue.empty()
     assert len(statsd._buffer) == 0
 
     statsd.post_fork()
 
-    assert disable_buffering or statsd._buffering_flush_thread[0].is_alive()
+    assert disable_buffering or statsd._flush_thread.is_alive()
     assert disable_background_sender or statsd._sender_thread.is_alive()
 
     foo.close()
