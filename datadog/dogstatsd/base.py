@@ -486,10 +486,10 @@ class DogStatsd(object):
             self._socket_path = path
             if path is None:
                 self._transport = "udp"
-                self._max_payload_size = (self._max_buffer_len or UDP_OPTIMAL_PAYLOAD_LENGTH)
+                self._max_payload_size = self._max_buffer_len or UDP_OPTIMAL_PAYLOAD_LENGTH
             else:
                 self._transport = "uds"
-                self._max_payload_size = (self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH)
+                self._max_payload_size = self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH
 
     def enable_background_sender(self, sender_queue_size=0, sender_queue_timeout=0):
         """
@@ -1130,7 +1130,6 @@ class DogStatsd(object):
 
         if sample_rate != 1 and random() > sample_rate:
             return
-        # TODO: use metric_types enum
         # timestamps (protocol v1.3) only allowed on gauges and counts
         allows_timestamp = metric_type == MetricType.GAUGE or metric_type == MetricType.COUNT
 
