@@ -1536,9 +1536,9 @@ class DogStatsd(object):
                 )
             else:
                 self._start_flush_thread(
-                self._flush_interval,
-                self.flush_aggregated_metrics,
-            )
+                    self._flush_interval,
+                    self.flush_aggregated_metrics,
+                )
             self._start_sender_thread()
 
     def stop(self):
