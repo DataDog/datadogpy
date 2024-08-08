@@ -101,3 +101,20 @@ def test_buffering_with_context():
     bar.settimeout(5)
     msg = bar.recv(8192)
     assert msg == b"first:1|c\n"
+
+def test_aggregation_with_context():
+    statsd = DogStatsd(
+        telemetry_min_flush_interval=0,
+        disable_aggregating=False,
+    )
+
+    foo, bar = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM, 0)
+    statsd.socket = foo
+
+    statsd.increment("first")
+    with statsd: 
+        pass
+
+    bar.settimeout(5)
+    msg = bar.recv(8192)
+    assert msg == b"first:1|c\n"
