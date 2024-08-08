@@ -59,6 +59,7 @@ def test_fork_hooks(disable_background_sender, disable_buffering, disable_aggreg
         telemetry_min_flush_interval=0,
         disable_background_sender=disable_background_sender,
         disable_buffering=disable_buffering,
+        disable_aggregating=disable_aggregating
     )
 
     foo, bar = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM, 0)
