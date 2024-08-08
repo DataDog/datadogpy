@@ -31,7 +31,8 @@ class Aggregator(object):
         return metrics
 
     def get_context(self, name, tags):
-        return "{}:{}".format(name, ",".join(tags))
+        tags_str = ",".join(tags) if tags is not None else ""
+        return "{}:{}".format(name, tags_str)
 
     def count(self, name, value, tags, rate, timestamp=0):
         return self.add_metric(
