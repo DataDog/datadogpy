@@ -51,10 +51,10 @@ def test_set_socket_timeout():
 
 
 @pytest.mark.parametrize(
-    "disable_background_sender, disable_buffering",
-    list(itertools.product([True, False], [True, False])),
+    "disable_background_sender, disable_buffering, disable_aggregating",
+    list(itertools.product([True, False], [True, False], [True, False])),
 )
-def test_fork_hooks(disable_background_sender, disable_buffering):
+def test_fork_hooks(disable_background_sender, disable_buffering, disable_aggregating):
     statsd = DogStatsd(
         telemetry_min_flush_interval=0,
         disable_background_sender=disable_background_sender,
@@ -66,7 +66,7 @@ def test_fork_hooks(disable_background_sender, disable_buffering):
 
     statsd.increment("test.metric")
 
-    assert disable_buffering or statsd._flush_thread.is_alive()
+    assert (disable_buffering and disable_aggregating) or statsd._flush_thread.is_alive()
     assert disable_background_sender or statsd._sender_thread.is_alive()
 
     statsd.pre_fork()
@@ -78,7 +78,7 @@ def test_fork_hooks(disable_background_sender, disable_buffering):
 
     statsd.post_fork()
 
-    assert disable_buffering or statsd._flush_thread.is_alive()
+    assert (disable_buffering and disable_aggregating) or statsd._flush_thread.is_alive()
     assert disable_background_sender or statsd._sender_thread.is_alive()
 
     foo.close()
