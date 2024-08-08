@@ -24,10 +24,6 @@ except ImportError:
     # pypy has the same module, but capitalized.
     import Queue as queue  # type: ignore[no-redef]
 
-# pylint: disable=unused-import
-from typing import Optional, List, Text, Union
-# pylint: enable=unused-import
-
 # Datadog libraries
 from datadog.dogstatsd.aggregator import Aggregator
 from datadog.dogstatsd.metric_types import MetricType
