@@ -802,8 +802,8 @@ class TestDogStatsd(unittest.TestCase):
         self.assertEqual('d', type_)
         self.assertEqual('distributed.test', name)
         self.assert_almost_equal(500, float(value), 100)
-
-
+        
+    def test_timed(self):
         """
         Measure the distribution of a function's run time.
         """

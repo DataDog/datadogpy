@@ -592,7 +592,7 @@ class DogStatsd(object):
         if not self._flush_thread:
             return
         try:
-            if self.disable_aggregation:
+            if self._disable_aggregating:
                 self.flush_buffered_metrics()
             else:
                 self.flush_aggregated_metrics()
@@ -1524,9 +1524,15 @@ class DogStatsd(object):
         self._forking = False
 
         with self._config_lock:
-            self._start_flush_thread(
+            if self._disable_aggregating:
+                self._start_flush_thread(
+                    self._flush_interval,
+                    self.flush_buffered_metrics,
+                )
+            else:
+                self._start_flush_thread(
                 self._flush_interval,
-                self.flush_buffered_metrics,
+                self.flush_aggregated_metrics,
             )
             self._start_sender_thread()
 
