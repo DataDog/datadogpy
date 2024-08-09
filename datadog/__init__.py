@@ -83,7 +83,7 @@ def initialize(
     :type statsd_disable_aggregating: boolean
 
     :param statsd_aggregation_flush_interval: Sets the flush interval for aggregation
-                                     (default: 3 seconds)
+                                     (default: 2 seconds)
     :type statsd_aggregation_flush_interval: float
 
     :param statsd_use_default_route: Dynamically set the statsd host to the default route
