@@ -52,29 +52,22 @@ class TestMetrics(unittest.TestCase):
         self.assertEqual(g.timestamp, 1713804588)
 
     def test_new_set_metric(self):
-        s = SetMetric("test", "value1", ["tag1", "tag2"], 1, 1713804588)
+        s = SetMetric("test", "value1", ["tag1", "tag2"], 1)
         self.assertEqual(s.data, {"value1"})
         self.assertEqual(s.name, "test")
         self.assertEqual(s.tags, ["tag1", "tag2"])
         self.assertEqual(s.rate, 1)
-        self.assertEqual(s.timestamp, 1713804588)
-
-        s_default_timestamp = SetMetric("test", "value1", ["tag1", "tag2"], 1)
-        self.assertEqual(s_default_timestamp.data, {"value1"})
-        self.assertEqual(s_default_timestamp.name, "test")
-        self.assertEqual(s_default_timestamp.tags, ["tag1", "tag2"])
-        self.assertEqual(s_default_timestamp.rate, 1)
-        self.assertEqual(s_default_timestamp.timestamp, 0)
+        self.assertEqual(s.timestamp, 0)
 
     def test_set_metric_aggregate(self):
-        s = SetMetric("test", "value1", ["tag1", "tag2"], 1, 1713804588)
+        s = SetMetric("test", "value1", ["tag1", "tag2"], 1)
         s.aggregate("value2")
         s.aggregate("value2")
         self.assertEqual(s.data, {"value1", "value2"})
         self.assertEqual(s.name, "test")
         self.assertEqual(s.tags, ["tag1", "tag2"])
         self.assertEqual(s.rate, 1)
-        self.assertEqual(s.timestamp, 1713804588)
+        self.assertEqual(s.timestamp, 0)
 
 if __name__ == '__main__':
     unittest.main()

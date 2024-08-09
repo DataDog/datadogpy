@@ -37,7 +37,9 @@ def initialize(
     api_host=None,  # type: Optional[str]
     statsd_host=None,  # type: Optional[str]
     statsd_port=None,  # type: Optional[int]
+    statsd_disable_aggregator=True,  # type: bool
     statsd_disable_buffering=True,  # type: bool
+    statsd_aggregation_flush_interval=2,  # type: float
     statsd_use_default_route=False,  # type: bool
     statsd_socket_path=None,  # type: Optional[str]
     statsd_namespace=None,  # type: Optional[str]
@@ -75,6 +77,14 @@ def initialize(
     :param statsd_disable_buffering: Enable/disable statsd client buffering support
                                      (default: True).
     :type statsd_disable_buffering: boolean
+
+    :param statsd_disable_aggregator: Enable/disable statsd client aggregation support
+                                     (default: True).
+    :type statsd_disable_aggregator: boolean
+
+    :param statsd_aggregation_flush_interval: Sets the flush interval for aggregation
+                                     (default: 2 seconds)
+    :type statsd_aggregation_flush_interval: float
 
     :param statsd_use_default_route: Dynamically set the statsd host to the default route
                                      (Useful when running the client in a container)
@@ -128,8 +138,11 @@ def initialize(
     if statsd_constant_tags:
         statsd.constant_tags += statsd_constant_tags
 
+    if statsd_disable_aggregator:
+        statsd.disable_aggregation()
+    else:
+        statsd.enable_aggregation(statsd_aggregation_flush_interval)
     statsd.disable_buffering = statsd_disable_buffering
-
     api._return_raw_response = return_raw_response
 
     # HTTP client and API options
