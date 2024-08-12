@@ -1533,16 +1533,17 @@ class DogStatsd(object):
 
     def post_fork_parent(self):
         """Restore the client state after a fork in the parent process."""
-        if self._disable_aggregating:
-            self._start_flush_thread(
-                self._flush_interval,
-                self.flush_buffered_metrics,
-            )
-        else:
-            self._start_flush_thread(
-                self._flush_interval,
-                self.flush_aggregated_metrics,
-            )
+        with self._config_lock:
+            if self._disable_aggregating:
+                self._start_flush_thread(
+                    self._flush_interval,
+                    self.flush_buffered_metrics,
+                )
+            else:
+                self._start_flush_thread(
+                    self._flush_interval,
+                    self.flush_aggregated_metrics,
+                )
         self._start_sender_thread()
         self._config_lock.release()
 
