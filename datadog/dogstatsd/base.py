@@ -115,17 +115,26 @@ def pre_fork():
         c.pre_fork()
 
 
-def post_fork():
+def post_fork_parent():
     """Restore all client instances after a fork.
 
     If SUPPORTS_FORKING is true, this will be called automatically after os.fork().
     """
     for c in _instances:
-        c.post_fork()
+        c.post_fork_parent()
+
+
+def post_fork_child():
+    for c in _instances:
+        c.post_fork_child()
 
 
 if SUPPORTS_FORKING:
-    os.register_at_fork(before=pre_fork, after_in_child=post_fork, after_in_parent=post_fork)  # type: ignore
+    os.register_at_fork(  # type: ignore
+        before=pre_fork,
+        after_in_child=post_fork_child,
+        after_in_parent=post_fork_parent,
+    )
 
 
 # pylint: disable=useless-object-inheritance,too-many-instance-attributes
@@ -500,7 +509,8 @@ class DogStatsd(object):
         Applications should call stop() before exiting to make sure all pending payloads are sent.
 
         Compatible with os.fork() starting with Python 3.7. On earlier versions, compatible if applications
-        arrange to call pre_fork() and post_fork() module functions around calls to os.fork().
+        arrange to call pre_fork(), post_fork_parent() and post_fork_child() module functions around calls
+        to os.fork().
 
         :param sender_queue_size: Set the maximum number of packets to queue for the sender.
             How many packets to queue before blocking or dropping the packet if the packet queue is already full.
@@ -1504,29 +1514,46 @@ class DogStatsd(object):
     def pre_fork(self):
         """Prepare client for a process fork.
 
-        Flush any pending payloads, stop all background threads and
-        close the connection. Once the function returns.
+        Flush any pending payloads and stop all background threads.
 
         The client should not be used from this point until
-        post_fork() is called.
+        state is restored by calling post_fork_parent() or
+        post_fork_child().
         """
-        log.debug("[%d] pre_fork for %s", os.getpid(), self)
 
-        self._forking = True
+        # Hold the config lock across fork. This will make sure that
+        # we don't fork in the middle of the concurrent modification
+        # of the client's settings. Data protected by other locks may
+        # be left in inconsistent state in the child process, which we
+        # will clean up in post_fork_child.
 
-        with self._config_lock:
-            self._stop_flush_thread()
-            self._stop_sender_thread()
+        self._config_lock.acquire()
+        self._stop_flush_thread()
+        self._stop_sender_thread()
+
+    def post_fork_parent(self):
+        """Restore the client state after a fork in the parent process."""
+        self._start_flush_thread(self._flush_interval)
+        self._start_sender_thread()
+        self._config_lock.release()
+
+    def post_fork_child(self):
+        """Restore the client state after a fork in the child process."""
+        self._config_lock.release()
+
+        # Discard the locks that could have been locked at the time
+        # when we forked. This may cause inconsistent internal state,
+        # which we will fix in the next steps.
+        self._socket_lock = Lock()
+        self._buffer_lock = RLock()
+
+        # Reset the buffer so we don't send metrics from the parent
+        # process. Also makes sure buffer properties are consistent.
+        self._reset_buffer()
+        # Execute the socket_path setter to reconcile transport and
+        # payload size properties in respect to socket_path value.
+        self.socket_path = self.socket_path
         self.close_socket()
-
-    def post_fork(self):
-        """Restore the client state after a fork."""
-
-        log.debug("[%d] post_fork for %s", os.getpid(), self)
-
-        self.close_socket()
-
-        self._forking = False
 
         with self._config_lock:
             if self._disable_aggregating:
