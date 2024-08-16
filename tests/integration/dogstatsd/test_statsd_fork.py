@@ -3,6 +3,7 @@ import itertools
 import socket
 import threading
 import logging
+import time
 
 import pytest
 
@@ -49,12 +50,14 @@ def test_register_at_fork(disable_background_sender, disable_buffering):
 def sender_a(statsd, running):
     while running[0]:
         statsd.gauge("spam", 1)
+        time.sleep(0)
 
 
 def sender_b(statsd, running):
     while running[0]:
         with statsd:
             statsd.gauge("spam", 1)
+            time.sleep(0)
 
 @pytest.mark.parametrize(
     "disable_background_sender, disable_buffering, sender_fn",
@@ -86,7 +89,7 @@ def test_fork_with_thread(disable_background_sender, disable_buffering, sender_f
 
         assert os.WEXITSTATUS(status) == 42
     finally:
-        statsd.stop()
         if sender:
             sender_running[0] = False
             sender.join()
+        statsd.stop()
