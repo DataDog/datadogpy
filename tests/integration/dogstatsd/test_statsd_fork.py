@@ -82,6 +82,7 @@ def test_fork_with_thread(disable_background_sender, disable_buffering, sender_f
 
         pid = os.fork()
         if pid == 0:
+            statsd.gauge("spam", 2)
             os._exit(42)
 
         assert pid > 0
