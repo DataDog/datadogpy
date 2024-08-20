@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.50.0 / 2024-08-20
+
+* [Added] Add client side aggregation. See [#844](https://github.com/DataDog/datadogpy/pull/844).
+* [Added] Add metric object type. See [#837](https://github.com/DataDog/datadogpy/pull/837).
+* [Added] Support passing Unix timestamps to dogstatsd. See [#831](https://github.com/DataDog/datadogpy/pull/831).
+* [Fixed] Fix a potential deadlock on fork. See [#836](https://github.com/DataDog/datadogpy/pull/836).
+* [Changed] feat(origin detection): send both container ID and Entity ID. See [#828](https://github.com/DataDog/datadogpy/pull/828).
+
 ## 0.49.1 / 2024-03-18
 
 * [Fixed] Fix potential metric loss when open_buffer is combined with disable_buffering=False. See [#820](https://github.com/DataDog/datadogpy/pull/820).
