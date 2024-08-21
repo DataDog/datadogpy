@@ -652,6 +652,7 @@ class DogStatsd(object):
             if self._disable_buffering:
                 self._send = self._send_to_server
             self._start_flush_thread()
+            
     @staticmethod
     def resolve_host(host, use_default_route):
         """
