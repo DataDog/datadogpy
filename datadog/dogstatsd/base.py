@@ -50,11 +50,9 @@ DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8125
 
 # Buffering-related values (in seconds)
-DEFAULT_BUFFERING_FLUSH_INTERVAL = 10
+DEFAULT_FLUSH_INTERVAL = 0.3
 MIN_FLUSH_INTERVAL = 0.0001
 
-# Aggregation-related values (in seconds)
-DEFAULT_AGGREGATION_FLUSH_INTERVAL = 2
 # Env var to enable/disable sending the container ID field
 ORIGIN_DETECTION_ENABLED = "DD_ORIGIN_DETECTION_ENABLED"
 
@@ -147,7 +145,7 @@ class DogStatsd(object):
         host=DEFAULT_HOST,                      # type: Text
         port=DEFAULT_PORT,                      # type: int
         max_buffer_size=None,                   # type: None
-        flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL,  # type: float
+        flush_interval=DEFAULT_FLUSH_INTERVAL,  # type: float
         disable_aggregating=True,               # type: bool
         disable_buffering=True,                 # type: bool
         namespace=None,                         # type: Optional[Text]
@@ -645,7 +643,7 @@ class DogStatsd(object):
                 self._stop_flush_thread()
             log.debug("Statsd aggregation is disabled")
 
-    def enable_aggregation(self, flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL):
+    def enable_aggregation(self, flush_interval=DEFAULT_FLUSH_INTERVAL):
         with self._config_lock:
             if not self._disable_aggregating:
                 return
@@ -1124,7 +1122,6 @@ class DogStatsd(object):
         payload = self._serialize_metric(
             metric, metric_type, value, tags, sample_rate, timestamp
         )
-        print("payload is ", payload)
         # Send it
         self._send(payload)
 
@@ -1272,7 +1269,6 @@ class DogStatsd(object):
             self._buffer.append(packet)
             # Update the current buffer length, including line break to anticipate
             # the final packet size
-            print("buffer is ", self._buffer)
             self._current_buffer_total_size += len(packet) + 1
 
     def _should_flush(self, length_to_be_added):
@@ -1543,8 +1539,8 @@ class DogStatsd(object):
         self.disable_background_sender()
         self._disable_buffering = True
         self._disable_aggregating = True
-        self.flush_buffered_metrics()
         self.flush_aggregated_metrics()
+        self.flush_buffered_metrics()
         self.close_socket()
 
 
