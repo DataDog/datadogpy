@@ -637,7 +637,7 @@ class DogStatsd(object):
 
             self._disable_aggregating = True
 
-            # If aggregation has been disabled, flush and kill the background thread
+            # If aggregation and buffering has been disabled, flush and kill the background thread
             # otherwise start up the flushing thread and enable aggregation.
             if self._disable_aggregating and self.disable_buffering:
                 self._stop_flush_thread()
@@ -812,7 +812,6 @@ class DogStatsd(object):
         with self._buffer_lock:
             # Only send packets if there are packets to send
             if self._buffer:
-                print("flush buffered metrics?")
                 self._send_to_server("\n".join(self._buffer))
                 self._reset_buffer()
 
@@ -1123,6 +1122,7 @@ class DogStatsd(object):
         payload = self._serialize_metric(
             metric, metric_type, value, tags, sample_rate, timestamp
         )
+
         # Send it
         self._send(payload)
 
