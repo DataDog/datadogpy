@@ -29,7 +29,7 @@ import pytest
 # Datadog libraries
 from datadog import initialize, statsd
 from datadog import __version__ as version
-from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DogStatsd, MIN_SEND_BUFFER_SIZE, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_OPTIMAL_PAYLOAD_LENGTH
+from datadog.dogstatsd.base import DEFAULT_FLUSH_INTERVAL, DogStatsd, MIN_SEND_BUFFER_SIZE, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_OPTIMAL_PAYLOAD_LENGTH
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
 from tests.util.contextmanagers import preserve_environment_variable, EnvVars
@@ -41,7 +41,7 @@ class FakeSocket(object):
 
     FLUSH_GRACE_PERIOD = 0.2
 
-    def __init__(self, flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL):
+    def __init__(self, flush_interval=DEFAULT_FLUSH_INTERVAL):
         self.payloads = deque()
 
         self._flush_interval = flush_interval
@@ -1111,7 +1111,7 @@ async def print_foo():
         dogstatsd.increment('page.views')
         self.assertIsNone(fake_socket.recv(no_wait=True))
 
-        time.sleep(DEFAULT_BUFFERING_FLUSH_INTERVAL)
+        time.sleep(DEFAULT_FLUSH_INTERVAL)
         self.assertIsNone(fake_socket.recv(no_wait=True))
 
         time.sleep(0.3)
