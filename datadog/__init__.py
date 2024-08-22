@@ -39,7 +39,7 @@ def initialize(
     statsd_port=None,  # type: Optional[int]
     statsd_disable_aggregator=True,  # type: bool
     statsd_disable_buffering=True,  # type: bool
-    statsd_aggregation_flush_interval=2,  # type: float
+    statsd_aggregation_flush_interval=0.3,  # type: float
     statsd_use_default_route=False,  # type: bool
     statsd_socket_path=None,  # type: Optional[str]
     statsd_namespace=None,  # type: Optional[str]
@@ -82,8 +82,8 @@ def initialize(
                                      (default: True).
     :type statsd_disable_aggregator: boolean
 
-    :param statsd_aggregation_flush_interval: Sets the flush interval for aggregation
-                                     (default: 2 seconds)
+    :param statsd_aggregation_flush_interval: If aggregation is enabled, set the flush interval for aggregation/buffering
+                                     (default: 0.3 seconds)
     :type statsd_aggregation_flush_interval: float
 
     :param statsd_use_default_route: Dynamically set the statsd host to the default route
