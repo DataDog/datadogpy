@@ -82,7 +82,7 @@ def initialize(
                                      (default: True).
     :type statsd_disable_aggregator: boolean
 
-    :param statsd_aggregation_flush_interval: If aggregation is enabled, set the flush interval for 
+    :param statsd_aggregation_flush_interval: If aggregation is enabled, set the flush interval for
                     aggregation/buffering
                                      (default: 0.3 seconds)
     :type statsd_aggregation_flush_interval: float
