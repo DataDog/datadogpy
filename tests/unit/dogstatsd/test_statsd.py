@@ -1089,7 +1089,7 @@ async def print_foo():
         )
     
     def test_aggregation_buffering_simultaneously(self):
-        dogstatsd = DogStatsd(disable_buffering=False, disable_aggregating=False, telemetry_min_flush_interval=0)
+        dogstatsd = DogStatsd(disable_buffering=False, disable_aggregation=False, telemetry_min_flush_interval=0)
         fake_socket = FakeSocket()
         dogstatsd.socket = fake_socket
         for _ in range(10):
@@ -1100,7 +1100,7 @@ async def print_foo():
         self.assert_equal_telemetry('test.aggregation_and_buffering:10|c\n', fake_socket.recv(2))
 
     def test_aggregation_buffering_simultaneously_with_interval(self):
-        dogstatsd = DogStatsd(disable_buffering=False, disable_aggregating=False, flush_interval=1, telemetry_min_flush_interval=0)
+        dogstatsd = DogStatsd(disable_buffering=False, disable_aggregation=False, flush_interval=1, telemetry_min_flush_interval=0)
         fake_socket = FakeSocket()
         dogstatsd.socket = fake_socket
         for _ in range(10):
