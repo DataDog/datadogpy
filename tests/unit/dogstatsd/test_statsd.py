@@ -29,7 +29,7 @@ import pytest
 # Datadog libraries
 from datadog import initialize, statsd
 from datadog import __version__ as version
-from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DogStatsd, MIN_SEND_BUFFER_SIZE, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_OPTIMAL_PAYLOAD_LENGTH
+from datadog.dogstatsd.base import DEFAULT_FLUSH_INTERVAL, DogStatsd, MIN_SEND_BUFFER_SIZE, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_OPTIMAL_PAYLOAD_LENGTH
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
 from tests.util.contextmanagers import preserve_environment_variable, EnvVars
@@ -41,7 +41,7 @@ class FakeSocket(object):
 
     FLUSH_GRACE_PERIOD = 0.2
 
-    def __init__(self, flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL):
+    def __init__(self, flush_interval=DEFAULT_FLUSH_INTERVAL):
         self.payloads = deque()
 
         self._flush_interval = flush_interval
@@ -1087,6 +1087,34 @@ async def print_foo():
             'page.views:1|c\n',
             fake_socket.recv(2, no_wait=True)
         )
+    
+    def test_aggregation_buffering_simultaneously(self):
+        dogstatsd = DogStatsd(disable_buffering=False, disable_aggregation=False, telemetry_min_flush_interval=0)
+        fake_socket = FakeSocket()
+        dogstatsd.socket = fake_socket
+        for _ in range(10):
+            dogstatsd.increment('test.aggregation_and_buffering')
+        self.assertIsNone(fake_socket.recv(no_wait=True))
+        dogstatsd.flush_aggregated_metrics()
+        dogstatsd.flush_buffered_metrics()
+        self.assert_equal_telemetry('test.aggregation_and_buffering:10|c\n', fake_socket.recv(2))
+
+    def test_aggregation_buffering_simultaneously_with_interval(self):
+        dogstatsd = DogStatsd(disable_buffering=False, disable_aggregation=False, flush_interval=1, telemetry_min_flush_interval=0)
+        fake_socket = FakeSocket()
+        dogstatsd.socket = fake_socket
+        for _ in range(10):
+            dogstatsd.increment('test.aggregation_and_buffering_with_interval')
+        self.assertIsNone(fake_socket.recv(no_wait=True))
+
+        time.sleep(0.3)
+        self.assertIsNone(fake_socket.recv(no_wait=True))
+
+        time.sleep(1)
+        self.assert_equal_telemetry(
+            'test.aggregation_and_buffering_with_interval:10|c\n',
+            fake_socket.recv(2, no_wait=True)
+        )
 
     def test_disable_buffering(self):
         dogstatsd = DogStatsd(disable_buffering=True, telemetry_min_flush_interval=0)
@@ -1111,7 +1139,7 @@ async def print_foo():
         dogstatsd.increment('page.views')
         self.assertIsNone(fake_socket.recv(no_wait=True))
 
-        time.sleep(DEFAULT_BUFFERING_FLUSH_INTERVAL)
+        time.sleep(DEFAULT_FLUSH_INTERVAL)
         self.assertIsNone(fake_socket.recv(no_wait=True))
 
         time.sleep(0.3)
