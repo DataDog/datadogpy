@@ -1,6 +1,7 @@
 import random
 from datadog.dogstatsd.metric_types import MetricType
 
+
 class BufferedMetric(object):
     def __init__(self, name, tags, metric_type, max_metrics=0, specified_rate=1.0):
         self.name = name
@@ -50,15 +51,18 @@ class BufferedMetric(object):
             'values': self.data[:]
         }
 
+
 class HistogramMetric(BufferedMetric):
     def __init__(self, name, value, tags, max_metrics=0, rate=1.0):
         super(HistogramMetric, self).__init__(name, tags, MetricType.HISTOGRAM, max_metrics, rate)
         self.aggregate(value)
 
+
 class DistributionMetric(BufferedMetric):
     def __init__(self, name, value, tags, max_metrics=0, rate=1.0):
         super(DistributionMetric, self).__init__(name, tags, MetricType.DISTRIBUTION, max_metrics, rate)
         self.aggregate(value)
+
 
 class TimingMetric(BufferedMetric):
     def __init__(self, name, value, tags, max_metrics=0, rate=1.0):
