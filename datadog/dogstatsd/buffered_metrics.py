@@ -10,8 +10,8 @@ class BufferedMetric(object):
         self.max_metrics = max_metrics
         self.specified_rate = specified_rate
         self.data = []
-        self.stored_metrics = 0
-        self.total_metrics = 0
+        self.stored_metrics = 1
+        self.total_metrics = 1
 
     def aggregate(self, value):
         self.data.append(value)
@@ -39,10 +39,8 @@ class BufferedMetric(object):
         if self.specified_rate != 1.0:
             rate = self.specified_rate
         else:
-            if total_metrics != 0:
-                rate = self.stored_metrics / total_metrics
-            else:
-                rate = 1.0
+            rate = self.stored_metrics / total_metrics
+   
         return {
             'name': self.name,
             'tags': self.tags,
