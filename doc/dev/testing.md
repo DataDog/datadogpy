@@ -47,7 +47,7 @@ You should now be able to run the unit tests locally:
 
 <img width="604" alt="image" src="https://github.com/user-attachments/assets/ea5c74c5-ee56-4fc3-83c8-73a00c9cab1e">
 
-### Send logs to the agent
+### Send metrics to the agent using dogstasd
 Create a folder for testing, such as `testapp/main.py`. Create a file inside the folder with the following code:
 ```
 from datadog import initialize, statsd
