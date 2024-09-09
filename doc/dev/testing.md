@@ -72,6 +72,3 @@ while(1):
 Run the Agent: `./bin/agent/agent run -c bin/agent/dist/datadog.yaml`
 
 Inside the `main.py` file that you just created, run the debugger to send logs to the agent.
-
-Those logs should appear in the [Log Explorer](https://dddev.datadoghq.com/logs?query=&agg_m=count&agg_m_source=base&agg_t=count&cols=host%2Cservice&fromUser=true&messageDisplay=inline&refresh_mode=sliding&storage=hot&stream_sort=desc&viz=stream&from_ts=1722966102377&to_ts=1722967002377&live=true) in Datadog
-
