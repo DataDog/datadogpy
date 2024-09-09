@@ -1,4 +1,4 @@
-# Setting up a local testing environment
+# Setting up a local testing environment with VSCode
 
 ### Install dependencies
 Inside the repo, set up a virtual environment and install dependencies from the command line:
