@@ -40,7 +40,7 @@ class BufferedMetric(object):
             rate = self.specified_rate
         else:
             rate = self.stored_metrics / total_metrics
-   
+
         return {
             'name': self.name,
             'tags': self.tags,
