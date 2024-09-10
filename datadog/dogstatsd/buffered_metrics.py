@@ -58,7 +58,6 @@ class HistogramMetric(BufferedMetric):
 class DistributionMetric(BufferedMetric):
     def __init__(self, name, value, tags, max_metric_samples=0, rate=1.0):
         super(DistributionMetric, self).__init__(name, value, tags, MetricType.DISTRIBUTION, max_metric_samples, rate)
-        
 
 
 class TimingMetric(BufferedMetric):
