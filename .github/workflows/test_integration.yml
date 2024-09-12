@@ -1,5 +1,8 @@
 name: Run Integration Tests
 
+permissions:
+  contents: read
+
 on: # yamllint disable-line rule:truthy
   pull_request:
     types:
