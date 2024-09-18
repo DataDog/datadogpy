@@ -2,7 +2,7 @@
 
 ## 0.50.1 / 2024-09-18
 
-* [Added] enable the ability for buffering and aggregation to work at the same. See [#851](https://github.com/DataDog/datadogpy/pull/851).
+* [Added] Add the ability for buffering and aggregation to work at the same time. See [#851](https://github.com/DataDog/datadogpy/pull/851).
 
 ## v0.50.0 / 2024-08-20
 
