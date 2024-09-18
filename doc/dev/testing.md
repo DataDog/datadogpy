@@ -71,4 +71,4 @@ while(1):
 
 Run the Agent: `./bin/agent/agent run -c bin/agent/dist/datadog.yaml`
 
-Inside the `main.py` file that you just created, run the debugger to send logs to the agent.
+Inside the `main.py` file that you just created, run the debugger to send logs to the Agent.
