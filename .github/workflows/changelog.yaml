@@ -1,4 +1,8 @@
 name: "Ensure labels"
+
+permissions:
+  pull-requests: read
+
 on: # yamllint disable-line rule:truthy
   pull_request:
     types:
