@@ -9,7 +9,7 @@ on:
     - master
   pull_request:
     branches:
-    - '*' # TODO: Revert when merged to master
+    - master
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
