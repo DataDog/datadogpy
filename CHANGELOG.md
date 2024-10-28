@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.50.1 / 2024-09-18
+
+* [Added] Add the ability for buffering and aggregation to work at the same time. See [#851](https://github.com/DataDog/datadogpy/pull/851).
+
 ## v0.50.0 / 2024-08-20
 
 * [Added] Add client side aggregation. See [#844](https://github.com/DataDog/datadogpy/pull/844).

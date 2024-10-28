@@ -21,7 +21,7 @@ This project does not have a strict release schedule. However, we would make a r
 Our team will trigger the release pipeline.
 
 ### Prerequisite 
-- Install [datadog_checks_dev](https://datadog-checks-base.readthedocs.io/en/latest/datadog_checks_dev.cli.html#installation) using Python 3.
+- Install [datadog_checks_dev](https://datadoghq.dev/integrations-core/setup/#ddev) using Python 3.
 - Setup PyPI, see the internal documentation for more details
 
 ### Update Changelog and version
