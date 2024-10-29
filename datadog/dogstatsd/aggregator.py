@@ -10,6 +10,7 @@ from datadog.dogstatsd.buffered_metrics import (
     TimingMetric
 )
 from datadog.dogstatsd.metric_types import MetricType
+from datadog.dogstatsd.buffered_metrics_context import BufferedMetricContexts
 
 
 class Aggregator(object):
@@ -18,19 +19,14 @@ class Aggregator(object):
             MetricType.COUNT: {},
             MetricType.GAUGE: {},
             MetricType.SET: {},
-        }
-        self.buffered_metrics_map = {
-            MetricType.HISTOGRAM: {},
-            MetricType.DISTRIBUTION: {},
-            MetricType.TIMING: {}
+            MetricType.HISTOGRAM: BufferedMetricContexts(HistogramMetric),
+            MetricType.DISTRIBUTION: BufferedMetricContexts(DistributionMetric),
+            MetricType.TIMING: BufferedMetricContexts(TimingMetric)
         }
         self._locks = {
             MetricType.COUNT: threading.RLock(),
             MetricType.GAUGE: threading.RLock(),
             MetricType.SET: threading.RLock(),
-            MetricType.HISTOGRAM: threading.RLock(),
-            MetricType.DISTRIBUTION: threading.RLock(),
-            MetricType.TIMING: threading.RLock()
         }
 
     def flush_aggregated_metrics(self):
@@ -83,4 +79,27 @@ class Aggregator(object):
                 self.metrics_map[metric_type][context] = metric_class(
                     name, value, tags, rate, timestamp
                 )
+
+    def histogram(self, name, value, tags, rate):
+        return self.add_buffered_metric(
+            MetricType.HISTOGRAM, name, value, tags, rate
+        )
+
+    def distribution(self, name, value, tags, rate):
+        return self.add_buffered_metric(
+            MetricType.DISTRIBUTION, name, value, tags, rate
+        )
+
+    def timing(self, name, value, tags, rate):
+        return self.add_buffered_metric(
+            MetricType.TIMING, name, value, tags, rate
+        )
+
+    def add_buffered_metric(
+        self, metric_type, name, value, tags, rate
+    ):
+        context_key = self.get_context(name, tags)
+        metric_context = self.metrics_map[metric_type]
+        return metric_context.sample(name, value, tags, rate, context_key)
+        
     
