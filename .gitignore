@@ -44,3 +44,4 @@ pip-log.txt
 .env/
 .idea/
 *.swp
+venv/
