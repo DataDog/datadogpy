@@ -124,12 +124,12 @@ def conditional_lru_cache(func):
     the version of Python can support it (>3.2) and otherwise returns
     the original function
     """
-    if not is_higher_py32():
-        return func
+    # if not is_higher_py32():
+    return func
 
-    log.debug("Enabling LRU cache for function %s", func.__name__)
+    # log.debug("Enabling LRU cache for function %s", func.__name__)
 
-    # pylint: disable=import-outside-toplevel
-    from functools import lru_cache
+    # # pylint: disable=import-outside-toplevel
+    # from functools import lru_cache
 
-    return lru_cache(maxsize=512)(func)
+    # return lru_cache(maxsize=512)(func)
