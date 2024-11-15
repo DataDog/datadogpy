@@ -49,6 +49,11 @@ log = logging.getLogger("datadog.dogstatsd")
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8125
 
+# Socket prefixes
+UNIX_ADDRESS_SCHEME = "unix://"
+UNIX_ADDRESS_DATAGRAM_SCHEME = "unixgram://"
+UNIX_ADDRESS_STREAM_SCHEME = "unixstream://"
+
 # Buffering-related values (in seconds)
 DEFAULT_BUFFERING_FLUSH_INTERVAL = 0.3
 MIN_FLUSH_INTERVAL = 0.0001
@@ -731,11 +736,40 @@ class DogStatsd(object):
 
     @classmethod
     def _get_uds_socket(cls, socket_path, timeout):
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-        sock.settimeout(timeout)
-        cls._ensure_min_send_buffer_size(sock)
-        sock.connect(socket_path)
-        return sock
+        valid_socket_kinds = [socket.SOCK_DGRAM, socket.SOCK_STREAM]
+        if socket_path.startswith(UNIX_ADDRESS_DATAGRAM_SCHEME):
+            valid_socket_kinds = [socket.SOCK_DGRAM]
+            socket_path = socket_path[len(UNIX_ADDRESS_DATAGRAM_SCHEME):]
+        elif socket_path.startswith(UNIX_ADDRESS_STREAM_SCHEME):
+            valid_socket_kinds = [socket.SOCK_STREAM]
+            socket_path = socket_path[len(UNIX_ADDRESS_STREAM_SCHEME):]
+        elif socket_path.startswith(UNIX_ADDRESS_SCHEME):
+            socket_path = socket_path[len(UNIX_ADDRESS_SCHEME):]
+
+        last_error = ValueError("Invalid socket path")
+        for socket_kind in valid_socket_kinds:
+            try:
+                # This will fail in python2.7
+                sk_name = socket_kind.name
+            except AttributeError:
+                sk_name = socket_kind
+
+            try:
+                sock = socket.socket(socket.AF_UNIX, socket_kind)
+                sock.settimeout(timeout)
+                cls._ensure_min_send_buffer_size(sock)
+                sock.connect(socket_path)
+                log.debug("Connected to socket %s with kind %s", socket_path, sk_name)
+                return sock
+            except Exception as e:
+                if sock is not None:
+                    sock.close()
+                log.debug("Failed to connect to %s with kind %s: %s", socket_path, sk_name, e)
+                if e.errno == errno.EPROTOTYPE:
+                    last_error = e
+                    continue
+                raise e
+        raise last_error
 
     @classmethod
     def _get_udp_socket(cls, host, port, timeout):
@@ -1256,7 +1290,7 @@ class DogStatsd(object):
                 )
                 self.close_socket()
         except Exception as exc:
-            print("Unexpected error: %s", exc)
+            print("Unexpected error: ", exc)
             log.error("Unexpected error: %s", str(exc))
 
         if not is_telemetry and self._telemetry:

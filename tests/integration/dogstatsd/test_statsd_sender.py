@@ -1,18 +1,23 @@
+from contextlib import closing
 import itertools
+import os
+import shutil
 import socket
+import tempfile
 from threading import Thread
+import uuid
 
 import pytest
 
 from datadog.dogstatsd.base import DogStatsd
 
 @pytest.mark.parametrize(
-    "disable_background_sender, disable_buffering, wait_for_pending, socket_timeout, stop",
-    list(itertools.product([True, False], [True, False], [True, False], [0, 1], [True, False])),
+    "disable_background_sender, disable_buffering, wait_for_pending, socket_timeout, stop, socket_kind",
+    list(itertools.product([True, False], [True, False], [True, False], [0, 1], [True, False], [socket.SOCK_DGRAM, socket.SOCK_STREAM])),
 )
-def test_sender_mode(disable_background_sender, disable_buffering, wait_for_pending, socket_timeout, stop):
+def test_sender_mode(disable_background_sender, disable_buffering, wait_for_pending, socket_timeout, stop, socket_kind):
     # Test basic sender operation with an assortment of options
-    foo, bar = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM, 0)
+    foo, bar = socket.socketpair(socket.AF_UNIX, socket_kind, 0)
     statsd = DogStatsd(
         telemetry_min_flush_interval=0,
         disable_background_sender=disable_background_sender,
@@ -101,3 +106,41 @@ def test_buffering_with_context():
     bar.settimeout(5)
     msg = bar.recv(8192)
     assert msg == b"first:1|c\n"
+
+@pytest.fixture()
+def socket_dir():
+    tempdir = tempfile.mkdtemp()
+    yield tempdir
+    shutil.rmtree(tempdir)
+
+@pytest.mark.parametrize(
+        "socket_prefix, socket_kind, success",
+        [
+            ("", socket.SOCK_DGRAM, True),
+            ("", socket.SOCK_STREAM, True),
+            ("unix://", socket.SOCK_DGRAM, True),
+            ("unix://", socket.SOCK_STREAM, True),
+            ("unixstream://", socket.SOCK_DGRAM, False),
+            ("unixstream://", socket.SOCK_STREAM, True),
+            ("unixgram://", socket.SOCK_DGRAM, True),
+            ("unixgram://", socket.SOCK_STREAM, False)
+        ]
+)
+def test_socket_connection(socket_dir, socket_prefix, socket_kind, success):
+    socket_path = os.path.join(socket_dir, str(uuid.uuid1()) + ".sock")
+    listener_socket = socket.socket(socket.AF_UNIX, socket_kind)
+    listener_socket.bind(socket_path)
+
+    if socket_kind == socket.SOCK_STREAM:
+        listener_socket.listen(1)
+
+    with closing(listener_socket):
+        statsd = DogStatsd(
+            socket_path = socket_prefix + socket_path
+        )
+
+        if success:
+            assert statsd.get_socket() is not None
+        else:
+            with pytest.raises(OSError):
+                statsd.get_socket()
