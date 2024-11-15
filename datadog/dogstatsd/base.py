@@ -50,7 +50,7 @@ DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8125
 
 # Buffering-related values (in seconds)
-DEFAULT_FLUSH_INTERVAL = 0.3
+DEFAULT_BUFFERING_FLUSH_INTERVAL = 0.3
 MIN_FLUSH_INTERVAL = 0.0001
 
 # Env var to enable/disable sending the container ID field
@@ -145,7 +145,7 @@ class DogStatsd(object):
         host=DEFAULT_HOST,                      # type: Text
         port=DEFAULT_PORT,                      # type: int
         max_buffer_size=None,                   # type: None
-        flush_interval=DEFAULT_FLUSH_INTERVAL,  # type: float
+        flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL,  # type: float
         disable_aggregation=True,               # type: bool
         disable_buffering=True,                 # type: bool
         namespace=None,                         # type: Optional[Text]
@@ -643,7 +643,7 @@ class DogStatsd(object):
                 self._stop_flush_thread()
             log.debug("Statsd aggregation is disabled")
 
-    def enable_aggregation(self, flush_interval=DEFAULT_FLUSH_INTERVAL):
+    def enable_aggregation(self, flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL):
         with self._config_lock:
             if not self._disable_aggregation:
                 return
@@ -804,6 +804,9 @@ class DogStatsd(object):
         with self._buffer_lock:
             self._current_buffer_total_size = 0
             self._buffer = []
+
+    def flush(self):
+        self.flush_buffered_metrics() 
 
     def flush_buffered_metrics(self):
         """

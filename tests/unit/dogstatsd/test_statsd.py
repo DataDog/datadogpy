@@ -331,42 +331,42 @@ class TestDogStatsd(unittest.TestCase):
 
     def test_counter(self):
         self.statsd.increment('page.views')
-        self.statsd.flush_buffered_metrics()
+        self.statsd.flush()
         self.assert_equal_telemetry('page.views:1|c\n', self.recv(2))
 
         self.statsd._reset_telemetry()
         self.statsd.increment('page.views', 11)
-        self.statsd.flush_buffered_metrics()
+        self.statsd.flush()
         self.assert_equal_telemetry('page.views:11|c\n', self.recv(2))
 
         self.statsd._reset_telemetry()
         self.statsd.decrement('page.views')
-        self.statsd.flush_buffered_metrics()
+        self.statsd.flush()
         self.assert_equal_telemetry('page.views:-1|c\n', self.recv(2))
 
         self.statsd._reset_telemetry()
         self.statsd.decrement('page.views', 12)
-        self.statsd.flush_buffered_metrics()
+        self.statsd.flush()
         self.assert_equal_telemetry('page.views:-12|c\n', self.recv(2))
 
     def test_count(self):
         self.statsd.count('page.views', 11)
-        self.statsd.flush_buffered_metrics()
+        self.statsd.flush()
         self.assert_equal_telemetry('page.views:11|c\n', self.recv(2))
 
     def test_count_with_ts(self):
         self.statsd.count_with_timestamp("page.views", 1, timestamp=1066)
-        self.statsd.flush_buffered_metrics()
+        self.statsd.flush()
         self.assert_equal_telemetry("page.views:1|c|T1066\n", self.recv(2))
 
         self.statsd._reset_telemetry()
         self.statsd.count_with_timestamp("page.views", 11, timestamp=2121)
-        self.statsd.flush_buffered_metrics()
+        self.statsd.flush()
         self.assert_equal_telemetry("page.views:11|c|T2121\n", self.recv(2))
 
     def test_count_with_invalid_ts_should_be_ignored(self):
         self.statsd.count_with_timestamp("page.views", 1, timestamp=-1066)
-        self.statsd.flush_buffered_metrics()
+        self.statsd.flush()
         self.assert_equal_telemetry("page.views:1|c\n", self.recv(2))
 
     def test_histogram(self):
@@ -399,7 +399,7 @@ class TestDogStatsd(unittest.TestCase):
         for _ in range(10000):
             self.statsd.increment('sampled_counter', sample_rate=0.3)
 
-        self.statsd.flush_buffered_metrics()
+        self.statsd.flush()
 
         total_metrics = 0
         payload = self.recv()
@@ -667,7 +667,7 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.socket = BrokenSocket()
         with mock.patch("datadog.dogstatsd.base.log") as mock_log:
             self.statsd.gauge('no error', 1)
-            self.statsd.flush_buffered_metrics()
+            self.statsd.flush()
 
             mock_log.error.assert_not_called()
             mock_log.warning.assert_called_once_with(
@@ -679,7 +679,7 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.socket = OverflownSocket()
         with mock.patch("datadog.dogstatsd.base.log") as mock_log:
             self.statsd.gauge('no error', 1)
-            self.statsd.flush_buffered_metrics()
+            self.statsd.flush()
 
             mock_log.error.assert_not_called()
             calls = [call("Socket send would block: %s, dropping the packet", mock.ANY)]
@@ -689,7 +689,7 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.socket = BrokenSocket(error_number=errno.EMSGSIZE)
         with mock.patch("datadog.dogstatsd.base.log") as mock_log:
             self.statsd.gauge('no error', 1)
-            self.statsd.flush_buffered_metrics()
+            self.statsd.flush()
 
             mock_log.error.assert_not_called()
             calls = [
@@ -705,7 +705,7 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.socket = BrokenSocket(error_number=errno.ENOBUFS)
         with mock.patch("datadog.dogstatsd.base.log") as mock_log:
             self.statsd.gauge('no error', 1)
-            self.statsd.flush_buffered_metrics()
+            self.statsd.flush()
 
             mock_log.error.assert_not_called()
             calls = [call("Socket buffer full: %s, dropping the packet", mock.ANY)]
@@ -720,7 +720,7 @@ class TestDogStatsd(unittest.TestCase):
 
         datadog = DogStatsd(socket_path="/fake/uds/socket/path")
         datadog.gauge('some value', 1)
-        datadog.flush_buffered_metrics()
+        datadog.flush()
 
         # Sanity check
         mock_socket_create.assert_called_once_with(socket.AF_UNIX, socket.SOCK_DGRAM)
@@ -740,7 +740,7 @@ class TestDogStatsd(unittest.TestCase):
 
         datadog = DogStatsd()
         datadog.gauge('some value', 1)
-        datadog.flush_buffered_metrics()
+        datadog.flush()
 
         # Sanity check
         mock_socket_create.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -837,7 +837,7 @@ class TestDogStatsd(unittest.TestCase):
             return (arg1, arg2, kwarg1, kwarg2)
 
         func(1, 2, kwarg2=3)
-        self.statsd.flush_buffered_metrics()
+        self.statsd.flush()
 
         # Ignore telemetry packet
         packet = self.recv(2).split("\n")[0]
@@ -881,7 +881,7 @@ class TestDogStatsd(unittest.TestCase):
             return (arg1, arg2, kwarg1, kwarg2)
 
         func(1, 2, kwarg2=3)
-        self.statsd.flush_buffered_metrics()
+        self.statsd.flush()
 
         packet = self.recv()
         name_value, type_ = packet.rstrip('\n').split('|')
@@ -1068,7 +1068,7 @@ async def print_foo():
 
         dogstatsd.increment('page.views')
         self.assertIsNone(fake_socket.recv(no_wait=True))
-        dogstatsd.flush_buffered_metrics()
+        dogstatsd.flush()
         self.assert_equal_telemetry('page.views:1|c\n', fake_socket.recv(2))
 
     def test_flush_interval(self):
@@ -1096,7 +1096,7 @@ async def print_foo():
             dogstatsd.increment('test.aggregation_and_buffering')
         self.assertIsNone(fake_socket.recv(no_wait=True))
         dogstatsd.flush_aggregated_metrics()
-        dogstatsd.flush_buffered_metrics()
+        dogstatsd.flush()
         self.assert_equal_telemetry('test.aggregation_and_buffering:10|c\n', fake_socket.recv(2))
 
     def test_aggregation_buffering_simultaneously_with_interval(self):
@@ -1697,7 +1697,7 @@ async def print_foo():
         dogstatsd._container_id = "ci-fake-container-id"
 
         dogstatsd.increment("page.views")
-        dogstatsd.flush_buffered_metrics()
+        dogstatsd.flush()
         tags = "dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d"
         metric = 'page.views:1|c|#' + tags + '|c:ci-fake-container-id\n'
         self.assertEqual(metric, dogstatsd.socket.recv())
@@ -1712,7 +1712,7 @@ async def print_foo():
         dogstatsd._container_id = "ci-fake-container-id"
 
         dogstatsd.increment("page.views")
-        dogstatsd.flush_buffered_metrics()
+        dogstatsd.flush()
         tags = "dd.internal.entity_id:04652bb7-19b7-11e9-9cc6-42010a9c016d"
         metric = 'page.views:1|c|#' + tags + '|c:ci-fake-container-id' + '|e:it-false,cn-container-name,pu-04652bb7-19b7-11e9-9cc6-42010a9c016d' + '\n'
         self.assertEqual(metric, dogstatsd.socket.recv())
@@ -1795,7 +1795,7 @@ async def print_foo():
             # Make call with no tags passed; only the globally configured tags will be used.
             global_tags_str = ','.join([t for t in global_tags])
             dogstatsd.gauge('gt', 123.4)
-            dogstatsd.flush_buffered_metrics()
+            dogstatsd.flush()
 
             # Protect against the no tags case.
             metric = 'gt:123.4|g|#{}\n'.format(global_tags_str) if global_tags_str else 'gt:123.4|g\n'
@@ -1813,7 +1813,7 @@ async def print_foo():
             passed_tags = ['env:prod', 'version:def456', 'custom_tag:toad']
             all_tags_str = ','.join([t for t in passed_tags + global_tags])
             dogstatsd.gauge('gt', 123.4, tags=passed_tags)
-            dogstatsd.flush_buffered_metrics()
+            dogstatsd.flush()
 
             metric = 'gt:123.4|g|#{}\n'.format(all_tags_str)
             self.assertEqual(metric, dogstatsd.socket.recv())
@@ -1919,22 +1919,22 @@ async def print_foo():
         self.statsd._container_id = "ci-fake-container-id"
 
         self.statsd.increment("page.views")
-        self.statsd.flush_buffered_metrics()
+        self.statsd.flush()
         self.assert_equal_telemetry("page.views:1|c|c:ci-fake-container-id\n", self.recv(2))
 
         self.statsd._reset_telemetry()
         self.statsd.increment("page.views", 11)
-        self.statsd.flush_buffered_metrics()
+        self.statsd.flush()
         self.assert_equal_telemetry("page.views:11|c|c:ci-fake-container-id\n", self.recv(2))
 
         self.statsd._reset_telemetry()
         self.statsd.decrement("page.views")
-        self.statsd.flush_buffered_metrics()
+        self.statsd.flush()
         self.assert_equal_telemetry("page.views:-1|c|c:ci-fake-container-id\n", self.recv(2))
 
         self.statsd._reset_telemetry()
         self.statsd.decrement("page.views", 12)
-        self.statsd.flush_buffered_metrics()
+        self.statsd.flush()
         self.assert_equal_telemetry("page.views:-12|c|c:ci-fake-container-id\n", self.recv(2))
 
         self.statsd._container_id = None
