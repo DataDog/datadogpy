@@ -806,7 +806,7 @@ class DogStatsd(object):
             self._buffer = []
 
     def flush(self):
-        self.flush_buffered_metrics() 
+        self.flush_buffered_metrics()
 
     def flush_buffered_metrics(self):
         """
