@@ -30,7 +30,7 @@ import pytest
 # Datadog libraries
 from datadog import initialize, statsd
 from datadog import __version__ as version
-from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DogStatsd, MIN_SEND_BUFFER_SIZE, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_OPTIMAL_PAYLOAD_LENGTH
+from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_OPTIMAL_PAYLOAD_LENGTH
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
 from tests.util.contextmanagers import preserve_environment_variable, EnvVars
@@ -296,7 +296,7 @@ class TestDogStatsd(unittest.TestCase):
         initialize(**options)
         self.assertEqual(statsd.cardinality, 'none')
 
-    def test_dogstatsd_initialization_with_env_vars(self):
+    def test_dogstatsd_initialization_with_env_vars_agent_host(self):
         """
         Dogstatsd can retrieve its config from env vars when
         not provided in constructor.
@@ -311,6 +311,54 @@ class TestDogStatsd(unittest.TestCase):
         # Assert
         self.assertEqual(dogstatsd.host, "myenvvarhost")
         self.assertEqual(dogstatsd.port, 4321)
+
+
+    def test_dogstatsd_initialization_with_env_vars_dogstatsd_url(self):
+        """
+        Dogstatsd can retrieve its config from env vars when
+        not provided in constructor.
+        """
+        # Setup UDP
+        with preserve_environment_variable('DD_DOGSTATSD_URL'):
+            os.environ['DD_DOGSTATSD_URL'] = 'udp://myenvvarhost:4321'
+            dogstatsd = DogStatsd()
+
+        # Assert
+        self.assertEqual(dogstatsd.host, "myenvvarhost")
+        self.assertEqual(dogstatsd.port, 4321)
+        self.assertEqual(dogstatsd.socket_path, None)
+
+        # Test UDS
+        with preserve_environment_variable('DD_DOGSTATSD_URL'):
+            os.environ['DD_DOGSTATSD_URL'] = 'unix:///hello/world.sock'
+            dogstatsd = DogStatsd()
+        self.assertEqual(dogstatsd.socket_path, 'unix:///hello/world.sock')
+        self.assertEqual(dogstatsd.host, None)
+        self.assertEqual(dogstatsd.port, None)
+
+        # Test non-default host
+        with preserve_environment_variable('DD_DOGSTATSD_URL'):
+            os.environ['DD_DOGSTATSD_URL'] = 'unix:///hello/world.sock'
+            dogstatsd = DogStatsd(host="myhost")
+        self.assertEqual(dogstatsd.socket_path, None)
+        self.assertEqual(dogstatsd.host, 'myhost')
+        self.assertEqual(dogstatsd.port, DEFAULT_PORT)
+
+        # Test non-default port
+        with preserve_environment_variable('DD_DOGSTATSD_URL'):
+            os.environ['DD_DOGSTATSD_URL'] = 'unix:///hello/world.sock'
+            dogstatsd = DogStatsd(port=8240)
+        self.assertEqual(dogstatsd.socket_path, None)
+        self.assertEqual(dogstatsd.host, DEFAULT_HOST)
+        self.assertEqual(dogstatsd.port, 8240)
+
+        # Test non-default socket_path
+        with preserve_environment_variable('DD_DOGSTATSD_URL'):
+            os.environ['DD_DOGSTATSD_URL'] = 'unix:///hello/world.sock'
+            dogstatsd = DogStatsd(socket_path='unix:///var/run/datadog/dsd.sock')
+        self.assertEqual(dogstatsd.socket_path, 'unix:///var/run/datadog/dsd.sock')
+        self.assertEqual(dogstatsd.host, None)
+        self.assertEqual(dogstatsd.port, None)
 
     def test_initialization_closes_socket(self):
         statsd.socket = FakeSocket()
@@ -2178,13 +2226,13 @@ async def print_foo():
         """
         statsd = DogStatsd(disable_buffering=True)
 
-        class fakeSock:
+        class FakeSock:
             def __init__(self, id):
                 self.id = id
             def send(self, _):
                 pass
-        statsd.socket = fakeSock(5)
-        statsd.telemetry_socket = fakeSock(10)
+        statsd.socket = FakeSock(5)
+        statsd.telemetry_socket = FakeSock(10)
 
         assert statsd.socket.id == 5
         assert statsd.telemetry_socket.id == 10
