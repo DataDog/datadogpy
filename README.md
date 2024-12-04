@@ -94,6 +94,11 @@ options = {
 initialize(**options)
 ```
 
+Alternatively, the environment variable `DD_DOGSTATSD_URL` can be used to define a udp connection:
+`DD_DOGSTATSD_URL=udp://localhost:8125`
+
+Manually supplying a host/port will take precedence over using this environment variable.
+
 See the full list of available [DogStatsD client instantiation parameters](https://docs.datadoghq.com/developers/dogstatsd/?code-lang=python#client-instantiation-parameters).
 
 #### Instantiate the DogStatsd client with UDS
@@ -109,6 +114,12 @@ options = {
 
 initialize(**options)
 ```
+
+Alternatively, the environment variable `DD_DOGSTATSD_URL` can be used to define a UDS connection:
+`DD_DOGSTATSD_URL=unix:///var/run/datadog/dsd.socket`
+
+As with the udp variant, manually supplying a statsd_socket_path will take precedence over the environment variable.
+
 
 #### Origin detection over UDP and UDS
 
