@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.50.2 / 2024-11-21
+
+* [Fixed] [AMLII-2170] fix removed/renamed function flush. See [#868](https://github.com/DataDog/datadogpy/pull/868).
+
 ## 0.50.1 / 2024-09-18
 
 * [Added] Add the ability for buffering and aggregation to work at the same time. See [#851](https://github.com/DataDog/datadogpy/pull/851).
