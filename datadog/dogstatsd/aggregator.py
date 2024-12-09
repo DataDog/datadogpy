@@ -4,7 +4,13 @@ from datadog.dogstatsd.metrics import (
     GaugeMetric,
     SetMetric,
 )
+from datadog.dogstatsd.buffered_metrics import (
+    HistogramMetric,
+    DistributionMetric,
+    TimingMetric
+)
 from datadog.dogstatsd.metric_types import MetricType
+from datadog.dogstatsd.buffered_metrics_context import BufferedMetricContexts
 
 
 class Aggregator(object):
@@ -13,6 +19,9 @@ class Aggregator(object):
             MetricType.COUNT: {},
             MetricType.GAUGE: {},
             MetricType.SET: {},
+            MetricType.HISTOGRAM: BufferedMetricContexts(HistogramMetric),
+            MetricType.DISTRIBUTION: BufferedMetricContexts(DistributionMetric),
+            MetricType.TIMING: BufferedMetricContexts(TimingMetric)
         }
         self._locks = {
             MetricType.COUNT: threading.RLock(),
@@ -28,6 +37,16 @@ class Aggregator(object):
                 self.metrics_map[metric_type] = {}
             for metric in current_metrics.values():
                 metrics.extend(metric.get_data() if isinstance(metric, SetMetric) else [metric])
+        return metrics
+
+    def flush_aggregated_buffered_metrics(self):
+        metrics = []
+        for metric_type in self.buffered_metrics_map.keys():
+            with self._locks[metric_type]:
+                current_metrics = self.buffered_metrics_map[metric_type]
+                self.buffered_metrics_map[metric_type] = {}
+            for metric in current_metrics.values():
+                metrics.append(metric)
         return metrics
 
     def get_context(self, name, tags):
@@ -60,3 +79,27 @@ class Aggregator(object):
                 self.metrics_map[metric_type][context] = metric_class(
                     name, value, tags, rate, timestamp
                 )
+
+    def histogram(self, name, value, tags, rate):
+        return self.add_buffered_metric(
+            MetricType.HISTOGRAM, name, value, tags, rate
+        )
+
+    def distribution(self, name, value, tags, rate):
+        return self.add_buffered_metric(
+            MetricType.DISTRIBUTION, name, value, tags, rate
+        )
+
+    def timing(self, name, value, tags, rate):
+        return self.add_buffered_metric(
+            MetricType.TIMING, name, value, tags, rate
+        )
+
+    def add_buffered_metric(
+        self, metric_type, name, value, tags, rate
+    ):
+        context_key = self.get_context(name, tags)
+        metric_context = self.metrics_map[metric_type]
+        return metric_context.sample(name, value, tags, rate, context_key)
+        
+    
