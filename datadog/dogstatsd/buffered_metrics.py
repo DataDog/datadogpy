@@ -13,12 +13,12 @@ class BufferedMetric(object):
         self.stored_metric_samples = 1
         self.total_metric_samples = 1
 
-    def aggregate(self, value):
+    def sample(self, value):
         self.data.append(value)
         self.stored_metric_samples += 1
         self.total_metric_samples += 1
 
-    def maybe_add_metric(self, value):
+    def maybe_keep_sample(self, value):
         if self.max_metric_samples > 0:
             if self.stored_metric_samples >= self.max_metric_samples:
                 i = random.randint(0, self.total_metric_samples - 1)
@@ -29,9 +29,9 @@ class BufferedMetric(object):
                 self.stored_metric_samples += 1
             self.total_metric_samples += 1
         else:
-            self.aggregate(value)
+            self.sample(value)
 
-    def skip_metric(self):
+    def skip_sample(self):
         self.total_metric_samples += 1
 
     def flush(self):
