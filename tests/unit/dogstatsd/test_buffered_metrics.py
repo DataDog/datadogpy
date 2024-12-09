@@ -12,16 +12,16 @@ class TestBufferedMetric(unittest.TestCase):
         self.assertEqual(s.specified_rate, 1.0)
         self.assertEqual(s.metric_type, MetricType.HISTOGRAM)
 
-    def test_histogram_metric_aggregate(self):
+    def test_histogram_metric_sample(self):
         s = HistogramMetric(name="test", value=1.0, tags="tag1,tag2", max_metric_samples=0, rate=1.0)
-        s.aggregate(123.45)
+        s.sample(123.45)
         self.assertEqual(s.data, [1.0, 123.45])
         self.assertEqual(s.name, "test")
         self.assertEqual(s.tags, "tag1,tag2")
         self.assertEqual(s.specified_rate, 1.0)
         self.assertEqual(s.metric_type, MetricType.HISTOGRAM)
 
-    def test_flush_histogram_metric_aggregate(self):
+    def test_flush_histogram_metric_sample(self):
         s = HistogramMetric(name="test", value=1.0, tags="tag1,tag2", max_metric_samples=0, rate=1.0)
         m = s.flush()
         self.assertEqual(m['metric_type'], MetricType.HISTOGRAM)
@@ -29,8 +29,8 @@ class TestBufferedMetric(unittest.TestCase):
         self.assertEqual(m['name'], "test")
         self.assertEqual(m['tags'], "tag1,tag2")
 
-        s.aggregate(21)
-        s.aggregate(123.45)
+        s.sample(21)
+        s.sample(123.45)
         m = s.flush()
         self.assertEqual(m['metric_type'], MetricType.HISTOGRAM)
         self.assertEqual(m['values'], [1.0, 21.0, 123.45])
@@ -45,15 +45,15 @@ class TestBufferedMetric(unittest.TestCase):
         self.assertEqual(s.tags, "tag1,tag2")
         self.assertEqual(s.metric_type, MetricType.DISTRIBUTION)
 
-    def test_distribution_metric_aggregate(self):
+    def test_distribution_metric_sample(self):
         s = DistributionMetric(name="test", value=1.0, tags="tag1,tag2", max_metric_samples=0, rate=1.0)
-        s.aggregate(123.45)
+        s.sample(123.45)
         self.assertEqual(s.data, [1.0, 123.45])
         self.assertEqual(s.name, "test")
         self.assertEqual(s.tags, "tag1,tag2")
         self.assertEqual(s.metric_type, MetricType.DISTRIBUTION)
 
-    def test_flush_distribution_metric_aggregate(self):
+    def test_flush_distribution_metric_sample(self):
         s = DistributionMetric(name="test", value=1.0, tags="tag1,tag2", max_metric_samples=0, rate=1.0)
         m = s.flush()
         self.assertEqual(m['metric_type'], MetricType.DISTRIBUTION)
@@ -61,8 +61,8 @@ class TestBufferedMetric(unittest.TestCase):
         self.assertEqual(m['name'], "test")
         self.assertEqual(m['tags'], "tag1,tag2")
 
-        s.aggregate(21)
-        s.aggregate(123.45)
+        s.sample(21)
+        s.sample(123.45)
         m = s.flush()
         self.assertEqual(m['metric_type'], MetricType.DISTRIBUTION)
         self.assertEqual(m['values'], [1.0, 21.0, 123.45])
@@ -76,15 +76,15 @@ class TestBufferedMetric(unittest.TestCase):
         self.assertEqual(s.tags, "tag1,tag2")
         self.assertEqual(s.metric_type, MetricType.TIMING)
 
-    def test_timing_metric_aggregate(self):
+    def test_timing_metric_sample(self):
         s = TimingMetric(name="test", value=1.0, tags="tag1,tag2", max_metric_samples=0, rate=1.0)
-        s.aggregate(123.45)
+        s.sample(123.45)
         self.assertEqual(s.data, [1.0, 123.45])
         self.assertEqual(s.name, "test")
         self.assertEqual(s.tags, "tag1,tag2")
         self.assertEqual(s.metric_type, MetricType.TIMING)
 
-    def test_flush_timing_metric_aggregate(self):
+    def test_flush_timing_metric_sample(self):
         s = TimingMetric(name="test", value=1.0, tags="tag1,tag2", max_metric_samples=0, rate=1.0)
         m = s.flush()
         self.assertEqual(m['metric_type'], MetricType.TIMING)
@@ -92,8 +92,8 @@ class TestBufferedMetric(unittest.TestCase):
         self.assertEqual(m['name'], "test")
         self.assertEqual(m['tags'], "tag1,tag2")
 
-        s.aggregate(21)
-        s.aggregate(123.45)
+        s.sample(21)
+        s.sample(123.45)
         m = s.flush()
         self.assertEqual(m['metric_type'], MetricType.TIMING)
         self.assertEqual(m['values'], [1.0, 21.0, 123.45])
