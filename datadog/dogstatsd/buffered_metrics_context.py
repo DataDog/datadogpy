@@ -1,26 +1,26 @@
 from threading import Lock
-from random import random
+import secrets
 
 from datadog.dogstatsd.buffered_metrics import BufferedMetric
 
 class BufferedMetricContexts:
-    def __init__(self, buffered_metric_type: BufferedMetric):
+    def __init__(self, buffered_metric_type: BufferedMetric, maxSamplesPerContext):
         self.nb_context = 0
         self.lock = Lock()
         self.values = {}
+        self.maxSamplesPerContext = maxSamplesPerContext
         self.buffered_metric_type = buffered_metric_type
-        self.random = random.Random()
-        self.random_lock = Lock()
+        self.random = secrets
 
-    def flush(self, metrics):
+    def flush(self):
+        metrics = []
         """Flush the metrics and reset the stored values."""
         with self.lock:
             values = self.values.copy()
             self.values.clear()
 
         for _, metric in values.items():
-            with metric.lock:
-                metrics.append(metric.flush())
+            metrics.append(metric.flush())
 
         self.nb_context += len(values)
         return metrics
@@ -28,24 +28,24 @@ class BufferedMetricContexts:
     def sample(self, name, value, tags, rate, context_key):
         """Sample a metric and store it if it meets the criteria."""
         keeping_sample = self.should_sample(rate)
-        
+        print("keeping sample is ", keeping_sample)
+        print("context_key is ", context_key)
         with self.lock:
             if context_key not in self.values:
                 # Create a new metric if it doesn't exist
-                self.values[context_key] = self.buffered_metric_type(name, value, tags, 0, rate)
-
+                self.values[context_key] = self.buffered_metric_type(name, tags, self.maxSamplesPerContext, rate)
             metric = self.values[context_key]
-
+        print("values are :", self.values.keys())
         if keeping_sample:
-            with self.random_lock:
-                metric.maybe_keep_sample(value, self.random, self.random_lock)
+            metric.maybe_keep_sample(value)
         else:
             metric.skip_sample()
 
     def should_sample(self, rate):
         """Determine if a sample should be kept based on the specified rate."""
-        with self.random_lock:
-            return self.random.random() < rate
+        if rate >= 1:
+            return True
+        return secrets.SystemRandom().random() < rate
 
     def get_nb_context(self):
         """Return the number of contexts."""
