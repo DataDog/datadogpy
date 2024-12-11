@@ -89,7 +89,7 @@ class Hosts(ActionAPIResource, SearchableAPIResource, ListableAPIResource):
         :returns: Dictionary representing the API's JSON response
         """
         return super(Hosts, cls)._trigger_class_action("GET", "totals")
-    
+
     @classmethod
     def get_all(cls, **params):
         """
@@ -104,7 +104,9 @@ class Hosts(ActionAPIResource, SearchableAPIResource, ListableAPIResource):
         :param sort_dir: Direction of sort. Options include asc and desc.
         :type sort_dir: string
 
-        :param start: Specify the starting point for the host search results. For example, if you set count to 100 and the first 100 results have already been returned, you can set start to 101 to get the next 100 results.
+        :param start: Specify the starting point for the host search results.
+            For example, if you set count to 100 and the first 100 results have already been returned,
+            you can set start to 101 to get the next 100 results.
         :type start: integer
 
         :param count: number of hosts to return. Max 1000.
@@ -116,13 +118,13 @@ class Hosts(ActionAPIResource, SearchableAPIResource, ListableAPIResource):
         :param include_muted_hosts_data: Include data from muted hosts.
         :type include_muted_hosts_data: boolean
 
-        :param include_hosts_metadata: Include metadata from the hosts (agent_version, machine, platform, processor, etc.).
+        :param include_hosts_metadata: Include metadata from the hosts
+            (agent_version, machine, platform, processor, etc.).
         :type include_hosts_metadata: boolean
-
 
         :returns: Dictionary representing the API's JSON response
         """
-        
+
         for param in ["filter"]:
             if param in params and isinstance(params[param], list):
                 params[param] = ",".join(params[param])
