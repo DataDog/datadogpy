@@ -56,8 +56,7 @@ class TestBufferedMetric(unittest.TestCase):
         self.assertEqual(m.tags, "tag1,tag2")
 
     def test_new_timing_metric(self):
-        s = TimingMetric(name="test", value=1.0, tags="tag1,tag2", max_metric_samples=0, rate=1.0)
-        self.assertEqual(s.data, [1.0])
+        s = TimingMetric(name="test", tags="tag1,tag2", max_metric_samples=0, rate=1.0)
         self.assertEqual(s.name, "test")
         self.assertEqual(s.tags, "tag1,tag2")
         self.assertEqual(s.metric_type, MetricType.TIMING)
