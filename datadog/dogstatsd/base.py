@@ -561,6 +561,8 @@ class DogStatsd(object):
                 time.sleep(flush_interval)
                 if not self._disable_aggregation:
                     self.flush_aggregated_metrics()
+                    # Histograms, Distribution and Timing metrics are not aggregated
+                    self.flush_buffered_metrics()
                 if not self._disable_buffering:
                     self.flush_buffered_metrics()
         self._flush_thread = threading.Thread(
@@ -1127,7 +1129,10 @@ class DogStatsd(object):
         )
 
         # Send it
-        self._send(payload)
+        if metric_type == MetricType.DISTRIBUTION or metric_type == MetricType.HISTOGRAM or metric_type == MetricType.TIMING:
+            self._send_to_buffer(payload)
+        else:
+            self._send(payload)
 
     def _reset_telemetry(self):
         self.metrics_count = 0
