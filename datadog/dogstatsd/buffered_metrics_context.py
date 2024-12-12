@@ -1,6 +1,5 @@
 from threading import Lock
 import secrets
-import Dict
 from datadog.dogstatsd.buffered_metrics import BufferedMetric
 
 
@@ -8,7 +7,7 @@ class BufferedMetricContexts:
     def __init__(self, buffered_metric_type: BufferedMetric):
         self.nb_context = 0
         self.lock = Lock()
-        self.values = Dict[str, any] = {}
+        self.values = {}
         self.buffered_metric_type = buffered_metric_type
         self.random = secrets
 
@@ -50,3 +49,4 @@ class BufferedMetricContexts:
     def get_nb_context(self):
         """Return the number of contexts."""
         return self.nb_context
+    
