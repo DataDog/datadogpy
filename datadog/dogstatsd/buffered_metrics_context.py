@@ -1,5 +1,5 @@
 from threading import Lock
-import secrets
+import random
 
 
 class BufferedMetricContexts:
@@ -8,7 +8,6 @@ class BufferedMetricContexts:
         self.lock = Lock()
         self.values = {}
         self.buffered_metric_type = buffered_metric_type
-        self.random = secrets
 
     def flush(self):
         metrics = []
@@ -26,14 +25,11 @@ class BufferedMetricContexts:
     def sample(self, name, value, tags, rate, context_key):
         """Sample a metric and store it if it meets the criteria."""
         keeping_sample = self.should_sample(rate)
-        print("keeping sample is ", keeping_sample)
-        print("context_key is ", context_key)
         with self.lock:
             if context_key not in self.values:
                 # Create a new metric if it doesn't exist
                 self.values[context_key] = self.buffered_metric_type(name, tags, rate)
             metric = self.values[context_key]
-        print("values are :", self.values.keys())
         if keeping_sample:
             metric.maybe_keep_sample(value)
         else:
@@ -43,9 +39,8 @@ class BufferedMetricContexts:
         """Determine if a sample should be kept based on the specified rate."""
         if rate >= 1:
             return True
-        return secrets.SystemRandom().random() < rate
+        return random.random() < rate  # Replace `secrets` with `random`
 
     def get_nb_context(self):
         """Return the number of contexts."""
         return self.nb_context
-    
