@@ -1129,7 +1129,7 @@ class DogStatsd(object):
         )
 
         # Send it
-        if metric_type == MetricType.DISTRIBUTION or metric_type == MetricType.HISTOGRAM or metric_type == MetricType.TIMING:
+        if metric_type in {MetricType.DISTRIBUTION, MetricType.HISTOGRAM, MetricType.TIMING}:
             self._send_to_buffer(payload)
         else:
             self._send(payload)
