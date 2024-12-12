@@ -1,10 +1,9 @@
 from threading import Lock
 import secrets
-from datadog.dogstatsd.buffered_metrics import BufferedMetric
 
 
 class BufferedMetricContexts:
-    def __init__(self, buffered_metric_type: BufferedMetric):
+    def __init__(self, buffered_metric_type):
         self.nb_context = 0
         self.lock = Lock()
         self.values = {}
