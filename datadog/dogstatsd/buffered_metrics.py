@@ -4,7 +4,7 @@ from datadog.dogstatsd.metrics import MetricAggregator
 
 
 class BufferedMetric(object):
-    def __init__(self, name, tags, metric_type, max_metric_samples=0, specified_rate=1.0):
+    def __init__(self, name, tags, metric_type, specified_rate=1.0, max_metric_samples=0):
         self.name = name
         self.tags = tags
         self.metric_type = metric_type
@@ -54,15 +54,15 @@ class BufferedMetric(object):
 
 
 class HistogramMetric(BufferedMetric):
-    def __init__(self, name, tags, max_metric_samples=0, rate=1.0):
-        super(HistogramMetric, self).__init__(name, tags, MetricType.HISTOGRAM, max_metric_samples, rate)
+    def __init__(self, name, tags, rate=1.0, max_metric_samples=0):
+        super(HistogramMetric, self).__init__(name, tags, MetricType.HISTOGRAM, rate, max_metric_samples)
 
 
 class DistributionMetric(BufferedMetric):
-    def __init__(self, name, tags, max_metric_samples=0, rate=1.0):
-        super(DistributionMetric, self).__init__(name, tags, MetricType.DISTRIBUTION, max_metric_samples, rate)
+    def __init__(self, name, tags, rate=1.0, max_metric_samples=0):
+        super(DistributionMetric, self).__init__(name, tags, MetricType.DISTRIBUTION, rate, max_metric_samples)
 
 
 class TimingMetric(BufferedMetric):
-    def __init__(self, name, tags, max_metric_samples=0, rate=1.0):
-        super(TimingMetric, self).__init__(name, tags, MetricType.TIMING, max_metric_samples, rate)
+    def __init__(self, name, tags, rate=1.0, max_metric_samples=0):
+        super(TimingMetric, self).__init__(name, tags, MetricType.TIMING, rate, max_metric_samples)

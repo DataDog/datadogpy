@@ -14,16 +14,16 @@ from datadog.dogstatsd.buffered_metrics_context import BufferedMetricContexts
 
 
 class Aggregator(object):
-    def __init__(self, max_samples_per_context=0):
+    def __init__(self):
         self.metrics_map = {
             MetricType.COUNT: {},
             MetricType.GAUGE: {},
             MetricType.SET: {},
         }
         self.buffered_metrics_map = {
-            MetricType.HISTOGRAM: BufferedMetricContexts(HistogramMetric, max_samples_per_context),
-            MetricType.DISTRIBUTION: BufferedMetricContexts(DistributionMetric, max_samples_per_context),
-            MetricType.TIMING: BufferedMetricContexts(TimingMetric, max_samples_per_context)
+            MetricType.HISTOGRAM: BufferedMetricContexts(HistogramMetric),
+            MetricType.DISTRIBUTION: BufferedMetricContexts(DistributionMetric),
+            MetricType.TIMING: BufferedMetricContexts(TimingMetric)
         }
         self._locks = {
             MetricType.COUNT: threading.RLock(),

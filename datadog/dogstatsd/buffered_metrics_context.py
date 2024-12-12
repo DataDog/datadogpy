@@ -4,11 +4,10 @@ import secrets
 from datadog.dogstatsd.buffered_metrics import BufferedMetric
 
 class BufferedMetricContexts:
-    def __init__(self, buffered_metric_type: BufferedMetric, max_samples_per_context):
+    def __init__(self, buffered_metric_type: BufferedMetric):
         self.nb_context = 0
         self.lock = Lock()
         self.values = {}
-        self.max_samples_per_context = max_samples_per_context
         self.buffered_metric_type = buffered_metric_type
         self.random = secrets
 
@@ -33,7 +32,7 @@ class BufferedMetricContexts:
         with self.lock:
             if context_key not in self.values:
                 # Create a new metric if it doesn't exist
-                self.values[context_key] = self.buffered_metric_type(name, tags, self.max_samples_per_context, rate)
+                self.values[context_key] = self.buffered_metric_type(name, tags, rate)
             metric = self.values[context_key]
         print("values are :", self.values.keys())
         if keeping_sample:

@@ -90,13 +90,12 @@ class TestAggregator(unittest.TestCase):
             {"metric_type": MetricType.SET, "name": "setTest1", "tags": tags, "rate": 1, "value": "value2", "timestamp": 0},
             {"metric_type": MetricType.SET, "name": "setTest2", "tags": tags, "rate": 1, "value": "value1", "timestamp": 0},
         ]
-                
+
         for metric, expected in zip(metrics, expected_metrics):
             self.assertEqual(metric.name, expected["name"])
             self.assertEqual(metric.tags, expected["tags"])
             self.assertEqual(metric.rate, expected["rate"])
             self.assertEqual(metric.value, expected["value"])
-
-
+            
 if __name__ == '__main__':
     unittest.main()
