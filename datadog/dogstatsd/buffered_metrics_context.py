@@ -39,7 +39,7 @@ class BufferedMetricContexts:
         """Determine if a sample should be kept based on the specified rate."""
         if rate >= 1:
             return True
-        return random.random() < rate  
+        return random.random() < rate
 
     def get_nb_context(self):
         """Return the number of contexts."""
