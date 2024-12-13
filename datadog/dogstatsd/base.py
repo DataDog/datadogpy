@@ -969,7 +969,11 @@ class DogStatsd(object):
         >>> statsd.histogram("uploaded.file.size", 1445)
         >>> statsd.histogram("album.photo.count", 26, tags=["gender:female"])
         """
-        self._report(metric, "h", value, tags, sample_rate)
+        if self._disable_aggregation:
+            self._report(metric, "h", value, tags, sample_rate)
+        else:
+            self.aggregator.histogram(metric, value, tags, sample_rate)
+        
 
     def distribution(
         self,
@@ -984,7 +988,11 @@ class DogStatsd(object):
         >>> statsd.distribution("uploaded.file.size", 1445)
         >>> statsd.distribution("album.photo.count", 26, tags=["gender:female"])
         """
-        self._report(metric, "d", value, tags, sample_rate)
+        if self._disable_aggregation:
+            self._report(metric, "d", value, tags, sample_rate)
+        else:
+            self.aggregator.distribution(metric, value, tags, sample_rate)
+        
 
     def timing(
         self,
