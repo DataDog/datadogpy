@@ -992,7 +992,6 @@ class DogStatsd(object):
             self._report(metric, "d", value, tags, sample_rate)
         else:
             self.aggregator.distribution(metric, value, tags, sample_rate)
-        
 
     def timing(
         self,
