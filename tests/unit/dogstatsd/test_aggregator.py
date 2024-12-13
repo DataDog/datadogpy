@@ -63,6 +63,7 @@ class TestAggregator(unittest.TestCase):
         self.aggregator.timing("timingTest2", 23, tags, 1)
 
         metrics = self.aggregator.flush_aggregated_metrics()
+        metrics.extend(self.aggregator.flush_aggregated_buffered_metrics())
         self.assertEqual(len(self.aggregator.metrics_map[MetricType.GAUGE]), 0)
         self.assertEqual(len(self.aggregator.metrics_map[MetricType.COUNT]), 0)
         self.assertEqual(len(self.aggregator.metrics_map[MetricType.SET]), 0)

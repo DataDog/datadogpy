@@ -828,6 +828,13 @@ class DogStatsd(object):
         for m in metrics:
             self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp)
 
+        buffered_metrics = self.aggregator.flush_aggregated_buffered_metrics()
+        send_method = self._send
+        self._send = self._send_to_buffer
+        for m in buffered_metrics:
+            self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp)
+        self._send = send_method
+
     def gauge(
         self,
         metric,  # type: Text
