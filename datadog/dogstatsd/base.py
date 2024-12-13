@@ -1004,7 +1004,12 @@ class DogStatsd(object):
 
         >>> statsd.timing("query.response.time", 1234)
         """
-        self._report(metric, "ms", value, tags, sample_rate)
+
+        if self._disable_aggregation:
+            self._report(metric, "ms", value, tags, sample_rate)
+        else:
+            self.aggregator.timing(metric, value, tags, sample_rate)
+        
 
     def timed(self, metric=None, tags=None, sample_rate=None, use_ms=None):
         """
