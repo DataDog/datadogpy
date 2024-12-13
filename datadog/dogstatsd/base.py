@@ -562,7 +562,7 @@ class DogStatsd(object):
                 if not self._disable_aggregation:
                     self.flush_aggregated_metrics()
                     # Histograms, Distribution and Timing metrics are not aggregated
-                    # self.flush_buffered_metrics()
+                    self.flush_buffered_metrics()
                 if not self._disable_buffering:
                     self.flush_buffered_metrics()
         self._flush_thread = threading.Thread(
