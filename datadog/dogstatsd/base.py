@@ -973,7 +973,6 @@ class DogStatsd(object):
             self._report(metric, "h", value, tags, sample_rate)
         else:
             self.aggregator.histogram(metric, value, tags, sample_rate)
-        
 
     def distribution(
         self,
