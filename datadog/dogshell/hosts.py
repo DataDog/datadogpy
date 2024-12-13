@@ -18,6 +18,7 @@ class HostsClient(object):
     def setup_parser(cls, subparsers):
         parser = subparsers.add_parser("hosts", help="Get information about hosts")
         verb_parsers = parser.add_subparsers(title="Verbs", dest="verb")
+        verb_parsers.required = True
 
         list_parser = verb_parsers.add_parser("list", help="List all hosts")
         list_parser.add_argument("--filter", help="String to filter search results", type=str)
@@ -46,6 +47,7 @@ class HostsClient(object):
                                     (agent_version, machine, platform, processor, etc.).",
             default=False,
         )
+        list_parser.set_defaults(func=cls._list)
 
     @classmethod
     def _list(cls, args):

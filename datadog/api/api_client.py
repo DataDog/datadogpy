@@ -56,7 +56,7 @@ class APIClient(object):
         error_formatter=None,
         suppress_response_errors_on_codes=None,
         compress_payload=False,
-        **params
+        **params,
     ):
         """
         Make an HTTP API request
