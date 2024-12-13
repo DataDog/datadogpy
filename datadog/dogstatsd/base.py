@@ -1136,11 +1136,6 @@ class DogStatsd(object):
         )
 
         # Send it
-        # if metric_type in {MetricType.DISTRIBUTION, MetricType.HISTOGRAM, MetricType.TIMING}:
-        #     self._send_to_buffer(payload)
-        # else:
-        #     self._send(payload)
-
         self._send(payload)
 
     def _reset_telemetry(self):
