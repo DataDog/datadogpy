@@ -102,6 +102,8 @@ class Aggregator(object):
     def add_buffered_metric(
         self, metric_type, name, value, tags, rate
     ):
+        if rate is None:
+            rate = 1
         context_key = self.get_context(name, tags)
         metric_context = self.buffered_metrics_map[metric_type]
         return metric_context.sample(name, value, tags, rate, context_key)
