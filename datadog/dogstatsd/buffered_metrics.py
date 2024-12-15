@@ -20,21 +20,16 @@ class BufferedMetric(object):
         self.total_metric_samples += 1
 
     def maybe_keep_sample(self, value):
-        print("max metric samples is ", self.max_metric_samples)
-        print("stored metric samples is ", self.stored_metric_samples)
         if self.max_metric_samples > 0:
             if self.stored_metric_samples >= self.max_metric_samples:
                 i = random.randint(0, self.total_metric_samples - 1)
                 if i < self.max_metric_samples:
-                    print("REPLACE")
                     self.data[i] = value
             else:
-                print("APPEND")
                 self.data.append(value)
                 self.stored_metric_samples += 1
             self.total_metric_samples += 1
         else:
-            print("APPEND2")
             self.sample(value)
 
     def skip_sample(self):
