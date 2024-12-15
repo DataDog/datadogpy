@@ -67,9 +67,9 @@ class TestAggregator(unittest.TestCase):
         self.assertEqual(len(self.aggregator.metrics_map[MetricType.GAUGE]), 0)
         self.assertEqual(len(self.aggregator.metrics_map[MetricType.COUNT]), 0)
         self.assertEqual(len(self.aggregator.metrics_map[MetricType.SET]), 0)
-        self.assertEqual(len(self.aggregator.buffered_metrics_map[MetricType.HISTOGRAM]), 0)
-        self.assertEqual(len(self.aggregator.buffered_metrics_map[MetricType.DISTRIBUTION]), 0)
-        self.assertEqual(len(self.aggregator.buffered_metrics_map[MetricType.TIMING]), 0)
+        self.assertEqual(len(self.aggregator.buffered_metrics_map[MetricType.HISTOGRAM].values), 0)
+        self.assertEqual(len(self.aggregator.buffered_metrics_map[MetricType.DISTRIBUTION].values), 0)
+        self.assertEqual(len(self.aggregator.buffered_metrics_map[MetricType.TIMING].values), 0)
         self.assertEqual(len(metrics), 16)
         metrics.sort(key=lambda m: (m.metric_type, m.name, m.value))
 
