@@ -13,13 +13,13 @@ class BufferedMetricContexts:
         metrics = []
         """Flush the metrics and reset the stored values."""
         with self.lock:
-            values = self.values.copy()
+            copiedValues = self.values.copy()
             self.values.clear()
-
-        for _, metric in values.items():
+        self.values = {}
+        for _, metric in copiedValues.items():
             metrics.append(metric.flush())
 
-        self.nb_context += len(values)
+        self.nb_context += len(copiedValues)
         return metrics
 
     def sample(self, name, value, tags, rate, context_key):

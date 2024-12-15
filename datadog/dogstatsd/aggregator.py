@@ -49,7 +49,6 @@ class Aggregator(object):
         for metric_type in self.buffered_metrics_map.keys():
             with self._locks[metric_type]:
                 metric_context = self.buffered_metrics_map[metric_type]
-                self.buffered_metrics_map[metric_type] = {}
             for metricList in metric_context.flush():
                 metrics.extend(metricList)
         return metrics
