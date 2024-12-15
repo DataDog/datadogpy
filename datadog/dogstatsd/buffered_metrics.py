@@ -11,8 +11,8 @@ class BufferedMetric(object):
         self.max_metric_samples = max_metric_samples
         self.specified_rate = specified_rate
         self.data = []
-        self.stored_metric_samples = 1
-        self.total_metric_samples = 1
+        self.stored_metric_samples = 0
+        self.total_metric_samples = 0
 
     def sample(self, value):
         self.data.append(value)

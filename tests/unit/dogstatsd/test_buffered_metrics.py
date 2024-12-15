@@ -78,5 +78,17 @@ class TestBufferedMetric(unittest.TestCase):
         self.assertEqual(m.name, "test")
         self.assertEqual(m.tags, "tag1,tag2")
 
+    def test_maybe_keep_sample(self):
+        s = HistogramMetric(name="test", tags="tag1,tag2", rate=1.0, max_metric_samples=2)
+        s.maybe_keep_sample(123)
+        s.maybe_keep_sample(456)
+        s.maybe_keep_sample(789)
+        self.assertEqual(len(s.data), 2)
+        self.assertFalse(123 in s.data and 456 in s.data)
+        self.assertEqual(s.name, "test")
+        self.assertEqual(s.tags, "tag1,tag2")
+        self.assertEqual(s.specified_rate, 1.0)
+        self.assertEqual(s.metric_type, MetricType.HISTOGRAM)
+
 if __name__ == '__main__':
     unittest.main()
