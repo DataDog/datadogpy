@@ -1120,7 +1120,7 @@ async def print_foo():
         dogstatsd = DogStatsd(disable_buffering=True, telemetry_min_flush_interval=0)
         fake_socket = FakeSocket()
         dogstatsd.socket = fake_socket
-
+        #test wack
         dogstatsd.increment('page.views')
         self.assert_equal_telemetry(
             'page.views:1|c\n',
