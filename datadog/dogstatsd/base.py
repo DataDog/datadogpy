@@ -561,6 +561,8 @@ class DogStatsd(object):
                 time.sleep(flush_interval)
                 if not self._disable_aggregation:
                     self.flush_aggregated_metrics()
+                    # Histograms, Distribution and Timing metrics are not aggregated
+                    self.flush_buffered_metrics()
                 if not self._disable_buffering:
                     self.flush_buffered_metrics()
         self._flush_thread = threading.Thread(
@@ -826,6 +828,13 @@ class DogStatsd(object):
         for m in metrics:
             self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp)
 
+        buffered_metrics = self.aggregator.flush_aggregated_buffered_metrics()
+        send_method = self._send
+        self._send = self._send_to_buffer
+        for m in buffered_metrics:
+            self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp)
+        self._send = send_method
+
     def gauge(
         self,
         metric,  # type: Text
@@ -960,7 +969,10 @@ class DogStatsd(object):
         >>> statsd.histogram("uploaded.file.size", 1445)
         >>> statsd.histogram("album.photo.count", 26, tags=["gender:female"])
         """
-        self._report(metric, "h", value, tags, sample_rate)
+        if self._disable_aggregation:
+            self._report(metric, "h", value, tags, sample_rate)
+        else:
+            self.aggregator.histogram(metric, value, tags, sample_rate)
 
     def distribution(
         self,
@@ -975,7 +987,10 @@ class DogStatsd(object):
         >>> statsd.distribution("uploaded.file.size", 1445)
         >>> statsd.distribution("album.photo.count", 26, tags=["gender:female"])
         """
-        self._report(metric, "d", value, tags, sample_rate)
+        if self._disable_aggregation:
+            self._report(metric, "d", value, tags, sample_rate)
+        else:
+            self.aggregator.distribution(metric, value, tags, sample_rate)
 
     def timing(
         self,
@@ -989,7 +1004,11 @@ class DogStatsd(object):
 
         >>> statsd.timing("query.response.time", 1234)
         """
-        self._report(metric, "ms", value, tags, sample_rate)
+
+        if self._disable_aggregation:
+            self._report(metric, "ms", value, tags, sample_rate)
+        else:
+            self.aggregator.timing(metric, value, tags, sample_rate)
 
     def timed(self, metric=None, tags=None, sample_rate=None, use_ms=None):
         """
