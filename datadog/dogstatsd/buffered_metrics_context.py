@@ -40,7 +40,3 @@ class BufferedMetricContexts:
         if rate >= 1:
             return True
         return random.random() < rate
-
-    def get_nb_context(self):
-        """Return the number of contexts."""
-        return self.nb_context
