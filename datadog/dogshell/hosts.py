@@ -24,7 +24,10 @@ class HostsClient(object):
         list_parser.add_argument("--filter", help="String to filter search results", type=str)
         list_parser.add_argument("--sort_field", help="Sort hosts by this field", type=str)
         list_parser.add_argument(
-            "--sort_dir", help="Direction of sort. 'asc' or 'desc'", choices=["asc", "desc"], default="asc"
+            "--sort_dir",
+            help="Direction of sort. 'asc' or 'desc'",
+            choices=["asc", "desc"],
+            default="asc"
         )
         list_parser.add_argument(
             "--start",
@@ -42,9 +45,15 @@ class HostsClient(object):
             dest="from_",
         )
         list_parser.add_argument(
+            "--include_muted_hosts_data",
+            help="Include information on the muted status of hosts and when the mute expires.",
+            type=bool,
+            default=False)
+        list_parser.add_argument(
             "--include_hosts_metadata",
             help="Include metadata from the hosts \
                                     (agent_version, machine, platform, processor, etc.).",
+            type=bool,
             default=False,
         )
         list_parser.set_defaults(func=cls._list)

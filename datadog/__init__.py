@@ -46,7 +46,7 @@ def initialize(
     statsd_constant_tags=None,  # type: Optional[List[str]]
     return_raw_response=False,  # type: bool
     hostname_from_config=True,  # type: bool
-    **kwargs,  # type: Any
+    **kwargs  # type: Any
 ):
     # type: (...) -> None
     """
