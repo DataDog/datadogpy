@@ -47,14 +47,12 @@ class HostsClient(object):
         list_parser.add_argument(
             "--include_muted_hosts_data",
             help="Include information on the muted status of hosts and when the mute expires.",
-            type=bool,
             action="store_true",
         )
         list_parser.add_argument(
             "--include_hosts_metadata",
             help="Include metadata from the hosts \
                                     (agent_version, machine, platform, processor, etc.).",
-            type=bool,
             action="store_true",
         )
         list_parser.set_defaults(func=cls._list)
