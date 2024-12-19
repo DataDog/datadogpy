@@ -82,13 +82,16 @@ class Hosts(ActionAPIResource, SearchableAPIResource, ListableAPIResource):
         return super(Hosts, cls)._search(**params)
 
     @classmethod
-    def totals(cls):
+    def totals(cls, **params):
         """
         Get total number of hosts active and up.
 
+        :param from_: Number of seconds since UNIX epoch from which you want to search your hosts.
+        :type from_: integer
+
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Hosts, cls)._trigger_class_action("GET", "totals")
+        return super(Hosts, cls)._trigger_class_action("GET", "totals", **params)
 
     @classmethod
     def get_all(cls, **params):
