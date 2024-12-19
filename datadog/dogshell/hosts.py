@@ -90,7 +90,7 @@ class HostsClient(object):
     def _totals(cls, args):
         api._timeout = args.timeout
         format = args.format
-        res = api.Hosts.get_totals(from_=args.from_)
+        res = api.Hosts.totals(from_=args.from_)
         report_warnings(res)
         report_errors(res)
         if format == "pretty":
