@@ -645,6 +645,12 @@ class TestDogshell:
         assert out["host_list"] is not None
         assert out["total_matching"] >= 1
 
+    def test_hosts_totals(self, dogshell):
+        # `dog hosts totals` should return the total number of hosts
+        out, _, return_code = dogshell(["hosts", "totals"])
+        out = json.loads(out)
+        assert out["total_active"] >= 1
+
     def test_downtime_schedule(self, freezer, dogshell):
         # Schedule a downtime
         scope = "env:staging"
