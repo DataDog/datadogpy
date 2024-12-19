@@ -636,8 +636,8 @@ class TestDogshell:
                                         "--start", str(params["start"]),
                                         "--count", str(params["count"]), 
                                         "--from", str(params["from_"])],
-                                        "--include_muted_hosts_data", str(params["include_muted_hosts_data"]),
-                                        "--include_hosts_metadata", str(params["include_hosts_metadata"])
+                                        "--include_muted_hosts_data",
+                                        "--include_hosts_metadata",
                                         )
 
         out = json.loads(out)
