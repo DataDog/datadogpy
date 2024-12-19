@@ -55,7 +55,7 @@ class HostsClient(object):
             help="Include metadata from the hosts \
                                     (agent_version, machine, platform, processor, etc.).",
             type=bool,
-            action = "store_true",
+            action="store_true",
         )
         list_parser.set_defaults(func=cls._list)
 
