@@ -78,7 +78,7 @@ class HostsClient(object):
             from_=args.from_,
             include_hosts_metadata=args.include_hosts_metadata,
             # this doesn't seem to actually filter and I don't need it for now.
-            # include_muted_hosts_data=args.include_muted_hosts_data 
+            # include_muted_hosts_data=args.include_muted_hosts_data
         )
         report_warnings(res)
         report_errors(res)
