@@ -820,6 +820,14 @@ class TestDatadog:
         assert "host_list" in all_hosts
         assert isinstance(all_hosts["host_list"], list)
 
+    def test_hosts_totals(self, dog):
+        params = {
+            "--from": 0,
+        }
+        totals = dog.Hosts.totals()
+        assert "total_active" in totals
+        assert "total_up" in totals
+
     def test_get_all_embeds(self, dog):
         all_embeds = dog.Embed.get_all()
         # Check all embeds is a valid response
