@@ -1,0 +1,54 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.50.3-dev (python 3.12.3; os linux; arch aarch64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/hosts?count=100&filter=env%3Adev&from_=0&include_hosts_metadata=True&include_muted_hosts_data=True&sort_field=host_name&sort_order=asc&start=0
+  response:
+    body:
+      string: '{"host_list":[{"id":27481196051,"tags_by_source":{"Datadog":["env:dev","host:ip-172-31-14-202.us-west-1.compute.internal"]},"aliases":["i-0b6c56389c4206eac","ip-172-31-14-202.us-west-1.compute.internal"],"apps":["ntp","agent"],"sources":["agent"],"name":"ip-172-31-14-202.us-west-1.compute.internal","host_name":"ip-172-31-14-202.us-west-1.compute.internal","aws_id":"i-0b6c56389c4206eac","up":true,"last_reported_time":1734636980,"is_muted":false,"mute_timeout":null,"meta":{"gohai":"{\"cpu\":{\"cache_size\":\"46080
+        KB\",\"cpu_cores\":\"1\",\"cpu_logical_processors\":\"1\",\"family\":\"6\",\"mhz\":\"2299.998\",\"model\":\"79\",\"model_name\":\"Intel(R)
+        Xeon(R) CPU E5-2686 v4 @ 2.30GHz\",\"stepping\":\"1\",\"vendor_id\":\"GenuineIntel\"},\"filesystem\":[{\"kb_size\":\"907364\",\"mounted_on\":\"/dev/shm\",\"name\":\"tmpfs\"},{\"kb_size\":\"362948\",\"mounted_on\":\"/run\",\"name\":\"tmpfs\"},{\"kb_size\":\"30136300\",\"mounted_on\":\"/\",\"name\":\"/dev/xvda4\"},{\"kb_size\":\"983040\",\"mounted_on\":\"/boot\",\"name\":\"/dev/xvda3\"},{\"kb_size\":\"204580\",\"mounted_on\":\"/efi\",\"name\":\"/dev/xvda2\"},{\"kb_size\":\"181472\",\"mounted_on\":\"/run/user/1000\",\"name\":\"tmpfs\"}],\"memory\":{\"swap_total\":\"0kB\",\"total\":\"1858281472\"},\"network\":{\"interfaces\":[{\"ipv4\":[\"172.31.14.202\"],\"ipv4-network\":\"172.31.0.0/20\",\"ipv6\":[\"fe80::4ce:eaff:fee4:d439\"],\"ipv6-network\":\"fe80::/64\",\"macaddress\":\"06:ce:ea:e4:d4:39\",\"name\":\"eth0\"},{\"ipv4\":[\"172.17.0.1\"],\"ipv4-network\":\"172.17.0.0/16\",\"ipv6\":[\"fe80::42:e7ff:fe6e:8e5b\"],\"ipv6-network\":\"fe80::/64\",\"macaddress\":\"02:42:e7:6e:8e:5b\",\"name\":\"docker0\"},{\"ipv4\":[\"172.18.0.1\"],\"ipv4-network\":\"172.18.0.0/16\",\"ipv6\":[\"fe80::42:32ff:fe0a:575c\"],\"ipv6-network\":\"fe80::/64\",\"macaddress\":\"02:42:32:0a:57:5c\",\"name\":\"br-6cee6f1db3c3\"},{\"ipv4\":[],\"ipv6\":[\"fe80::3469:aff:fe8e:2f37\"],\"ipv6-network\":\"fe80::/64\",\"macaddress\":\"36:69:0a:8e:2f:37\",\"name\":\"veth522c76c\"}],\"ipaddress\":\"172.31.14.202\",\"ipaddressv6\":\"fe80::4ce:eaff:fee4:d439\",\"macaddress\":\"06:ce:ea:e4:d4:39\"},\"platform\":{\"GOOARCH\":\"amd64\",\"GOOS\":\"linux\",\"goV\":\"1.22.8\",\"hardware_platform\":\"x86_64\",\"hostname\":\"ip-172-31-14-202.us-west-1.compute.internal\",\"kernel_name\":\"Linux\",\"kernel_release\":\"5.14.0-427.20.1.el9_4.x86_64\",\"kernel_version\":\"#1
+        SMP PREEMPT_DYNAMIC Thu May 23 16:37:13 EDT 2024\",\"machine\":\"x86_64\",\"os\":\"GNU/Linux\",\"processor\":\"x86_64\"}}","socket-fqdn":"ip-172-31-14-202.us-west-1.compute.internal.","machine":"amd64","agent_flavor":"agent","install_method":{"installer_version":"install_script-1.36.0","tool":"install_script","tool_version":"install_script_agent7"},"platform":"linux","processor":"Intel(R)
+        Xeon(R) CPU E5-2686 v4 @ 2.30GHz","pythonV":"3.12.6","nixV":["redhat","9.5",""],"network":{"network-id":"vpc-946eb0f0"},"cpuCores":1,"socket-hostname":"ip-172-31-14-202.us-west-1.compute.internal","timezones":["UTC"],"fbsdV":["","",""],"agent_checks":[["container_lifecycle","container_lifecycle","container_lifecycle","OK","",""],["ntp","ntp","ntp:3c427a42a70bbf8","OK","",""],["telemetry","telemetry","telemetry","OK","",""],["memory","memory","memory","OK","",""],["network","network","network:4b0649b7e11f0772","OK","",""],["load","load","load","OK","",""],["io","io","io","OK","",""],["disk","disk","disk:67cc0574430a16ba","OK","",""],["cpu","cpu","cpu","OK","",""],["container_image","container_image","container_image","OK","",""],["service_discovery","service_discovery","service_discovery","OK","",""],["uptime","uptime","uptime","OK","",""],["file_handle","file_handle","file_handle","OK","",""]],"winV":["","",""],"agent_version":"7.59.0","logs_agent":{"auto_multi_line_detection_enabled":false,"transport":""},"macV":["","",""],"host_id":27481196051},"metrics":{"cpu":2.034643,"iowait":0.0073472015,"load":0.0025555554}},{"id":23185512164,"tags_by_source":{"Datadog":["app:database","env:dev","fourthtag:something","managedby:manual","manual_tag:first","other_tag:second","owner:dongothing","region:mountain","team:integration-services","thirdtag:abc_123_thing","host:gothing-windows-aws"]},"aliases":["i-0e22acf18a4892f62","gothing-windows-aws"],"apps":["agent","ntp"],"sources":["agent"],"name":"gothing-windows-aws","host_name":"gothing-windows-aws","aws_id":"i-0e22acf18a4892f62","up":true,"last_reported_time":1734636768,"is_muted":false,"mute_timeout":null,"meta":{"gohai":"{\"cpu\":{\"cache_size_l1\":\"32768\",\"cache_size_l2\":\"262144\",\"cache_size_l3\":\"47185920\",\"cpu_cores\":\"2\",\"cpu_logical_processors\":\"2\",\"cpu_numa_nodes\":\"1\",\"cpu_pkgs\":\"1\",\"family\":\"6\",\"mhz\":\"2300\",\"model\":\"79\",\"model_name\":\"Intel(R)
+        Xeon(R) CPU E5-2686 v4 @ 2.30GHz\",\"stepping\":\"1\",\"vendor_id\":\"GenuineIntel\"},\"filesystem\":[{\"kb_size\":\"104855548\",\"mounted_on\":\"C:\\\\\",\"name\":\"\\\\\\\\?\\\\Volume{6d1c1d2f-0000-0000-0000-100000000000}\\\\\"}],\"memory\":{\"total\":\"8589524992\"},\"network\":{\"interfaces\":[{\"ipv4\":[\"172.31.13.116\"],\"ipv4-network\":\"172.31.0.0/20\",\"ipv6\":[\"fe80::200f:2cab:b405:ff46\"],\"ipv6-network\":\"fe80::/64\",\"macaddress\":\"06:52:fc:91:a7:8b\",\"name\":\"Ethernet
+        2\"}],\"ipaddress\":\"172.31.13.116\",\"ipaddressv6\":\"fe80::200f:2cab:b405:ff46\",\"macaddress\":\"06:52:fc:91:a7:8b\"},\"platform\":{\"GOOARCH\":\"amd64\",\"GOOS\":\"windows\",\"family\":\"Standalone
+        Workstation\",\"goV\":\"1.22.7\",\"hostname\":\"EC2AMAZ-PO2N6RI\",\"kernel_name\":\"Windows\",\"kernel_release\":\"10.0.20348\",\"machine\":\"x86_64\",\"os\":\"Windows
+        Server 2022 Datacenter\"}}","agent_version":"7.57.2","winV":["Windows Server
+        2022 Datacenter","10.0 Build 20348"],"network":null,"macV":["",""],"pythonV":"3.11.8","install_method":{"installer_version":"7.57.2","tool":"windows_msi_gui","tool_version":"windows_msi_next_gen_1.0.0.0"},"logs_agent":{"auto_multi_line_detection_enabled":false,"transport":"HTTP"},"socket-fqdn":"EC2AMAZ-PO2N6RI.us-west-1.compute.internal.","agent_checks":[["agentcrashdetect","agentcrashdetect","agentcrashdetect","OK","",""],["uptime","uptime","uptime","OK","",""],["ntp","ntp","ntp:3c427a42a70bbf8","OK","",""],["memory","memory","memory","OK","",""],["file_handle","file_handle","file_handle","OK","",""],["cpu","cpu","cpu","OK","",""],["container_image","container_image","container_image","OK","",""],["telemetry","telemetry","telemetry","OK","",""],["network","network","network:4b0649b7e11f0772","OK","",""],["io","io","io","OK","",""],["disk","disk","disk:67cc0574430a16ba","OK","",""],["container_lifecycle","container_lifecycle","container_lifecycle","OK","",""],["winproc","winproc","winproc","OK","",""]],"agent_flavor":"agent","nixV":["",""],"processor":"Intel(R)
+        Xeon(R) CPU E5-2686 v4 @ 2.30GHz","platform":"windows","fbsdV":["",""],"socket-hostname":"EC2AMAZ-PO2N6RI","cpuCores":2,"timezones":["UTC"],"machine":"amd64","host_id":23185512164},"metrics":{"cpu":1.3142827,"iowait":0,"load":null}}],"total_returned":2,"total_matching":2,"exact_total_matching":true}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 19 Dec 2024 20:07:45 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+version: 1

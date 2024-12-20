@@ -1,0 +1,44 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.50.3-dev (python 3.12.3; os linux; arch aarch64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/hosts?count=100&filter=env&from_=0&include_hosts_metadata=False&sort_dir=asc&sort_field=host_name&start=0
+  response:
+    body:
+      string: '{"host_list":[{"id":23185512164,"tags_by_source":{"Datadog":["app:database","env:dev","fourthtag:something","managedby:manual","manual_tag:first","other_tag:second","owner:dongothing","region:mountain","team:integration-services","thirdtag:abc_123_thing","host:gothing-windows-aws"]},"aliases":["i-0e22acf18a4892f62","gothing-windows-aws"],"apps":["ntp","agent"],"sources":["agent"],"name":"gothing-windows-aws","host_name":"gothing-windows-aws","aws_id":"i-0e22acf18a4892f62","up":true,"last_reported_time":1734638540,"is_muted":false,"mute_timeout":null,"meta":{},"metrics":{"cpu":1.3145235,"iowait":0,"load":null}},{"id":27639881247,"tags_by_source":{"Datadog":["env:something","host:EC2AMAZ-MO5317L"]},"aliases":["i-081339270eeb1cc57","EC2AMAZ-MO5317L"],"apps":["ntp","agent"],"sources":["agent"],"name":"EC2AMAZ-MO5317L","host_name":"EC2AMAZ-MO5317L","aws_id":"i-081339270eeb1cc57","up":true,"last_reported_time":1734638543,"is_muted":false,"mute_timeout":null,"meta":{},"metrics":{"cpu":1.4423724,"iowait":0,"load":null}},{"id":27481196051,"tags_by_source":{"Datadog":["env:dev","host:ip-172-31-14-202.us-west-1.compute.internal"]},"aliases":["i-0b6c56389c4206eac","ip-172-31-14-202.us-west-1.compute.internal"],"apps":["agent","ntp"],"sources":["agent"],"name":"ip-172-31-14-202.us-west-1.compute.internal","host_name":"ip-172-31-14-202.us-west-1.compute.internal","aws_id":"i-0b6c56389c4206eac","up":true,"last_reported_time":1734638269,"is_muted":false,"mute_timeout":null,"meta":{},"metrics":{"cpu":2.039951,"iowait":0.005161117,"load":0.0024444445}}],"total_returned":3,"total_matching":3,"exact_total_matching":true}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 19 Dec 2024 20:14:07 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+version: 1
