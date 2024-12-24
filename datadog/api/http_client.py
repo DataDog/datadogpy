@@ -28,7 +28,7 @@ except ImportError:
     urlfetch, urlfetch_errors = None, None
 
 try:
-    import urllib3
+    import urllib3  # type: ignore
 except ImportError:
     urllib3 = None
 
