@@ -161,6 +161,7 @@ class DogStatsd(object):
         telemetry_port=None,                    # type: Union[str, int]
         telemetry_socket_path=None,             # type: Text
         max_buffer_len=0,                       # type: int
+        max_metric_samples=0,                   # type: int
         container_id=None,                      # type: Optional[Text]
         origin_detection_enabled=True,          # type: bool
         socket_timeout=0,                       # type: Optional[float]
@@ -271,6 +272,9 @@ class DogStatsd(object):
         if sending metrics in batch. If not specified it will be adjusted to a optimal value
         depending on the connection type.
         :type max_buffer_len: integer
+
+        :param max_metric_samples: Maximum number of metric samples for buffered metrics (Histogram, Distribution, Timing)
+        :type max_metric_samples: integer
 
         :param disable_telemetry: Should client telemetry be disabled
         :type disable_telemetry: boolean
@@ -455,7 +459,7 @@ class DogStatsd(object):
         self._flush_interval = flush_interval
         self._flush_thread = None
         self._flush_thread_stop = threading.Event()
-        self.aggregator = Aggregator()
+        self.aggregator = Aggregator(max_metric_samples)
         # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
         self._forking = False
 

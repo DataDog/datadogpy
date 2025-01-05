@@ -3,10 +3,11 @@ import random
 
 
 class BufferedMetricContexts:
-    def __init__(self, buffered_metric_type):
+    def __init__(self, buffered_metric_type, max_metric_samples=0):
         self.nb_context = 0
         self.lock = Lock()
         self.values = {}
+        self.max_metric_samples = max_metric_samples
         self.buffered_metric_type = buffered_metric_type
 
     def flush(self):
@@ -28,7 +29,7 @@ class BufferedMetricContexts:
         with self.lock:
             if context_key not in self.values:
                 # Create a new metric if it doesn't exist
-                self.values[context_key] = self.buffered_metric_type(name, tags, rate)
+                self.values[context_key] = self.buffered_metric_type(name, tags, rate, self.max_metric_samples)
             metric = self.values[context_key]
         if keeping_sample:
             metric.maybe_keep_sample(value)
