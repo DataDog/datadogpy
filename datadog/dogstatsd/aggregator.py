@@ -29,9 +29,6 @@ class Aggregator(object):
             MetricType.COUNT: threading.RLock(),
             MetricType.GAUGE: threading.RLock(),
             MetricType.SET: threading.RLock(),
-            MetricType.HISTOGRAM: threading.RLock(),
-            MetricType.DISTRIBUTION: threading.RLock(),
-            MetricType.TIMING: threading.RLock(),
         }
 
     def flush_aggregated_metrics(self):
@@ -47,8 +44,7 @@ class Aggregator(object):
     def flush_aggregated_buffered_metrics(self):
         metrics = []
         for metric_type in self.buffered_metrics_map.keys():
-            with self._locks[metric_type]:
-                metric_context = self.buffered_metrics_map[metric_type]
+            metric_context = self.buffered_metrics_map[metric_type]
             for metricList in metric_context.flush():
                 metrics.extend(metricList)
         return metrics
