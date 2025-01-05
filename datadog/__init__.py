@@ -38,6 +38,7 @@ def initialize(
     statsd_host=None,  # type: Optional[str]
     statsd_port=None,  # type: Optional[int]
     statsd_disable_aggregation=True,  # type: bool
+    statsd_disable_extended_aggregation=True,  # type: bool
     statsd_disable_buffering=True,  # type: bool
     statsd_aggregation_flush_interval=0.3,  # type: float
     statsd_use_default_route=False,  # type: bool
@@ -81,6 +82,10 @@ def initialize(
     :param statsd_disable_aggregation: Enable/disable statsd client aggregation support
                                      (default: True).
     :type statsd_disable_aggregation: boolean
+
+    :param statsd_disable_extended_aggregation: Enable/disable statsd client aggregation support for histograms, distributions and timing metrics
+                                     (default: True).
+    :type statsd_disable_extended_aggregation: boolean
 
     :param statsd_aggregation_flush_interval: If aggregation is enabled, set the flush interval for
                     aggregation/buffering
@@ -143,6 +148,10 @@ def initialize(
         statsd.disable_aggregation()
     else:
         statsd.enable_aggregation(statsd_aggregation_flush_interval)
+    if statsd_disable_extended_aggregation:
+        statsd.disable_extended_aggregation()
+    else:
+        statsd.enable_extended_aggregation(statsd_aggregation_flush_interval)
     statsd.disable_buffering = statsd_disable_buffering
     api._return_raw_response = return_raw_response
 
