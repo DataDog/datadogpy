@@ -147,7 +147,6 @@ class DogStatsd(object):
         max_buffer_size=None,                   # type: None
         flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL,  # type: float
         disable_aggregation=True,               # type: bool
-        disable_extended_aggregation=True,      # type: bool
         disable_buffering=True,                 # type: bool
         namespace=None,                         # type: Optional[Text]
         constant_tags=None,                     # type: Optional[List[str]]
@@ -239,9 +238,6 @@ class DogStatsd(object):
         :type flush_interval: float
 
         :disable_aggregation: If true, metrics (Count, Gauge, Set) are no longer aggregated by the client
-        :type disable_aggregation: bool
-
-        :disable_extended_aggregation: If true, metrics (Histogram, Distribution, Timing) are no longer aggregated by the client
         :type disable_aggregation: bool
 
         :disable_buffering: If set, metrics are no longered buffered by the client and
@@ -454,7 +450,6 @@ class DogStatsd(object):
 
         self._disable_buffering = disable_buffering
         self._disable_aggregation = disable_aggregation
-        self._disable_extended_aggregation = disable_extended_aggregation
 
         self._flush_interval = flush_interval
         self._flush_thread = None
@@ -468,7 +463,7 @@ class DogStatsd(object):
         else:
             self._send = self._send_to_server
 
-        if not self._disable_aggregation or not self._disable_buffering or not self._disable_extended_aggregation:
+        if not self._disable_aggregation or not self._disable_buffering:
             self._start_flush_thread()
         else:
             log.debug("Statsd buffering and aggregation is disabled")
@@ -568,7 +563,7 @@ class DogStatsd(object):
         def _flush_thread_loop(self, flush_interval):
             while not self._flush_thread_stop.is_set():
                 time.sleep(flush_interval)
-                if not self._disable_aggregation or not self._disable_extended_aggregation:
+                if not self._disable_aggregation:
                     self.flush_aggregated_metrics()
                 if not self._disable_buffering:
                     self.flush_buffered_metrics()
@@ -589,7 +584,7 @@ class DogStatsd(object):
         if not self._flush_thread:
             return
         try:
-            if not self._disable_aggregation or not self._disable_extended_aggregation:
+            if not self._disable_aggregation:
                 self.flush_aggregated_metrics()
             if not self.disable_buffering:
                 self.flush_buffered_metrics()
@@ -648,35 +643,11 @@ class DogStatsd(object):
 
             # If aggregation and buffering has been disabled, flush and kill the background thread
             # otherwise start up the flushing thread and enable aggregation.
-            if self._disable_aggregation and self._disable_extended_aggregation and self.disable_buffering:
+            if self._disable_aggregation and self.disable_buffering:
                 self._stop_flush_thread()
             log.debug("Statsd aggregation is disabled")
 
     def enable_aggregation(self, flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL):
-        with self._config_lock:
-            if not self._disable_aggregation:
-                return
-            self._disable_aggregation = False
-            self._flush_interval = flush_interval
-            if self._disable_buffering:
-                self._send = self._send_to_server
-            self._start_flush_thread()
-
-    def disable_extended_aggregation(self):
-        with self._config_lock:
-            # If the toggle didn't change anything, this method is a noop
-            if self._disable_extended_aggregation:
-                return
-
-            self._disable_extended_aggregation = True
-
-            # If aggregation and buffering has been disabled, flush and kill the background thread
-            # otherwise start up the flushing thread and enable aggregation.
-            if self._disable_aggregation and self._disable_extended_aggregation and self.disable_buffering:
-                self._stop_flush_thread()
-            log.debug("Statsd aggregation is disabled")
-
-    def enable_extended_aggregation(self, flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL):
         with self._config_lock:
             if not self._disable_aggregation:
                 return
