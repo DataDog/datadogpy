@@ -269,7 +269,8 @@ class DogStatsd(object):
         depending on the connection type.
         :type max_buffer_len: integer
 
-        :param max_metric_samples: Maximum number of metric samples for buffered metrics (Histogram, Distribution, Timing)
+        :param max_metric_samples: Maximum number of metric samples for buffered
+        metrics (Histogram, Distribution, Timing)
         :type max_metric_samples: integer
 
         :param disable_telemetry: Should client telemetry be disabled
