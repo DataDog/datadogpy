@@ -23,7 +23,14 @@ if sys.version_info[0] >= 3:
     from collections import UserDict as IterableUserDict
     from io import StringIO
     from urllib.parse import urlparse
-    import urllib.request as url_lib
+
+    class Urllib(object):
+        def __getattr__(self, name):
+            # defer the importing of urllib.request to when one of its
+            # attributes is accessed
+            import urllib.request
+            return getattr(urllib.request, name)
+    url_lib = Urllib()
 
     imap = map
     get_input = input
