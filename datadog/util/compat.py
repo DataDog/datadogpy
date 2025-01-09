@@ -23,8 +23,6 @@ log = logging.getLogger("datadog.util")
 if sys.version_info[0] >= 3:
     import builtins
     from collections import UserDict as IterableUserDict
-    import configparser
-    from configparser import ConfigParser
     from io import StringIO
     from urllib.parse import urljoin, urlparse
     import urllib.request as url_lib, urllib.error, urllib.parse
@@ -32,6 +30,10 @@ if sys.version_info[0] >= 3:
     imap = map
     get_input = input
     text = str
+
+    def ConfigParser():
+        import configparser
+        return configparser.ConfigParser()
 
     def iteritems(d):
         return iter(d.items())
@@ -43,8 +45,7 @@ if sys.version_info[0] >= 3:
 # Python 2.x
 else:
     import __builtin__ as builtins
-    import ConfigParser as configparser
-    from configparser import ConfigParser
+    from ConfigParser import ConfigParser
     from cStringIO import StringIO
     from itertools import imap
     import urllib2 as url_lib
