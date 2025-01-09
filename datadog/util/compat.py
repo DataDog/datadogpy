@@ -5,9 +5,7 @@
 """
 Imports for compatibility with Python 2, Python 3 and Google App Engine.
 """
-from functools import wraps
 import logging
-import socket
 import sys
 
 # Logging
@@ -24,8 +22,8 @@ if sys.version_info[0] >= 3:
     import builtins
     from collections import UserDict as IterableUserDict
     from io import StringIO
-    from urllib.parse import urljoin, urlparse
-    import urllib.request as url_lib, urllib.error, urllib.parse
+    from urllib.parse import urlparse
+    import urllib.request as url_lib
 
     imap = map
     get_input = input
@@ -49,7 +47,7 @@ else:
     from cStringIO import StringIO
     from itertools import imap
     import urllib2 as url_lib
-    from urlparse import urljoin, urlparse
+    from urlparse import urlparse
     from UserDict import IterableUserDict
 
     get_input = raw_input
@@ -77,9 +75,7 @@ if sys.version_info >= (2, 7):
     from logging import NullHandler
 # Python 2.6.x
 else:
-    from logging import Handler
-
-    class NullHandler(Handler):
+    class NullHandler(logging.Handler):
         def emit(self, record):
             pass
 
