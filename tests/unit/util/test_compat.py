@@ -3,6 +3,8 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
 import logging
+import pytest
+import sys
 import unittest
 
 from mock import patch
@@ -48,3 +50,35 @@ class TestConditionalLRUCache(unittest.TestCase):
                 mock_debug.assert_called_once()
             else:
                 mock_debug.assert_not_called()
+
+def test_slow_imports(monkeypatch):
+    # We should lazy load certain modules to avoid slowing down the startup
+    # time when running in a serverless environment.  This test will fail if
+    # any of those modules are imported during the import of datadogpy.
+
+    blocklist = [
+        'configparser',
+        'email.mime.application',
+        'email.mime.multipart',
+        'importlib.metadata',
+        'importlib_metadata',
+        'logging.handlers',
+        'multiprocessing',
+        'urllib.request',
+    ]
+
+    class BlockListFinder:
+        def find_spec(self, fullname, *args):
+            for lib in blocklist:
+                if fullname == lib:
+                    raise ImportError('module %s was imported!' % fullname)
+            return None
+        find_module = find_spec  # Python 2
+
+    monkeypatch.setattr('sys.meta_path', [BlockListFinder()] + sys.meta_path)
+
+    for mod in sys.modules.copy():
+        if mod in blocklist or mod.startswith('datadog'):
+            del sys.modules[mod]
+
+    import datadog
