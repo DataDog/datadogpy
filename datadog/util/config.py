@@ -6,7 +6,7 @@ import string
 import sys
 
 # datadog
-from datadog.util.compat import ConfigParser, StringIO, is_p3k
+from datadog.util.compat import configparser, StringIO, is_p3k
 from datadog.version import __version__
 
 # CONSTANTS
@@ -113,7 +113,7 @@ def get_config(cfg_path=None, options=None):
         path = os.path.dirname(path)
 
         config_path = get_config_path(cfg_path, os_name=get_os())
-        config = ConfigParser()
+        config = configparser.ConfigParser()
         with open(config_path) as config_file:
             if is_p3k():
                 config.read_file(skip_leading_wsp(config_file))

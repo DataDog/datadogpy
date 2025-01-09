@@ -24,21 +24,23 @@ if sys.version_info[0] >= 3:
     from io import StringIO
     from urllib.parse import urlparse
 
-    class Urllib(object):
+    class LazyLoader(object):
+        def __init__(self, module_name):
+            self.module_name = module_name
+
         def __getattr__(self, name):
             # defer the importing of urllib.request to when one of its
             # attributes is accessed
-            import urllib.request
-            return getattr(urllib.request, name)
-    url_lib = Urllib()
+            import importlib
+            mod = importlib.import_module(self.module_name)
+            return getattr(mod, name)
+
+    url_lib = LazyLoader('urllib.request')
+    configparser = LazyLoader('configparser')
 
     imap = map
     get_input = input
     text = str
-
-    def ConfigParser():
-        import configparser
-        return configparser.ConfigParser()
 
     def iteritems(d):
         return iter(d.items())
@@ -50,7 +52,7 @@ if sys.version_info[0] >= 3:
 # Python 2.x
 else:
     import __builtin__ as builtins
-    from ConfigParser import ConfigParser
+    import ConfigParser as configparser
     from cStringIO import StringIO
     from itertools import imap
     import urllib2 as url_lib

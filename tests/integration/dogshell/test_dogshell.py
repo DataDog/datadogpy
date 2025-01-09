@@ -14,7 +14,7 @@ import sys
 import pytest
 import requests
 
-from datadog.util.compat import is_p3k, ConfigParser
+from datadog.util.compat import is_p3k, configparser
 from ..api.constants import API_KEY, APP_KEY, MONITOR_REFERENCED_IN_SLO_MESSAGE
 
 WAIT_TIME = 11
@@ -32,7 +32,7 @@ def get_temp_file():
 
 @pytest.fixture  # (scope="module")
 def dogshell_config():
-    config = ConfigParser()
+    config = configparser.ConfigParser()
     config.add_section("Connection")
     config.set("Connection", "apikey", API_KEY)
     config.set("Connection", "appkey", APP_KEY)

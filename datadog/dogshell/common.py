@@ -7,7 +7,7 @@ import os
 import sys
 
 # datadog
-from datadog.util.compat import is_p3k, ConfigParser, IterableUserDict, get_input
+from datadog.util.compat import is_p3k, configparser, IterableUserDict, get_input
 
 
 def print_err(msg):
@@ -44,7 +44,7 @@ def report_warnings(res):
 
 class DogshellConfig(IterableUserDict):
     def load(self, config_file, api_key, app_key, api_host):
-        config = ConfigParser()
+        config = configparser.ConfigParser()
 
         if api_host is not None:
             if api_host in ("datadoghq.com", "us"):
