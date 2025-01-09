@@ -64,7 +64,7 @@ else:
 
 # Python >= 3.5
 if sys.version_info >= (3, 5):
-    from asyncio import iscoroutinefunction
+    from inspect import iscoroutinefunction
 # Others
 else:
 
