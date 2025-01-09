@@ -47,6 +47,7 @@ def initialize(
     statsd_constant_tags=None,  # type: Optional[List[str]]
     return_raw_response=False,  # type: bool
     hostname_from_config=True,  # type: bool
+    cardinality=None,  # type: Optional[str]
     **kwargs  # type: Any
 ):
     # type: (...) -> None
@@ -117,6 +118,12 @@ def initialize(
 
     :param hostname_from_config: Set the hostname from the Datadog agent config (agent 5). Will be deprecated
     :type hostname_from_config: boolean
+
+    :param cardinality: Set the global cardinality for all metrics. \
+        Possible values are "none", "low", "orchestrator" and "high".
+        Can also be set via the DATADOG_CARDINALITY or DD_CARDINALITY environment variables.
+    :type cardinality: string
+
     """
     # API configuration
     api._api_key = api_key or api._api_key or os.environ.get("DATADOG_API_KEY", os.environ.get("DD_API_KEY"))
@@ -150,6 +157,9 @@ def initialize(
         statsd.enable_aggregation(statsd_aggregation_flush_interval, statsd_max_samples_per_context)
     statsd.disable_buffering = statsd_disable_buffering
     api._return_raw_response = return_raw_response
+
+    # Set the global cardinality for all metrics
+    statsd.cardinality = cardinality or os.environ.get("DATADOG_CARDINALITY", os.environ.get("DD_CARDINALITY"))
 
     # HTTP client and API options
     for key, value in iteritems(kwargs):
