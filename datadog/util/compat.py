@@ -29,8 +29,8 @@ if sys.version_info[0] >= 3:
             self.module_name = module_name
 
         def __getattr__(self, name):
-            # defer the importing of urllib.request to when one of its
-            # attributes is accessed
+            # defer the importing of the module to when one of its attributes
+            # is accessed
             import importlib
             mod = importlib.import_module(self.module_name)
             return getattr(mod, name)
