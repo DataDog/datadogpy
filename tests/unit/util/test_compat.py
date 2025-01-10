@@ -9,7 +9,7 @@ import unittest
 
 from mock import patch
 
-from datadog.util.compat import conditional_lru_cache, is_higher_py32
+from datadog.util.compat import conditional_lru_cache, is_higher_py32, is_p3k
 
 class TestConditionalLRUCache(unittest.TestCase):
     def test_normal_usage(self):
@@ -51,6 +51,7 @@ class TestConditionalLRUCache(unittest.TestCase):
             else:
                 mock_debug.assert_not_called()
 
+@pytest.mark.skipif(not is_p3k(), reason='Python 3 only')
 def test_slow_imports(monkeypatch):
     # We should lazy load certain modules to avoid slowing down the startup
     # time when running in a serverless environment.  This test will fail if
