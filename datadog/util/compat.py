@@ -38,6 +38,9 @@ if sys.version_info[0] >= 3:
     url_lib = LazyLoader('urllib.request')
     configparser = LazyLoader('configparser')
 
+    def ConfigParser():
+        return configparser.ConfigParser()
+
     imap = map
     get_input = input
     text = str
@@ -53,6 +56,7 @@ if sys.version_info[0] >= 3:
 else:
     import __builtin__ as builtins
     import ConfigParser as configparser
+    from configparser import ConfigParser
     from cStringIO import StringIO
     from itertools import imap
     import urllib2 as url_lib
