@@ -1,8 +1,8 @@
 import unittest
-from datadog.dogstatsd.buffered_metrics import HistogramMetric, DistributionMetric, TimingMetric
+from datadog.dogstatsd.max_sample_metric import HistogramMetric, DistributionMetric, TimingMetric
 from datadog.dogstatsd.metric_types import MetricType
 
-class TestBufferedMetric(unittest.TestCase):
+class TestMaxSampleMetric(unittest.TestCase):
 
     def test_new_histogram_metric(self):
         s = HistogramMetric(name="test", tags="tag1,tag2", max_metric_samples=0, rate=1.0)

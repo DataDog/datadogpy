@@ -23,16 +23,16 @@ class TestAggregator(unittest.TestCase):
             self.assertIn("setTest:tag1,tag2", self.aggregator.metrics_map[MetricType.SET])
 
             self.aggregator.histogram("histogramTest", 21, tags, 1)
-            self.assertEqual(len(self.aggregator.buffered_metrics_map[MetricType.HISTOGRAM].values), 1)
-            self.assertIn("histogramTest:tag1,tag2", self.aggregator.buffered_metrics_map[MetricType.HISTOGRAM].values)
+            self.assertEqual(len(self.aggregator.max_sample_metric_map[MetricType.HISTOGRAM].values), 1)
+            self.assertIn("histogramTest:tag1,tag2", self.aggregator.max_sample_metric_map[MetricType.HISTOGRAM].values)
 
             self.aggregator.distribution("distributionTest", 21, tags, 1)
-            self.assertEqual(len(self.aggregator.buffered_metrics_map[MetricType.DISTRIBUTION].values), 1)
-            self.assertIn("distributionTest:tag1,tag2", self.aggregator.buffered_metrics_map[MetricType.DISTRIBUTION].values)
+            self.assertEqual(len(self.aggregator.max_sample_metric_map[MetricType.DISTRIBUTION].values), 1)
+            self.assertIn("distributionTest:tag1,tag2", self.aggregator.max_sample_metric_map[MetricType.DISTRIBUTION].values)
 
             self.aggregator.timing("timingTest", 21, tags, 1)
-            self.assertEqual(len(self.aggregator.buffered_metrics_map[MetricType.TIMING].values), 1)
-            self.assertIn("timingTest:tag1,tag2", self.aggregator.buffered_metrics_map[MetricType.TIMING].values)
+            self.assertEqual(len(self.aggregator.max_sample_metric_map[MetricType.TIMING].values), 1)
+            self.assertIn("timingTest:tag1,tag2", self.aggregator.max_sample_metric_map[MetricType.TIMING].values)
 
     def test_aggregator_flush(self):
         tags = ["tag1", "tag2"]
@@ -63,13 +63,13 @@ class TestAggregator(unittest.TestCase):
         self.aggregator.timing("timingTest2", 23, tags, 1)
 
         metrics = self.aggregator.flush_aggregated_metrics()
-        metrics.extend(self.aggregator.flush_aggregated_buffered_metrics())
+        metrics.extend(self.aggregator.flush_aggregated_sampled_metrics())
         self.assertEqual(len(self.aggregator.metrics_map[MetricType.GAUGE]), 0)
         self.assertEqual(len(self.aggregator.metrics_map[MetricType.COUNT]), 0)
         self.assertEqual(len(self.aggregator.metrics_map[MetricType.SET]), 0)
-        self.assertEqual(len(self.aggregator.buffered_metrics_map[MetricType.HISTOGRAM].values), 0)
-        self.assertEqual(len(self.aggregator.buffered_metrics_map[MetricType.DISTRIBUTION].values), 0)
-        self.assertEqual(len(self.aggregator.buffered_metrics_map[MetricType.TIMING].values), 0)
+        self.assertEqual(len(self.aggregator.max_sample_metric_map[MetricType.HISTOGRAM].values), 0)
+        self.assertEqual(len(self.aggregator.max_sample_metric_map[MetricType.DISTRIBUTION].values), 0)
+        self.assertEqual(len(self.aggregator.max_sample_metric_map[MetricType.TIMING].values), 0)
         self.assertEqual(len(metrics), 16)
         metrics.sort(key=lambda m: (m.metric_type, m.name, m.value))
 
