@@ -844,7 +844,6 @@ class DogStatsd(object):
                 m.name, m.metric_type,  m.value, tags, m.rate, timestamp
             )
             self._send(payload)
-           
 
     def gauge(
         self,
