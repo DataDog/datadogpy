@@ -3,11 +3,10 @@ import random
 
 
 class MaxSampleMetricContexts:
-    def __init__(self, max_sample_metric_type, max_metric_samples=0):
+    def __init__(self, max_sample_metric_type):
         self.nb_context = 0
         self.lock = Lock()
         self.values = {}
-        self.max_metric_samples = max_metric_samples
         self.max_sample_metric_type = max_sample_metric_type
 
     def flush(self):
@@ -23,13 +22,13 @@ class MaxSampleMetricContexts:
         self.nb_context += len(copiedValues)
         return metrics
 
-    def sample(self, name, value, tags, rate, context_key):
+    def sample(self, name, value, tags, rate, context_key, max_samples_per_context):
         """Sample a metric and store it if it meets the criteria."""
         keeping_sample = self.should_sample(rate)
         with self.lock:
             if context_key not in self.values:
                 # Create a new metric if it doesn't exist
-                self.values[context_key] = self.max_sample_metric_type(name, tags, rate, self.max_metric_samples)
+                self.values[context_key] = self.max_sample_metric_type(name, tags, rate, max_samples_per_context)
             metric = self.values[context_key]
         if keeping_sample:
             metric.maybe_keep_sample(value)

@@ -43,6 +43,7 @@ def initialize(
     statsd_use_default_route=False,  # type: bool
     statsd_socket_path=None,  # type: Optional[str]
     statsd_namespace=None,  # type: Optional[str]
+    statsd_max_samples_per_context=0, # type: Optional[int]
     statsd_constant_tags=None,  # type: Optional[List[str]]
     return_raw_response=False,  # type: bool
     hostname_from_config=True,  # type: bool
@@ -81,6 +82,10 @@ def initialize(
     :param statsd_disable_aggregation: Enable/disable statsd client aggregation support
                                      (default: True).
     :type statsd_disable_aggregation: boolean
+
+    :param statsd_max_samples_per_context: Set the max samples per context for Histogram,
+    Distribution and Timing metrics. Use with the statsd_disable_aggregation set to False.
+    :type statsd_max_samples_per_context: int
 
     :param statsd_aggregation_flush_interval: If aggregation is enabled, set the flush interval for
                     aggregation/buffering
@@ -139,10 +144,11 @@ def initialize(
     if statsd_constant_tags:
         statsd.constant_tags += statsd_constant_tags
 
+    print("inside __init__", statsd_max_samples_per_context)
     if statsd_disable_aggregation:
         statsd.disable_aggregation()
     else:
-        statsd.enable_aggregation(statsd_aggregation_flush_interval)
+        statsd.enable_aggregation(statsd_aggregation_flush_interval, statsd_max_samples_per_context)
     statsd.disable_buffering = statsd_disable_buffering
     api._return_raw_response = return_raw_response
 

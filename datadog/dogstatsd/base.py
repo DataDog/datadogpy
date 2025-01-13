@@ -160,7 +160,7 @@ class DogStatsd(object):
         telemetry_port=None,                    # type: Union[str, int]
         telemetry_socket_path=None,             # type: Text
         max_buffer_len=0,                       # type: int
-        max_metric_samples_per_context=0,                   # type: int
+        max_metric_samples_per_context=0,       # type: int
         container_id=None,                      # type: Optional[Text]
         origin_detection_enabled=True,          # type: bool
         socket_timeout=0,                       # type: Optional[float]
@@ -455,7 +455,7 @@ class DogStatsd(object):
         self._flush_interval = flush_interval
         self._flush_thread = None
         self._flush_thread_stop = threading.Event()
-        self.aggregator = Aggregator(max_metric_samples_per_context)
+        self.aggregator = Aggregator()
         # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
         self._forking = False
 
@@ -648,10 +648,11 @@ class DogStatsd(object):
                 self._stop_flush_thread()
             log.debug("Statsd aggregation is disabled")
 
-    def enable_aggregation(self, flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL):
+    def enable_aggregation(self, flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL, max_samples_per_context=0):
         with self._config_lock:
             if not self._disable_aggregation:
                 return
+            self.aggregator.set_max_samples_per_context(max_samples_per_context)
             self._disable_aggregation = False
             self._flush_interval = flush_interval
             if self._disable_buffering:

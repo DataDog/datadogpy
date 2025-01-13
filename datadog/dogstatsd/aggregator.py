@@ -14,16 +14,16 @@ from datadog.dogstatsd.max_sample_metric_context import MaxSampleMetricContexts
 
 
 class Aggregator(object):
-    def __init__(self, max_metric_samples=0):
+    def __init__(self):
         self.metrics_map = {
             MetricType.COUNT: {},
             MetricType.GAUGE: {},
             MetricType.SET: {},
         }
         self.max_sample_metric_map = {
-            MetricType.HISTOGRAM: MaxSampleMetricContexts(HistogramMetric, max_metric_samples),
-            MetricType.DISTRIBUTION: MaxSampleMetricContexts(DistributionMetric, max_metric_samples),
-            MetricType.TIMING: MaxSampleMetricContexts(TimingMetric, max_metric_samples)
+            MetricType.HISTOGRAM: MaxSampleMetricContexts(HistogramMetric),
+            MetricType.DISTRIBUTION: MaxSampleMetricContexts(DistributionMetric),
+            MetricType.TIMING: MaxSampleMetricContexts(TimingMetric)
         }
         self._locks = {
             MetricType.COUNT: threading.RLock(),
@@ -40,6 +40,9 @@ class Aggregator(object):
             for metric in current_metrics.values():
                 metrics.extend(metric.get_data() if isinstance(metric, SetMetric) else [metric])
         return metrics
+    
+    def set_max_samples_per_context(self, max_samples_per_context=0):
+        self.max_samples_per_context = max_samples_per_context
 
     def flush_aggregated_sampled_metrics(self):
         metrics = []
@@ -100,6 +103,7 @@ class Aggregator(object):
     ):
         if rate is None:
             rate = 1
+        print("inside the add sample function", self.max_samples_per_context)
         context_key = self.get_context(name, tags)
         metric_context = self.max_sample_metric_map[metric_type]
-        return metric_context.sample(name, value, tags, rate, context_key)
+        return metric_context.sample(name, value, tags, rate, context_key, self.max_samples_per_context)
