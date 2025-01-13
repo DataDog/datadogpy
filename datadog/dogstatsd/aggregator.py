@@ -4,13 +4,13 @@ from datadog.dogstatsd.metrics import (
     GaugeMetric,
     SetMetric,
 )
-from datadog.dogstatsd.buffered_metrics import (
+from datadog.dogstatsd.max_sample_metric import (
     HistogramMetric,
     DistributionMetric,
     TimingMetric
 )
 from datadog.dogstatsd.metric_types import MetricType
-from datadog.dogstatsd.buffered_metrics_context import BufferedMetricContexts
+from datadog.dogstatsd.max_sample_metric_context import MaxSampleMetricContexts
 
 
 class Aggregator(object):
@@ -20,10 +20,10 @@ class Aggregator(object):
             MetricType.GAUGE: {},
             MetricType.SET: {},
         }
-        self.buffered_metrics_map = {
-            MetricType.HISTOGRAM: BufferedMetricContexts(HistogramMetric, max_metric_samples),
-            MetricType.DISTRIBUTION: BufferedMetricContexts(DistributionMetric, max_metric_samples),
-            MetricType.TIMING: BufferedMetricContexts(TimingMetric, max_metric_samples)
+        self.max_sample_metric_map = {
+            MetricType.HISTOGRAM: MaxSampleMetricContexts(HistogramMetric, max_metric_samples),
+            MetricType.DISTRIBUTION: MaxSampleMetricContexts(DistributionMetric, max_metric_samples),
+            MetricType.TIMING: MaxSampleMetricContexts(TimingMetric, max_metric_samples)
         }
         self._locks = {
             MetricType.COUNT: threading.RLock(),
@@ -41,10 +41,10 @@ class Aggregator(object):
                 metrics.extend(metric.get_data() if isinstance(metric, SetMetric) else [metric])
         return metrics
 
-    def flush_aggregated_buffered_metrics(self):
+    def flush_aggregated_sampled_metrics(self):
         metrics = []
-        for metric_type in self.buffered_metrics_map.keys():
-            metric_context = self.buffered_metrics_map[metric_type]
+        for metric_type in self.max_sample_metric_map.keys():
+            metric_context = self.max_sample_metric_map[metric_type]
             for metricList in metric_context.flush():
                 metrics.extend(metricList)
         return metrics
@@ -81,25 +81,25 @@ class Aggregator(object):
                 )
 
     def histogram(self, name, value, tags, rate):
-        return self.add_buffered_metric(
+        return self.add_max_sample_metric(
             MetricType.HISTOGRAM, name, value, tags, rate
         )
 
     def distribution(self, name, value, tags, rate):
-        return self.add_buffered_metric(
+        return self.add_max_sample_metric(
             MetricType.DISTRIBUTION, name, value, tags, rate
         )
 
     def timing(self, name, value, tags, rate):
-        return self.add_buffered_metric(
+        return self.add_max_sample_metric(
             MetricType.TIMING, name, value, tags, rate
         )
 
-    def add_buffered_metric(
+    def add_max_sample_metric(
         self, metric_type, name, value, tags, rate
     ):
         if rate is None:
             rate = 1
         context_key = self.get_context(name, tags)
-        metric_context = self.buffered_metrics_map[metric_type]
+        metric_context = self.max_sample_metric_map[metric_type]
         return metric_context.sample(name, value, tags, rate, context_key)

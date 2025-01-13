@@ -2,7 +2,7 @@ from threading import Lock
 import random
 
 
-class BufferedMetricContexts:
+class MetricContexts:
     def __init__(self, buffered_metric_type, max_metric_samples=0):
         self.nb_context = 0
         self.lock = Lock()

@@ -831,9 +831,20 @@ class DogStatsd(object):
         for m in metrics:
             self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp)
 
-        buffered_metrics = self.aggregator.flush_aggregated_buffered_metrics()
-        for m in buffered_metrics:
-            self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp)
+        sampled_metrics = self.aggregator.flush_aggregated_sampled_metrics()
+        if self._enabled is not True:
+            return
+        for m in sampled_metrics:
+            if self._telemetry:
+                self.metrics_count += 1
+
+            timestamp = 0
+            tags = self._add_constant_tags(m.tags)
+            payload = self._serialize_metric(
+                m.name, m.metric_type,  m.value, tags, m.rate, timestamp
+            )
+            self._send(payload)
+           
 
     def gauge(
         self,
