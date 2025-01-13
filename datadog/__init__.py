@@ -43,7 +43,7 @@ def initialize(
     statsd_use_default_route=False,  # type: bool
     statsd_socket_path=None,  # type: Optional[str]
     statsd_namespace=None,  # type: Optional[str]
-    statsd_max_samples_per_context=0, # type: Optional[int]
+    statsd_max_samples_per_context=0,  # type: Optional[int]
     statsd_constant_tags=None,  # type: Optional[List[str]]
     return_raw_response=False,  # type: bool
     hostname_from_config=True,  # type: bool
