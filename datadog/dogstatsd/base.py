@@ -837,12 +837,9 @@ class DogStatsd(object):
         for m in sampled_metrics:
             if self._telemetry:
                 self.metrics_count += 1
-
             timestamp = 0
             tags = self._add_constant_tags(m.tags)
-            payload = self._serialize_metric(
-                m.name, m.metric_type,  m.value, tags, m.rate, timestamp
-            )
+            payload = self._serialize_metric(m.name, m.metric_type,  m.value, tags, m.rate, timestamp)
             self._send(payload)
 
     def gauge(
