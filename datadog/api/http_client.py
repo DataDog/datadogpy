@@ -27,6 +27,11 @@ try:
 except ImportError:
     urlfetch, urlfetch_errors = None, None
 
+try:
+    import urllib3  # type: ignore
+except ImportError:
+    urllib3 = None
+
 # datadog
 from datadog.api.exceptions import ProxyError, ClientError, HTTPError, HttpTimeout
 
@@ -178,6 +183,58 @@ class URLFetchClient(HTTPClient):
                 raise HTTPError(status_code)
 
 
+class Urllib3Client(HTTPClient):
+    """
+    HTTP client based on 3rd party `urllib3` module.
+    """
+
+    _pool = None
+    _pool_lock = Lock()
+
+    @classmethod
+    def request(cls, method, url, headers, params, data, timeout, proxies, verify, max_retries):
+        """
+        Wrapper around `urllib3.PoolManager.request` method. This method will raise
+        exceptions for HTTP status codes that are not 2xx.
+        """
+        try:
+            with cls._pool_lock:
+                if cls._pool is None:
+                    cls._pool = urllib3.PoolManager(
+                        retries=max_retries,
+                        timeout=timeout,
+                        cert_reqs="CERT_REQUIRED" if verify else "CERT_NONE",
+                    )
+
+            newheaders = copy.deepcopy(headers)
+            newheaders["User-Agent"] = _get_user_agent_header()
+            response = cls._pool.request(
+                method, url, body=data, fields=params, headers=newheaders
+            )
+            cls.raise_on_status(response)
+
+        except urllib3.exceptions.ProxyError as e:
+            raise _remove_context(ProxyError(method, url, e))
+        except urllib3.exceptions.MaxRetryError as e:
+            raise _remove_context(ClientError(method, url, e))
+        except urllib3.exceptions.TimeoutError as e:
+            raise _remove_context(HttpTimeout(method, url, e))
+        except urllib3.exceptions.HTTPError as e:
+            raise _remove_context(HTTPError(e))
+
+        return response
+
+    @classmethod
+    def raise_on_status(cls, response):
+        """
+        Raise on HTTP status code errors.
+        """
+        status_code = response.status
+        if status_code < 200 or status_code >= 300:
+            if status_code not in (400, 401, 403, 404, 409, 429):
+                raise HTTPError(status_code, response.reason)
+
+
 def resolve_http_client():
     """
     Resolve an appropriate HTTP client based the defined priority and user environment.
@@ -189,6 +246,10 @@ def resolve_http_client():
     if urlfetch and urlfetch_errors:
         log.debug(u"Use `urlfetch` based HTTP client.")
         return URLFetchClient
+
+    if urllib3:
+        log.debug(u"Use `urllib3` based HTTP client.")
+        return Urllib3Client
 
     raise ImportError(
         u"Datadog API client was unable to resolve a HTTP client. " u" Please install `requests` library."

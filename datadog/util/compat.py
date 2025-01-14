@@ -5,9 +5,7 @@
 """
 Imports for compatibility with Python 2, Python 3 and Google App Engine.
 """
-from functools import wraps
 import logging
-import socket
 import sys
 
 # Logging
@@ -23,11 +21,25 @@ log = logging.getLogger("datadog.util")
 if sys.version_info[0] >= 3:
     import builtins
     from collections import UserDict as IterableUserDict
-    import configparser
-    from configparser import ConfigParser
     from io import StringIO
-    from urllib.parse import urljoin, urlparse
-    import urllib.request as url_lib, urllib.error, urllib.parse
+    from urllib.parse import urlparse
+
+    class LazyLoader(object):
+        def __init__(self, module_name):
+            self.module_name = module_name
+
+        def __getattr__(self, name):
+            # defer the importing of the module to when one of its attributes
+            # is accessed
+            import importlib
+            mod = importlib.import_module(self.module_name)
+            return getattr(mod, name)
+
+    url_lib = LazyLoader('urllib.request')
+    configparser = LazyLoader('configparser')
+
+    def ConfigParser():
+        return configparser.ConfigParser()
 
     imap = map
     get_input = input
@@ -48,7 +60,7 @@ else:
     from cStringIO import StringIO
     from itertools import imap
     import urllib2 as url_lib
-    from urlparse import urljoin, urlparse
+    from urlparse import urlparse
     from UserDict import IterableUserDict
 
     get_input = raw_input
@@ -63,7 +75,7 @@ else:
 
 # Python >= 3.5
 if sys.version_info >= (3, 5):
-    from asyncio import iscoroutinefunction
+    from inspect import iscoroutinefunction
 # Others
 else:
 
@@ -76,9 +88,7 @@ if sys.version_info >= (2, 7):
     from logging import NullHandler
 # Python 2.6.x
 else:
-    from logging import Handler
-
-    class NullHandler(Handler):
+    class NullHandler(logging.Handler):
         def emit(self, record):
             pass
 
