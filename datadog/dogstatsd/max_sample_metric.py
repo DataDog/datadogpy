@@ -31,7 +31,6 @@ class MaxSampleMetric(object):
             self.total_metric_samples += 1
         else:
             self.sample(value)
-        print("len is ", len(self.data))
 
     def skip_sample(self):
         self.total_metric_samples += 1
