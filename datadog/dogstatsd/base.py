@@ -240,6 +240,11 @@ class DogStatsd(object):
         :disable_aggregation: If true, metrics (Count, Gauge, Set) are no longer aggregated by the client
         :type disable_aggregation: bool
 
+        :max_metric_samples_per_context: Sets the maximum amount of samples for Histogram, Distribution 
+        and Timings metrics (default 0). This feature should be used alongside aggregation. This feature
+        is experimental.
+        :type max_metric_samples_per_context: int
+
         :disable_buffering: If set, metrics are no longered buffered by the client and
         all data is sent synchronously to the server
         :type disable_buffering: bool

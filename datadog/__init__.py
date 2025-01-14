@@ -88,7 +88,7 @@ def initialize(
     :type statsd_max_samples_per_context: int
 
     :param statsd_aggregation_flush_interval: If aggregation is enabled, set the flush interval for
-                    aggregation/buffering
+                    aggregation/buffering (This feature is experimental)
                                      (default: 0.3 seconds)
     :type statsd_aggregation_flush_interval: float
 
