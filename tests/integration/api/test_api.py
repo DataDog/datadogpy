@@ -813,7 +813,7 @@ class TestDatadog:
             "count": 100,
             "from_": 0,
             "include_muted_hosts_data": True,
-            "include_hosts_metadata": True
+            "include_hosts_metadata": False
             }
         
         all_hosts = dog.Hosts.get_all(**params)
