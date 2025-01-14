@@ -455,7 +455,7 @@ class DogStatsd(object):
         self._flush_interval = flush_interval
         self._flush_thread = None
         self._flush_thread_stop = threading.Event()
-        self.aggregator = Aggregator()
+        self.aggregator = Aggregator(max_metric_samples_per_context)
         # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
         self._forking = False
 
@@ -833,7 +833,7 @@ class DogStatsd(object):
             self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp)
 
         sampled_metrics = self.aggregator.flush_aggregated_sampled_metrics()
-        if self._enabled is not True:
+        if not self._enabled:
             return
         for m in sampled_metrics:
             if self._telemetry:

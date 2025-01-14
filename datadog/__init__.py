@@ -144,7 +144,6 @@ def initialize(
     if statsd_constant_tags:
         statsd.constant_tags += statsd_constant_tags
 
-    print("inside __init__", statsd_max_samples_per_context)
     if statsd_disable_aggregation:
         statsd.disable_aggregation()
     else:

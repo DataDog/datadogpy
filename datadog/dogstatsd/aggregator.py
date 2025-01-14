@@ -14,7 +14,8 @@ from datadog.dogstatsd.max_sample_metric_context import MaxSampleMetricContexts
 
 
 class Aggregator(object):
-    def __init__(self):
+    def __init__(self, max_samples_per_context=0):
+        self.max_samples_per_context = max_samples_per_context
         self.metrics_map = {
             MetricType.COUNT: {},
             MetricType.GAUGE: {},
@@ -103,7 +104,6 @@ class Aggregator(object):
     ):
         if rate is None:
             rate = 1
-        print("inside the add sample function", self.max_samples_per_context)
         context_key = self.get_context(name, tags)
         metric_context = self.max_sample_metric_map[metric_type]
         return metric_context.sample(name, value, tags, rate, context_key, self.max_samples_per_context)
