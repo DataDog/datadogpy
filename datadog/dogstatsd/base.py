@@ -274,10 +274,6 @@ class DogStatsd(object):
         depending on the connection type.
         :type max_buffer_len: integer
 
-        :param max_metric_samples: Maximum number of metric samples for buffered
-        metrics (Histogram, Distribution, Timing)
-        :type max_metric_samples: integer
-
         :param disable_telemetry: Should client telemetry be disabled
         :type disable_telemetry: boolean
 
@@ -838,6 +834,8 @@ class DogStatsd(object):
             self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp)
 
         sampled_metrics = self.aggregator.flush_aggregated_sampled_metrics()
+        for m in sampled_metrics:
+            self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp)
         if not self._enabled:
             return
         for m in sampled_metrics:
@@ -983,8 +981,10 @@ class DogStatsd(object):
         >>> statsd.histogram("album.photo.count", 26, tags=["gender:female"])
         """
         if not self._disable_aggregation and self.aggregator.max_samples_per_context != 0:
+            print("Aggregated histogram")
             self.aggregator.histogram(metric, value, tags, sample_rate)
         else:
+            print("Regular histogram")
             self._report(metric, "h", value, tags, sample_rate)
 
     def distribution(
