@@ -982,10 +982,10 @@ class DogStatsd(object):
         >>> statsd.histogram("uploaded.file.size", 1445)
         >>> statsd.histogram("album.photo.count", 26, tags=["gender:female"])
         """
-        if self._disable_aggregation:
-            self._report(metric, "h", value, tags, sample_rate)
-        else:
+        if not self._disable_aggregation and self.aggregator.max_samples_per_context != 0:
             self.aggregator.histogram(metric, value, tags, sample_rate)
+        else:
+            self._report(metric, "h", value, tags, sample_rate)
 
     def distribution(
         self,
@@ -1000,10 +1000,10 @@ class DogStatsd(object):
         >>> statsd.distribution("uploaded.file.size", 1445)
         >>> statsd.distribution("album.photo.count", 26, tags=["gender:female"])
         """
-        if self._disable_aggregation:
-            self._report(metric, "d", value, tags, sample_rate)
-        else:
+        if not self._disable_aggregation and self.aggregator.max_samples_per_context != 0:
             self.aggregator.distribution(metric, value, tags, sample_rate)
+        else:
+            self._report(metric, "d", value, tags, sample_rate)
 
     def timing(
         self,
@@ -1017,11 +1017,10 @@ class DogStatsd(object):
 
         >>> statsd.timing("query.response.time", 1234)
         """
-
-        if self._disable_aggregation:
-            self._report(metric, "ms", value, tags, sample_rate)
-        else:
+        if not self._disable_aggregation and self.aggregator.max_samples_per_context != 0:
             self.aggregator.timing(metric, value, tags, sample_rate)
+        else:
+            self._report(metric, "ms", value, tags, sample_rate)
 
     def timed(self, metric=None, tags=None, sample_rate=None, use_ms=None):
         """
