@@ -4,7 +4,6 @@ import random
 
 class MaxSampleMetricContexts:
     def __init__(self, max_sample_metric_type):
-        self.nb_context = 0
         self.lock = Lock()
         self.values = {}
         self.max_sample_metric_type = max_sample_metric_type
@@ -19,7 +18,6 @@ class MaxSampleMetricContexts:
         for _, metric in copiedValues.items():
             metrics.append(metric.flush())
 
-        self.nb_context += len(copiedValues)
         return metrics
 
     def sample(self, name, value, tags, rate, context_key, max_samples_per_context):
