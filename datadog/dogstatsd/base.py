@@ -835,16 +835,7 @@ class DogStatsd(object):
 
         sampled_metrics = self.aggregator.flush_aggregated_sampled_metrics()
         for m in sampled_metrics:
-            self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp)
-        if not self._enabled:
-            return
-        for m in sampled_metrics:
-            if self._telemetry:
-                self.metrics_count += 1
-            timestamp = 0
-            tags = self._add_constant_tags(m.tags)
-            payload = self._serialize_metric(m.name, m.metric_type, m.value, tags, m.rate, timestamp)
-            self._send(payload)
+            self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp, False)
 
     def gauge(
         self,
@@ -1124,7 +1115,7 @@ class DogStatsd(object):
             ("|T" + text(timestamp)) if timestamp > 0 else "",
         )
 
-    def _report(self, metric, metric_type, value, tags, sample_rate, timestamp=0):
+    def _report(self, metric, metric_type, value, tags, sample_rate, timestamp=0, sampling=True):
         """
         Create a metric packet and send it.
 
@@ -1140,11 +1131,12 @@ class DogStatsd(object):
         if self._telemetry:
             self.metrics_count += 1
 
-        if sample_rate is None:
-            sample_rate = self.default_sample_rate
+        if sampling:   
+            if sample_rate is None:
+                sample_rate = self.default_sample_rate
 
-        if sample_rate != 1 and random() > sample_rate:
-            return
+            if sample_rate != 1 and random() > sample_rate:
+                return
         # timestamps (protocol v1.3) only allowed on gauges and counts
         allows_timestamp = metric_type == MetricType.GAUGE or metric_type == MetricType.COUNT
 
