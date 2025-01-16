@@ -1317,8 +1317,9 @@ class DogStatsd(object):
 
             encoded_packet = packet.encode(self.encoding)
             if socket_kind == socket.SOCK_STREAM:
-                mysocket.sendall(struct.pack('<I', len(encoded_packet)))
-                mysocket.sendall(encoded_packet)
+                with self._socket_lock:
+                    mysocket.sendall(struct.pack('<I', len(encoded_packet)))
+                    mysocket.sendall(encoded_packet)
             else:
                 mysocket.send(encoded_packet)
 
