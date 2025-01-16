@@ -10,7 +10,7 @@ class MaxSampleMetric(object):
         self.metric_type = metric_type
         self.max_metric_samples = max_metric_samples
         self.specified_rate = specified_rate
-        self.data = []
+        self.data = [None] * max_metric_samples if max_metric_samples > 0 else []
         self.stored_metric_samples = 0
         self.total_metric_samples = 0
 
