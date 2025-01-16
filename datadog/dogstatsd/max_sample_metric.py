@@ -38,14 +38,8 @@ class MaxSampleMetric(object):
         self.total_metric_samples += 1
 
     def flush(self):
-        total_metric_samples = self.total_metric_samples
-        if self.specified_rate != 1.0:
-            rate = self.specified_rate
-        else:
-            rate = self.stored_metric_samples / total_metric_samples
-
         return [
-            MetricAggregator(self.name, self.tags, rate, self.metric_type, value)
+            MetricAggregator(self.name, self.tags, self.specified_rate, self.metric_type, value)
             for value in self.data
         ]
 
