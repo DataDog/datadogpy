@@ -42,6 +42,7 @@ class MaxSampleMetric(object):
         return [
             MetricAggregator(self.name, self.tags, self.specified_rate, self.metric_type, value)
             for value in self.data
+            if value is not None
         ]
 
 
