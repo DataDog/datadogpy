@@ -15,7 +15,6 @@ class MaxSampleMetricContexts:
         with self.lock:
             copiedValues = copy.deepcopy(self.values)
             self.values.clear()
-        self.values = {}
         for _, metric in copiedValues.items():
             metrics.append(metric.flush())
 
