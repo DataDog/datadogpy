@@ -39,11 +39,10 @@ class MaxSampleMetric(object):
         self.total_metric_samples += 1
 
     def flush(self):
-        return [
-            MetricAggregator(self.name, self.tags, self.specified_rate, self.metric_type, value)
-            for value in self.data
-            if value is not None
-        ]
+        values = [None] * self.stored_metric_samples
+        for i in range(self.stored_metric_samples):
+            values[i] = MetricAggregator(self.name, self.tags, self.specified_rate, self.metric_type, self.data[i])
+        return values
 
 
 class HistogramMetric(MaxSampleMetric):
