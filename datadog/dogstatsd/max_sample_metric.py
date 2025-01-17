@@ -24,7 +24,7 @@ class MaxSampleMetric(object):
 
     def maybe_keep_sample(self, value):
         if self.max_metric_samples > 0:
-            self.total_metric_samples += 1  
+            self.total_metric_samples += 1
             if self.stored_metric_samples < self.max_metric_samples:
                 self.data[self.stored_metric_samples] = value
                 self.stored_metric_samples += 1
@@ -34,7 +34,6 @@ class MaxSampleMetric(object):
                     self.data[i] = value
         else:
             self.sample(value)
-
 
     def skip_sample(self):
         self.total_metric_samples += 1
