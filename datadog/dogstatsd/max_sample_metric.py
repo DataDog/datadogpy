@@ -15,16 +15,18 @@ class MaxSampleMetric(object):
         self.total_metric_samples = 0
 
     def sample(self, value):
-        self.data.append(value)
+        if self.max_metric_samples == 0:
+            self.data.append(value)
+        else:
+            self.data[self.stored_metric_samples] = value
         self.stored_metric_samples += 1
         self.total_metric_samples += 1
 
     def maybe_keep_sample(self, value):
         if self.max_metric_samples > 0:
             self.total_metric_samples += 1  
-            
             if self.stored_metric_samples < self.max_metric_samples:
-                self.data.append(value)
+                self.data[self.stored_metric_samples] = value
                 self.stored_metric_samples += 1
             else:
                 i = random.randint(0, self.total_metric_samples - 1)
