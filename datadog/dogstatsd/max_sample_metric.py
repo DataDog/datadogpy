@@ -1,12 +1,14 @@
 import random
 from datadog.dogstatsd.metric_types import MetricType
 from datadog.dogstatsd.metrics import MetricAggregator
+from threading import Lock
 
 
 class MaxSampleMetric(object):
     def __init__(self, name, tags, metric_type, specified_rate=1.0, max_metric_samples=0):
         self.name = name
         self.tags = tags
+        self.lock = Lock()
         self.metric_type = metric_type
         self.max_metric_samples = max_metric_samples
         self.specified_rate = specified_rate
@@ -23,26 +25,28 @@ class MaxSampleMetric(object):
         self.total_metric_samples += 1
 
     def maybe_keep_sample(self, value):
-        if self.max_metric_samples > 0:
-            self.total_metric_samples += 1
-            if self.stored_metric_samples < self.max_metric_samples:
-                self.data[self.stored_metric_samples] = value
-                self.stored_metric_samples += 1
+        with self.lock:
+            if self.max_metric_samples > 0:
+                self.total_metric_samples += 1
+                if self.stored_metric_samples < self.max_metric_samples:
+                    self.data[self.stored_metric_samples] = value
+                    self.stored_metric_samples += 1
+                else:
+                    i = random.randint(0, self.total_metric_samples - 1)
+                    if i < self.max_metric_samples:
+                        self.data[i] = value
             else:
-                i = random.randint(0, self.total_metric_samples - 1)
-                if i < self.max_metric_samples:
-                    self.data[i] = value
-        else:
-            self.sample(value)
+                self.sample(value)
 
     def skip_sample(self):
         self.total_metric_samples += 1
 
     def flush(self):
-        values = [None] * self.stored_metric_samples
-        for i in range(self.stored_metric_samples):
-            values[i] = MetricAggregator(self.name, self.tags, self.specified_rate, self.metric_type, self.data[i])
-        return values
+        with self.lock:
+            values = [None] * self.stored_metric_samples
+            for i in range(self.stored_metric_samples):
+                values[i] = MetricAggregator(self.name, self.tags, self.specified_rate, self.metric_type, self.data[i])
+            return values
 
 
 class HistogramMetric(MaxSampleMetric):
