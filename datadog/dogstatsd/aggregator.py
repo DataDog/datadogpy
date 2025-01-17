@@ -40,6 +40,7 @@ class Aggregator(object):
                 self.metrics_map[metric_type] = {}
             for metric in current_metrics.values():
                 metrics.extend(metric.get_data() if isinstance(metric, SetMetric) else [metric])
+
         return metrics
 
     def set_max_samples_per_context(self, max_samples_per_context=0):
