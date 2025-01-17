@@ -1131,7 +1131,7 @@ class DogStatsd(object):
         if self._telemetry:
             self.metrics_count += 1
 
-        if sampling:   
+        if sampling:
             if sample_rate is None:
                 sample_rate = self.default_sample_rate
 
