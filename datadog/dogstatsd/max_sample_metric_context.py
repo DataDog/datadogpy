@@ -1,6 +1,5 @@
 from threading import Lock
 import random
-import copy
 
 
 class MaxSampleMetricContexts:
@@ -12,12 +11,9 @@ class MaxSampleMetricContexts:
     def flush(self):
         metrics = []
         """Flush the metrics and reset the stored values."""
-        with self.lock:
-            copiedValues = copy.deepcopy(self.values)
-            self.values.clear()
-        for _, metric in copiedValues.items():
+        for _, metric in self.values.items():
             metrics.append(metric.flush())
-
+        self.values = {}
         return metrics
 
     def sample(self, name, value, tags, rate, context_key, max_samples_per_context):
