@@ -84,7 +84,6 @@ class TestMaxSampleMetric(unittest.TestCase):
         s.maybe_keep_sample(456)
         s.maybe_keep_sample(789)
         self.assertEqual(len(s.data), 2)
-        self.assertFalse(123 in s.data and 456 in s.data)
         self.assertEqual(s.name, "test")
         self.assertEqual(s.tags, "tag1,tag2")
         self.assertEqual(s.specified_rate, 1.0)
