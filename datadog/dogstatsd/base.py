@@ -972,10 +972,8 @@ class DogStatsd(object):
         >>> statsd.histogram("album.photo.count", 26, tags=["gender:female"])
         """
         if not self._disable_aggregation and self.aggregator.max_samples_per_context != 0:
-            print("Aggregated histogram")
             self.aggregator.histogram(metric, value, tags, sample_rate)
         else:
-            print("Regular histogram")
             self._report(metric, "h", value, tags, sample_rate)
 
     def distribution(
