@@ -28,7 +28,7 @@ class MaxSampleMetricContexts:
             metric = self.values[context_key]
             metric.lock.acquire()
         if keeping_sample:
-            metric.maybe_keep_sample(value)
+            metric.maybe_keep_sample_work_unsafe(value)
         else:
             metric.skip_sample()
         metric.lock.release()

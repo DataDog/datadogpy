@@ -24,7 +24,7 @@ class MaxSampleMetric(object):
         self.stored_metric_samples += 1
         self.total_metric_samples += 1
 
-    def maybe_keep_sample(self, value):
+    def maybe_keep_sample_work_unsafe(self, value):
         if self.max_metric_samples > 0:
             self.total_metric_samples += 1
             if self.stored_metric_samples < self.max_metric_samples:

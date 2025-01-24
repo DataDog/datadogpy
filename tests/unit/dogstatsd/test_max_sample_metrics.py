@@ -78,11 +78,11 @@ class TestMaxSampleMetric(unittest.TestCase):
         self.assertEqual(m.name, "test")
         self.assertEqual(m.tags, "tag1,tag2")
 
-    def test_maybe_keep_sample(self):
+    def test_maybe_keep_sample_work_unsafe(self):
         s = HistogramMetric(name="test", tags="tag1,tag2", rate=1.0, max_metric_samples=2)
-        s.maybe_keep_sample(123)
-        s.maybe_keep_sample(456)
-        s.maybe_keep_sample(789)
+        s.maybe_keep_sample_work_unsafe(123)
+        s.maybe_keep_sample_work_unsafe(456)
+        s.maybe_keep_sample_work_unsafe(789)
 
         self.assertEqual(len(s.data), 2)
         self.assertEqual(s.name, "test")
