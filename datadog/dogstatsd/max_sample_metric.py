@@ -48,6 +48,7 @@ class MaxSampleMetric(object):
                 for i in range(self.stored_metric_samples)
             ]
 
+
 class HistogramMetric(MaxSampleMetric):
     def __init__(self, name, tags, rate=1.0, max_metric_samples=0):
         super(HistogramMetric, self).__init__(name, tags, MetricType.HISTOGRAM, rate, max_metric_samples)
