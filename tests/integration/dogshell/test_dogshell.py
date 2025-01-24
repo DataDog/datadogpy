@@ -616,6 +616,40 @@ class TestDogshell:
         assert out["action"] == "Unmuted"
         assert out["hostname"] == hostname
 
+    def test_hosts_list(self, dogshell):
+        # `dog hosts list` should return a list of hosts
+        params = {
+            "filter": "env",
+            "sort_field": "host_name",
+            "sort_dir": "asc",
+            "start": 0,
+            "count": 100,
+            "from_": 0,
+            "include_muted_hosts_data": True,
+            "include_hosts_metadata": True,
+        }
+        
+        out, _, _ = dogshell(["hosts", "list",
+                                        "--filter", params["filter"],
+                                        "--sort_field", params["sort_field"],
+                                        "--sort_dir", params["sort_dir"], 
+                                        "--start", str(params["start"]),
+                                        "--count", str(params["count"]), 
+                                        "--from", str(params["from_"])],
+                                        "--include_muted_hosts_data",
+                                        "--include_hosts_metadata",
+                                        )
+
+        out = json.loads(out)
+        assert out["host_list"] is not None
+        assert out["total_matching"] >= 1
+
+    def test_hosts_totals(self, dogshell):
+        # `dog hosts totals` should return the total number of hosts
+        out, _, _ = dogshell(["hosts", "totals"])
+        out = json.loads(out)
+        assert out["total_active"] >= 1
+
     def test_downtime_schedule(self, freezer, dogshell):
         # Schedule a downtime
         scope = "env:staging"

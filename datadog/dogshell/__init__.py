@@ -17,6 +17,7 @@ from datadog.dogshell.dashboard_list import DashboardListClient
 from datadog.dogshell.downtime import DowntimeClient
 from datadog.dogshell.event import EventClient
 from datadog.dogshell.host import HostClient
+from datadog.dogshell.hosts import HostsClient
 from datadog.dogshell.metric import MetricClient
 from datadog.dogshell.monitor import MonitorClient
 from datadog.dogshell.screenboard import ScreenboardClient
@@ -95,6 +96,7 @@ def main():
     ScreenboardClient.setup_parser(subparsers)
     DashboardListClient.setup_parser(subparsers)
     HostClient.setup_parser(subparsers)
+    HostsClient.setup_parser(subparsers)
     DowntimeClient.setup_parser(subparsers)
     ServiceCheckClient.setup_parser(subparsers)
     ServiceLevelObjectiveClient.setup_parser(subparsers)
