@@ -39,14 +39,15 @@ class MaxSampleMetric(object):
 
     def skip_sample(self):
         self.total_metric_samples += 1
-
+ 
     def flush(self):
         rate = self.stored_metric_samples / self.total_metric_samples
         with self.lock:
-            values = [None] * self.stored_metric_samples
-            for i in range(self.stored_metric_samples):
-                values[i] = MetricAggregator(self.name, self.tags, rate, self.metric_type, self.data[i])
-            return values
+            return [
+                MetricAggregator(self.name, self.tags, rate, self.metric_type, self.data[i])
+                for i in range(self.stored_metric_samples)
+            ]
+
 
 
 class HistogramMetric(MaxSampleMetric):
