@@ -5,6 +5,7 @@
 import calendar
 import datetime
 import json
+import logging
 import re
 
 from datadog.util.compat import conditional_lru_cache
@@ -40,3 +41,13 @@ def normalize_tags(tag_list):
     # We have to turn our input tag list into a non-mutable tuple for it to
     # be hashable (and thus usable) by the @lru_cache decorator.
     return _normalize_tags_with_cache(tuple(tag_list))
+
+
+def validate_cardinality(cardinality):
+    if cardinality not in (None, "none", "low", "orchestrator", "high"):
+        logging.warning(
+            "Cardinality must be one of the following: 'none', 'low', 'orchestrator' or 'high'. "
+            "Falling back to default cardinality."
+        )
+        return None
+    return cardinality
