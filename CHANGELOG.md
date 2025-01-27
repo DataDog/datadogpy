@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.51.0 / 2025-01-27
+
+* [Added] Add hosts endpoint. See [#884](https://github.com/DataDog/datadogpy/pull/884).
+* [Added] Lazy load packages in compat for faster import. See [#881](https://github.com/DataDog/datadogpy/pull/881).
+* [Added] Provide urllib3 implementation of HTTPClient. See [#879](https://github.com/DataDog/datadogpy/pull/879).
+
 ## v0.50.2 / 2024-11-21
 
 * [Fixed] [AMLII-2170] fix removed/renamed function flush. See [#868](https://github.com/DataDog/datadogpy/pull/868).
