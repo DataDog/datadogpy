@@ -1,0 +1,48 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.50.3-dev (python 3.8.20; os linux; arch aarch64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v1/hosts?count=100&filter=env%3Adev&from_=0&include_hosts_metadata=False&include_muted_hosts_data=True&sort_field=host_name&sort_order=asc&start=0
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAEA5xSy27EIAy89zM4J1Eg2bzO/YtqhbyEbpEIoGB2W0X595qs1EOlHracYGyPPWM2
+        9uEjSmsisultY2Zmk+jbgfOxq0+8YAjXKC9fMvq0Ks2mjb0CwuyvlM60u02zvrHiYJlMKHkvyoaX
+        vC1FLaoUy7uOWPJK+SUk1JVxqFcHlp33goE1EHXMTKasL506dc0wqlbUnQZFrE8REl8IB5nDQMVw
+        1Q7ZuWCP0Y/ID+ZgITFPNXiIlP+qhHuU2do/dKbAJlyTLpgF2saqg19RzxJNnpL3TTcMXTeO5EiU
+        C/lIVO9gIxXk15HnE23QJWsJ0wi0KXKYbqtRJH1jKiSiqvqh5Q3t1fg7GKqoq7oWQtR92wzU3gNR
+        Z6w5Hafdd3IQPYKlsTCtLvfO/+KAFkD1YRx9BoL0JyiUvwNZ1/7yDQAA//8DAFrb9LBoAgAA
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 14 Jan 2025 20:39:44 GMT
+      Transfer-Encoding:
+      - chunked
+      content-encoding:
+      - gzip
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+    status:
+      code: 200
+      message: OK
+version: 1

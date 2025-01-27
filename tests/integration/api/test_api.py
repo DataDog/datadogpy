@@ -803,6 +803,30 @@ class TestDatadog:
         unmute = dog.Host.unmute(hostname)
         assert unmute["hostname"] == hostname
         assert unmute["action"] == "Unmuted"
+    
+    def test_hosts_get_all(self, dog):
+        params = {
+            "filter": "env:dev",
+            "sort_field": "host_name",
+            "sort_order": "asc",
+            "start": 0,
+            "count": 100,
+            "from_": 0,
+            "include_muted_hosts_data": True,
+            "include_hosts_metadata": False
+            }
+        
+        all_hosts = dog.Hosts.get_all(**params)
+        assert "host_list" in all_hosts
+        assert isinstance(all_hosts["host_list"], list)
+
+    def test_hosts_totals(self, dog):
+        params = {
+            "--from": 0,
+        }
+        totals = dog.Hosts.totals()
+        assert "total_active" in totals
+        assert "total_up" in totals
 
     def test_get_all_embeds(self, dog):
         all_embeds = dog.Embed.get_all()
