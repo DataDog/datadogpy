@@ -160,6 +160,7 @@ class DogStatsd(object):
         telemetry_port=None,                    # type: Union[str, int]
         telemetry_socket_path=None,             # type: Text
         max_buffer_len=0,                       # type: int
+        max_metric_samples_per_context=0,       # type: int
         container_id=None,                      # type: Optional[Text]
         origin_detection_enabled=True,          # type: bool
         socket_timeout=0,                       # type: Optional[float]
@@ -236,8 +237,13 @@ class DogStatsd(object):
         it overrides the default value.
         :type flush_interval: float
 
-        :disable_aggregation: If true, metrics (Count, Gauge, Set) are no longered aggregated by the client
+        :disable_aggregation: If true, metrics (Count, Gauge, Set) are no longer aggregated by the client
         :type disable_aggregation: bool
+
+        :max_metric_samples_per_context: Sets the maximum amount of samples for Histogram, Distribution
+        and Timings metrics (default 0). This feature should be used alongside aggregation. This feature
+        is experimental.
+        :type max_metric_samples_per_context: int
 
         :disable_buffering: If set, metrics are no longered buffered by the client and
         all data is sent synchronously to the server
@@ -450,7 +456,7 @@ class DogStatsd(object):
         self._flush_interval = flush_interval
         self._flush_thread = None
         self._flush_thread_stop = threading.Event()
-        self.aggregator = Aggregator()
+        self.aggregator = Aggregator(max_metric_samples_per_context)
         # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
         self._forking = False
 
@@ -643,10 +649,11 @@ class DogStatsd(object):
                 self._stop_flush_thread()
             log.debug("Statsd aggregation is disabled")
 
-    def enable_aggregation(self, flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL):
+    def enable_aggregation(self, flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL, max_samples_per_context=0):
         with self._config_lock:
             if not self._disable_aggregation:
                 return
+            self.aggregator.set_max_samples_per_context(max_samples_per_context)
             self._disable_aggregation = False
             self._flush_interval = flush_interval
             if self._disable_buffering:
@@ -826,6 +833,10 @@ class DogStatsd(object):
         for m in metrics:
             self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp)
 
+        sampled_metrics = self.aggregator.flush_aggregated_sampled_metrics()
+        for m in sampled_metrics:
+            self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp, False)
+
     def gauge(
         self,
         metric,  # type: Text
@@ -960,7 +971,10 @@ class DogStatsd(object):
         >>> statsd.histogram("uploaded.file.size", 1445)
         >>> statsd.histogram("album.photo.count", 26, tags=["gender:female"])
         """
-        self._report(metric, "h", value, tags, sample_rate)
+        if not self._disable_aggregation and self.aggregator.max_samples_per_context != 0:
+            self.aggregator.histogram(metric, value, tags, sample_rate)
+        else:
+            self._report(metric, "h", value, tags, sample_rate)
 
     def distribution(
         self,
@@ -975,7 +989,10 @@ class DogStatsd(object):
         >>> statsd.distribution("uploaded.file.size", 1445)
         >>> statsd.distribution("album.photo.count", 26, tags=["gender:female"])
         """
-        self._report(metric, "d", value, tags, sample_rate)
+        if not self._disable_aggregation and self.aggregator.max_samples_per_context != 0:
+            self.aggregator.distribution(metric, value, tags, sample_rate)
+        else:
+            self._report(metric, "d", value, tags, sample_rate)
 
     def timing(
         self,
@@ -989,7 +1006,10 @@ class DogStatsd(object):
 
         >>> statsd.timing("query.response.time", 1234)
         """
-        self._report(metric, "ms", value, tags, sample_rate)
+        if not self._disable_aggregation and self.aggregator.max_samples_per_context != 0:
+            self.aggregator.timing(metric, value, tags, sample_rate)
+        else:
+            self._report(metric, "ms", value, tags, sample_rate)
 
     def timed(self, metric=None, tags=None, sample_rate=None, use_ms=None):
         """
@@ -1093,7 +1113,7 @@ class DogStatsd(object):
             ("|T" + text(timestamp)) if timestamp > 0 else "",
         )
 
-    def _report(self, metric, metric_type, value, tags, sample_rate, timestamp=0):
+    def _report(self, metric, metric_type, value, tags, sample_rate, timestamp=0, sampling=True):
         """
         Create a metric packet and send it.
 
@@ -1109,11 +1129,12 @@ class DogStatsd(object):
         if self._telemetry:
             self.metrics_count += 1
 
-        if sample_rate is None:
-            sample_rate = self.default_sample_rate
+        if sampling:
+            if sample_rate is None:
+                sample_rate = self.default_sample_rate
 
-        if sample_rate != 1 and random() > sample_rate:
-            return
+            if sample_rate != 1 and random() > sample_rate:
+                return
         # timestamps (protocol v1.3) only allowed on gauges and counts
         allows_timestamp = metric_type == MetricType.GAUGE or metric_type == MetricType.COUNT
 
