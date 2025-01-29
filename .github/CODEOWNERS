@@ -4,30 +4,30 @@
 # pattern is the one used.
 
 # Default owners of everything in the repo
-*                                @DataDog/api-clients
+*                                @datadog/api-clients @datadog/web-frameworks
 
 # API
-/datadog/api/                    @DataDog/api-clients
-/tests/integration/api/          @DataDog/api-clients
-/tests/unit/api/                 @DataDog/api-clients
+/datadog/api/                    @datadog/api-clients @datadog/web-frameworks
+/tests/integration/api/          @datadog/api-clients @datadog/web-frameworks
+/tests/unit/api/                 @datadog/api-clients @datadog/web-frameworks
 
 # Dogshell
-/datadog/dogshell/               @DataDog/api-clients
-/tests/integration/dogshell/     @DataDog/api-clients
+/datadog/dogshell/               @datadog/api-clients @datadog/web-frameworks
+/tests/integration/dogshell/     @datadog/api-clients @datadog/web-frameworks
 
 # Dogstatd
-/datadog/dogstatsd/              @DataDog/api-clients @DataDog/agent-metrics-logs
-/datadog/util/                   @DataDog/api-clients @DataDog/agent-metrics-logs
-/tests/integration/dogstatsd/    @DataDog/api-clients @DataDog/agent-metrics-logs
-/tests/unit/dogstatsd/           @DataDog/api-clients @DataDog/agent-metrics-logs
-/tests/unit/util/                @DataDog/api-clients @DataDog/agent-metrics-logs
-/tests/util/                     @DataDog/api-clients @DataDog/agent-metrics-logs
-/tests/performance/test_statsd_* @DataDog/api-clients @DataDog/agent-metrics-logs
+/datadog/dogstatsd/              @datadog/api-clients @datadog/web-frameworks @DataDog/agent-metrics-logs
+/datadog/util/                   @datadog/api-clients @datadog/web-frameworks @DataDog/agent-metrics-logs
+/tests/integration/dogstatsd/    @datadog/api-clients @datadog/web-frameworks @DataDog/agent-metrics-logs
+/tests/unit/dogstatsd/           @datadog/api-clients @datadog/web-frameworks @DataDog/agent-metrics-logs
+/tests/unit/util/                @datadog/api-clients @datadog/web-frameworks @DataDog/agent-metrics-logs
+/tests/util/                     @datadog/api-clients @datadog/web-frameworks @DataDog/agent-metrics-logs
+/tests/performance/test_statsd_* @datadog/api-clients @datadog/web-frameworks @DataDog/agent-metrics-logs
 
 # Threadstats
-/datadog/threadstats/            @DataDog/api-clients @DataDog/agent-metrics-logs
-/tests/unit/threadstats/         @DataDog/api-clients @DataDog/agent-metrics-logs
+/datadog/threadstats/            @datadog/api-clients @datadog/web-frameworks @DataDog/agent-metrics-logs
+/tests/unit/threadstats/         @datadog/api-clients @datadog/web-frameworks @DataDog/agent-metrics-logs
 
 # Documentation
-*.md                             @DataDog/documentation @DataDog/api-clients
-LICENSE                          @DataDog/documentation @DataDog/api-clients
+*.md                             @DataDog/documentation @datadog/api-clients @datadog/web-frameworks
+LICENSE                          @DataDog/documentation @datadog/api-clients @datadog/web-frameworks
