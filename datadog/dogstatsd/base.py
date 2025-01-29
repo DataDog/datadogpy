@@ -419,7 +419,7 @@ class DogStatsd(object):
         if namespace is not None:
             namespace = text(namespace)
         self.namespace = namespace
-        self.use_ms = use_ms
+        self.use_ms = use_ms  # type: bool
         self.default_sample_rate = default_sample_rate
 
         # Origin detection
@@ -1011,7 +1011,13 @@ class DogStatsd(object):
         else:
             self._report(metric, "ms", value, tags, sample_rate)
 
-    def timed(self, metric=None, tags=None, sample_rate=None, use_ms=None):
+    def timed(
+        self,
+        metric=None,  # type: Optional[Text]
+        tags=None,  # type: Optional[List[str]]
+        sample_rate=None,  # type: Optional[float]
+        use_ms=None,  # type: Optional[bool]
+    ):  # type(...) -> TimedContextManagerDecorator
         """
         A decorator or context manager that will measure the distribution of a
         function's/context's run time. Optionally specify a list of tags or a
