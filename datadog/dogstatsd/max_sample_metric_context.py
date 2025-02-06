@@ -18,13 +18,15 @@ class MaxSampleMetricContexts:
             metrics.append(metric.flush())
         return metrics
 
-    def sample(self, name, value, tags, rate, context_key, max_samples_per_context):
+    def sample(self, name, value, tags, rate, context_key, max_samples_per_context, cardinality=None):
         """Sample a metric and store it if it meets the criteria."""
         keeping_sample = self.should_sample(rate)
         with self.lock:
             if context_key not in self.values:
                 # Create a new metric if it doesn't exist
-                self.values[context_key] = self.max_sample_metric_type(name, tags, max_samples_per_context)
+                self.values[context_key] = self.max_sample_metric_type(
+                    name, tags, max_samples_per_context, cardinality=cardinality
+                )
             metric = self.values[context_key]
             metric.lock.acquire()
         if keeping_sample:
