@@ -257,7 +257,7 @@ class ServiceLevelObjectiveClient(object):
             for threshold_str in args.thresholds.split(","):
                 parts = threshold_str.split(":")
                 timeframe = parts[0]
-                target = parts[1]
+                target = float(parts[1])
 
                 threshold = {"timeframe": timeframe, "target": target}
 
