@@ -273,6 +273,9 @@ class ServiceLevelObjectiveClient(object):
                 thresholds.append(threshold)
             params["thresholds"] = thresholds
 
+        if args.name:
+            params["name"] = args.name
+
         if args.description:
             params["description"] = args.description
 
