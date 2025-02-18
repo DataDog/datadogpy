@@ -3,6 +3,7 @@
 # Copyright 2015-Present Datadog, Inc
 # stdlib
 from functools import wraps
+from typing import Any, Callable, List, Optional, Text, TYPE_CHECKING, Union
 
 try:
     from time import monotonic  # type: ignore[attr-defined]
@@ -13,6 +14,9 @@ except ImportError:
 from datadog.dogstatsd.context_async import _get_wrapped_co
 from datadog.util.compat import iscoroutinefunction
 
+if TYPE_CHECKING:
+    from datadog.dogstatsd.base import DogStatsd
+
 
 class TimedContextManagerDecorator(object):
     """
@@ -20,16 +24,25 @@ class TimedContextManagerDecorator(object):
     the context OR in a function call.
     """
 
-    def __init__(self, statsd, metric=None, tags=None, sample_rate=1, use_ms=None):
+    def __init__(
+        self,
+        statsd,  # type: DogStatsd
+        metric=None,  # type: Optional[Text]
+        tags=None,  # type: Optional[List[str]]
+        sample_rate=1,  # type: Optional[float]
+        use_ms=None,  # type: Optional[bool]
+    ):  # type(...) -> None
         self.statsd = statsd
         self.timing_func = statsd.timing
         self.metric = metric
         self.tags = tags
         self.sample_rate = sample_rate
         self.use_ms = use_ms
-        self.elapsed = None
+        self.elapsed = None  # type: Optional[Union[float, int]]
 
-    def __call__(self, func):
+    def __call__(
+        self, func  # type: Callable[..., Any]
+    ):  # type(...) -> Callable[..., Any]
         """
         Decorator which returns the elapsed time of the function call.
 
@@ -53,27 +66,30 @@ class TimedContextManagerDecorator(object):
 
         return wrapped
 
-    def __enter__(self):
+    def __enter__(self):  # type(...) -> TimedContextManagerDecorator
         if not self.metric:
             raise TypeError("Cannot used timed without a metric!")
         self._start = monotonic()
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, type, value, traceback):  # type(...) -> None
         # Report the elapsed time of the context manager.
         self._send(self._start)
 
-    def _send(self, start):
+    def _send(
+        self,
+        start,  # type: float
+    ):  # type(...) -> None
         elapsed = monotonic() - start
         use_ms = self.use_ms if self.use_ms is not None else self.statsd.use_ms
         elapsed = int(round(1000 * elapsed)) if use_ms else elapsed
-        self.timing_func(self.metric, elapsed, self.tags, self.sample_rate)
+        self.timing_func(self.metric, elapsed, self.tags, self.sample_rate)  # type: ignore
         self.elapsed = elapsed
 
-    def start(self):
+    def start(self):  # type(...) -> None
         self.__enter__()
 
-    def stop(self):
+    def stop(self):  # type(...) -> None
         self.__exit__(None, None, None)
 
 
@@ -83,6 +99,13 @@ class DistributedContextManagerDecorator(TimedContextManagerDecorator):
     the context OR in a function call using the custom distribution metric.
     """
 
-    def __init__(self, statsd, metric=None, tags=None, sample_rate=1, use_ms=None):
+    def __init__(
+        self,
+        statsd,  # type: DogStatsd
+        metric=None,  # type: Optional[Text]
+        tags=None,  # type: Optional[List[str]]
+        sample_rate=1,  # type: Optional[float]
+        use_ms=None,  # type: Optional[bool]
+    ):  # type(...) -> None
         super(DistributedContextManagerDecorator, self).__init__(statsd, metric, tags, sample_rate, use_ms)
         self.timing_func = statsd.distribution
