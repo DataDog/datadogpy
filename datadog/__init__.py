@@ -18,11 +18,15 @@ from typing import Any, List, Optional
 
 # datadog
 from datadog import api
-from datadog.dogstatsd import DogStatsd, statsd  # noqa
-from datadog.threadstats import ThreadStats, datadog_lambda_wrapper, lambda_metric  # noqa
+from datadog.dogstatsd import DogStatsd as DogStatsd, statsd as statsd  # noqa
+from datadog.threadstats import (  # noqa
+    ThreadStats as ThreadStats,
+    datadog_lambda_wrapper as datadog_lambda_wrapper,
+    lambda_metric as lambda_metric,
+)
 from datadog.util.compat import iteritems, NullHandler, text
 from datadog.util.hostname import get_hostname
-from datadog.version import __version__  # noqa
+from datadog.version import __version__ as __version__  # noqa
 
 # Loggers
 logging.getLogger("datadog.api").addHandler(NullHandler())
