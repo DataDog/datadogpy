@@ -1531,29 +1531,31 @@ class DogStatsd(object):
         self._stop_flush_thread()
         self._stop_sender_thread()
 
+        # Prevent concurrent calls to system libraries (notably
+        # getaddrinfo) which may leave internal locks in a locked
+        # state and deadlock the child.
+        self._socket_lock.acquire()
+
     def post_fork_parent(self):
         """Restore the client state after a fork in the parent process."""
+        self._socket_lock.release()
         self._start_flush_thread()
         self._start_sender_thread()
         self._config_lock.release()
 
     def post_fork_child(self):
         """Restore the client state after a fork in the child process."""
+        self._socket_lock.release()
         self._config_lock.release()
 
         # Discard the locks that could have been locked at the time
         # when we forked. This may cause inconsistent internal state,
         # which we will fix in the next steps.
-        self._socket_lock = Lock()
         self._buffer_lock = RLock()
 
         # Reset the buffer so we don't send metrics from the parent
         # process. Also makes sure buffer properties are consistent.
         self._reset_buffer()
-        # Execute the socket_path setter to reconcile transport and
-        # payload size properties in respect to socket_path value.
-        self.socket_path = self.socket_path
-        self.close_socket()
 
         with self._config_lock:
             self._start_flush_thread()

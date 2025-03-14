@@ -2,11 +2,14 @@ import os
 import itertools
 import socket
 import threading
+import logging
+import time
 
 import pytest
 
 from datadog.dogstatsd.base import DogStatsd, SUPPORTS_FORKING
 
+logging.getLogger("datadog.dogstatsd").setLevel(logging.FATAL)
 
 @pytest.mark.parametrize(
     "disable_background_sender, disable_buffering",
@@ -47,18 +50,20 @@ def test_register_at_fork(disable_background_sender, disable_buffering):
 def sender_a(statsd, running):
     while running[0]:
         statsd.gauge("spam", 1)
+        time.sleep(0)
 
 
-def sender_b(statsd, signal):
+def sender_b(statsd, running):
     while running[0]:
         with statsd:
             statsd.gauge("spam", 1)
+            time.sleep(0)
 
 @pytest.mark.parametrize(
-    "disable_background_sender, disable_buffering, sender",
+    "disable_background_sender, disable_buffering, sender_fn",
     list(itertools.product([True, False], [True, False], [sender_a, sender_b])),
 )
-def test_fork_with_thread(disable_background_sender, disable_buffering, sender):
+def test_fork_with_thread(disable_background_sender, disable_buffering, sender_fn):
     if not SUPPORTS_FORKING:
         pytest.skip("os.register_at_fork is required for this test")
 
@@ -71,12 +76,13 @@ def test_fork_with_thread(disable_background_sender, disable_buffering, sender):
     sender = None
     try:
         sender_running = [True]
-        sender = threading.Thread(target=sender, args=(statsd, sender_running))
+        sender = threading.Thread(target=sender_fn, args=(statsd, sender_running))
         sender.daemon = True
         sender.start()
 
         pid = os.fork()
         if pid == 0:
+            statsd.gauge("spam", 2)
             os._exit(42)
 
         assert pid > 0
@@ -84,7 +90,7 @@ def test_fork_with_thread(disable_background_sender, disable_buffering, sender):
 
         assert os.WEXITSTATUS(status) == 42
     finally:
-        statsd.stop()
         if sender:
             sender_running[0] = False
             sender.join()
+        statsd.stop()
