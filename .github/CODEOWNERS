@@ -29,5 +29,5 @@
 /tests/unit/threadstats/         @DataDog/web-frameworks @DataDog/agent-metric-pipelines
 
 # Documentation
-*.md                             @DataDog/documentation @DataDog/web-frameworks
-LICENSE                          @DataDog/documentation @DataDog/web-frameworks
+*.md                             @DataDog/web-frameworks
+LICENSE                          @DataDog/web-frameworks
