@@ -13,6 +13,7 @@ import logging
 import os
 import socket
 import errno
+import struct
 import threading
 import time
 from threading import Lock, RLock
@@ -24,6 +25,11 @@ except ImportError:
     # pypy has the same module, but capitalized.
     import Queue as queue  # type: ignore[no-redef]
 
+try:
+    from urllib.parse import urlparse  # type: ignore
+except ImportError:
+    # Python 2 has the same functionality stored under a different module.
+    from urlparse import urlparse  # type: ignore
 
 # pylint: disable=unused-import
 from typing import Optional, List, Text, Union
@@ -48,6 +54,12 @@ log = logging.getLogger("datadog.dogstatsd")
 # Default config
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8125
+
+# Socket prefixes
+UNIX_ADDRESS_SCHEME = "unix://"
+UNIX_ADDRESS_DATAGRAM_SCHEME = "unixgram://"
+UNIX_ADDRESS_STREAM_SCHEME = "unixstream://"
+WINDOWS_NAMEDPIPE_SCHEME = "\\\\.\\pipe\\"
 
 # Buffering-related values (in seconds)
 DEFAULT_BUFFERING_FLUSH_INTERVAL = 0.3
@@ -175,12 +187,19 @@ class DogStatsd(object):
 
         >>> statsd = DogStatsd()
 
+        :envvar DD_DOGSTATSD_URL: the connection information for the dogstatsd server.
+        If set, it overrides the default values.
+        Example for UDP url: `DD_DOGSTATSD_URL=udp://localhost:8125`
+        Example for UDS: `DD_DOGSTATSD_URL=unix:///var/run/datadog/dsd.socket`
+        Windows named pipes are currently unsupported.
+        :type DD_DOGSTATSD_URL: string
+
         :envvar DD_AGENT_HOST: the host of the DogStatsd server.
-        If set, it overrides default value.
+        If set, it overrides default value. DD_DOGSTATSD_URL takes precedence over this value.
         :type DD_AGENT_HOST: string
 
         :envvar DD_DOGSTATSD_PORT: the port of the DogStatsd server.
-        If set, it overrides default value.
+        If set, it overrides default value. DD_DOGSTATSD_URL takes precedence over this value.
         :type DD_DOGSTATSD_PORT: integer
 
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by dogstatsd client.
@@ -353,22 +372,8 @@ class DogStatsd(object):
         # Check for deprecated option
         if max_buffer_size is not None:
             log.warning("The parameter max_buffer_size is now deprecated and is not used anymore")
-        # Check host and port env vars
-        agent_host = os.environ.get("DD_AGENT_HOST")
-        if agent_host and host == DEFAULT_HOST:
-            host = agent_host
 
-        dogstatsd_port = os.environ.get("DD_DOGSTATSD_PORT")
-        if dogstatsd_port and port == DEFAULT_PORT:
-            try:
-                port = int(dogstatsd_port)
-            except ValueError:
-                log.warning(
-                    "Port number provided in DD_DOGSTATSD_PORT env var is not an integer: \
-                %s, using %s as port number",
-                    dogstatsd_port,
-                    port,
-                )
+        host, port, socket_path = self._parse_env_connection_overrides(host, port, socket_path)
 
         # Assuming environment variables always override
         telemetry_host = os.environ.get("DD_TELEMETRY_HOST", telemetry_host)
@@ -495,6 +500,36 @@ class DogStatsd(object):
                 self._transport = "uds"
                 self._max_payload_size = self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH
 
+    @property
+    def socket(self):
+        return self._socket
+
+    @socket.setter
+    def socket(self, new_socket):
+        self._socket = new_socket
+        if new_socket:
+            try:
+                self._socket_kind = new_socket.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
+                return
+            except AttributeError:  # _socket can't have a type if it doesn't have sockopts
+                log.info("Unexpected socket provided with no support for getsockopt")
+        self._socket_kind = None
+
+    @property
+    def telemetry_socket(self):
+        return self._telemetry_socket
+
+    @telemetry_socket.setter
+    def telemetry_socket(self, t_socket):
+        self._telemetry_socket = t_socket
+        if t_socket:
+            try:
+                self._telemetry_socket_kind = t_socket.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
+                return
+            except AttributeError:  # _telemetry_socket can't have a kind if it doesn't have sockopts
+                log.info("Unexpected telemetry socket provided with no support for getsockopt")
+        self._telemetry_socket_kind = None
+
     def enable_background_sender(self, sender_queue_size=0, sender_queue_timeout=0):
         """
         Use a background thread to communicate with the dogstatsd server.
@@ -543,6 +578,74 @@ class DogStatsd(object):
 
     def enable_telemetry(self):
         self._telemetry = True
+
+    def _parse_env_connection_overrides(self, host, port, socket_path):
+        dogstatsd_url = os.environ.get("DD_DOGSTATSD_URL")
+
+        if (
+            host == DEFAULT_HOST
+            and port == DEFAULT_PORT
+            and socket_path is None
+            and dogstatsd_url is not None
+        ):
+            parsed = urlparse(dogstatsd_url)
+            # If all values are defaults, prefer DD_DOGSTATSD_URL if present.
+            if parsed.scheme == "unix":
+                log.debug(
+                    "Found a DD_DOGSTATSD_URL matching the uds syntax, "
+                    "setting socket path %s.", dogstatsd_url
+                )
+                return host, port, dogstatsd_url
+
+            elif dogstatsd_url.startswith(WINDOWS_NAMEDPIPE_SCHEME):
+                log.debug(
+                    "DD_DOGSTATSD_URL is configured to utilize a windows named pipe, "
+                    "which is not currently supported by datadogpy. Falling back to "
+                    "alternate connection identifiers."
+                )
+
+            elif parsed.scheme == "udp":
+                try:
+                    p_port = parsed.port
+                    # Python 2 doesn't automatically perform bounds checking on the port
+                    if p_port is None or p_port < 0 or p_port > 65535:
+                        log.debug("Invalid port number provided, reverting to default port")
+                        p_port = DEFAULT_PORT
+                except ValueError:
+                    log.debug("Invalid port number provided, reverting to default port")
+                    p_port = DEFAULT_PORT
+
+                log.debug(
+                    "Found a DD_DOGSTATSD_URL matching the udp sytnax, "
+                    "setting host and port %s:%d.", parsed.hostname, p_port
+                )
+
+                return parsed.hostname, p_port, socket_path
+            else:
+                log.debug(
+                    "Unable to parse DD_DOGSTATSD_URL, did you remember to prefix the url "
+                    "with 'unix://' or 'udp://'? Falling back to alternate "
+                    "connection identifiers."
+                )
+
+        # We either have some non-default values or no DD_DOGSTATSD_URL
+        # Check host and port env vars
+        agent_host = os.environ.get("DD_AGENT_HOST")
+        if agent_host and host == DEFAULT_HOST:
+            host = agent_host
+
+        dogstatsd_port = os.environ.get("DD_DOGSTATSD_PORT")
+        if dogstatsd_port and port == DEFAULT_PORT:
+            try:
+                port = int(dogstatsd_port)
+            except ValueError:
+                log.warning(
+                    "Port number provided in DD_DOGSTATSD_PORT env var is not an integer: \
+                %s, using %s as port number",
+                    dogstatsd_port,
+                    port,
+                )
+        return host, port, socket_path
 
     # Note: Invocations of this method should be thread-safe
     def _start_flush_thread(self):
@@ -738,11 +841,37 @@ class DogStatsd(object):
 
     @classmethod
     def _get_uds_socket(cls, socket_path, timeout):
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-        sock.settimeout(timeout)
-        cls._ensure_min_send_buffer_size(sock)
-        sock.connect(socket_path)
-        return sock
+        valid_socket_kinds = [socket.SOCK_DGRAM, socket.SOCK_STREAM]
+        if socket_path.startswith(UNIX_ADDRESS_DATAGRAM_SCHEME):
+            valid_socket_kinds = [socket.SOCK_DGRAM]
+            socket_path = socket_path[len(UNIX_ADDRESS_DATAGRAM_SCHEME):]
+        elif socket_path.startswith(UNIX_ADDRESS_STREAM_SCHEME):
+            valid_socket_kinds = [socket.SOCK_STREAM]
+            socket_path = socket_path[len(UNIX_ADDRESS_STREAM_SCHEME):]
+        elif socket_path.startswith(UNIX_ADDRESS_SCHEME):
+            socket_path = socket_path[len(UNIX_ADDRESS_SCHEME):]
+
+        last_error = ValueError("Invalid socket path")
+        for socket_kind in valid_socket_kinds:
+            # py2 stores socket kinds differently than py3, determine the name independently from version
+            sk_name = {socket.SOCK_STREAM: "stream", socket.SOCK_DGRAM: "datagram"}[socket_kind]
+
+            try:
+                sock = socket.socket(socket.AF_UNIX, socket_kind)
+                sock.settimeout(timeout)
+                cls._ensure_min_send_buffer_size(sock)
+                sock.connect(socket_path)
+                log.debug("Connected to socket %s with kind %s", socket_path, sk_name)
+                return sock
+            except Exception as e:
+                if sock is not None:
+                    sock.close()
+                log.debug("Failed to connect to %s with kind %s: %s", socket_path, sk_name, e)
+                if e.errno == errno.EPROTOTYPE:
+                    last_error = e
+                    continue
+                raise e
+        raise last_error
 
     @classmethod
     def _get_udp_socket(cls, host, port, timeout):
@@ -1243,14 +1372,23 @@ class DogStatsd(object):
                 self.packets_dropped_writer += 1
 
     def _xmit_packet(self, packet, is_telemetry):
+        socket_kind = None
         try:
             if is_telemetry and self._dedicated_telemetry_destination():
                 mysocket = self.telemetry_socket or self.get_socket(telemetry=True)
+                socket_kind = self._telemetry_socket_kind
             else:
                 # If set, use socket directly
                 mysocket = self.socket or self.get_socket()
+                socket_kind = self._socket_kind
 
-            mysocket.send(packet.encode(self.encoding))
+            encoded_packet = packet.encode(self.encoding)
+            if socket_kind == socket.SOCK_STREAM:
+                with self._socket_lock:
+                    mysocket.sendall(struct.pack('<I', len(encoded_packet)))
+                    mysocket.sendall(encoded_packet)
+            else:
+                mysocket.send(encoded_packet)
 
             if not is_telemetry and self._telemetry:
                 self.packets_sent += 1
@@ -1283,12 +1421,18 @@ class DogStatsd(object):
                 )
                 self.close_socket()
         except Exception as exc:
-            print("Unexpected error: %s", exc)
+            print("Unexpected error: ", exc)
             log.error("Unexpected error: %s", str(exc))
 
         if not is_telemetry and self._telemetry:
             self.bytes_dropped_writer += len(packet)
             self.packets_dropped_writer += 1
+
+        # if in stream mode we need to shut down the socket; we can't recover from a
+        # partial send
+        if socket_kind == socket.SOCK_STREAM:
+            log.debug("Confirming socket closure after error streaming")
+            self.close_socket()
 
         return False
 
