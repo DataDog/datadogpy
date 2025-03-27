@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+* [Added] Add Cloud SIEM rule management and security signals retrieval.
+* [Added] Add dogshell command for security monitoring rule and signal management.
+
 ## v0.51.0 / 2025-01-27
 
 * [Added] Add hosts endpoint. See [#884](https://github.com/DataDog/datadogpy/pull/884).

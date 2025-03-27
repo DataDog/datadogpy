@@ -50,3 +50,5 @@ from datadog.api.permissions import Permissions
 from datadog.api.service_level_objectives import ServiceLevelObjective
 from datadog.api.synthetics import Synthetics
 from datadog.api.logs import Logs
+from datadog.api.security_monitoring_rules import SecurityMonitoringRule
+from datadog.api.security_monitoring_signals import SecurityMonitoringSignal

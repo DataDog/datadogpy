@@ -1,0 +1,52 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.51.1-dev (python 3.10.6; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v2/security_monitoring/signals?filter%5Bfrom%5D=2025-03-28T09%3A48%3A05%2B00%3A00&filter%5Bquery%5D=%2A&filter%5Bto%5D=2025-03-28T10%3A48%3A05%2B00%3A00&page%5Bsize%5D=10&sort=-timestamp
+  response:
+    body:
+      string: '{"data":[],"meta":{"elapsed":40,"request_id":"pddv1ChZmcTZ6UC00OVR2eV9mUFpzdnlTaW5RIisKG6GoW4kkIgv_EF8ff1Kd7QSfjHsxhGew-iMxZxIMSR0sPZ1zHds6RZgE","status":"done"}}
+
+        '
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 28 Mar 2025 10:48:06 GMT
+      Transfer-Encoding:
+      - chunked
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '1000'
+      x-ratelimit-name:
+      - security_analytics
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '999'
+      x-ratelimit-reset:
+      - '4'
+    status:
+      code: 200
+      message: OK
+version: 1
