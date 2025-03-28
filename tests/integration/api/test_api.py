@@ -989,6 +989,97 @@ class TestDatadog:
         res = dog.Roles.get(role_uuid)
         assert "errors" in res
 
+    def test_security_monitoring_rules(self, dog, get_with_retry, freezer):
+        """
+        Test security monitoring rules CRUD operations.
+        """
+        with freezer:
+            timestamp = int(time.time())
+            
+        # Create a security monitoring rule
+        rule_name = "Test Rule {}".format(timestamp)
+        rule_data = {
+            "name": rule_name,
+            "queries": [
+                {
+                    "query": "source:test",
+                    "groupByFields": [],
+                    "distinctFields": [],
+                    "name": "a"
+                }
+            ],
+            "cases": [
+                {
+                    "name": "test case",
+                    "condition": "a > 0",
+                    "status": "info"
+                }
+            ],
+            "options": {
+                "evaluationWindow": 3600,
+                "keepAlive": 3600,
+                "maxSignalDuration": 86400
+            },
+            "message": "Test rule generated via API",
+            "tags": ["test:true", "env:test"],
+            "isEnabled": True,
+            "type": "log_detection"
+        }
+
+        rule = dog.SecurityMonitoringRule.create(**rule_data)
+        assert rule["name"] == rule_name
+        assert rule["message"] == "Test rule generated via API"
+        assert rule["isEnabled"] is True
+        assert "id" in rule
+        
+        rule_id = rule["id"]
+        
+        # Get the rule
+        retrieved_rule = get_with_retry("SecurityMonitoringRule", rule_id)
+        assert retrieved_rule["id"] == rule_id
+        assert retrieved_rule["name"] == rule_name
+        
+        # Update the rule
+        updated_name = "Updated Rule {}".format(timestamp)
+        update_data = dict(rule_data)
+        update_data["name"] = updated_name
+        
+        updated_rule = dog.SecurityMonitoringRule.update(rule_id, **update_data)
+        assert updated_rule["id"] == rule_id
+        assert updated_rule["name"] == updated_name
+
+        # Skip the list rule since there is not filtering
+
+        # Delete the rule
+        dog.SecurityMonitoringRule.delete(rule_id)
+        retrieved_rule = get_with_retry("SecurityMonitoringRule", rule_id)
+        assert retrieved_rule["error"] is not None
+        assert retrieved_rule["error"]["code"] == "NotFound"
+        assert retrieved_rule["error"]["message"] == "Threat detection rule not found: {}".format(rule_id)
+
+    def test_security_monitoring_signals(self, dog, freezer):
+        """
+        Test security monitoring signals API.
+        Note: This test might be limited as signals cannot be created directly via API.
+        We'll test the list functionality with filters.
+        """
+        with freezer:
+            now_time = datetime.datetime.now(datetime.timezone.utc)
+            now = now_time.replace(microsecond=0).isoformat()
+            one_hour_ago = (now_time - datetime.timedelta(hours=1)).replace(microsecond=0).isoformat()
+
+        # List signals with various filters
+        signals = dog.SecurityMonitoringSignal.get_all(
+            **{
+                "filter[query]": "*",
+                "filter[from]": one_hour_ago,
+                "filter[to]": now,
+                "sort": "-timestamp",
+                "page[size]": 10
+            }
+        )
+        assert signals["data"] is not None
+
     @mock.patch('datadog.api._return_raw_response', True)
     def test_user_agent(self, dog):
         _, resp = dog.api_client.APIClient.submit('GET', 'validate')

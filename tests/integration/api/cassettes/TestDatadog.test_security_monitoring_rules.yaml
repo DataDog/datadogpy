@@ -1,0 +1,263 @@
+interactions:
+- request:
+    body: '{"cases": [{"condition": "a > 0", "name": "test case", "status": "info"}],
+      "isEnabled": true, "message": "Test rule generated via API", "name": "Test Rule
+      1743153035", "options": {"evaluationWindow": 3600, "keepAlive": 3600, "maxSignalDuration":
+      86400}, "queries": [{"distinctFields": [], "groupByFields": [], "name": "a",
+      "query": "source:test"}], "tags": ["test:true", "env:test"], "type": "log_detection"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '408'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.51.1-dev (python 3.10.6; os darwin; arch arm64)
+    method: POST
+    uri: https://api.datadoghq.com/api/v2/security_monitoring/rules
+  response:
+    body:
+      string: '{"name":"Test Rule 1743153035","createdAt":1743156728662,"isDefault":false,"isPartner":false,"isEnabled":true,"isBeta":false,"isDeleted":false,"isDeprecated":false,"queries":[{"query":"source:test","groupByFields":[],"hasOptionalGroupByFields":false,"distinctFields":[],"aggregation":"count","name":"a","dataSource":"logs"}],"options":{"evaluationWindow":3600,"detectionMethod":"threshold","maxSignalDuration":86400,"keepAlive":3600},"cases":[{"name":"test
+        case","status":"info","notifications":[],"condition":"a \u003e 0"}],"message":"Test
+        rule generated via API","tags":["env:test","test:true"],"hasExtendedTitle":false,"type":"log_detection","filters":[],"version":1,"id":"ns0-4ha-0kz","blocking":false,"metadata":{"entities":null,"sources":null},"creationAuthorId":1445416,"creator":{"handle":"frog@datadoghq.com","name":"frog"},"updater":{"handle":"","name":""}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '867'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 28 Mar 2025 10:12:08 GMT
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '1000'
+      x-ratelimit-name:
+      - security_analytics
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '999'
+      x-ratelimit-reset:
+      - '2'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.51.1-dev (python 3.10.6; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v2/security_monitoring/rules/ns0-4ha-0kz
+  response:
+    body:
+      string: '{"name":"Test Rule 1743153035","createdAt":1743156728662,"isDefault":false,"isPartner":false,"isEnabled":true,"isBeta":false,"isDeleted":false,"isDeprecated":false,"queries":[{"query":"source:test","groupByFields":[],"hasOptionalGroupByFields":false,"distinctFields":[],"aggregation":"count","name":"a","dataSource":"logs"}],"options":{"evaluationWindow":3600,"detectionMethod":"threshold","maxSignalDuration":86400,"keepAlive":3600},"cases":[{"name":"test
+        case","status":"info","notifications":[],"condition":"a \u003e 0"}],"message":"Test
+        rule generated via API","tags":["env:test","test:true"],"hasExtendedTitle":false,"type":"log_detection","filters":[],"version":1,"id":"ns0-4ha-0kz","blocking":false,"metadata":{"entities":null,"sources":null},"creationAuthorId":1445416,"creator":{"handle":"frog@datadoghq.com","name":"frog"},"updater":{"handle":"","name":""}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '867'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 28 Mar 2025 10:12:09 GMT
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '1000'
+      x-ratelimit-name:
+      - security_analytics
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '998'
+      x-ratelimit-reset:
+      - '1'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"cases": [{"condition": "a > 0", "name": "test case", "status": "info"}],
+      "isEnabled": true, "message": "Test rule generated via API", "name": "Updated
+      Rule 1743153035", "options": {"evaluationWindow": 3600, "keepAlive": 3600, "maxSignalDuration":
+      86400}, "queries": [{"distinctFields": [], "groupByFields": [], "name": "a",
+      "query": "source:test"}], "tags": ["test:true", "env:test"], "type": "log_detection"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '411'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - datadogpy/0.51.1-dev (python 3.10.6; os darwin; arch arm64)
+    method: PUT
+    uri: https://api.datadoghq.com/api/v2/security_monitoring/rules/ns0-4ha-0kz
+  response:
+    body:
+      string: '{"name":"Updated Rule 1743153035","isEnabled":true,"queries":[{"query":"source:test","groupByFields":[],"hasOptionalGroupByFields":false,"distinctFields":[],"aggregation":"count","name":"a","dataSource":"logs"}],"options":{"evaluationWindow":3600,"detectionMethod":"threshold","maxSignalDuration":86400,"keepAlive":3600},"cases":[{"name":"test
+        case","status":"info","notifications":[],"condition":"a \u003e 0"}],"message":"Test
+        rule generated via API","tags":["env:test","test:true"],"hasExtendedTitle":false,"type":"log_detection","filters":[],"id":"ns0-4ha-0kz","version":2,"createdAt":1743156728662,"creationAuthorId":1445416,"updateAuthorId":1445416,"updatedAt":1743156729592,"isDefault":false,"blocking":false,"isBeta":false,"isDeleted":false,"isDeprecated":false,"metadata":{"entities":null,"sources":null}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '813'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 28 Mar 2025 10:12:09 GMT
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '1000'
+      x-ratelimit-name:
+      - security_analytics
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '997'
+      x-ratelimit-reset:
+      - '1'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '0'
+      User-Agent:
+      - datadogpy/0.51.1-dev (python 3.10.6; os darwin; arch arm64)
+    method: DELETE
+    uri: https://api.datadoghq.com/api/v2/security_monitoring/rules/ns0-4ha-0kz
+  response:
+    body:
+      string: ''
+    headers:
+      Connection:
+      - keep-alive
+      Date:
+      - Fri, 28 Mar 2025 10:12:10 GMT
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '1000'
+      x-ratelimit-name:
+      - security_analytics
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '999'
+      x-ratelimit-reset:
+      - '10'
+    status:
+      code: 204
+      message: No Content
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - datadogpy/0.51.1-dev (python 3.10.6; os darwin; arch arm64)
+    method: GET
+    uri: https://api.datadoghq.com/api/v2/security_monitoring/rules/ns0-4ha-0kz
+  response:
+    body:
+      string: '{"error":{"code":"NotFound","message":"Threat detection rule not found:
+        ns0-4ha-0kz"}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '86'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 28 Mar 2025 10:12:10 GMT
+      content-security-policy:
+      - frame-ancestors 'self'; report-uri https://logs.browser-intake-datadoghq.com/api/v2/logs?dd-api-key=pube4f163c23bbf91c16b8f57f56af9fc58&dd-evp-origin=content-security-policy&ddsource=csp-report&ddtags=site%3Adatadoghq.com
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-ratelimit-limit:
+      - '1000'
+      x-ratelimit-name:
+      - security_analytics
+      x-ratelimit-period:
+      - '10'
+      x-ratelimit-remaining:
+      - '998'
+      x-ratelimit-reset:
+      - '10'
+    status:
+      code: 404
+      message: Not Found
+version: 1
