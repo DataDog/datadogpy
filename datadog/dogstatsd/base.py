@@ -498,7 +498,11 @@ class DogStatsd(object):
                 self._transport = "udp"
                 self._max_payload_size = self._max_buffer_len or UDP_OPTIMAL_PAYLOAD_LENGTH
             else:
-                self._transport = "uds"
+                if path.startswith("unixstream"):
+                    self._transport = "uds-stream"
+                else:
+                    self._transport = "uds"
+
                 self._max_payload_size = self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH
 
     @property
