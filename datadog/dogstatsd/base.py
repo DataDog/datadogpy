@@ -494,12 +494,6 @@ class DogStatsd(object):
     def socket_path(self, path):
         with self._socket_lock:
             self._socket_path = path
-            if path is None:
-                self._transport = "udp"
-                self._max_payload_size = self._max_buffer_len or UDP_OPTIMAL_PAYLOAD_LENGTH
-            else:
-                self._transport = "uds"
-                self._max_payload_size = self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH
 
     @property
     def socket(self):
@@ -511,6 +505,15 @@ class DogStatsd(object):
         if new_socket:
             try:
                 self._socket_kind = new_socket.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
+                if self._socket_kind == socket.SOCK_STREAM:
+                    self._transport = "uds-stream"
+                    self._max_payload_size = self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH
+                elif self._socket_kind == socket.SOCK_DGRAM:
+                    self._transport = "uds"
+                    self._max_payload_size = self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH
+                else:
+                    self._transport = "udp"
+                    self._max_payload_size = self._max_buffer_len or UDP_OPTIMAL_PAYLOAD_LENGTH
                 return
             except AttributeError:  # _socket can't have a type if it doesn't have sockopts
                 log.info("Unexpected socket provided with no support for getsockopt")

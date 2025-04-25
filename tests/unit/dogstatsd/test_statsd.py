@@ -769,12 +769,21 @@ class TestDogStatsd(unittest.TestCase):
         )
 
     def test_socket_path_updates_telemetry(self):
+        # Test UDP
         self.statsd.gauge("foo", 1)
         self.assert_equal_telemetry("foo:1|g\n", self.recv(2), transport="udp")
+        
+        # Test UDS
         self.statsd.socket_path = "/fake/path"
         self.statsd._reset_telemetry()
         self.statsd.gauge("foo", 2)
         self.assert_equal_telemetry("foo:2|g\n", self.recv(2), transport="uds")
+
+        # Test UDS stream
+        self.statsd.socket_path = "unixstream://fake/path"
+        self.statsd._reset_telemetry()
+        self.statsd.gauge("foo", 2)
+        self.assert_equal_telemetry("foo:2|g\n", self.recv(2), transport="uds-stream")
 
     def test_distributed(self):
         """
