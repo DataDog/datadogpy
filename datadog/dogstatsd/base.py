@@ -505,11 +505,11 @@ class DogStatsd(object):
         if new_socket:
             try:
                 self._socket_kind = new_socket.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
-                if self._socket_kind == socket.SOCK_STREAM:
-                    self._transport = "uds-stream"
-                    self._max_payload_size = self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH
-                elif self._socket_kind == socket.SOCK_DGRAM:
-                    self._transport = "uds"
+                if new_socket.family == socket.AF_UNIX:
+                    if self._socket_kind == socket.SOCK_STREAM:
+                        self._transport = "uds-stream"
+                    else:
+                        self._transport = "uds"
                     self._max_payload_size = self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH
                 else:
                     self._transport = "udp"
@@ -518,6 +518,8 @@ class DogStatsd(object):
             except AttributeError:  # _socket can't have a type if it doesn't have sockopts
                 log.info("Unexpected socket provided with no support for getsockopt")
         self._socket_kind = None
+        # When the socket is None, we use the UDP optimal payload length
+        self._max_payload_size = UDP_OPTIMAL_PAYLOAD_LENGTH
 
     @property
     def telemetry_socket(self):

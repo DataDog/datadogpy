@@ -42,13 +42,18 @@ class FakeSocket(object):
 
     FLUSH_GRACE_PERIOD = 0.2
 
-    def __init__(self, flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL, socket_kind=socket.SOCK_DGRAM):
+    def __init__(self, flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL, socket_kind=socket.SOCK_DGRAM, socket_path=None):
         self.payloads = deque()
 
         self._flush_interval = flush_interval
         self._flush_wait = False
         self._socket_kind = socket_kind
         self.timeout = () # unit tuple = settimeout was not called
+
+        if socket_path:
+            self.family = socket.AF_UNIX
+        else:
+            self.family = socket.AF_INET
 
     def sendall(self, payload):
         self.send(payload)
@@ -768,19 +773,19 @@ class TestDogStatsd(unittest.TestCase):
             MIN_SEND_BUFFER_SIZE,
         )
 
-    def test_socket_path_updates_telemetry(self):
+    def test_socket_updates_telemetry(self):
         # Test UDP
         self.statsd.gauge("foo", 1)
         self.assert_equal_telemetry("foo:1|g\n", self.recv(2), transport="udp")
         
         # Test UDS
-        self.statsd.socket_path = "/fake/path"
+        self.statsd.socket = FakeSocket(socket_path="/fake/path")
         self.statsd._reset_telemetry()
         self.statsd.gauge("foo", 2)
         self.assert_equal_telemetry("foo:2|g\n", self.recv(2), transport="uds")
 
         # Test UDS stream
-        self.statsd.socket_path = "unixstream://fake/path"
+        self.statsd.socket = FakeSocket(socket_path="unixstream://fake/path", socket_kind=socket.SOCK_STREAM)
         self.statsd._reset_telemetry()
         self.statsd.gauge("foo", 2)
         self.assert_equal_telemetry("foo:2|g\n", self.recv(2), transport="uds-stream")
@@ -1904,7 +1909,7 @@ async def print_foo():
             flush_interval=10000,
             disable_telemetry=True,
         )
-        dogstatsd.socket = FakeSocket()
+        dogstatsd.socket = FakeSocket(socket_path=dogstatsd.socket_path)
 
         for _ in range(10000):
             dogstatsd.increment('val')
@@ -2110,7 +2115,13 @@ async def print_foo():
     def test_max_payload_size(self):
         statsd = DogStatsd(socket_path=None, port=8125)
         self.assertEqual(statsd._max_payload_size, UDP_OPTIMAL_PAYLOAD_LENGTH)
-        statsd.socket_path = "/foo"
+
+        test_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        statsd.socket = test_socket
+        self.assertEqual(statsd._max_payload_size, UDP_OPTIMAL_PAYLOAD_LENGTH)
+
+        test_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+        statsd.socket = test_socket
         self.assertEqual(statsd._max_payload_size, UDS_OPTIMAL_PAYLOAD_LENGTH)
 
     def test_post_fork_locks(self):
