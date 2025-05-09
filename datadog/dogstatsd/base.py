@@ -13,6 +13,7 @@ import logging
 import os
 import socket
 import errno
+import struct
 import threading
 import time
 from threading import Lock, RLock
@@ -48,6 +49,11 @@ log = logging.getLogger("datadog.dogstatsd")
 # Default config
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8125
+
+# Socket prefixes
+UNIX_ADDRESS_SCHEME = "unix://"
+UNIX_ADDRESS_DATAGRAM_SCHEME = "unixgram://"
+UNIX_ADDRESS_STREAM_SCHEME = "unixstream://"
 
 # Buffering-related values (in seconds)
 DEFAULT_BUFFERING_FLUSH_INTERVAL = 0.3
@@ -488,12 +494,47 @@ class DogStatsd(object):
     def socket_path(self, path):
         with self._socket_lock:
             self._socket_path = path
-            if path is None:
-                self._transport = "udp"
-                self._max_payload_size = self._max_buffer_len or UDP_OPTIMAL_PAYLOAD_LENGTH
-            else:
-                self._transport = "uds"
-                self._max_payload_size = self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH
+
+    @property
+    def socket(self):
+        return self._socket
+
+    @socket.setter
+    def socket(self, new_socket):
+        self._socket = new_socket
+        if new_socket:
+            try:
+                self._socket_kind = new_socket.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
+                if new_socket.family == socket.AF_UNIX:
+                    if self._socket_kind == socket.SOCK_STREAM:
+                        self._transport = "uds-stream"
+                    else:
+                        self._transport = "uds"
+                    self._max_payload_size = self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH
+                else:
+                    self._transport = "udp"
+                    self._max_payload_size = self._max_buffer_len or UDP_OPTIMAL_PAYLOAD_LENGTH
+                return
+            except AttributeError:  # _socket can't have a type if it doesn't have sockopts
+                log.info("Unexpected socket provided with no support for getsockopt")
+        self._socket_kind = None
+        # When the socket is None, we use the UDP optimal payload length
+        self._max_payload_size = UDP_OPTIMAL_PAYLOAD_LENGTH
+
+    @property
+    def telemetry_socket(self):
+        return self._telemetry_socket
+
+    @telemetry_socket.setter
+    def telemetry_socket(self, t_socket):
+        self._telemetry_socket = t_socket
+        if t_socket:
+            try:
+                self._telemetry_socket_kind = t_socket.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
+                return
+            except AttributeError:  # _telemetry_socket can't have a kind if it doesn't have sockopts
+                log.info("Unexpected telemetry socket provided with no support for getsockopt")
+        self._telemetry_socket_kind = None
 
     def enable_background_sender(self, sender_queue_size=0, sender_queue_timeout=0):
         """
@@ -738,11 +779,37 @@ class DogStatsd(object):
 
     @classmethod
     def _get_uds_socket(cls, socket_path, timeout):
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-        sock.settimeout(timeout)
-        cls._ensure_min_send_buffer_size(sock)
-        sock.connect(socket_path)
-        return sock
+        valid_socket_kinds = [socket.SOCK_DGRAM, socket.SOCK_STREAM]
+        if socket_path.startswith(UNIX_ADDRESS_DATAGRAM_SCHEME):
+            valid_socket_kinds = [socket.SOCK_DGRAM]
+            socket_path = socket_path[len(UNIX_ADDRESS_DATAGRAM_SCHEME):]
+        elif socket_path.startswith(UNIX_ADDRESS_STREAM_SCHEME):
+            valid_socket_kinds = [socket.SOCK_STREAM]
+            socket_path = socket_path[len(UNIX_ADDRESS_STREAM_SCHEME):]
+        elif socket_path.startswith(UNIX_ADDRESS_SCHEME):
+            socket_path = socket_path[len(UNIX_ADDRESS_SCHEME):]
+
+        last_error = ValueError("Invalid socket path")
+        for socket_kind in valid_socket_kinds:
+            # py2 stores socket kinds differently than py3, determine the name independently from version
+            sk_name = {socket.SOCK_STREAM: "stream", socket.SOCK_DGRAM: "datagram"}[socket_kind]
+
+            try:
+                sock = socket.socket(socket.AF_UNIX, socket_kind)
+                sock.settimeout(timeout)
+                cls._ensure_min_send_buffer_size(sock)
+                sock.connect(socket_path)
+                log.debug("Connected to socket %s with kind %s", socket_path, sk_name)
+                return sock
+            except Exception as e:
+                if sock is not None:
+                    sock.close()
+                log.debug("Failed to connect to %s with kind %s: %s", socket_path, sk_name, e)
+                if e.errno == errno.EPROTOTYPE:
+                    last_error = e
+                    continue
+                raise e
+        raise last_error
 
     @classmethod
     def _get_udp_socket(cls, host, port, timeout):
@@ -1243,14 +1310,23 @@ class DogStatsd(object):
                 self.packets_dropped_writer += 1
 
     def _xmit_packet(self, packet, is_telemetry):
+        socket_kind = None
         try:
             if is_telemetry and self._dedicated_telemetry_destination():
                 mysocket = self.telemetry_socket or self.get_socket(telemetry=True)
+                socket_kind = self._telemetry_socket_kind
             else:
                 # If set, use socket directly
                 mysocket = self.socket or self.get_socket()
+                socket_kind = self._socket_kind
 
-            mysocket.send(packet.encode(self.encoding))
+            encoded_packet = packet.encode(self.encoding)
+            if socket_kind == socket.SOCK_STREAM:
+                with self._socket_lock:
+                    mysocket.sendall(struct.pack('<I', len(encoded_packet)))
+                    mysocket.sendall(encoded_packet)
+            else:
+                mysocket.send(encoded_packet)
 
             if not is_telemetry and self._telemetry:
                 self.packets_sent += 1
@@ -1283,12 +1359,18 @@ class DogStatsd(object):
                 )
                 self.close_socket()
         except Exception as exc:
-            print("Unexpected error: %s", exc)
+            print("Unexpected error: ", exc)
             log.error("Unexpected error: %s", str(exc))
 
         if not is_telemetry and self._telemetry:
             self.bytes_dropped_writer += len(packet)
             self.packets_dropped_writer += 1
+
+        # if in stream mode we need to shut down the socket; we can't recover from a
+        # partial send
+        if socket_kind == socket.SOCK_STREAM:
+            log.debug("Confirming socket closure after error streaming")
+            self.close_socket()
 
         return False
 
