@@ -291,6 +291,11 @@ class TestDogStatsd(unittest.TestCase):
         self.assertIsNone(statsd.host)
         self.assertIsNone(statsd.port)
 
+        # Add cardinality
+        options['cardinality'] = 'none'
+        initialize(**options)
+        self.assertEqual(statsd.cardinality, 'none')
+
     def test_dogstatsd_initialization_with_env_vars(self):
         """
         Dogstatsd can retrieve its config from env vars when
@@ -339,6 +344,10 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd._report('set', 's', 123, tags=None, sample_rate=None, timestamp=100)
         self.assert_equal_telemetry('set:123|s\n', self.recv(2))
 
+    def test_report_with_cardinality(self):
+        self.statsd._report('report', 'g', 123.4, tags=None, sample_rate=None, cardinality="orchestrator")
+        self.assert_equal_telemetry('report:123.4|g|card:orchestrator\n', self.recv(2))
+
     def test_gauge(self):
         self.statsd.gauge('gauge', 123.4)
         self.assert_equal_telemetry('gauge:123.4|g\n', self.recv(2))
@@ -346,6 +355,14 @@ class TestDogStatsd(unittest.TestCase):
     def test_gauge_with_ts(self):
         self.statsd.gauge_with_timestamp("gauge", 123.4, timestamp=1066)
         self.assert_equal_telemetry("gauge:123.4|g|T1066\n", self.recv(2))
+
+    def test_gauge_with_cardinality(self):
+        self.statsd.gauge('gauge', 123.4, cardinality="high")
+        self.assert_equal_telemetry('gauge:123.4|g|card:high\n', self.recv(2))
+
+        self.statsd._reset_telemetry()
+        self.statsd.gauge_with_timestamp("gauge", 123.4, timestamp=1066, cardinality="none")
+        self.assert_equal_telemetry("gauge:123.4|g|card:none|T1066\n", self.recv(2))
 
     def test_gauge_with_invalid_ts_should_be_ignored(self):
         self.statsd.gauge_with_timestamp("gauge", 123.4, timestamp=-500)
@@ -386,6 +403,16 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.flush()
         self.assert_equal_telemetry("page.views:11|c|T2121\n", self.recv(2))
 
+    def test_count_with_cardinality(self):
+        self.statsd.count('page.views', 11, cardinality="low")
+        self.statsd.flush()
+        self.assert_equal_telemetry('page.views:11|c|card:low\n', self.recv(2))
+
+        self.statsd._reset_telemetry()
+        self.statsd.count_with_timestamp("page.views", 11, timestamp=2121, cardinality="high")
+        self.statsd.flush()
+        self.assert_equal_telemetry("page.views:11|c|card:high|T2121\n", self.recv(2))
+
     def test_count_with_invalid_ts_should_be_ignored(self):
         self.statsd.count_with_timestamp("page.views", 1, timestamp=-1066)
         self.statsd.flush()
@@ -394,6 +421,10 @@ class TestDogStatsd(unittest.TestCase):
     def test_histogram(self):
         self.statsd.histogram('histo', 123.4)
         self.assert_equal_telemetry('histo:123.4|h\n', self.recv(2))
+
+    def test_histogram_with_cardinality(self):
+        self.statsd.histogram('histo', 123.4, cardinality="low")
+        self.assert_equal_telemetry('histo:123.4|h|card:low\n', self.recv(2))
 
     def test_pipe_in_tags(self):
         self.statsd.gauge('gt', 123.4, tags=['pipe|in:tag', 'red'])
@@ -473,8 +504,9 @@ class TestDogStatsd(unittest.TestCase):
             u'L1\nL2',
             priority='low',
             date_happened=1375296969,
+            cardinality="orchestrator",
         )
-        event2 = u'_e{5,6}:Title|L1\\nL2|d:1375296969|p:low\n'
+        event2 = u'_e{5,6}:Title|L1\\nL2|d:1375296969|p:low|card:orchestrator\n'
         self.assert_equal_telemetry(
             event2,
             self.recv(2),
@@ -586,8 +618,10 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.service_check(
             'my_check.name', self.statsd.WARNING,
             tags=['key1:val1', 'key2:val2'], timestamp=now,
-            hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪")
-        check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}'.format(self.statsd.WARNING, now, u'♬ †øU \\n†øU ¥ºu|m\\: T0µ ♪\n')
+            hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪",
+            cardinality="low",
+        )
+        check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}|card:low\n'.format(self.statsd.WARNING, now, u'♬ †øU \\n†øU ¥ºu|m\\: T0µ ♪')
         self.assert_equal_telemetry(
             check,
             self.recv(2),
