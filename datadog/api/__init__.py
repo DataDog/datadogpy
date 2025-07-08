@@ -52,3 +52,36 @@ from datadog.api.synthetics import Synthetics
 from datadog.api.logs import Logs
 from datadog.api.security_monitoring_rules import SecurityMonitoringRule
 from datadog.api.security_monitoring_signals import SecurityMonitoringSignal
+
+__all__ = [
+    "Comment",
+    "DashboardList",
+    "Distribution",
+    "Downtime",
+    "Timeboard",
+    "Dashboard",
+    "Event",
+    "Infrastructure",
+    "Metadata",
+    "Metric",
+    "Monitor",
+    "Screenboard",
+    "Graph",
+    "Embed",
+    "Host",
+    "Hosts",
+    "ServiceCheck",
+    "Tag",
+    "User",
+    "AwsIntegration",
+    "AwsLogsIntegration",
+    "AzureIntegration",
+    "GcpIntegration",
+    "Roles",
+    "Permissions",
+    "ServiceLevelObjective",
+    "Synthetics",
+    "Logs",
+    "SecurityMonitoringRule",
+    "SecurityMonitoringSignal",
+]
