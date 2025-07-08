@@ -1,9 +1,12 @@
 # Changelog
 
-## Unreleased
+## v0.52.0 / 2025-07-08
 
-* [Added] Add Cloud SIEM rule management and security signals retrieval.
-* [Added] Add dogshell command for security monitoring rule and signal management.
+* [Added] Add Cardinality common field. See [#883](https://github.com/DataDog/datadogpy/pull/883)
+* [Added] Add Cloud SIEM rule management and security signals retrieval. See [#893](https://github.com/DataDog/datadogpy/pull/893)
+* [Added] Add dogshell command for security monitoring rule and signal management. See [#893](https://github.com/DataDog/datadogpy/pull/893)
+* [Added] Add UDS SOCK_STREAM support to the DogStatsD client. See [#869](https://github.com/DataDog/datadogpy/pull/869)
+* [Added] Max samples per context for Histogram, Distribution and Timing metrics (Experimental Feature). See [#863](https://github.com/DataDog/datadogpy/pull/863)
 
 ## v0.51.0 / 2025-01-27
 
