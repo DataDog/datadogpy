@@ -12,8 +12,8 @@ on:
 
 jobs:
   build_wheels:
-    name: Build wheels on Ubuntu 20.04
-    runs-on: ubuntu-20.04
+    name: Build wheels on Ubuntu latest
+    runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
       - uses: actions/checkout@v2
