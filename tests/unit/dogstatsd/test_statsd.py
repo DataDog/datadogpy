@@ -2192,3 +2192,21 @@ async def print_foo():
         statsd.increment("test", 1)
 
         assert statsd.socket is not None
+
+    def test_transport_attribute_present_on_connection_error(self):
+        """
+        Ensure `_transport` attribute is present for telemetry even if the socket is None.
+        """
+        # This test will fail with an AttributeError before the fix.
+        # Use a non-resolvable host to trigger a connection error.
+        statsd = DogStatsd(
+            host='non.existent.host.datadog.internal',
+            telemetry_min_flush_interval=0  # Flush telemetry immediately
+        )
+
+        # This call will attempt to send a metric, fail to create a socket,
+        # and then attempt to send telemetry, which requires `_transport`.
+        statsd.gauge('test.metric', 1)
+
+        assert statsd.socket is None
+        assert statsd._transport is not None
