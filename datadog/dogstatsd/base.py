@@ -534,13 +534,7 @@ class DogStatsd(object):
             except AttributeError:  # _socket can't have a type if it doesn't have sockopts
                 log.info("Unexpected socket provided with no support for getsockopt")
         self._socket_kind = None
-        if self.socket_path:
-            if self.socket_path.startswith(UNIX_ADDRESS_STREAM_SCHEME):
-                self._transport = "uds-stream"
-            else:
-                self._transport = "uds"
-        else:
-            self._transport = "udp"
+        self._transport = "udp"
         # When the socket is None, we use the UDP optimal payload length
         self._max_payload_size = UDP_OPTIMAL_PAYLOAD_LENGTH
 
