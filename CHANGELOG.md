@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.52.1 / 2025-07-30 
 * [Fixed] Fix missing transport attribute when flushing telemetry.
 
 ## v0.52.0 / 2025-07-08
