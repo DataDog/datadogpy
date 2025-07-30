@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+* [Fixed] Fix missing transport attribute when flushing telemetry.
+
 ## v0.52.0 / 2025-07-08
 
 * [Added] Add Cardinality common field. See [#883](https://github.com/DataDog/datadogpy/pull/883)
