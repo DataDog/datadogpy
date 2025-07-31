@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.52.1 / 2025-07-31
+
+* [Fixed] Fix missing transport attribute when flushing telemetry. See [#902](https://github.com/DataDog/datadogpy/pull/902).
+
 ## Unreleased
 * [Fixed] Fix missing transport attribute when flushing telemetry.
 
