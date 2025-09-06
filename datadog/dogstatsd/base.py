@@ -1551,6 +1551,8 @@ class DogStatsd(object):
         self._send(string)
 
     def _add_constant_tags(self, tags):
+        if isinstance(tags, dict):
+            tags = list(map(lambda kv: '%s:%s' % kv, tags.items()))
         if self.constant_tags:
             if tags:
                 return tags + self.constant_tags
