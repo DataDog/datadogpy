@@ -37,6 +37,7 @@ def initialize(
     api_host=None,  # type: Optional[str]
     statsd_host=None,  # type: Optional[str]
     statsd_port=None,  # type: Optional[int]
+    statsd_disable=False,  # type: bool
     statsd_disable_aggregation=True,  # type: bool
     statsd_disable_buffering=True,  # type: bool
     statsd_aggregation_flush_interval=0.3,  # type: float
@@ -75,6 +76,9 @@ def initialize(
 
     :param statsd_port: Port of DogStatsd server or statsd daemon
     :type statsd_port: port
+
+    :param statsd_disable: Disable any statsd metric collection (default False).
+    :type statsd_disable: bool
 
     :param statsd_disable_buffering: Enable/disable statsd client buffering support
                                      (default: True).
@@ -150,6 +154,11 @@ def initialize(
         statsd.namespace = text(statsd_namespace)
     if statsd_constant_tags:
         statsd.constant_tags += statsd_constant_tags
+
+    if statsd_disable:
+        statsd.disable_statsd()
+    else:
+        statsd.enable_statsd()
 
     if statsd_disable_aggregation:
         statsd.disable_aggregation()
