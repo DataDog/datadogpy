@@ -1164,6 +1164,20 @@ async def print_foo():
             u'page.®views®:1|c\n',
             fake_socket.recv(2, no_wait=True)
         )
+
+    def test_statsd_disabled_dgram(self):
+        self._test_statsd_disabled(socket.SOCK_DGRAM)
+
+    def test_statsd_disabled_stream(self):
+        self._test_statsd_disabled(socket.SOCK_STREAM)
+
+    def _test_statsd_disabled(self, socket_kind):
+        dogstatsd = DogStatsd(disable_statsd=True, telemetry_min_flush_interval=0)
+        fake_socket = FakeSocket(socket_kind=socket_kind)
+        dogstatsd.socket = fake_socket
+        dogstatsd.increment('_test_statsd_disabled')
+        dogstatsd.flush()
+        self.assertIsNone(fake_socket.recv(no_wait=True))
     
     def test_aggregation_buffering_simultaneously_dgram(self):
         self._test_aggregation_buffering_simultaneously(socket.SOCK_DGRAM)

@@ -6,6 +6,7 @@
 
 ## Unreleased
 * [Fixed] Fix missing transport attribute when flushing telemetry.
+* [Added] Add ability to disable statsd via new `statsd_disable` parameter in `initialize`.
 
 ## v0.52.0 / 2025-07-08
 

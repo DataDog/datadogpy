@@ -158,6 +158,7 @@ class DogStatsd(object):
         port=DEFAULT_PORT,                      # type: int
         max_buffer_size=None,                   # type: None
         flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL,  # type: float
+        disable_statsd=False,                   # type: bool
         disable_aggregation=True,               # type: bool
         disable_buffering=True,                 # type: bool
         namespace=None,                         # type: Optional[Text]
@@ -249,6 +250,10 @@ class DogStatsd(object):
         wait before trying to flush the buffered metrics to the server. If set,
         it overrides the default value.
         :type flush_interval: float
+
+        :disable_statsd: Disable any statsd metric collection (default False).
+        Overridden by DD_DOGSTATSD_DISABLE enviroment variable.
+        :type disable_statsd: bool
 
         :disable_aggregation: If true, metrics (Count, Gauge, Set) are no longer aggregated by the client
         :type disable_aggregation: bool
@@ -396,10 +401,10 @@ class DogStatsd(object):
         telemetry_port = os.environ.get("DD_TELEMETRY_PORT", telemetry_port) or port
 
         # Check enabled
-        if os.environ.get("DD_DOGSTATSD_DISABLE") not in {"True", "true", "yes", "1"}:
-            self._enabled = True
-        else:
+        if os.environ.get("DD_DOGSTATSD_DISABLE", disable_statsd) in {True, "True", "true", "yes", "1"}:
             self._enabled = False
+        else:
+            self._enabled = True
 
         # Connection
         self._max_buffer_len = max_buffer_len
@@ -692,6 +697,12 @@ class DogStatsd(object):
             else:
                 self._send = self._send_to_buffer
                 self._start_flush_thread()
+
+    def disable_statsd(self):
+        self._enabled = False
+
+    def enable_statsd(self):
+        self._enabled = True
 
     def disable_aggregation(self):
         with self._config_lock:
