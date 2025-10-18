@@ -40,6 +40,15 @@ Here's an example where the statsd host and port are configured as well::
     )
 
 
+If statsd_host and statsd_port are left at their default values and no socket_path alternative is supplied, 
+the DD_DOGSTATSD_URL environment variable, if it exists, will be used to determine the connection
+information. This must be a URL that start with either `udp://` (to connect using UDP) or with `unix://` 
+(to use a Unix Domain Socket).
+
+* Example for UDP url: `DD_DOGSTATSD_URL=udp://localhost:8125`
+* Example for UDS: `DD_DOGSTATSD_URL=unix:///var/run/datadog/dsd.socket`
+
+
 .. autofunction:: datadog.initialize
 
 
