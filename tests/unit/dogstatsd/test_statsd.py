@@ -10,6 +10,7 @@ Tests for dogstatsd.py
 # Standard libraries
 from collections import deque
 from contextlib import closing
+import struct
 from threading import Thread
 import errno
 import os
@@ -41,12 +42,21 @@ class FakeSocket(object):
 
     FLUSH_GRACE_PERIOD = 0.2
 
-    def __init__(self, flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL):
+    def __init__(self, flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL, socket_kind=socket.SOCK_DGRAM, socket_path=None):
         self.payloads = deque()
 
         self._flush_interval = flush_interval
         self._flush_wait = False
+        self._socket_kind = socket_kind
         self.timeout = () # unit tuple = settimeout was not called
+
+        if socket_path:
+            self.family = socket.AF_UNIX
+        else:
+            self.family = socket.AF_INET
+
+    def sendall(self, payload):
+        self.send(payload)
 
     def send(self, payload):
         if is_p3k():
@@ -64,16 +74,28 @@ class FakeSocket(object):
                 time.sleep(self._flush_interval+self.FLUSH_GRACE_PERIOD)
             self._flush_wait = True
 
-        if count > len(self.payloads):
+        payload_len = len(self.payloads)
+        if self._socket_kind == socket.SOCK_STREAM:
+            if payload_len % 2 != 0 or count > (payload_len / 2):
+                return None
+        elif count > len(self.payloads):
             return None
 
         out = []
         for _ in range(count):
-            out.append(self.payloads.popleft().decode('utf-8'))
+            if self._socket_kind == socket.SOCK_DGRAM:
+                out.append(self.payloads.popleft().decode('utf-8'))
+            else:
+                length = struct.unpack('<I', self.payloads.popleft())[0]
+                pl = self.payloads.popleft()[:length].decode('utf-8')
+                out.append(pl)
         return '\n'.join(out)
 
     def close(self):
         pass
+
+    def getsockopt(self, *args):
+        return self._socket_kind
 
     def __repr__(self):
         return str(self.payloads)
@@ -269,6 +291,11 @@ class TestDogStatsd(unittest.TestCase):
         self.assertIsNone(statsd.host)
         self.assertIsNone(statsd.port)
 
+        # Add cardinality
+        options['cardinality'] = 'none'
+        initialize(**options)
+        self.assertEqual(statsd.cardinality, 'none')
+
     def test_dogstatsd_initialization_with_env_vars(self):
         """
         Dogstatsd can retrieve its config from env vars when
@@ -317,6 +344,10 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd._report('set', 's', 123, tags=None, sample_rate=None, timestamp=100)
         self.assert_equal_telemetry('set:123|s\n', self.recv(2))
 
+    def test_report_with_cardinality(self):
+        self.statsd._report('report', 'g', 123.4, tags=None, sample_rate=None, cardinality="orchestrator")
+        self.assert_equal_telemetry('report:123.4|g|card:orchestrator\n', self.recv(2))
+
     def test_gauge(self):
         self.statsd.gauge('gauge', 123.4)
         self.assert_equal_telemetry('gauge:123.4|g\n', self.recv(2))
@@ -324,6 +355,14 @@ class TestDogStatsd(unittest.TestCase):
     def test_gauge_with_ts(self):
         self.statsd.gauge_with_timestamp("gauge", 123.4, timestamp=1066)
         self.assert_equal_telemetry("gauge:123.4|g|T1066\n", self.recv(2))
+
+    def test_gauge_with_cardinality(self):
+        self.statsd.gauge('gauge', 123.4, cardinality="high")
+        self.assert_equal_telemetry('gauge:123.4|g|card:high\n', self.recv(2))
+
+        self.statsd._reset_telemetry()
+        self.statsd.gauge_with_timestamp("gauge", 123.4, timestamp=1066, cardinality="none")
+        self.assert_equal_telemetry("gauge:123.4|g|card:none|T1066\n", self.recv(2))
 
     def test_gauge_with_invalid_ts_should_be_ignored(self):
         self.statsd.gauge_with_timestamp("gauge", 123.4, timestamp=-500)
@@ -364,6 +403,16 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.flush()
         self.assert_equal_telemetry("page.views:11|c|T2121\n", self.recv(2))
 
+    def test_count_with_cardinality(self):
+        self.statsd.count('page.views', 11, cardinality="low")
+        self.statsd.flush()
+        self.assert_equal_telemetry('page.views:11|c|card:low\n', self.recv(2))
+
+        self.statsd._reset_telemetry()
+        self.statsd.count_with_timestamp("page.views", 11, timestamp=2121, cardinality="high")
+        self.statsd.flush()
+        self.assert_equal_telemetry("page.views:11|c|card:high|T2121\n", self.recv(2))
+
     def test_count_with_invalid_ts_should_be_ignored(self):
         self.statsd.count_with_timestamp("page.views", 1, timestamp=-1066)
         self.statsd.flush()
@@ -372,6 +421,10 @@ class TestDogStatsd(unittest.TestCase):
     def test_histogram(self):
         self.statsd.histogram('histo', 123.4)
         self.assert_equal_telemetry('histo:123.4|h\n', self.recv(2))
+
+    def test_histogram_with_cardinality(self):
+        self.statsd.histogram('histo', 123.4, cardinality="low")
+        self.assert_equal_telemetry('histo:123.4|h|card:low\n', self.recv(2))
 
     def test_pipe_in_tags(self):
         self.statsd.gauge('gt', 123.4, tags=['pipe|in:tag', 'red'])
@@ -451,8 +504,9 @@ class TestDogStatsd(unittest.TestCase):
             u'L1\nL2',
             priority='low',
             date_happened=1375296969,
+            cardinality="orchestrator",
         )
-        event2 = u'_e{5,6}:Title|L1\\nL2|d:1375296969|p:low\n'
+        event2 = u'_e{5,6}:Title|L1\\nL2|d:1375296969|p:low|card:orchestrator\n'
         self.assert_equal_telemetry(
             event2,
             self.recv(2),
@@ -564,8 +618,10 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.service_check(
             'my_check.name', self.statsd.WARNING,
             tags=['key1:val1', 'key2:val2'], timestamp=now,
-            hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪")
-        check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}'.format(self.statsd.WARNING, now, u'♬ †øU \\n†øU ¥ºu|m\\: T0µ ♪\n')
+            hostname='i-abcd1234', message=u"♬ †øU \n†øU ¥ºu|m: T0µ ♪",
+            cardinality="low",
+        )
+        check = u'_sc|my_check.name|{0}|d:{1}|h:i-abcd1234|#key1:val1,key2:val2|m:{2}|card:low\n'.format(self.statsd.WARNING, now, u'♬ †øU \\n†øU ¥ºu|m\\: T0µ ♪')
         self.assert_equal_telemetry(
             check,
             self.recv(2),
@@ -751,13 +807,22 @@ class TestDogStatsd(unittest.TestCase):
             MIN_SEND_BUFFER_SIZE,
         )
 
-    def test_socket_path_updates_telemetry(self):
+    def test_socket_updates_telemetry(self):
+        # Test UDP
         self.statsd.gauge("foo", 1)
         self.assert_equal_telemetry("foo:1|g\n", self.recv(2), transport="udp")
-        self.statsd.socket_path = "/fake/path"
+        
+        # Test UDS
+        self.statsd.socket = FakeSocket(socket_path="/fake/path")
         self.statsd._reset_telemetry()
         self.statsd.gauge("foo", 2)
         self.assert_equal_telemetry("foo:2|g\n", self.recv(2), transport="uds")
+
+        # Test UDS stream
+        self.statsd.socket = FakeSocket(socket_path="unixstream://fake/path", socket_kind=socket.SOCK_STREAM)
+        self.statsd._reset_telemetry()
+        self.statsd.gauge("foo", 2)
+        self.assert_equal_telemetry("foo:2|g\n", self.recv(2), transport="uds-stream")
 
     def test_distributed(self):
         """
@@ -1061,22 +1126,34 @@ async def print_foo():
                 telemetry=telemetry_metrics(metrics=2, bytes_sent=len(expected))
         )
 
-    def test_flush(self):
+    def test_flush_dgram(self):
+        self._test_flush(socket.SOCK_DGRAM)
+
+    def test_flush_stream(self):
+        self._test_flush(socket.SOCK_STREAM)
+
+    def _test_flush(self, socket_kind):
         dogstatsd = DogStatsd(disable_buffering=False, telemetry_min_flush_interval=0)
-        fake_socket = FakeSocket()
+        fake_socket = FakeSocket(socket_kind=socket_kind)
         dogstatsd.socket = fake_socket
 
-        dogstatsd.increment('page.views')
+        dogstatsd.increment(u'page.®views®')
         self.assertIsNone(fake_socket.recv(no_wait=True))
         dogstatsd.flush()
-        self.assert_equal_telemetry('page.views:1|c\n', fake_socket.recv(2))
+        self.assert_equal_telemetry(u'page.®views®:1|c\n', fake_socket.recv(2))
 
-    def test_flush_interval(self):
+    def test_flush_interval_dgram(self):
+        self._test_flush_interval(socket.SOCK_DGRAM)
+
+    def test_flush_interval_stream(self):
+        self._test_flush_interval(socket.SOCK_STREAM)
+
+    def _test_flush_interval(self, socket_kind):
         dogstatsd = DogStatsd(disable_buffering=False, flush_interval=1, telemetry_min_flush_interval=0)
-        fake_socket = FakeSocket()
+        fake_socket = FakeSocket(socket_kind=socket_kind)
         dogstatsd.socket = fake_socket
 
-        dogstatsd.increment('page.views')
+        dogstatsd.increment(u'page.®views®')
         self.assertIsNone(fake_socket.recv(no_wait=True))
 
         time.sleep(0.3)
@@ -1084,24 +1161,36 @@ async def print_foo():
 
         time.sleep(1)
         self.assert_equal_telemetry(
-            'page.views:1|c\n',
+            u'page.®views®:1|c\n',
             fake_socket.recv(2, no_wait=True)
         )
     
-    def test_aggregation_buffering_simultaneously(self):
+    def test_aggregation_buffering_simultaneously_dgram(self):
+        self._test_aggregation_buffering_simultaneously(socket.SOCK_DGRAM)
+
+    def test_aggregation_buffering_simultaneously_stream(self):
+        self._test_aggregation_buffering_simultaneously(socket.SOCK_STREAM)
+
+    def _test_aggregation_buffering_simultaneously(self, socket_kind):
         dogstatsd = DogStatsd(disable_buffering=False, disable_aggregation=False, telemetry_min_flush_interval=0)
-        fake_socket = FakeSocket()
+        fake_socket = FakeSocket(socket_kind=socket_kind)
         dogstatsd.socket = fake_socket
         for _ in range(10):
-            dogstatsd.increment('test.aggregation_and_buffering')
+            dogstatsd.increment(u'test.ÀggregÀtion_and_buffering')
         self.assertIsNone(fake_socket.recv(no_wait=True))
         dogstatsd.flush_aggregated_metrics()
         dogstatsd.flush()
-        self.assert_equal_telemetry('test.aggregation_and_buffering:10|c\n', fake_socket.recv(2))
+        self.assert_equal_telemetry(u'test.ÀggregÀtion_and_buffering:10|c\n', fake_socket.recv(2))
 
-    def test_aggregation_buffering_simultaneously_with_interval(self):
+    def test_aggregation_buffering_simultaneously_with_interval_dgram(self):
+        self._test_aggregation_buffering_simultaneously_with_interval(socket.SOCK_DGRAM)
+
+    def test_aggregation_buffering_simultaneously_with_interval_stream(self):
+        self._test_aggregation_buffering_simultaneously_with_interval(socket.SOCK_STREAM)
+    
+    def _test_aggregation_buffering_simultaneously_with_interval(self, socket_kind):
         dogstatsd = DogStatsd(disable_buffering=False, disable_aggregation=False, flush_interval=1, telemetry_min_flush_interval=0)
-        fake_socket = FakeSocket()
+        fake_socket = FakeSocket(socket_kind=socket_kind)
         dogstatsd.socket = fake_socket
         for _ in range(10):
             dogstatsd.increment('test.aggregation_and_buffering_with_interval')
@@ -1185,12 +1274,18 @@ async def print_foo():
             )
         )
 
-    def test_batching_runtime_changes(self):
+    def test_batching_runtime_changes_dgram(self):
+        self._test_batching_runtime_changes(socket.SOCK_DGRAM)
+
+    def test_batching_runtime_changes_stream(self):
+        self._test_batching_runtime_changes(socket.SOCK_STREAM)
+
+    def _test_batching_runtime_changes(self, socket_kind):
         dogstatsd = DogStatsd(
             disable_buffering=True,
             telemetry_min_flush_interval=0
         )
-        dogstatsd.socket = FakeSocket()
+        dogstatsd.socket = FakeSocket(socket_kind=socket_kind)
 
         # Send some unbuffered metrics and verify we got it immediately
         last_telemetry_size = self.send_and_assert(
@@ -1848,7 +1943,7 @@ async def print_foo():
             flush_interval=10000,
             disable_telemetry=True,
         )
-        dogstatsd.socket = FakeSocket()
+        dogstatsd.socket = FakeSocket(socket_path=dogstatsd.socket_path)
 
         for _ in range(10000):
             dogstatsd.increment('val')
@@ -2054,7 +2149,13 @@ async def print_foo():
     def test_max_payload_size(self):
         statsd = DogStatsd(socket_path=None, port=8125)
         self.assertEqual(statsd._max_payload_size, UDP_OPTIMAL_PAYLOAD_LENGTH)
-        statsd.socket_path = "/foo"
+
+        test_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        statsd.socket = test_socket
+        self.assertEqual(statsd._max_payload_size, UDP_OPTIMAL_PAYLOAD_LENGTH)
+
+        test_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+        statsd.socket = test_socket
         self.assertEqual(statsd._max_payload_size, UDS_OPTIMAL_PAYLOAD_LENGTH)
 
     def test_post_fork_locks(self):
@@ -2069,3 +2170,43 @@ async def print_foo():
         t.start()
         t.join(timeout=5)
         self.assertFalse(t.is_alive())
+
+    def test_fake_sockets(self):
+        """
+        To support legacy behavior wherein customers were able to set sockets directly as long as they supported a .send interface, 
+        ensure that arbitrary values passed to these properties are allowed and are handled correctly
+        """
+        statsd = DogStatsd(disable_buffering=True)
+
+        class fakeSock:
+            def __init__(self, id):
+                self.id = id
+            def send(self, _):
+                pass
+        statsd.socket = fakeSock(5)
+        statsd.telemetry_socket = fakeSock(10)
+
+        assert statsd.socket.id == 5
+        assert statsd.telemetry_socket.id == 10
+
+        statsd.increment("test", 1)
+
+        assert statsd.socket is not None
+
+    def test_transport_attribute_present_on_connection_error(self):
+        """
+        Ensure `_transport` attribute is present for telemetry even if the socket is None.
+        """
+        # This test will fail with an AttributeError before the fix.
+        # Use a non-resolvable host to trigger a connection error.
+        statsd = DogStatsd(
+            host='non.existent.host.datadog.internal',
+            telemetry_min_flush_interval=0  # Flush telemetry immediately
+        )
+
+        # This call will attempt to send a metric, fail to create a socket,
+        # and then attempt to send telemetry, which requires `_transport`.
+        statsd.gauge('test.metric', 1)
+
+        assert statsd.socket is None
+        assert statsd._transport is not None

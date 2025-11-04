@@ -13,6 +13,7 @@ import logging
 import os
 import socket
 import errno
+import struct
 import threading
 import time
 from threading import Lock, RLock
@@ -39,7 +40,7 @@ from datadog.dogstatsd.context import (
 from datadog.dogstatsd.route import get_default_route
 from datadog.dogstatsd.container import Cgroup
 from datadog.util.compat import is_p3k, text
-from datadog.util.format import normalize_tags
+from datadog.util.format import normalize_tags, validate_cardinality
 from datadog.version import __version__
 
 # Logging
@@ -48,6 +49,11 @@ log = logging.getLogger("datadog.dogstatsd")
 # Default config
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 8125
+
+# Socket prefixes
+UNIX_ADDRESS_SCHEME = "unix://"
+UNIX_ADDRESS_DATAGRAM_SCHEME = "unixgram://"
+UNIX_ADDRESS_STREAM_SCHEME = "unixstream://"
 
 # Buffering-related values (in seconds)
 DEFAULT_BUFFERING_FLUSH_INTERVAL = 0.3
@@ -140,6 +146,12 @@ if SUPPORTS_FORKING:
 class DogStatsd(object):
     OK, WARNING, CRITICAL, UNKNOWN = (0, 1, 2, 3)
 
+    # Cardinality
+    CARDINALITY_NONE = "none"
+    CARDINALITY_LOW = "low"
+    CARDINALITY_ORCHESTRATOR = "orchestrator"
+    CARDINALITY_HIGH = "high"
+
     def __init__(
         self,
         host=DEFAULT_HOST,                      # type: Text
@@ -163,6 +175,7 @@ class DogStatsd(object):
         max_metric_samples_per_context=0,       # type: int
         container_id=None,                      # type: Optional[Text]
         origin_detection_enabled=True,          # type: bool
+        cardinality=None,                       # type: Optional[Text]
         socket_timeout=0,                       # type: Optional[float]
         telemetry_socket_timeout=0,             # type: Optional[float]
         disable_background_sender=True,         # type: bool
@@ -313,6 +326,14 @@ class DogStatsd(object):
         More on this: https://docs.datadoghq.com/developers/dogstatsd/?tab=kubernetes#origin-detection-over-udp
         :type origin_detection_enabled: boolean
 
+        :param cardinality: Set the cardinality of the client. Optional.
+        This feature requires Datadog Agent version >=7.64.0.
+        When configured, the provided cardinality is sent to the Agent to enrich the metrics with
+        specific cardinality tags from Origin Detection.
+        Default: None.
+        More on this: https://docs.datadoghq.com/containers/kubernetes/tag/?tab=datadogoperator#out-of-the-box-tags
+        :type cardinality: string
+
         :param socket_timeout: Set timeout for socket operations, in seconds. Optional.
         If sets to zero, never wait if operation can not be completed immediately. If set to None, wait forever.
         This option does not affect hostname resolution when using UDP.
@@ -419,8 +440,9 @@ class DogStatsd(object):
         if namespace is not None:
             namespace = text(namespace)
         self.namespace = namespace
-        self.use_ms = use_ms
+        self.use_ms = use_ms  # type: bool
         self.default_sample_rate = default_sample_rate
+        self.cardinality = cardinality
 
         # Origin detection
         self._container_id = None
@@ -456,7 +478,7 @@ class DogStatsd(object):
         self._flush_interval = flush_interval
         self._flush_thread = None
         self._flush_thread_stop = threading.Event()
-        self.aggregator = Aggregator(max_metric_samples_per_context)
+        self.aggregator = Aggregator(max_metric_samples_per_context, self.cardinality)
         # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
         self._forking = False
 
@@ -488,12 +510,48 @@ class DogStatsd(object):
     def socket_path(self, path):
         with self._socket_lock:
             self._socket_path = path
-            if path is None:
-                self._transport = "udp"
-                self._max_payload_size = self._max_buffer_len or UDP_OPTIMAL_PAYLOAD_LENGTH
-            else:
-                self._transport = "uds"
-                self._max_payload_size = self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH
+
+    @property
+    def socket(self):
+        return self._socket
+
+    @socket.setter
+    def socket(self, new_socket):
+        self._socket = new_socket
+        if new_socket:
+            try:
+                self._socket_kind = new_socket.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
+                if new_socket.family == socket.AF_UNIX:
+                    if self._socket_kind == socket.SOCK_STREAM:
+                        self._transport = "uds-stream"
+                    else:
+                        self._transport = "uds"
+                    self._max_payload_size = self._max_buffer_len or UDS_OPTIMAL_PAYLOAD_LENGTH
+                else:
+                    self._transport = "udp"
+                    self._max_payload_size = self._max_buffer_len or UDP_OPTIMAL_PAYLOAD_LENGTH
+                return
+            except AttributeError:  # _socket can't have a type if it doesn't have sockopts
+                log.info("Unexpected socket provided with no support for getsockopt")
+        self._socket_kind = None
+        self._transport = "udp"
+        # When the socket is None, we use the UDP optimal payload length
+        self._max_payload_size = UDP_OPTIMAL_PAYLOAD_LENGTH
+
+    @property
+    def telemetry_socket(self):
+        return self._telemetry_socket
+
+    @telemetry_socket.setter
+    def telemetry_socket(self, t_socket):
+        self._telemetry_socket = t_socket
+        if t_socket:
+            try:
+                self._telemetry_socket_kind = t_socket.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
+                return
+            except AttributeError:  # _telemetry_socket can't have a kind if it doesn't have sockopts
+                log.info("Unexpected telemetry socket provided with no support for getsockopt")
+        self._telemetry_socket_kind = None
 
     def enable_background_sender(self, sender_queue_size=0, sender_queue_timeout=0):
         """
@@ -738,11 +796,37 @@ class DogStatsd(object):
 
     @classmethod
     def _get_uds_socket(cls, socket_path, timeout):
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-        sock.settimeout(timeout)
-        cls._ensure_min_send_buffer_size(sock)
-        sock.connect(socket_path)
-        return sock
+        valid_socket_kinds = [socket.SOCK_DGRAM, socket.SOCK_STREAM]
+        if socket_path.startswith(UNIX_ADDRESS_DATAGRAM_SCHEME):
+            valid_socket_kinds = [socket.SOCK_DGRAM]
+            socket_path = socket_path[len(UNIX_ADDRESS_DATAGRAM_SCHEME):]
+        elif socket_path.startswith(UNIX_ADDRESS_STREAM_SCHEME):
+            valid_socket_kinds = [socket.SOCK_STREAM]
+            socket_path = socket_path[len(UNIX_ADDRESS_STREAM_SCHEME):]
+        elif socket_path.startswith(UNIX_ADDRESS_SCHEME):
+            socket_path = socket_path[len(UNIX_ADDRESS_SCHEME):]
+
+        last_error = ValueError("Invalid socket path")
+        for socket_kind in valid_socket_kinds:
+            # py2 stores socket kinds differently than py3, determine the name independently from version
+            sk_name = {socket.SOCK_STREAM: "stream", socket.SOCK_DGRAM: "datagram"}[socket_kind]
+
+            try:
+                sock = socket.socket(socket.AF_UNIX, socket_kind)
+                sock.settimeout(timeout)
+                cls._ensure_min_send_buffer_size(sock)
+                sock.connect(socket_path)
+                log.debug("Connected to socket %s with kind %s", socket_path, sk_name)
+                return sock
+            except Exception as e:
+                if sock is not None:
+                    sock.close()
+                log.debug("Failed to connect to %s with kind %s: %s", socket_path, sk_name, e)
+                if e.errno == errno.EPROTOTYPE:
+                    last_error = e
+                    continue
+                raise e
+        raise last_error
 
     @classmethod
     def _get_udp_socket(cls, host, port, timeout):
@@ -831,7 +915,7 @@ class DogStatsd(object):
         """
         metrics = self.aggregator.flush_aggregated_metrics()
         for m in metrics:
-            self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp)
+            self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp, cardinality=m.cardinality)
 
         sampled_metrics = self.aggregator.flush_aggregated_sampled_metrics()
         for m in sampled_metrics:
@@ -843,6 +927,7 @@ class DogStatsd(object):
         value,  # type: float
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
+        cardinality=None,  # type: Optional[str]
     ):  # type(...) -> None
         """
         Record the value of a gauge, optionally setting a list of tags and a
@@ -852,9 +937,9 @@ class DogStatsd(object):
         >>> statsd.gauge("active.connections", 1001, tags=["protocol:http"])
         """
         if self._disable_aggregation:
-            self._report(metric, "g", value, tags, sample_rate)
+            self._report(metric, "g", value, tags, sample_rate, cardinality=cardinality)
         else:
-            self.aggregator.gauge(metric, value, tags, sample_rate)
+            self.aggregator.gauge(metric, value, tags, sample_rate, cardinality=cardinality)
 
     # Minimum Datadog Agent version: 7.40.0
     def gauge_with_timestamp(
@@ -864,6 +949,7 @@ class DogStatsd(object):
         timestamp,  # type: int
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
+        cardinality=None,  # type: Optional[str]
     ):  # type(...) -> None
         """u
         Record the value of a gauge with a Unix timestamp (in seconds),
@@ -875,9 +961,9 @@ class DogStatsd(object):
         >>> statsd.gauge("active.connections", 1001, 1713804588, tags=["protocol:http"])
         """
         if self._disable_aggregation:
-            self._report(metric, "g", value, tags, sample_rate, timestamp)
+            self._report(metric, "g", value, tags, sample_rate, timestamp, cardinality=cardinality)
         else:
-            self.aggregator.gauge(metric, value, tags, sample_rate, timestamp)
+            self.aggregator.gauge(metric, value, tags, sample_rate, timestamp, cardinality=cardinality)
 
     def count(
         self,
@@ -885,6 +971,7 @@ class DogStatsd(object):
         value,  # type: float
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
+        cardinality=None,  # type: Optional[str]
     ):  # type(...) -> None
         """
         Count tracks how many times something happened per second, tags and a sample
@@ -893,9 +980,9 @@ class DogStatsd(object):
         >>> statsd.count("page.views", 123)
         """
         if self._disable_aggregation:
-            self._report(metric, "c", value, tags, sample_rate)
+            self._report(metric, "c", value, tags, sample_rate, cardinality=cardinality)
         else:
-            self.aggregator.count(metric, value, tags, sample_rate)
+            self.aggregator.count(metric, value, tags, sample_rate, cardinality=cardinality)
 
     # Minimum Datadog Agent version: 7.40.0
     def count_with_timestamp(
@@ -905,6 +992,7 @@ class DogStatsd(object):
         timestamp=0,  # type: int
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
+        cardinality=None,  # type: Optional[str]
     ):  # type(...) -> None
         """
         Count how many times something happened at a given Unix timestamp in seconds,
@@ -915,9 +1003,9 @@ class DogStatsd(object):
         >>> statsd.count("files.transferred", 124, timestamp=1713804588)
         """
         if self._disable_aggregation:
-            self._report(metric, "c", value, tags, sample_rate, timestamp)
+            self._report(metric, "c", value, tags, sample_rate, timestamp, cardinality=cardinality)
         else:
-            self.aggregator.count(metric, value, tags, sample_rate, timestamp)
+            self.aggregator.count(metric, value, tags, sample_rate, timestamp, cardinality=cardinality)
 
     def increment(
         self,
@@ -925,6 +1013,7 @@ class DogStatsd(object):
         value=1,  # type: float
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
+        cardinality=None,  # type: Optional[str]
     ):  # type(...) -> None
         """
         Increment a counter, optionally setting a value, tags and a sample
@@ -934,9 +1023,9 @@ class DogStatsd(object):
         >>> statsd.increment("files.transferred", 124)
         """
         if self._disable_aggregation:
-            self._report(metric, "c", value, tags, sample_rate)
+            self._report(metric, "c", value, tags, sample_rate, cardinality=cardinality)
         else:
-            self.aggregator.count(metric, value, tags, sample_rate)
+            self.aggregator.count(metric, value, tags, sample_rate, cardinality=cardinality)
 
     def decrement(
         self,
@@ -944,6 +1033,7 @@ class DogStatsd(object):
         value=1,  # type: float
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
+        cardinality=None,  # type: Optional[str]
     ):  # type(...) -> None
         """
         Decrement a counter, optionally setting a value, tags and a sample
@@ -954,9 +1044,9 @@ class DogStatsd(object):
         """
         metric_value = -value if value else value
         if self._disable_aggregation:
-            self._report(metric, "c", metric_value, tags, sample_rate)
+            self._report(metric, "c", metric_value, tags, sample_rate, cardinality=cardinality)
         else:
-            self.aggregator.count(metric, metric_value, tags, sample_rate)
+            self.aggregator.count(metric, metric_value, tags, sample_rate, cardinality=cardinality)
 
     def histogram(
         self,
@@ -964,6 +1054,7 @@ class DogStatsd(object):
         value,  # type: float
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
+        cardinality=None,  # type: Optional[str]
     ):  # type(...) -> None
         """
         Sample a histogram value, optionally setting tags and a sample rate.
@@ -972,9 +1063,9 @@ class DogStatsd(object):
         >>> statsd.histogram("album.photo.count", 26, tags=["gender:female"])
         """
         if not self._disable_aggregation and self.aggregator.max_samples_per_context != 0:
-            self.aggregator.histogram(metric, value, tags, sample_rate)
+            self.aggregator.histogram(metric, value, tags, sample_rate, cardinality=cardinality)
         else:
-            self._report(metric, "h", value, tags, sample_rate)
+            self._report(metric, "h", value, tags, sample_rate, cardinality=cardinality)
 
     def distribution(
         self,
@@ -982,6 +1073,7 @@ class DogStatsd(object):
         value,  # type: float
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
+        cardinality=None,  # type: Optional[str]
     ):  # type(...) -> None
         """
         Send a global distribution value, optionally setting tags and a sample rate.
@@ -990,9 +1082,9 @@ class DogStatsd(object):
         >>> statsd.distribution("album.photo.count", 26, tags=["gender:female"])
         """
         if not self._disable_aggregation and self.aggregator.max_samples_per_context != 0:
-            self.aggregator.distribution(metric, value, tags, sample_rate)
+            self.aggregator.distribution(metric, value, tags, sample_rate, cardinality=cardinality)
         else:
-            self._report(metric, "d", value, tags, sample_rate)
+            self._report(metric, "d", value, tags, sample_rate, cardinality=cardinality)
 
     def timing(
         self,
@@ -1000,6 +1092,7 @@ class DogStatsd(object):
         value,  # type: float
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
+        cardinality=None,  # type: Optional[str]
     ):  # type(...) -> None
         """
         Record a timing, optionally setting tags and a sample rate.
@@ -1007,11 +1100,17 @@ class DogStatsd(object):
         >>> statsd.timing("query.response.time", 1234)
         """
         if not self._disable_aggregation and self.aggregator.max_samples_per_context != 0:
-            self.aggregator.timing(metric, value, tags, sample_rate)
+            self.aggregator.timing(metric, value, tags, sample_rate, cardinality=cardinality)
         else:
-            self._report(metric, "ms", value, tags, sample_rate)
+            self._report(metric, "ms", value, tags, sample_rate, cardinality=cardinality)
 
-    def timed(self, metric=None, tags=None, sample_rate=None, use_ms=None):
+    def timed(
+        self,
+        metric=None,  # type: Optional[Text]
+        tags=None,  # type: Optional[List[str]]
+        sample_rate=None,  # type: Optional[float]
+        use_ms=None,  # type: Optional[bool]
+    ):  # type(...) -> TimedContextManagerDecorator
         """
         A decorator or context manager that will measure the distribution of a
         function's/context's run time. Optionally specify a list of tags or a
@@ -1067,16 +1166,16 @@ class DogStatsd(object):
         """
         return DistributedContextManagerDecorator(self, metric, tags, sample_rate, use_ms)
 
-    def set(self, metric, value, tags=None, sample_rate=None):
+    def set(self, metric, value, tags=None, sample_rate=None, cardinality=None):
         """
         Sample a set value.
 
         >>> statsd.set("visitors.uniques", 999)
         """
         if self._disable_aggregation:
-            self._report(metric, "s", value, tags, sample_rate)
+            self._report(metric, "s", value, tags, sample_rate, cardinality=cardinality)
         else:
-            self.aggregator.set(metric, value, tags, sample_rate)
+            self.aggregator.set(metric, value, tags, sample_rate, cardinality=cardinality)
 
     def close_socket(self):
         """
@@ -1098,10 +1197,10 @@ class DogStatsd(object):
                 self.telemetry_socket = None
 
     def _serialize_metric(
-        self, metric, metric_type, value, tags, sample_rate=1, timestamp=0
+        self, metric, metric_type, value, tags, sample_rate=1, timestamp=0, cardinality=None
     ):
         # Create/format the metric packet
-        return "%s%s:%s|%s%s%s%s%s%s" % (
+        return "%s%s:%s|%s%s%s%s%s%s%s" % (
             (self.namespace + ".") if self.namespace else "",
             metric,
             value,
@@ -1110,10 +1209,11 @@ class DogStatsd(object):
             ("|#" + ",".join(normalize_tags(tags))) if tags else "",
             ("|c:" + self._container_id if self._container_id else ""),
             ("|e:" + self._external_data if self._external_data else ""),
+            ("|card:" + cardinality if cardinality else ""),
             ("|T" + text(timestamp)) if timestamp > 0 else "",
         )
 
-    def _report(self, metric, metric_type, value, tags, sample_rate, timestamp=0, sampling=True):
+    def _report(self, metric, metric_type, value, tags, sample_rate, timestamp=0, sampling=True, cardinality=None):
         """
         Create a metric packet and send it.
 
@@ -1141,10 +1241,15 @@ class DogStatsd(object):
         if not allows_timestamp or timestamp < 0:
             timestamp = 0
 
+        if cardinality is None:
+            cardinality = self.cardinality
+
+        validate_cardinality(cardinality)
+
         # Resolve the full tag list
         tags = self._add_constant_tags(tags)
         payload = self._serialize_metric(
-            metric, metric_type, value, tags, sample_rate, timestamp
+            metric, metric_type, value, tags, sample_rate, timestamp, cardinality
         )
 
         # Send it
@@ -1237,14 +1342,23 @@ class DogStatsd(object):
                 self.packets_dropped_writer += 1
 
     def _xmit_packet(self, packet, is_telemetry):
+        socket_kind = None
         try:
             if is_telemetry and self._dedicated_telemetry_destination():
                 mysocket = self.telemetry_socket or self.get_socket(telemetry=True)
+                socket_kind = self._telemetry_socket_kind
             else:
                 # If set, use socket directly
                 mysocket = self.socket or self.get_socket()
+                socket_kind = self._socket_kind
 
-            mysocket.send(packet.encode(self.encoding))
+            encoded_packet = packet.encode(self.encoding)
+            if socket_kind == socket.SOCK_STREAM:
+                with self._socket_lock:
+                    mysocket.sendall(struct.pack('<I', len(encoded_packet)))
+                    mysocket.sendall(encoded_packet)
+            else:
+                mysocket.send(encoded_packet)
 
             if not is_telemetry and self._telemetry:
                 self.packets_sent += 1
@@ -1277,12 +1391,18 @@ class DogStatsd(object):
                 )
                 self.close_socket()
         except Exception as exc:
-            print("Unexpected error: %s", exc)
+            print("Unexpected error: ", exc)
             log.error("Unexpected error: %s", str(exc))
 
         if not is_telemetry and self._telemetry:
             self.bytes_dropped_writer += len(packet)
             self.packets_dropped_writer += 1
+
+        # if in stream mode we need to shut down the socket; we can't recover from a
+        # partial send
+        if socket_kind == socket.SOCK_STREAM:
+            log.debug("Confirming socket closure after error streaming")
+            self.close_socket()
 
         return False
 
@@ -1320,6 +1440,7 @@ class DogStatsd(object):
         priority=None,
         tags=None,
         hostname=None,
+        cardinality=None,
     ):
         """
         Send an event. Attributes are the same as the Event API.
@@ -1348,6 +1469,11 @@ class DogStatsd(object):
             message,
         )
 
+        if cardinality is None:
+            cardinality = self.cardinality
+
+        validate_cardinality(cardinality)
+
         if date_happened:
             string = "%s|d:%d" % (string, date_happened)
         if hostname:
@@ -1364,6 +1490,8 @@ class DogStatsd(object):
             string = "%s|#%s" % (string, ",".join(tags))
         if self._container_id:
             string = "%s|c:%s" % (string, self._container_id)
+        if cardinality:
+            string = "%s|card:%s" % (string, cardinality)
 
         if len(string) > 8 * 1024:
             raise ValueError(
@@ -1383,6 +1511,7 @@ class DogStatsd(object):
         status,
         tags=None,
         timestamp=None,
+        cardinality=None,
         hostname=None,
         message=None,
     ):
@@ -1398,6 +1527,11 @@ class DogStatsd(object):
         # Append all client level tags to every status check
         tags = self._add_constant_tags(tags)
 
+        if cardinality is None:
+            cardinality = self.cardinality
+
+        validate_cardinality(cardinality)
+
         if timestamp:
             string = u"{0}|d:{1}".format(string, timestamp)
         if hostname:
@@ -1408,6 +1542,8 @@ class DogStatsd(object):
             string = u"{0}|m:{1}".format(string, message)
         if self._container_id:
             string = u"{0}|c:{1}".format(string, self._container_id)
+        if cardinality:
+            string = u"{0}|card:{1}".format(string, cardinality)
 
         if self._telemetry:
             self.service_checks_count += 1
