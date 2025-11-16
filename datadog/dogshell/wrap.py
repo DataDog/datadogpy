@@ -5,7 +5,7 @@
 
 Wraps shell commands and sends the result to Datadog as events. Ex:
 
-dogwrap -n test-job -k $API_KEY --submit_mode all "ls -lah"
+dogwrap -n test-job -k $API_KEY --submit_mode=all "ls -lah"
 
 Note that you need to enclose your command in quotes to prevent python
 from thinking the command line arguments belong to the python command
@@ -13,7 +13,7 @@ instead of the wrapped command.
 
 You can also have the script only send events if they fail:
 
-dogwrap -n test-job -k $API_KEY --submit_mode errors "ls -lah"
+dogwrap -n test-job -k $API_KEY --submit_mode=errors "ls -lah"
 
 And you can give the command a timeout too:
 
@@ -254,7 +254,7 @@ def parse_options(raw_args=None):
     Parse the raw command line options into an options object and the remaining command string
     """
     parser = optparse.OptionParser(
-        usage='%prog -n [event_name] -k [api_key] --submit_mode \
+        usage='%prog -n [event_name] -k [api_key] --submit_mode=\
 [ all | errors | warnings] [options] "command". \n\nNote that you need to enclose your command in \
 quotes to prevent python executing as soon as there is a space in your command. \n \nNOTICE: In \
 normal mode, the whole stderr is printed before stdout, in flush_live mode they will be mixed but \
