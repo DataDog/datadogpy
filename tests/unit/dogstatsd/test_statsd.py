@@ -442,6 +442,10 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.histogram('h', 1, tags=['red'])
         self.assert_equal_telemetry('h:1|h|#red\n', self.recv(2))
 
+    def test_dict_tagged(self):
+        self.statsd.increment('dct', tags={'country': 'españa'})
+        self.assert_equal_telemetry('dct:1|c|#country:españa\n', self.recv(2))
+
     def test_sample_rate(self):
         # Disabling telemetry since sample_rate imply randomness
         self.statsd._telemetry = False
