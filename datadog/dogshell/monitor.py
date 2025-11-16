@@ -167,6 +167,10 @@ class MonitorClient(object):
         validate_parser.add_argument("--options", help="json options for the monitor", default=None)
         validate_parser.set_defaults(func=cls._validate)
 
+        file_validate_parser = verb_parsers.add_parser("fvalidate", help="Validate monitor from file")
+        file_validate_parser.add_argument("file", help="json file holding all details", type=argparse.FileType("r"))
+        file_validate_parser.set_defaults(func=cls._file_validate)
+
     @classmethod
     def _post(cls, args):
         api._timeout = args.timeout
@@ -466,6 +470,36 @@ class MonitorClient(object):
             restricted_roles=restricted_roles,
             options=options
         )
+        # report_warnings(res)
+        # report_errors(res)
+        if format == "pretty":
+            print(pretty_json(res))
+        else:
+            print(json.dumps(res))
+
+    @classmethod
+    def _file_validate(cls, args):
+        api._timeout = args.timeout
+        format = args.format
+        monitor = json.load(args.file)
+        body = {
+            "type": monitor["type"],
+            "query": monitor["query"],
+            "name": monitor["name"],
+            "message": monitor["message"],
+            "options": monitor["options"]
+        }
+        restricted_roles = monitor.get("restricted_roles", None)
+        if restricted_roles:
+            body["restricted_roles"] = restricted_roles
+        tags = monitor.get("tags", None)
+        if tags:
+            body["tags"] = tags
+        priority = monitor.get("priority", None)
+        if priority:
+            body["priority"] = priority
+
+        res = api.Monitor.validate(**body)
         # report_warnings(res)
         # report_errors(res)
         if format == "pretty":
