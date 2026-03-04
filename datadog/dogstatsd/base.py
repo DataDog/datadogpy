@@ -553,6 +553,40 @@ class DogStatsd(object):
                 log.info("Unexpected telemetry socket provided with no support for getsockopt")
         self._telemetry_socket_kind = None
 
+    @property
+    def namespace(self):
+        # type: () -> Optional[Text]
+        return self._namespace
+
+    @namespace.setter
+    def namespace(self, value):
+        # type: (Optional[Text]) -> None
+        self._namespace = value
+        self._namespace_prefix = value + "." if value else ""
+
+    @property
+    def constant_tags(self):
+        # type: () -> List[str]
+        return self._constant_tags
+
+    @constant_tags.setter
+    def constant_tags(self, value):
+        # type: (List[str]) -> None
+        self._constant_tags = value
+        self._constant_tags_cache_key = None
+        self._normalized_constant_tags_str = ""
+
+    def _get_normalized_constant_tags_str(self):
+        # type: () -> str
+        ct = self._constant_tags
+        if not ct:
+            return ""
+        ct_key = tuple(ct)
+        if ct_key != self._constant_tags_cache_key:
+            self._normalized_constant_tags_str = ",".join(normalize_tags(ct))
+            self._constant_tags_cache_key = ct_key
+        return self._normalized_constant_tags_str
+
     def enable_background_sender(self, sender_queue_size=0, sender_queue_timeout=0):
         """
         Use a background thread to communicate with the dogstatsd server.
@@ -906,7 +940,7 @@ class DogStatsd(object):
         with self._buffer_lock:
             # Only send packets if there are packets to send
             if self._buffer:
-                self._send_to_server("\n".join(self._buffer))
+                self._send_to_server("".join(self._buffer))
                 self._reset_buffer()
 
     def flush_aggregated_metrics(self):
@@ -1199,19 +1233,42 @@ class DogStatsd(object):
     def _serialize_metric(
         self, metric, metric_type, value, tags, sample_rate=1, timestamp=0, cardinality=None
     ):
-        # Create/format the metric packet
-        return "%s%s:%s|%s%s%s%s%s%s%s" % (
-            (self.namespace + ".") if self.namespace else "",
-            metric,
-            value,
-            metric_type,
-            ("|@" + text(sample_rate)) if sample_rate != 1 else "",
-            ("|#" + ",".join(normalize_tags(tags))) if tags else "",
-            ("|c:" + self._container_id if self._container_id else ""),
-            ("|e:" + self._external_data if self._external_data else ""),
-            ("|card:" + cardinality if cardinality else ""),
-            ("|T" + text(timestamp)) if timestamp > 0 else "",
-        )
+        parts = [self._namespace_prefix, metric, ":", text(value), "|", metric_type]
+
+        if sample_rate != 1:
+            parts.append("|@")
+            parts.append(text(sample_rate))
+
+        constant_tags_str = self._get_normalized_constant_tags_str()
+
+        if tags:
+            parts.append("|#")
+            parts.append(",".join(normalize_tags(tags)))
+            if constant_tags_str:
+                parts.append(",")
+                parts.append(constant_tags_str)
+        elif constant_tags_str:
+            parts.append("|#")
+            parts.append(constant_tags_str)
+
+        if self._container_id:
+            parts.append("|c:")
+            parts.append(self._container_id)
+
+        if self._external_data:
+            parts.append("|e:")
+            parts.append(self._external_data)
+
+        if cardinality:
+            parts.append("|card:")
+            parts.append(cardinality)
+
+        if timestamp > 0:
+            parts.append("|T")
+            parts.append(text(timestamp))
+
+        parts.append("\n")
+        return "".join(parts)
 
     def _report(self, metric, metric_type, value, tags, sample_rate, timestamp=0, sampling=True, cardinality=None):
         """
@@ -1246,8 +1303,6 @@ class DogStatsd(object):
 
         validate_cardinality(cardinality)
 
-        # Resolve the full tag list
-        tags = self._add_constant_tags(tags)
         payload = self._serialize_metric(
             metric, metric_type, value, tags, sample_rate, timestamp, cardinality
         )
@@ -1318,13 +1373,13 @@ class DogStatsd(object):
             with self._buffer_lock:
                 if self._queue is not None:
                     try:
-                        self._queue.put(packet + '\n', self._queue_blocking, self._queue_timeout)
+                        self._queue.put(packet, self._queue_blocking, self._queue_timeout)
                     except queue.Full:
                         self.packets_dropped_queue += 1
                         self.bytes_dropped_queue += 1
                     return
 
-        self._xmit_packet_with_telemetry(packet + '\n')
+        self._xmit_packet_with_telemetry(packet)
 
     def _xmit_packet_with_telemetry(self, packet):
         self._xmit_packet(packet, False)
@@ -1412,12 +1467,10 @@ class DogStatsd(object):
                 self.flush_buffered_metrics()
 
             self._buffer.append(packet)
-            # Update the current buffer length, including line break to anticipate
-            # the final packet size
-            self._current_buffer_total_size += len(packet) + 1
+            self._current_buffer_total_size += len(packet)
 
     def _should_flush(self, length_to_be_added):
-        if self._current_buffer_total_size + length_to_be_added + 1 > self._max_payload_size:
+        if self._current_buffer_total_size + length_to_be_added > self._max_payload_size:
             return True
         return False
 
@@ -1503,7 +1556,7 @@ class DogStatsd(object):
         if self._telemetry:
             self.events_count += 1
 
-        self._send(string)
+        self._send(string + "\n")
 
     def service_check(
         self,
@@ -1548,7 +1601,7 @@ class DogStatsd(object):
         if self._telemetry:
             self.service_checks_count += 1
 
-        self._send(string)
+        self._send(string + "\n")
 
     def _add_constant_tags(self, tags):
         if self.constant_tags:
