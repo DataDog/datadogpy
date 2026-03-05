@@ -1200,18 +1200,33 @@ class DogStatsd(object):
         self, metric, metric_type, value, tags, sample_rate=1, timestamp=0, cardinality=None
     ):
         # Create/format the metric packet
-        return "%s%s:%s|%s%s%s%s%s%s%s" % (
-            (self.namespace + ".") if self.namespace else "",
-            metric,
-            value,
-            metric_type,
-            ("|@" + text(sample_rate)) if sample_rate != 1 else "",
-            ("|#" + ",".join(normalize_tags(tags))) if tags else "",
-            ("|c:" + self._container_id if self._container_id else ""),
-            ("|e:" + self._external_data if self._external_data else ""),
-            ("|card:" + cardinality if cardinality else ""),
-            ("|T" + text(timestamp)) if timestamp > 0 else "",
-        )
+        parts = [(self.namespace + ".") if self.namespace else "", metric, ":", text(value), "|", metric_type]
+
+        if sample_rate != 1:
+            parts.append("|@")
+            parts.append(text(sample_rate))
+
+        if tags:
+            parts.append("|#")
+            parts.append(",".join(normalize_tags(tags)))
+
+        if self._container_id:
+            parts.append("|c:")
+            parts.append(self._container_id)
+
+        if self._external_data:
+            parts.append("|e:")
+            parts.append(self._external_data)
+
+        if cardinality:
+            parts.append("|card:")
+            parts.append(cardinality)
+
+        if timestamp > 0:
+            parts.append("|T")
+            parts.append(text(timestamp))
+
+        return "".join(parts)
 
     def _report(self, metric, metric_type, value, tags, sample_rate, timestamp=0, sampling=True, cardinality=None):
         """
