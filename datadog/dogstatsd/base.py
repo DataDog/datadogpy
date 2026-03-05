@@ -43,6 +43,68 @@ from datadog.util.compat import is_p3k, text
 from datadog.util.format import normalize_tags, validate_cardinality
 from datadog.version import __version__
 
+
+class TagList(list):
+    """A list subclass that calls on_change() after any mutation."""
+
+    def __init__(self, iterable=(), on_change=None):
+        super(TagList, self).__init__(iterable)
+        self._on_change = on_change
+
+    def _notify(self):
+        if self._on_change is not None:
+            self._on_change()
+
+    def __setitem__(self, index, value):
+        super(TagList, self).__setitem__(index, value)
+        self._notify()
+
+    def __delitem__(self, index):
+        super(TagList, self).__delitem__(index)
+        self._notify()
+
+    def __add__(self, other):
+        return list(self) + list(other)
+
+    def __iadd__(self, other):
+        result = super(TagList, self).__iadd__(other)
+        self._notify()
+        return result
+
+    def append(self, value):
+        super(TagList, self).append(value)
+        self._notify()
+
+    def extend(self, iterable):
+        super(TagList, self).extend(iterable)
+        self._notify()
+
+    def insert(self, index, value):
+        super(TagList, self).insert(index, value)
+        self._notify()
+
+    def remove(self, value):
+        super(TagList, self).remove(value)
+        self._notify()
+
+    def pop(self, index=-1):
+        value = super(TagList, self).pop(index)
+        self._notify()
+        return value
+
+    def clear(self):
+        super(TagList, self).__delitem__(slice(None))
+        self._notify()
+
+    def sort(self, *args, **kwargs):
+        super(TagList, self).sort(*args, **kwargs)
+        self._notify()
+
+    def reverse(self):
+        super(TagList, self).reverse()
+        self._notify()
+
+
 # Logging
 log = logging.getLogger("datadog.dogstatsd")
 
@@ -1199,6 +1261,16 @@ class DogStatsd(object):
     def _serialize_metric(
         self, metric, metric_type, value, tags, sample_rate=1, timestamp=0, cardinality=None
     ):
+        # Build the combined tag string from user tags + cached constant tags
+        if tags:
+            user_tags_str = ",".join(normalize_tags(tags))
+            if self._constant_tags_str:
+                tag_str = user_tags_str + "," + self._constant_tags_str
+            else:
+                tag_str = user_tags_str
+        else:
+            tag_str = self._constant_tags_str
+
         # Create/format the metric packet
         parts = [(self.namespace + ".") if self.namespace else "", metric, ":", text(value), "|", metric_type]
 
@@ -1206,9 +1278,9 @@ class DogStatsd(object):
             parts.append("|@")
             parts.append(text(sample_rate))
 
-        if tags:
+        if tag_str:
             parts.append("|#")
-            parts.append(",".join(normalize_tags(tags)))
+            parts.append(tag_str)
 
         if self._container_id:
             parts.append("|c:")
@@ -1261,8 +1333,6 @@ class DogStatsd(object):
 
         validate_cardinality(cardinality)
 
-        # Resolve the full tag list
-        tags = self._add_constant_tags(tags)
         payload = self._serialize_metric(
             metric, metric_type, value, tags, sample_rate, timestamp, cardinality
         )
@@ -1565,12 +1635,31 @@ class DogStatsd(object):
 
         self._send(string)
 
-    def _add_constant_tags(self, tags):
-        if self.constant_tags:
-            if tags:
-                return tags + self.constant_tags
+    @staticmethod
+    def _normalize_and_join_tags(tags):
+        """Normalize a tag list and join into a comma-separated string."""
+        if tags:
+            return ",".join(normalize_tags(tags))
+        return ""
 
-            return self.constant_tags
+    def _rebuild_constant_tags_str(self):
+        self._constant_tags_str = self._normalize_and_join_tags(self._constant_tags)
+
+    @property
+    def constant_tags(self):
+        return self._constant_tags
+
+    @constant_tags.setter
+    def constant_tags(self, value):
+        self._constant_tags = TagList(value or [], on_change=self._rebuild_constant_tags_str)
+        self._rebuild_constant_tags_str()
+
+    def _add_constant_tags(self, tags):
+        if self._constant_tags:
+            if tags:
+                return tags + self._constant_tags
+
+            return self._constant_tags
         return tags
 
     def _is_origin_detection_enabled(self, container_id, origin_detection_enabled):
