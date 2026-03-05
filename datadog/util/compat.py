@@ -7,6 +7,7 @@ Imports for compatibility with Python 2, Python 3 and Google App Engine.
 """
 import logging
 import sys
+from typing import TypeVar, Any, Type
 
 # Logging
 log = logging.getLogger("datadog.util")
@@ -143,3 +144,10 @@ def conditional_lru_cache(func):
     from functools import lru_cache
 
     return lru_cache(maxsize=512)(func)
+
+
+T = TypeVar('T')
+
+def cast(typ, val):
+    # type: (Type[T], Any) -> T
+    return val

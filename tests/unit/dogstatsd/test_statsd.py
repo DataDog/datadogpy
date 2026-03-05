@@ -749,6 +749,57 @@ class TestDogStatsd(unittest.TestCase):
             ),
         )
 
+    def test_constant_tags_cache_invalidated_on_mutation(self):
+        dogstatsd = DogStatsd(telemetry_min_flush_interval=0, disable_telemetry=True)
+        dogstatsd.socket = FakeSocket()
+
+        dogstatsd.constant_tags = ['original:tag']
+        dogstatsd.gauge('gauge', 1)
+        dogstatsd.flush()
+        self.assertEqual('gauge:1|g|#original:tag\n', dogstatsd.socket.recv())
+
+        # append
+        dogstatsd.constant_tags.append('new:tag')
+        dogstatsd.gauge('gauge', 2)
+        dogstatsd.flush()
+        self.assertEqual('gauge:2|g|#original:tag,new:tag\n', dogstatsd.socket.recv())
+
+        # sort
+        dogstatsd.constant_tags.sort()
+        dogstatsd.gauge('gauge', 3)
+        dogstatsd.flush()
+        self.assertEqual('gauge:3|g|#new:tag,original:tag\n', dogstatsd.socket.recv())
+
+        # remove
+        dogstatsd.constant_tags.remove('new:tag')
+        dogstatsd.gauge('gauge', 4)
+        dogstatsd.flush()
+        self.assertEqual('gauge:4|g|#original:tag\n', dogstatsd.socket.recv())
+
+        # __setitem__
+        dogstatsd.constant_tags[0] = 'replaced:tag'
+        dogstatsd.gauge('gauge', 5)
+        dogstatsd.flush()
+        self.assertEqual('gauge:5|g|#replaced:tag\n', dogstatsd.socket.recv())
+
+        # extend
+        dogstatsd.constant_tags.extend(['a:1', 'b:2'])
+        dogstatsd.gauge('gauge', 6)
+        dogstatsd.flush()
+        self.assertEqual('gauge:6|g|#replaced:tag,a:1,b:2\n', dogstatsd.socket.recv())
+
+        # pop
+        dogstatsd.constant_tags.pop()
+        dogstatsd.gauge('gauge', 7)
+        dogstatsd.flush()
+        self.assertEqual('gauge:7|g|#replaced:tag,a:1\n', dogstatsd.socket.recv())
+
+        # clear
+        dogstatsd.constant_tags.clear()
+        dogstatsd.gauge('gauge', 8)
+        dogstatsd.flush()
+        self.assertEqual('gauge:8|g\n', dogstatsd.socket.recv())
+
     def test_socket_error(self):
         self.statsd.socket = BrokenSocket()
         with mock.patch("datadog.dogstatsd.base.log") as mock_log:

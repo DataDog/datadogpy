@@ -8,7 +8,9 @@ Warning: requires Python 3.5 or higher.
 """
 # stdlib
 import sys
-from typing import Any, Callable
+
+if sys.version_info[:2] >= (3, 5):
+    from typing import Any, Callable  # noqa: F401
 
 
 # Wrap the Python 3.5+ function in a docstring to avoid syntax errors when

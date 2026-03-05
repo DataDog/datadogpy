@@ -6,7 +6,10 @@
 import errno
 import os
 import re
-from typing import Optional
+import sys
+
+if sys.version_info[:2] >= (3, 5):
+    from typing import Optional  # noqa: F401
 
 
 class UnresolvableContainerID(Exception):

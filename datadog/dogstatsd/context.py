@@ -3,7 +3,8 @@
 # Copyright 2015-Present Datadog, Inc
 # stdlib
 from functools import wraps
-from typing import Any, Callable, List, Optional, Text, TYPE_CHECKING, Union
+import sys
+
 
 try:
     from time import monotonic  # type: ignore[attr-defined]
@@ -14,8 +15,12 @@ except ImportError:
 from datadog.dogstatsd.context_async import _get_wrapped_co
 from datadog.util.compat import iscoroutinefunction
 
-if TYPE_CHECKING:
-    from datadog.dogstatsd.base import DogStatsd
+
+if sys.version_info[:2] >= (3, 5):
+    from typing import Any, Callable, List, Optional, Text, TYPE_CHECKING, Union  # noqa: F401
+
+    if TYPE_CHECKING:
+        from datadog.dogstatsd.base import DogStatsd  # noqa: F401
 
 
 class TimedContextManagerDecorator(object):

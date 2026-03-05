@@ -12,16 +12,19 @@ Priority:
 import copy
 import logging
 import platform
+import sys
 import urllib
-from typing import TYPE_CHECKING
+
 from threading import Lock
 
 # datadog
 from datadog.api.exceptions import ProxyError, ClientError, HTTPError, HttpTimeout
 
-if TYPE_CHECKING:
-    import types  # noqa: F401
-    from typing import Optional  # noqa: F401
+if sys.version_info[:2] >= (3, 5):
+    from typing import TYPE_CHECKING
+    if TYPE_CHECKING:
+        import types  # noqa: F401
+        from typing import Optional  # noqa: F401
 
 
 # 3p

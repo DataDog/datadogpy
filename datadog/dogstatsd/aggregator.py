@@ -1,5 +1,8 @@
 import threading
-from typing import Any, Dict, List, Optional
+import sys
+
+if sys.version_info[:2] >= (3, 5):
+    from typing import Any, Dict, List, Optional  # noqa: F401
 
 from datadog.dogstatsd.metrics import (
     CountMetric,
