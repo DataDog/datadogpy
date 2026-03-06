@@ -424,20 +424,14 @@ class MonitorClient(object):
         res = api.Monitor.unmute(args.monitor_id, scope=args.scope, all_scopes=args.all_scopes)
         report_warnings(res)
         report_errors(res)
-        if format == "pretty":
-            print(pretty_json(res))
-        else:
-            print(json.dumps(res))
+        print(json.dumps(res))
 
     @classmethod
     def _can_delete(cls, args):
         api._timeout = args.timeout
         monitor_ids = [i.strip() for i in args.monitor_ids.split(",") if i.strip()]
         res = api.Monitor.can_delete(monitor_ids=monitor_ids)
-        if format == "pretty":
-            print(pretty_json(res))
-        else:
-            print(json.dumps(res))
+        print(json.dumps(res))
 
     @classmethod
     def _validate(cls, args):

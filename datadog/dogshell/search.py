@@ -27,17 +27,4 @@ class SearchClient(object):
         res = api.Infrastructure.search(q=args.query)
         report_warnings(res)
         report_errors(res)
-        if format == "pretty":
-            for facet, results in list(res["results"].items()):
-                for idx, result in enumerate(results):
-                    if idx == 0:
-                        print("\n")
-                        print("%s\t%s" % (facet, result))
-                    else:
-                        print("%s\t%s" % (" " * len(facet), result))
-        elif format == "raw":
-            print(json.dumps(res))
-        else:
-            for facet, results in list(res["results"].items()):
-                for result in results:
-                    print("%s\t%s" % (facet, result))
+        print(json.dumps(res))
