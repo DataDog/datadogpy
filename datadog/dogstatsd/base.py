@@ -1261,16 +1261,6 @@ class DogStatsd(object):
     def _serialize_metric(
         self, metric, metric_type, value, tags, sample_rate=1, timestamp=0, cardinality=None
     ):
-        # Build the combined tag string from user tags + cached constant tags
-        if tags:
-            user_tags_str = ",".join(normalize_tags(tags))
-            if self._constant_tags_str:
-                tag_str = user_tags_str + "," + self._constant_tags_str
-            else:
-                tag_str = user_tags_str
-        else:
-            tag_str = self._constant_tags_str
-
         # Create/format the metric packet
         parts = [(self.namespace + ".") if self.namespace else "", metric, ":", text(value), "|", metric_type]
 
@@ -1278,9 +1268,15 @@ class DogStatsd(object):
             parts.append("|@")
             parts.append(text(sample_rate))
 
-        if tag_str:
+        if tags or self._constant_tags_str:
             parts.append("|#")
-            parts.append(tag_str)
+            if tags:
+                parts.append(",".join(normalize_tags(tags)))
+                if self._constant_tags_str:
+                    parts.append(",")
+                    parts.append(self._constant_tags_str)
+            else:
+                parts.append(self._constant_tags_str)
 
         if self._container_id:
             parts.append("|c:")
