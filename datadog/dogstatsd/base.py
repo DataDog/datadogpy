@@ -1390,12 +1390,13 @@ class DogStatsd(object):
         if self._queue is not None:
             # Prevent a race with disable_background_sender.
             with self._buffer_lock:
+                packet_with_newline = packet + '\n'
                 if self._queue is not None:
                     try:
-                        self._queue.put(packet + '\n', self._queue_blocking, self._queue_timeout)
+                        self._queue.put(packet_with_newline, self._queue_blocking, self._queue_timeout)
                     except queue.Full:
                         self.packets_dropped_queue += 1
-                        self.bytes_dropped_queue += 1
+                        self.bytes_dropped_queue += len(packet_with_newline.encode(self.encoding))
                     return
 
         self._xmit_packet_with_telemetry(packet + '\n')
