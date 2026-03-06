@@ -1336,7 +1336,7 @@ class DogStatsd(object):
                         self._queue.put(packet + '\n', self._queue_blocking, self._queue_timeout)
                     except queue.Full:
                         self.packets_dropped_queue += 1
-                        self.bytes_dropped_queue += 1
+                        self.bytes_dropped_queue += len(packet) + 1
                     return
 
         self._xmit_packet_with_telemetry(packet + '\n')
