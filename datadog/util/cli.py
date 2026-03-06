@@ -120,13 +120,10 @@ def parse_date(date_str, to_epoch_ts=False):
         return formatter(datetime.utcnow())
 
     def _from_epoch_timestamp(seconds):
-        print("_from_epoch_timestamp({})".format(seconds))
         return datetime.utcfromtimestamp(float(seconds))
 
     def _from_epoch_ms_timestamp(millis):
-        print("_from_epoch_ms_timestamp({})".format(millis))
         in_sec = float(millis) / 1000.0
-        print("_from_epoch_ms_timestamp({}) -> {}".format(millis, in_sec))
         return _from_epoch_timestamp(in_sec)
 
     # Or parse date formats (most specific to least specific)

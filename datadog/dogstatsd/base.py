@@ -1406,7 +1406,6 @@ class DogStatsd(object):
                 )
                 self.close_socket()
         except Exception as exc:
-            print("Unexpected error: ", exc)
             log.error("Unexpected error: %s", str(exc))
 
         if not is_telemetry and self._telemetry:
