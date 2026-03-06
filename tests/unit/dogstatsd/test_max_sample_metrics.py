@@ -1,5 +1,7 @@
 import unittest
+from mock import patch
 from datadog.dogstatsd.max_sample_metric import HistogramMetric, DistributionMetric, TimingMetric
+from datadog.dogstatsd.max_sample_metric_context import MaxSampleMetricContexts
 from datadog.dogstatsd.metric_types import MetricType
 
 class TestMaxSampleMetric(unittest.TestCase):
@@ -99,6 +101,44 @@ class TestMaxSampleMetric(unittest.TestCase):
         self.assertEqual(s.specified_rate, 1.0)
         self.assertEqual(s.metric_type, MetricType.HISTOGRAM)
         self.assertEqual(s.cardinality, None)
+
+class TestMaxSampleMetricContexts(unittest.TestCase):
+
+    @patch('datadog.dogstatsd.max_sample_metric_context.random.random', return_value=0.0)
+    def test_sample_passes_rate_to_metric_constructor(self, _mock_random):
+        """Ensure the rate parameter is forwarded when creating a new metric context."""
+        contexts = MaxSampleMetricContexts(HistogramMetric)
+        contexts.sample(
+            name="test.metric",
+            value=42,
+            tags=["tag:value"],
+            rate=0.5,
+            context_key="test.metric:tag:value",
+            max_samples_per_context=10,
+            cardinality=None,
+        )
+        metric = contexts.values["test.metric:tag:value"]
+        self.assertAlmostEqual(metric.specified_rate, 0.5)
+        self.assertEqual(metric.max_metric_samples, 10)
+
+    @patch('datadog.dogstatsd.max_sample_metric_context.random.random', return_value=0.0)
+    def test_sample_passes_rate_to_distribution_metric(self, _mock_random):
+        """Ensure the rate parameter is forwarded for distribution metrics."""
+        contexts = MaxSampleMetricContexts(DistributionMetric)
+        contexts.sample(
+            name="test.dist",
+            value=100,
+            tags=["env:prod"],
+            rate=0.3,
+            context_key="test.dist:env:prod",
+            max_samples_per_context=5,
+            cardinality="low",
+        )
+        metric = contexts.values["test.dist:env:prod"]
+        self.assertAlmostEqual(metric.specified_rate, 0.3)
+        self.assertEqual(metric.max_metric_samples, 5)
+        self.assertEqual(metric.cardinality, "low")
+
 
 if __name__ == '__main__':
     unittest.main()
