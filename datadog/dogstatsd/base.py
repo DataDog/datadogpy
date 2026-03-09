@@ -496,6 +496,8 @@ class DogStatsd(object):
             value = os.environ.get(var, "")
             if value:
                 env_tags.append("{name}:{value}".format(name=tag_name, value=value))
+
+        self._config_lock = RLock()
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
@@ -529,10 +531,6 @@ class DogStatsd(object):
         self._buffer_lock = RLock()
 
         self._reset_buffer()
-
-        # This lock is used for all cases where client configuration is being changed: buffering,
-        # aggregation, sender mode.
-        self._config_lock = RLock()
 
         self._disable_buffering = disable_buffering
         self._disable_aggregation = disable_aggregation
@@ -1639,7 +1637,8 @@ class DogStatsd(object):
         return ""
 
     def _rebuild_constant_tags_str(self):
-        self._constant_tags_str = self._normalize_and_join_tags(self._constant_tags)
+        with self._config_lock:
+            self._constant_tags_str = self._normalize_and_join_tags(self._constant_tags)
 
     @property
     def constant_tags(self):
@@ -1647,8 +1646,9 @@ class DogStatsd(object):
 
     @constant_tags.setter
     def constant_tags(self, value):
-        self._constant_tags = TagList(value or [], on_change=self._rebuild_constant_tags_str)
-        self._rebuild_constant_tags_str()
+        with self._config_lock:
+            self._constant_tags = TagList(value or [], on_change=self._rebuild_constant_tags_str)
+            self._rebuild_constant_tags_str()
 
     def _add_constant_tags(self, tags):
         if self._constant_tags:
