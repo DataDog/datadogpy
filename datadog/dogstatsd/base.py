@@ -507,7 +507,7 @@ class DogStatsd(object):
 
         # This lock is used for all cases where client configuration is being changed: buffering,
         # aggregation, sender mode.
-        #         self._config_lock = RLock()
+        self._config_lock = RLock()
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
