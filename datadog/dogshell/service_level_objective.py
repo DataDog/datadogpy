@@ -362,7 +362,7 @@ class ServiceLevelObjectiveClient(object):
             report_warnings(res)
             report_errors(res)
 
-            if format == "pretty":
+            if args.format == "pretty":
                 print(pretty_json(res))
             else:
                 print(json.dumps(res))
@@ -375,7 +375,7 @@ class ServiceLevelObjectiveClient(object):
             report_warnings(res)
             report_errors(res)
 
-            if format == "pretty":
+            if args.format == "pretty":
                 print(pretty_json(res))
             else:
                 print(json.dumps(res))
@@ -391,7 +391,7 @@ class ServiceLevelObjectiveClient(object):
             report_warnings(res)
             report_errors(res)
 
-            if format == "pretty":
+            if args.format == "pretty":
                 print(pretty_json(res))
             else:
                 print(json.dumps(res))
@@ -405,7 +405,7 @@ class ServiceLevelObjectiveClient(object):
             report_warnings(res)
             report_errors(res)
 
-            if format == "pretty":
+            if args.format == "pretty":
                 print(pretty_json(res))
             else:
                 print(json.dumps(res))
@@ -419,7 +419,7 @@ class ServiceLevelObjectiveClient(object):
             report_warnings(res)
             report_errors(res)
 
-            if format == "pretty":
+            if args.format == "pretty":
                 print(pretty_json(res))
             else:
                 print(json.dumps(res))

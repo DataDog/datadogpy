@@ -421,6 +421,7 @@ class MonitorClient(object):
     @classmethod
     def _unmute(cls, args):
         api._timeout = args.timeout
+        format = args.format
         res = api.Monitor.unmute(args.monitor_id, scope=args.scope, all_scopes=args.all_scopes)
         report_warnings(res)
         report_errors(res)
@@ -432,6 +433,7 @@ class MonitorClient(object):
     @classmethod
     def _can_delete(cls, args):
         api._timeout = args.timeout
+        format = args.format
         monitor_ids = [i.strip() for i in args.monitor_ids.split(",") if i.strip()]
         res = api.Monitor.can_delete(monitor_ids=monitor_ids)
         if format == "pretty":

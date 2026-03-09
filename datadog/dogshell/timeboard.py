@@ -244,13 +244,11 @@ class TimeboardClient(object):
             report_warnings(res)
             report_errors(res)
 
-            if format == "pretty":
+            if args.format == "pretty":
                 print(pretty_json(res))
+                print("Uploaded file {0} (dashboard {1})".format(f.name, dash_obj["id"]))
             else:
                 print(json.dumps(res))
-
-            if args.format == "pretty":
-                print("Uploaded file {0} (dashboard {1})".format(f.name, dash_obj["id"]))
 
     @classmethod
     def _post(cls, args):

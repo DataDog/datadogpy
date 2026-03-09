@@ -24,6 +24,7 @@ class SearchClient(object):
     @classmethod
     def _query(cls, args):
         api._timeout = args.timeout
+        format = args.format
         res = api.Infrastructure.search(q=args.query)
         report_warnings(res)
         report_errors(res)
