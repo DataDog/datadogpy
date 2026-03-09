@@ -71,6 +71,14 @@ class TagList(list):
         self._notify()
         return result
 
+    def __mul__(self, n):
+        return list(self) * n
+
+    def __imul__(self, n):
+        result = super(TagList, self).__imul__(n)
+        self._notify()
+        return result
+
     def append(self, value):
         super(TagList, self).append(value)
         self._notify()
