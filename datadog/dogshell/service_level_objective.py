@@ -362,7 +362,10 @@ class ServiceLevelObjectiveClient(object):
             report_warnings(res)
             report_errors(res)
 
-            print(json.dumps(res))
+            if args.format == "pretty":
+                print(pretty_json(res))
+            else:
+                print(json.dumps(res))
 
     @classmethod
     def _delete_many(cls, args):
@@ -372,7 +375,10 @@ class ServiceLevelObjectiveClient(object):
             report_warnings(res)
             report_errors(res)
 
-            print(json.dumps(res))
+            if args.format == "pretty":
+                print(pretty_json(res))
+            else:
+                print(json.dumps(res))
 
     @classmethod
     def _delete_timeframe(cls, args):
@@ -385,7 +391,10 @@ class ServiceLevelObjectiveClient(object):
             report_warnings(res)
             report_errors(res)
 
-            print(json.dumps(res))
+            if args.format == "pretty":
+                print(pretty_json(res))
+            else:
+                print(json.dumps(res))
 
     @classmethod
     def _can_delete(cls, args):
@@ -396,7 +405,10 @@ class ServiceLevelObjectiveClient(object):
             report_warnings(res)
             report_errors(res)
 
-            print(json.dumps(res))
+            if args.format == "pretty":
+                print(pretty_json(res))
+            else:
+                print(json.dumps(res))
 
     @classmethod
     def _history(cls, args):
@@ -407,7 +419,10 @@ class ServiceLevelObjectiveClient(object):
             report_warnings(res)
             report_errors(res)
 
-            print(json.dumps(res))
+            if args.format == "pretty":
+                print(pretty_json(res))
+            else:
+                print(json.dumps(res))
 
     @classmethod
     def _escape(cls, s):
