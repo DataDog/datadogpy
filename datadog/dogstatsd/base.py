@@ -504,9 +504,15 @@ class DogStatsd(object):
             value = os.environ.get(var, "")
             if value:
                 env_tags.append("{name}:{value}".format(name=tag_name, value=value))
+
+        # This lock is used for all cases where client configuration is being changed: buffering,
+        # aggregation, sender mode.
+        self._config_lock = RLock()
+
         if constant_tags is None:
             constant_tags = []
         self.constant_tags = constant_tags + env_tags
+
         if namespace is not None:
             namespace = text(namespace)
         self.namespace = namespace
@@ -537,10 +543,6 @@ class DogStatsd(object):
         self._buffer_lock = RLock()
 
         self._reset_buffer()
-
-        # This lock is used for all cases where client configuration is being changed: buffering,
-        # aggregation, sender mode.
-        self._config_lock = RLock()
 
         self._disable_buffering = disable_buffering
         self._disable_aggregation = disable_aggregation
