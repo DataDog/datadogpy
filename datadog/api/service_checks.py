@@ -1,6 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
+from typing import Any
+
 from datadog.api.constants import CheckStatus
 from datadog.api.exceptions import ApiError
 from datadog.api.resources import ActionAPIResource
@@ -13,6 +15,7 @@ class ServiceCheck(ActionAPIResource):
 
     @classmethod
     def check(cls, **body):
+        # type: (**Any) -> Any
         """
         Post check statuses for use with monitors
 

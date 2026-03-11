@@ -1,6 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
+from typing import Any, Dict, List, Optional
+
 from datadog.util.format import force_to_epoch_seconds
 from datadog.api.resources import (
     GetableAPIResource,
@@ -28,6 +30,7 @@ class ServiceLevelObjective(
 
     @classmethod
     def create(cls, attach_host_name=False, method="POST", id=None, params=None, **body):
+        # type: (bool, str, Optional[Any], Optional[Any], **Any) -> Any
         """
         Create a SLO
 
@@ -39,6 +42,7 @@ class ServiceLevelObjective(
 
     @classmethod
     def get(cls, id, **params):
+        # type: (str, **Any) -> Any
         """
         Get a specific SLO details.
 
@@ -51,6 +55,7 @@ class ServiceLevelObjective(
 
     @classmethod
     def get_all(cls, query=None, tags_query=None, metrics_query=None, ids=None, offset=0, limit=100, **params):
+        # type: (Optional[str], Optional[str], Optional[str], Optional[List[str]], int, int, **Any) -> Any
         """
         Get all SLO details.
 
@@ -74,7 +79,7 @@ class ServiceLevelObjective(
 
         :returns: SLOs matching the query
         """
-        search_terms = {}
+        search_terms = {}  # type: Dict[str, Any]
         if query:
             search_terms["query"] = query
         if ids:
@@ -90,6 +95,7 @@ class ServiceLevelObjective(
 
     @classmethod
     def update(cls, id, params=None, **body):
+        # type: (str, Optional[Any], **Any) -> Any
         """
         Update a specific SLO details.
 
@@ -102,6 +108,7 @@ class ServiceLevelObjective(
 
     @classmethod
     def delete(cls, id, **params):
+        # type: (str, **Any) -> Any
         """
         Delete a specific SLO.
 
@@ -114,6 +121,7 @@ class ServiceLevelObjective(
 
     @classmethod
     def bulk_delete(cls, ops, **params):
+        # type: (Dict[str, List[str]], **Any) -> Any
         """
         Bulk Delete Timeframes from multiple SLOs.
 
@@ -134,6 +142,7 @@ class ServiceLevelObjective(
 
     @classmethod
     def delete_many(cls, ids, **params):
+        # type: (List[str], **Any) -> Any
         """
         Delete Multiple SLOs
 
@@ -152,6 +161,7 @@ class ServiceLevelObjective(
 
     @classmethod
     def can_delete(cls, ids, **params):
+        # type: (List[str], **Any) -> Any
         """
         Check if the following SLOs can be safely deleted.
 
@@ -175,6 +185,7 @@ class ServiceLevelObjective(
 
     @classmethod
     def history(cls, id, from_ts, to_ts, **params):
+        # type: (str, Any, Any, **Any) -> Any
         """
         Get the SLO's history from the given time range.
 
@@ -205,6 +216,7 @@ class ServiceLevelObjective(
 
     @classmethod
     def search(cls, **params):
+        # type: (**Any) -> Any
         """
         Search SLOs.
 

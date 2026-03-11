@@ -4,6 +4,7 @@
 from numbers import Number
 import sys
 import time
+from typing import Any, List, Tuple, cast
 
 if sys.version_info[0] >= 3:
     from collections.abc import Iterable
@@ -12,6 +13,7 @@ else:
 
 
 def format_points(points):
+    # type: (Any) -> List[Tuple[float, Any]]
     """
     Format `points` parameter.
 
@@ -26,11 +28,11 @@ def format_points(points):
     if not isinstance(points, list):
         points = [points]
 
-    formatted_points = []
+    formatted_points = []  # type: List[Tuple[float, Any]]
     for point in points:
         if isinstance(point, Number):
             timestamp = now
-            value = float(point)
+            value = float(cast(float, point))  # type: Any
         # Distributions contain a list of points
         else:
             timestamp = point[0]

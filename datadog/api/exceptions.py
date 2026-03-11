@@ -4,6 +4,7 @@
 """
 API & HTTP Clients exceptions.
 """
+from typing import Optional
 
 
 class DatadogException(Exception):
@@ -23,6 +24,7 @@ class ProxyError(DatadogException):
     """
 
     def __init__(self, method, url, exception):
+        # type: (str, str, Exception) -> None
         message = (
             u"Could not request {method} {url}: Unable to connect to proxy. "
             u"Please check the proxy configuration and try again.".format(method=method, url=url)
@@ -36,6 +38,7 @@ class ClientError(DatadogException):
     """
 
     def __init__(self, method, url, exception):
+        # type: (str, str, Exception) -> None
         message = (
             u"Could not request {method} {url}: {exception}. "
             u"Please check the network connection or try again later. "
@@ -52,6 +55,7 @@ class HttpTimeout(DatadogException):
     """
 
     def __init__(self, method, url, timeout):
+        # type: (str, str, float) -> None
         message = (
             u"{method} {url} timed out after {timeout}. "
             u"Please try again later. "
@@ -68,6 +72,7 @@ class HttpBackoff(DatadogException):
     """
 
     def __init__(self, backoff_period):
+        # type: (float) -> None
         message = u"Too many timeouts. Won't try again for {backoff_period} seconds. ".format(
             backoff_period=backoff_period
         )
@@ -80,6 +85,7 @@ class HTTPError(DatadogException):
     """
 
     def __init__(self, status_code=None, reason=None):
+        # type: (Optional[int], Optional[str]) -> None
         reason = u" - {reason}".format(reason=reason) if reason else u""
         message = (
             u"Datadog returned a bad HTTP response code: {status_code}{reason}. "

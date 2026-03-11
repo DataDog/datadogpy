@@ -1,6 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
+from typing import Any, List, Union
+
 from datadog.api.resources import (
     ActionAPIResource,
     GetableAPIResource,
@@ -28,6 +30,7 @@ class User(
 
     @classmethod
     def invite(cls, emails):
+        # type: (Union[str, List[str]]) -> Any
         """
         Send an invite to join datadog to each of the email addresses in the
         *emails* list. If *emails* is a string, it will be wrapped in a list and
