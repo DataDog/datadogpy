@@ -31,6 +31,7 @@ from datadog.dogshell.security_monitoring import SecurityMonitoringClient
 
 
 def main():
+    # type: () -> None
     if sys.argv[0].endswith("dog"):
         warnings.warn("dog is pending deprecation. Please use dogshell instead.", PendingDeprecationWarning)
 

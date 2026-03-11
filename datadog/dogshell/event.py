@@ -2,11 +2,15 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
 # stdlib
+import argparse
 import datetime
 import time
 import re
 import sys
 import json
+
+# 3p
+from typing import Any, Dict, Optional
 
 # datadog
 from datadog import api
@@ -17,6 +21,7 @@ time_pat = re.compile(r"(?P<delta>[0-9]*\.?[0-9]+)(?P<unit>[mhd])")
 
 
 def prettyprint_event(event):
+    # type: (Dict[str, Any]) -> None
     title = event["title"] or ""
     text = event.get("text", "") or ""
     handle = event.get("handle", "") or ""
@@ -30,18 +35,22 @@ def prettyprint_event(event):
 
 
 def print_event(event):
+    # type: (Dict[str, Any]) -> None
     prettyprint_event(event)
 
 
 def prettyprint_event_details(event):
+    # type: (Dict[str, Any]) -> None
     prettyprint_event(event)
 
 
 def print_event_details(event):
+    # type: (Dict[str, Any]) -> None
     prettyprint_event(event)
 
 
 def parse_time(timestring):
+    # type: (Optional[str]) -> int
     now = time.mktime(datetime.datetime.now().timetuple())
     if timestring is None:
         t = now
@@ -67,6 +76,7 @@ def parse_time(timestring):
 class EventClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
+        # type: (argparse._SubParsersAction[argparse.ArgumentParser]) -> None
         parser = subparsers.add_parser("event", help="Post events, get event details," " and view the event stream.")
         verb_parsers = parser.add_subparsers(title="Verbs", dest="verb")
         verb_parsers.required = True
@@ -115,6 +125,7 @@ class EventClient(object):
 
     @classmethod
     def _post(cls, args):
+        # type: (argparse.Namespace) -> None
         """
         Post an event.
         """
@@ -158,6 +169,7 @@ class EventClient(object):
 
     @classmethod
     def _show(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         res = api.Event.get(args.event_id)
@@ -172,6 +184,7 @@ class EventClient(object):
 
     @classmethod
     def _stream(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         if args.sources is not None:

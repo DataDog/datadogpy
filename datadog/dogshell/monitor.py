@@ -16,6 +16,7 @@ from datadog.dogshell.common import report_errors, report_warnings, print_err
 class MonitorClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
+        # type: (argparse._SubParsersAction[argparse.ArgumentParser]) -> None
         parser = subparsers.add_parser("monitor", help="Create, edit, and delete monitors")
         parser.add_argument(
             "--string_ids",
@@ -169,6 +170,7 @@ class MonitorClient(object):
 
     @classmethod
     def _post(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         options = None
@@ -209,6 +211,7 @@ class MonitorClient(object):
 
     @classmethod
     def _file_post(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         monitor = json.load(args.file)
@@ -239,6 +242,7 @@ class MonitorClient(object):
 
     @classmethod
     def _update(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
 
@@ -292,6 +296,7 @@ class MonitorClient(object):
 
     @classmethod
     def _file_update(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         monitor = json.load(args.file)
@@ -324,6 +329,7 @@ class MonitorClient(object):
 
     @classmethod
     def _show(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         res = api.Monitor.get(args.monitor_id)
@@ -340,6 +346,7 @@ class MonitorClient(object):
 
     @classmethod
     def _show_all(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
 
@@ -375,6 +382,7 @@ class MonitorClient(object):
 
     @classmethod
     def _delete(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         # TODO CHECK
         res = api.Monitor.delete(args.monitor_id)
@@ -384,10 +392,12 @@ class MonitorClient(object):
 
     @classmethod
     def _escape(cls, s):
+        # type: (str) -> str
         return s.replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t")
 
     @classmethod
     def _mute_all(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         res = api.Monitor.mute_all()
@@ -400,6 +410,7 @@ class MonitorClient(object):
 
     @classmethod
     def _unmute_all(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         res = api.Monitor.unmute_all()
         if res is not None:
@@ -408,6 +419,7 @@ class MonitorClient(object):
 
     @classmethod
     def _mute(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         res = api.Monitor.mute(args.monitor_id, scope=args.scope, end=args.end)
@@ -420,6 +432,7 @@ class MonitorClient(object):
 
     @classmethod
     def _unmute(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         res = api.Monitor.unmute(args.monitor_id, scope=args.scope, all_scopes=args.all_scopes)
@@ -432,6 +445,7 @@ class MonitorClient(object):
 
     @classmethod
     def _can_delete(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         monitor_ids = [i.strip() for i in args.monitor_ids.split(",") if i.strip()]
@@ -443,6 +457,7 @@ class MonitorClient(object):
 
     @classmethod
     def _validate(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         options = None

@@ -10,6 +10,7 @@ import webbrowser
 
 # 3p
 from datadog.util.format import pretty_json
+from typing import Dict, List, Union
 
 # datadog
 from datadog import api
@@ -20,6 +21,7 @@ from datetime import datetime
 class ScreenboardClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
+        # type: (argparse._SubParsersAction[argparse.ArgumentParser]) -> None
         parser = subparsers.add_parser("screenboard", help="Create, edit, and delete screenboards.")
         parser.add_argument(
             "--string_ids",
@@ -114,11 +116,13 @@ class ScreenboardClient(object):
 
     @classmethod
     def _pull(cls, args):
+        # type: (argparse.Namespace) -> None
         cls._write_screen_to_file(args.screenboard_id, args.filename, args.timeout, args.format, args.string_ids)
 
     # TODO Is there a test for this one ?
     @classmethod
     def _push(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         for f in args.file:
             screen_obj = json.load(f)
@@ -153,6 +157,7 @@ class ScreenboardClient(object):
 
     @classmethod
     def _write_screen_to_file(cls, screenboard_id, filename, timeout, format="raw", string_ids=False):
+        # type: (Union[str, int], str, int, str, bool) -> None
         with open(filename, "w") as f:
             res = api.Screenboard.get(screenboard_id)
             report_warnings(res)
@@ -176,6 +181,7 @@ class ScreenboardClient(object):
 
     @classmethod
     def _post(cls, args):
+        # type: (argparse.Namespace) -> None
         graphs = sys.stdin.read()
         api._timeout = args.timeout
         format = args.format
@@ -200,6 +206,7 @@ class ScreenboardClient(object):
 
     @classmethod
     def _update(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         graphs = args.graphs
@@ -225,12 +232,14 @@ class ScreenboardClient(object):
 
     @classmethod
     def _web_view(cls, args):
+        # type: (argparse.Namespace) -> None
         dash_id = json.load(args.file)["id"]
-        url = api._api_host + "/dash/dash/{0}".format(dash_id)
+        url = (api._api_host or "") + "/dash/dash/{0}".format(dash_id)
         webbrowser.open(url)
 
     @classmethod
     def _show(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         res = api.Screenboard.get(args.screenboard_id)
@@ -247,6 +256,7 @@ class ScreenboardClient(object):
 
     @classmethod
     def _delete(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         # TODO CHECK
         res = api.Screenboard.delete(args.screenboard_id)
@@ -256,6 +266,7 @@ class ScreenboardClient(object):
 
     @classmethod
     def _share(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         res = api.Screenboard.share(args.screenboard_id)
@@ -267,6 +278,7 @@ class ScreenboardClient(object):
 
     @classmethod
     def _revoke(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         res = api.Screenboard.revoke(args.screenboard_id)
@@ -278,6 +290,7 @@ class ScreenboardClient(object):
 
     @classmethod
     def _new_file(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         graphs = args.graphs
@@ -299,6 +312,7 @@ class ScreenboardClient(object):
 
 
 def _template_variables(tpl_var_input):
+    # type: (str) -> Union[List[str], List[Dict[str, str]]]
     if "[" not in tpl_var_input:
         return [v.strip() for v in tpl_var_input.split(",")]
     else:

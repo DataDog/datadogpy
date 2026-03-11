@@ -32,6 +32,9 @@ import threading
 import time
 import warnings
 
+# 3p
+from typing import Any, IO, List, Optional, Tuple, Type, Union
+
 # datadog
 from datadog import initialize, api, __version__
 from datadog.util.compat import is_p3k
@@ -55,6 +58,7 @@ class OutputReader(threading.Thread):
     """
 
     def __init__(self, proc_out, fwd_out=None):
+        # type: (IO[bytes], Optional[IO[Any]]) -> None
         """
         Instantiates an OutputReader.
         :param proc_out: the output to read
@@ -69,6 +73,7 @@ class OutputReader(threading.Thread):
         self._fwd_out = fwd_out
 
     def run(self):
+        # type: () -> None
         """
         Thread's main loop: collects the output optionnally forwarding it to
         the file descriptor passed in the constructor.
@@ -81,6 +86,7 @@ class OutputReader(threading.Thread):
 
     @property
     def content(self):
+        # type: () -> bytes
         """
         The content stored in out so far. (Not threadsafe, wait with .join())
         """
@@ -88,6 +94,7 @@ class OutputReader(threading.Thread):
 
 
 def poll_proc(proc, sleep_interval, timeout):
+    # type: (subprocess.Popen[bytes], float, float) -> int
     """
     Polls the process until it returns or a given timeout has been reached
     """
@@ -103,11 +110,12 @@ def poll_proc(proc, sleep_interval, timeout):
 
 
 def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout, proc_poll_interval, buffer_outs):
+    # type: (str, float, float, float, float, bool) -> Tuple[Union[int, Type[Timeout]], bytes, bytes, float]
     """
     Launches the process and monitors its outputs
     """
     start_time = time.time()
-    returncode = -1
+    returncode = -1  # type: Union[int, Type[Timeout]]
     stdout = b""
     stderr = b""
     try:
@@ -120,6 +128,8 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout, proc_poll_interv
         # background
         stdout_buffer = sys.stdout.buffer if is_p3k() else sys.stdout
         stderr_buffer = sys.stderr.buffer if is_p3k() else sys.stderr
+        assert proc.stdout is not None
+        assert proc.stderr is not None
         out_reader = OutputReader(proc.stdout, stdout_buffer if not buffer_outs else None)
         err_reader = OutputReader(proc.stderr, stderr_buffer if not buffer_outs else None)
         out_reader.start()
@@ -167,6 +177,7 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout, proc_poll_interv
 
 
 def trim_text(text, max_len):
+    # type: (str, int) -> str
     """
     Trim input text to fit the `max_len` condition.
 
@@ -190,6 +201,7 @@ def trim_text(text, max_len):
 
 
 def build_event_body(cmd, returncode, stdout, stderr, notifications):
+    # type: (str, Union[int, Type[Timeout]], bytes, bytes, Union[str, bytes]) -> str
     """
     Format and return an event body.
 
@@ -233,6 +245,7 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
 
 
 def generate_warning_codes(option, opt, options_warning):
+    # type: (optparse.Option, str, str) -> List[str]
     try:
         # options_warning is a string e.g.: --warning_codes 123,456,789
         # we need to create a list from it
@@ -250,6 +263,7 @@ class DogwrapOption(optparse.Option):
 
 
 def parse_options(raw_args=None):
+    # type: (Optional[List[str]]) -> Tuple[optparse.Values, str]
     """
     Parse the raw command line options into an options object and the remaining command string
     """
@@ -399,12 +413,13 @@ returned (the command outputs remains buffered in dogwrap meanwhile)",
     if is_p3k():
         cmd = " ".join(args)
     else:
-        cmd = b" ".join(args).decode("utf-8")
+        cmd = b" ".join(a.encode("utf-8") for a in args).decode("utf-8")
 
     return options, cmd
 
 
 def main():
+    # type: () -> None
     options, cmd = parse_options()
 
     # If silent is checked we force the outputs to be buffered (and therefore
@@ -494,12 +509,11 @@ def main():
     }
 
     if options.buffer_outs:
-        if is_p3k():
-            stderr = stderr.decode("utf-8")
-            stdout = stdout.decode("utf-8")
+        stderr_out = stderr.decode("utf-8") if is_p3k() else stderr  # type: Union[bytes, str]
+        stdout_out = stdout.decode("utf-8") if is_p3k() else stdout  # type: Union[bytes, str]
 
-        print(stderr.strip(), file=sys.stderr)
-        print(stdout.strip(), file=sys.stdout)
+        print(stderr_out.strip(), file=sys.stderr)
+        print(stdout_out.strip(), file=sys.stdout)
 
     if options.submit_mode == "all" or returncode != 0:
         if options.send_metric:
@@ -511,6 +525,7 @@ def main():
             api.Metric.send(metric="dogwrap.duration", points=duration, tags=duration_tags, type="gauge")
         api.Event.create(title=event_title, text=event_body, **event)
 
+    assert isinstance(returncode, int)
     sys.exit(returncode)
 
 
