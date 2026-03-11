@@ -2,6 +2,8 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
 # datadog
+from typing import Any, Optional
+
 from datadog.api.format import format_points
 from datadog.api.resources import SendableAPIResource
 
@@ -13,6 +15,7 @@ class Distribution(SendableAPIResource):
 
     @classmethod
     def send(cls, distributions=None, attach_host_name=True, compress_payload=False, **distribution):
+        # type: (Optional[Any], bool, bool, **Any) -> Any
         """
         Submit a distribution metric or a list of distribution metrics to the distribution metric
         API

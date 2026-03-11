@@ -13,6 +13,7 @@ import copy
 import logging
 import platform
 import urllib
+import urllib.parse
 from typing import TYPE_CHECKING
 from threading import Lock
 
@@ -21,11 +22,11 @@ from datadog.api.exceptions import ProxyError, ClientError, HTTPError, HttpTimeo
 
 if TYPE_CHECKING:
     import types  # noqa: F401
-    from typing import Optional  # noqa: F401
+    from typing import Any, Dict, Optional, Type  # noqa: F401
 
 
 # 3p
-requests = None  # type: Optional[types.ModuleType]
+requests = None  # type: Any
 try:
     requests = __import__("requests")
     __import__("requests.adapters")
@@ -40,7 +41,7 @@ try:
 except ImportError:
     pass
 
-urllib3 = None  # type: Optional[types.ModuleType]
+urllib3 = None  # type: Any
 try:
     urllib3 = __import__("urllib3")
 except ImportError:
@@ -51,6 +52,7 @@ log = logging.getLogger("datadog.api")
 
 
 def _get_user_agent_header():
+    # type: () -> str
     from datadog import version
 
     return "datadogpy/{version} (python {pyver}; os {os}; arch {arch})".format(
@@ -62,6 +64,7 @@ def _get_user_agent_header():
 
 
 def _remove_context(exc):
+    # type: (Exception) -> Exception
     """Python3: remove context from chained exceptions to prevent leaking API keys in tracebacks."""
     exc.__cause__ = None
     return exc
@@ -74,6 +77,7 @@ class HTTPClient(object):
 
     @classmethod
     def request(cls, method, url, headers, params, data, timeout, proxies, verify, max_retries):
+        # type: (str, str, Dict[str, str], Dict[str, Any], Any, float, Optional[Any], Any, int) -> Any
         """
         Main method to be implemented by HTTP clients.
 
@@ -100,6 +104,7 @@ class RequestClient(HTTPClient):
 
     @classmethod
     def request(cls, method, url, headers, params, data, timeout, proxies, verify, max_retries):
+        # type: (str, str, Dict[str, str], Dict[str, Any], Any, float, Optional[Any], Any, int) -> Any
         try:
 
             with cls._session_lock:
@@ -144,6 +149,7 @@ class URLFetchClient(HTTPClient):
 
     @classmethod
     def request(cls, method, url, headers, params, data, timeout, proxies, verify, max_retries):
+        # type: (str, str, Dict[str, str], Dict[str, Any], Any, float, Optional[Any], Any, int) -> Any
         """
         Wrapper around `urlfetch.fetch` method.
 
@@ -154,7 +160,7 @@ class URLFetchClient(HTTPClient):
         validate_certificate = True if verify else False
 
         # Encode parameters in the url
-        url_with_params = "{url}?{params}".format(url=url, params=urllib.urlencode(params))
+        url_with_params = "{url}?{params}".format(url=url, params=urllib.parse.urlencode(params))
         newheaders = copy.deepcopy(headers)
         newheaders["User-Agent"] = _get_user_agent_header()
 
@@ -182,6 +188,7 @@ class URLFetchClient(HTTPClient):
 
     @classmethod
     def raise_on_status(cls, result):
+        # type: (Any) -> None
         """
         Raise on HTTP status code errors.
         """
@@ -204,6 +211,7 @@ class Urllib3Client(HTTPClient):
 
     @classmethod
     def request(cls, method, url, headers, params, data, timeout, proxies, verify, max_retries):
+        # type: (str, str, Dict[str, str], Dict[str, Any], Any, float, Optional[Any], Any, int) -> Any
         """
         Wrapper around `urllib3.PoolManager.request` method. This method will raise
         exceptions for HTTP status codes that are not 2xx.
@@ -237,6 +245,7 @@ class Urllib3Client(HTTPClient):
 
     @classmethod
     def raise_on_status(cls, response):
+        # type: (Any) -> None
         """
         Raise on HTTP status code errors.
         """
@@ -247,6 +256,7 @@ class Urllib3Client(HTTPClient):
 
 
 def resolve_http_client():
+    # type: () -> Type[HTTPClient]
     """
     Resolve an appropriate HTTP client based the defined priority and user environment.
     """

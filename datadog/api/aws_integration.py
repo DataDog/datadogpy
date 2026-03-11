@@ -1,6 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
+from typing import Any, Optional
+
 from datadog.api.resources import (
     GetableAPIResource,
     CreateableAPIResource,
@@ -25,9 +27,11 @@ class AwsIntegration(
 
     _resource_name = "integration"
     _resource_id = "aws"
+    _sub_resource_name = ""  # type: str
 
     @classmethod
     def list(cls, **params):
+        # type: (**Any) -> Any
         """
         List all Datadog-AWS integrations available in your Datadog organization.
 
@@ -36,7 +40,8 @@ class AwsIntegration(
         return super(AwsIntegration, cls).get(id=cls._resource_id, **params)
 
     @classmethod
-    def create(cls, **params):
+    def create(cls, attach_host_name=False, method="POST", id=None, params=None, **body):
+        # type: (bool, str, Optional[Any], Optional[Any], **Any) -> Any
         """
         Add a new AWS integration config.
 
@@ -94,10 +99,11 @@ class AwsIntegration(
         account_specific_namespace_rules=account_specific_namespace_rules \
         excluded_regions=excluded_regions)
         """
-        return super(AwsIntegration, cls).create(id=cls._resource_id, **params)
+        return super(AwsIntegration, cls).create(id=cls._resource_id, **body)
 
     @classmethod
-    def update(cls, **body):
+    def update(cls, id=None, params=None, **body):
+        # type: (Optional[Any], Optional[Any], **Any) -> Any
         """
         Update an AWS integration config.
 
@@ -213,7 +219,8 @@ class AwsIntegration(
         return super(AwsIntegration, cls).update(id=cls._resource_id, params=params, **body)
 
     @classmethod
-    def delete(cls, **body):
+    def delete(cls, id=None, **body):
+        # type: (Optional[Any], **Any) -> Any
         """
         Delete a given Datadog-AWS integration.
 
@@ -226,6 +233,7 @@ class AwsIntegration(
 
     @classmethod
     def list_namespace_rules(cls, **params):
+        # type: (**Any) -> Any
         """
         List all namespace rules available as options.
 
@@ -236,6 +244,7 @@ class AwsIntegration(
 
     @classmethod
     def generate_new_external_id(cls, **params):
+        # type: (**Any) -> Any
         """
         Generate a new AWS external id for a given AWS account id and role name pair.
 

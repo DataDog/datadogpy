@@ -2,6 +2,8 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
 # datadog
+from typing import Any, Optional
+
 from datadog.api.resources import GetableAPIResource, UpdatableAPIResource
 
 
@@ -13,21 +15,23 @@ class Metadata(GetableAPIResource, UpdatableAPIResource):
     _resource_name = "metrics"
 
     @classmethod
-    def get(cls, metric_name):
+    def get(cls, id, **params):
+        # type: (str, **Any) -> Any
         """
         Get metadata information on an existing Datadog metric
 
-        param metric_name: metric name (ex. system.cpu.idle)
+        param id: metric name (ex. system.cpu.idle)
 
         :returns: Dictionary representing the API's JSON response
         """
-        if not metric_name:
+        if not id:
             raise KeyError("'metric_name' parameter is required")
 
-        return super(Metadata, cls).get(metric_name)
+        return super(Metadata, cls).get(id)
 
     @classmethod
-    def update(cls, metric_name, **params):
+    def update(cls, id, params=None, **body):
+        # type: (str, Optional[Any], **Any) -> Any
         """
         Update metadata fields for an existing Datadog metric.
         If the metadata does not exist for the metric it is created by
@@ -58,7 +62,7 @@ class Metadata(GetableAPIResource, UpdatableAPIResource):
 
         >>> api.Metadata.update(metric_name='api.requests.served', metric_type="counter")
         """
-        if not metric_name:
+        if not id:
             raise KeyError("'metric_name' parameter is required")
 
-        return super(Metadata, cls).update(id=metric_name, **params)
+        return super(Metadata, cls).update(id=id, **body)
