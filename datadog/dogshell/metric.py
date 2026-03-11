@@ -2,6 +2,7 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
 # stdlib
+import argparse
 from collections import defaultdict
 
 # datadog
@@ -12,6 +13,7 @@ from datadog.dogshell.common import report_errors, report_warnings
 class MetricClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
+        # type: (argparse._SubParsersAction[argparse.ArgumentParser]) -> None
         parser = subparsers.add_parser("metric", help="Post metrics.")
         verb_parsers = parser.add_subparsers(title="Verbs", dest="verb")
         verb_parsers.required = True
@@ -41,6 +43,7 @@ class MetricClient(object):
 
     @classmethod
     def _post(cls, args):
+        # type: (argparse.Namespace) -> None
         """
         Post a metric.
         """

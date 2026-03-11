@@ -6,9 +6,12 @@ Security Monitoring client - dogshell implementation.
 """
 from __future__ import print_function
 
+import argparse
 import json
 import sys
 from functools import wraps
+
+from typing import Any, Callable, Dict, Optional
 
 from datadog.dogshell.common import report_errors, report_warnings, print_err
 from datadog.api.security_monitoring_rules import SecurityMonitoringRule
@@ -18,11 +21,13 @@ from datadog import api
 
 
 def api_cmd(f):
+    # type: (Callable[[argparse.Namespace], Optional[Dict[str, Any]]]) -> Callable[[argparse.Namespace], int]
     """
     Decorator for security monitoring commands.
     """
     @wraps(f)
     def wrapper(args):
+        # type: (argparse.Namespace) -> int
         """
         A decorator that reports errors and warnings.
         """
@@ -52,6 +57,7 @@ class SecurityMonitoringClient(object):
 
     @classmethod
     def setup_parser(cls, subparsers):
+        # type: (argparse._SubParsersAction[argparse.ArgumentParser]) -> None
         """
         Set up the command line parser for security monitoring commands.
         """
@@ -155,15 +161,19 @@ class SecurityMonitoringClient(object):
 
     @classmethod
     def _show_rule(cls, args):
+        # type: (argparse.Namespace) -> int
         @api_cmd
         def show_rule_cmd(args):
+            # type: (argparse.Namespace) -> Optional[Dict[str, Any]]
             return SecurityMonitoringRule.get(args.rule_id)
         return show_rule_cmd(args)
 
     @classmethod
     def _show_all_rules(cls, args):
+        # type: (argparse.Namespace) -> int
         @api_cmd
         def show_all_rules_cmd(args):
+            # type: (argparse.Namespace) -> Optional[Dict[str, Any]]
             params = {}
 
             if args.page_size:
@@ -176,11 +186,13 @@ class SecurityMonitoringClient(object):
 
     @classmethod
     def _create_rule(cls, args):
+        # type: (argparse.Namespace) -> int
         """
         Create a security monitoring rule.
         """
         @api_cmd
         def create_rule_cmd(args):
+            # type: (argparse.Namespace) -> Optional[Dict[str, Any]]
             try:
                 with open(args.file, "r") as f:
                     rule_data = json.load(f)
@@ -193,11 +205,13 @@ class SecurityMonitoringClient(object):
 
     @classmethod
     def _update_rule(cls, args):
+        # type: (argparse.Namespace) -> int
         """
         Update a security monitoring rule.
         """
         @api_cmd
         def update_rule_cmd(args):
+            # type: (argparse.Namespace) -> Optional[Dict[str, Any]]
             try:
                 with open(args.file, "r") as f:
                     rule_data = json.load(f)
@@ -210,21 +224,25 @@ class SecurityMonitoringClient(object):
 
     @classmethod
     def _delete_rule(cls, args):
+        # type: (argparse.Namespace) -> int
         """
         Delete a security monitoring rule.
         """
         @api_cmd
         def delete_rule_cmd(args):
+            # type: (argparse.Namespace) -> Optional[Dict[str, Any]]
             return SecurityMonitoringRule.delete(args.rule_id)
         return delete_rule_cmd(args)
 
     @classmethod
     def _list_signals(cls, args):
+        # type: (argparse.Namespace) -> int
         """
         List security monitoring signals.
         """
         @api_cmd
         def list_signals_cmd(args):
+            # type: (argparse.Namespace) -> Optional[Dict[str, Any]]
             params = {}
 
             if args.query:
@@ -245,20 +263,24 @@ class SecurityMonitoringClient(object):
 
     @classmethod
     def _get_signal(cls, args):
+        # type: (argparse.Namespace) -> int
         """
         Get a security monitoring signal.
         """
         @api_cmd
         def get_signal_cmd(args):
+            # type: (argparse.Namespace) -> Optional[Dict[str, Any]]
             return SecurityMonitoringSignal.get(args.signal_id)
         return get_signal_cmd(args)
 
     @classmethod
     def _change_triage_state(cls, args):
+        # type: (argparse.Namespace) -> int
         """
         Change triage state of security signals.
         """
         @api_cmd
         def change_triage_state_cmd(args):
+            # type: (argparse.Namespace) -> Optional[Dict[str, Any]]
             return SecurityMonitoringSignal.change_triage_state(args.signal_id, args.state)
         return change_triage_state_cmd(args)

@@ -7,6 +7,7 @@ import sys
 
 # 3p
 import argparse
+from typing import Any
 
 # datadog
 from datadog import api
@@ -17,6 +18,7 @@ from datadog.util.format import pretty_json
 class DashboardClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
+        # type: (argparse._SubParsersAction[argparse.ArgumentParser]) -> None
         parser = subparsers.add_parser("dashboard", help="Create, edit, and delete dashboards")
 
         verb_parsers = parser.add_subparsers(title="Verbs", dest="verb")
@@ -89,6 +91,7 @@ class DashboardClient(object):
 
     @classmethod
     def _post(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         widgets = args.widgets
@@ -118,6 +121,7 @@ class DashboardClient(object):
 
     @classmethod
     def _update(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         widgets = args.widgets
@@ -147,6 +151,7 @@ class DashboardClient(object):
 
     @classmethod
     def _show(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         res = api.Dashboard.get(args.dashboard_id)
@@ -160,6 +165,7 @@ class DashboardClient(object):
 
     @classmethod
     def _delete(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         res = api.Dashboard.delete(args.dashboard_id)
         if res is not None:
@@ -168,6 +174,7 @@ class DashboardClient(object):
 
 
 def _json_string(str):
+    # type: (str) -> Any
     try:
         return json.loads(str)
     except Exception:

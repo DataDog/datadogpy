@@ -10,6 +10,7 @@ import webbrowser
 
 # 3p
 import argparse
+from typing import Dict, List, Optional, Union
 
 # datadog
 from datadog import api
@@ -21,6 +22,7 @@ from datetime import datetime
 class TimeboardClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
+        # type: (argparse._SubParsersAction[argparse.ArgumentParser]) -> None
         parser = subparsers.add_parser("timeboard", help="Create, edit, and delete timeboards")
         parser.add_argument(
             "--string_ids",
@@ -116,13 +118,16 @@ class TimeboardClient(object):
 
     @classmethod
     def _pull(cls, args):
+        # type: (argparse.Namespace) -> None
         cls._write_dash_to_file(args.timeboard_id, args.filename, args.timeout, args.format, args.string_ids)
 
     @classmethod
     def _pull_all(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
 
         def _title_to_filename(title):
+            # type: (str) -> str
             # Get a lowercased version with most punctuation stripped out...
             no_punct = "".join([c for c in title.lower() if c.isalnum() or c in [" ", "_", "-"]])
             # Now replace all -'s, _'s and spaces with "_", and strip trailing _
@@ -157,6 +162,7 @@ class TimeboardClient(object):
 
     @classmethod
     def _new_file(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         graphs = args.graphs
@@ -179,6 +185,7 @@ class TimeboardClient(object):
 
     @classmethod
     def _write_dash_to_file(cls, dash_id, filename, timeout, format="raw", string_ids=False):
+        # type: (Union[str, int], str, int, str, bool) -> None
         with open(filename, "w") as f:
             res = api.Timeboard.get(dash_id)
             report_warnings(res)
@@ -205,6 +212,7 @@ class TimeboardClient(object):
 
     @classmethod
     def _push(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         for f in args.file:
             try:
@@ -252,6 +260,7 @@ class TimeboardClient(object):
 
     @classmethod
     def _post(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         graphs = args.graphs
@@ -270,6 +279,7 @@ class TimeboardClient(object):
 
     @classmethod
     def _update(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         graphs = args.graphs
@@ -293,6 +303,7 @@ class TimeboardClient(object):
 
     @classmethod
     def _show(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         res = api.Timeboard.get(args.timeboard_id)
@@ -309,6 +320,7 @@ class TimeboardClient(object):
 
     @classmethod
     def _show_all(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         res = api.Timeboard.get_all()
@@ -329,6 +341,7 @@ class TimeboardClient(object):
 
     @classmethod
     def _delete(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         res = api.Timeboard.delete(args.timeboard_id)
         if res is not None:
@@ -337,16 +350,19 @@ class TimeboardClient(object):
 
     @classmethod
     def _web_view(cls, args):
+        # type: (argparse.Namespace) -> None
         dash_id = json.load(args.file)["id"]
-        url = api._api_host + "/dash/dash/{0}".format(dash_id)
+        url = (api._api_host or "") + "/dash/dash/{0}".format(dash_id)
         webbrowser.open(url)
 
     @classmethod
     def _escape(cls, s):
+        # type: (Optional[str]) -> str
         return s.replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t") if s else ""
 
 
 def _template_variables(tpl_var_input):
+    # type: (str) -> Union[List[str], List[Dict[str, str]]]
     if "[" not in tpl_var_input:
         return [v.strip() for v in tpl_var_input.split(",")]
     else:
