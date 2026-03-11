@@ -13,27 +13,35 @@ import copy
 import logging
 import platform
 import urllib
+from typing import TYPE_CHECKING
 from threading import Lock
 
+# datadog
+from datadog.api.exceptions import ProxyError, ClientError, HTTPError, HttpTimeout
+
+if TYPE_CHECKING:
+    import types  # noqa: F401
+    from typing import Optional  # noqa: F401
+
+
 # 3p
+requests = None  # type: Optional[types.ModuleType]
 try:
-    import requests
-    import requests.adapters
+    requests = __import__("requests")
+    __import__("requests.adapters")
 except ImportError:
-    requests = None  # type: ignore
+    pass
 
 try:
     from google.appengine.api import urlfetch, urlfetch_errors
 except ImportError:
     urlfetch, urlfetch_errors = None, None
 
+urllib3 = None  # type: Optional[types.ModuleType]
 try:
-    import urllib3  # type: ignore
+    urllib3 = __import__("urllib3")
 except ImportError:
-    urllib3 = None
-
-# datadog
-from datadog.api.exceptions import ProxyError, ClientError, HTTPError, HttpTimeout
+    pass
 
 
 log = logging.getLogger("datadog.api")

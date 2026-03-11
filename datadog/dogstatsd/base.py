@@ -168,9 +168,9 @@ class DogStatsd(object):
         default_sample_rate=1,                  # type: float
         disable_telemetry=False,                # type: bool
         telemetry_min_flush_interval=(DEFAULT_TELEMETRY_MIN_FLUSH_INTERVAL),  # type: int
-        telemetry_host=None,                    # type: Text
-        telemetry_port=None,                    # type: Union[str, int]
-        telemetry_socket_path=None,             # type: Text
+        telemetry_host=None,                    # type: Optional[Text]
+        telemetry_port=None,                    # type: Optional[Union[str, int]]
+        telemetry_socket_path=None,             # type: Optional[Text]
         max_buffer_len=0,                       # type: int
         max_metric_samples_per_context=0,       # type: int
         container_id=None,                      # type: Optional[Text]
@@ -413,9 +413,9 @@ class DogStatsd(object):
             self.host = self.resolve_host(host, use_default_route)
             self.port = int(port)
 
-        self.telemetry_socket_path = telemetry_socket_path
-        self.telemetry_host = None
-        self.telemetry_port = None
+        self.telemetry_socket_path = telemetry_socket_path  # type: Optional[Text]
+        self.telemetry_host = None  # type: Optional[Text]
+        self.telemetry_port = None  # type: Optional[int]
         self.telemetry_socket_timeout = telemetry_socket_timeout
         if not telemetry_socket_path and telemetry_host:
             self.telemetry_socket_path = None
