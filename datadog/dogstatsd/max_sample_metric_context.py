@@ -25,7 +25,7 @@ class MaxSampleMetricContexts:
             if context_key not in self.values:
                 # Create a new metric if it doesn't exist
                 self.values[context_key] = self.max_sample_metric_type(
-                    name, tags, max_samples_per_context, cardinality=cardinality
+                    name=name, tags=tags, rate=rate, max_metric_samples=max_samples_per_context, cardinality=cardinality
                 )
             metric = self.values[context_key]
             metric.lock.acquire()
