@@ -1,15 +1,22 @@
 from threading import Lock
 import random
+from typing import Any, List, Optional, Type, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from datadog.dogstatsd.max_sample_metric import MaxSampleMetric
+    from datadog.dogstatsd.metrics import MetricAggregator
 
 
 class MaxSampleMetricContexts:
     def __init__(self, max_sample_metric_type):
+        # type: (Any) -> None
         self.lock = Lock()
-        self.values = {}
+        self.values = {}  # type: dict
         self.max_sample_metric_type = max_sample_metric_type
 
     def flush(self):
-        metrics = []
+        # type: () -> List[List[MetricAggregator]]
+        metrics = []  # type: List[List[MetricAggregator]]
         """Flush the metrics and reset the stored values."""
         with self.lock:
             temp = self.values
@@ -19,6 +26,7 @@ class MaxSampleMetricContexts:
         return metrics
 
     def sample(self, name, value, tags, rate, context_key, max_samples_per_context, cardinality=None):
+        # type: (str, Any, Optional[List[str]], float, str, int, Optional[str]) -> None
         """Sample a metric and store it if it meets the criteria."""
         keeping_sample = self.should_sample(rate)
         with self.lock:
@@ -36,6 +44,7 @@ class MaxSampleMetricContexts:
         metric.lock.release()
 
     def should_sample(self, rate):
+        # type: (float) -> bool
         """Determine if a sample should be kept based on the specified rate."""
         if rate >= 1:
             return True

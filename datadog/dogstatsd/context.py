@@ -31,7 +31,7 @@ class TimedContextManagerDecorator(object):
         tags=None,  # type: Optional[List[str]]
         sample_rate=1,  # type: Optional[float]
         use_ms=None,  # type: Optional[bool]
-    ):  # type(...) -> None
+    ):  # type: (...) -> None
         self.statsd = statsd
         self.timing_func = statsd.timing
         self.metric = metric
@@ -42,7 +42,7 @@ class TimedContextManagerDecorator(object):
 
     def __call__(
         self, func  # type: Callable[..., Any]
-    ):  # type(...) -> Callable[..., Any]
+    ):  # type: (...) -> Callable[..., Any]
         """
         Decorator which returns the elapsed time of the function call.
 
@@ -58,6 +58,7 @@ class TimedContextManagerDecorator(object):
         # Others
         @wraps(func)
         def wrapped(*args, **kwargs):
+            # type: (*Any, **Any) -> Any
             start = monotonic()
             try:
                 return func(*args, **kwargs)
@@ -66,30 +67,30 @@ class TimedContextManagerDecorator(object):
 
         return wrapped
 
-    def __enter__(self):  # type(...) -> TimedContextManagerDecorator
+    def __enter__(self):  # type: (...) -> TimedContextManagerDecorator
         if not self.metric:
             raise TypeError("Cannot used timed without a metric!")
         self._start = monotonic()
         return self
 
-    def __exit__(self, type, value, traceback):  # type(...) -> None
+    def __exit__(self, type, value, traceback):  # type: (Optional[Any], Optional[Any], Optional[Any]) -> None
         # Report the elapsed time of the context manager.
         self._send(self._start)
 
     def _send(
         self,
         start,  # type: float
-    ):  # type(...) -> None
+    ):  # type: (...) -> None
         elapsed = monotonic() - start
         use_ms = self.use_ms if self.use_ms is not None else self.statsd.use_ms
         elapsed = int(round(1000 * elapsed)) if use_ms else elapsed
         self.timing_func(self.metric, elapsed, self.tags, self.sample_rate)  # type: ignore
         self.elapsed = elapsed
 
-    def start(self):  # type(...) -> None
+    def start(self):  # type: (...) -> None
         self.__enter__()
 
-    def stop(self):  # type(...) -> None
+    def stop(self):  # type: (...) -> None
         self.__exit__(None, None, None)
 
 
@@ -106,6 +107,6 @@ class DistributedContextManagerDecorator(TimedContextManagerDecorator):
         tags=None,  # type: Optional[List[str]]
         sample_rate=1,  # type: Optional[float]
         use_ms=None,  # type: Optional[bool]
-    ):  # type(...) -> None
+    ):  # type: (...) -> None
         super(DistributedContextManagerDecorator, self).__init__(statsd, metric, tags, sample_rate, use_ms)
         self.timing_func = statsd.distribution

@@ -6,6 +6,7 @@
 import errno
 import os
 import re
+from typing import Optional
 
 
 class UnresolvableContainerID(Exception):
@@ -42,12 +43,14 @@ class Cgroup(object):
     CONTAINER_RE = re.compile(r"(?:.+)?({0}|{1}|{2})(?:\.scope)?$".format(UUID_SOURCE, CONTAINER_SOURCE, TASK_SOURCE))
 
     def __init__(self):
+        # type: () -> None
         if self._is_host_cgroup_namespace():
             self.container_id = self._read_cgroup_path()
             return
         self.container_id = self._get_cgroup_from_inode()
 
     def _is_host_cgroup_namespace(self):
+        # type: () -> bool
         """Check if the current process is in a host cgroup namespace."""
         try:
             return (
@@ -59,6 +62,7 @@ class Cgroup(object):
             return False
 
     def _read_cgroup_path(self):
+        # type: () -> Optional[str]
         """Read the container ID from the cgroup file."""
         try:
             with open(self.CGROUP_PATH, mode="r") as fp:
@@ -81,6 +85,7 @@ class Cgroup(object):
         return None
 
     def _get_cgroup_from_inode(self):
+        # type: () -> Optional[str]
         """Read the container ID from the cgroup inode."""
         # Parse /proc/self/cgroup and get a map of controller to its associated cgroup node path.
         cgroup_controllers_paths = {}

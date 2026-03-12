@@ -14,10 +14,15 @@ import os
 import socket
 import errno
 import struct
+import sys
 import threading
 import time
 from threading import Lock, RLock
 import weakref
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from socket import socket as _Socket
 
 try:
     import queue
@@ -27,7 +32,7 @@ except ImportError:
 
 
 # pylint: disable=unused-import
-from typing import Optional, List, Text, Union
+from typing import Any, Callable, Dict, Optional, List, Text, Type, Union
 # pylint: enable=unused-import
 
 # Datadog libraries
@@ -111,6 +116,7 @@ _instances = weakref.WeakSet()  # type: weakref.WeakSet
 
 
 def pre_fork():
+    # type: () -> None
     """Prepare all client instances for a process fork.
 
     If SUPPORTS_FORKING is true, this will be called automatically before os.fork().
@@ -120,6 +126,7 @@ def pre_fork():
 
 
 def post_fork_parent():
+    # type: () -> None
     """Restore all client instances after a fork.
 
     If SUPPORTS_FORKING is true, this will be called automatically after os.fork().
@@ -129,6 +136,7 @@ def post_fork_parent():
 
 
 def post_fork_child():
+    # type: () -> None
     for c in _instances:
         c.post_fork_child()
 
@@ -445,7 +453,7 @@ class DogStatsd(object):
         self.cardinality = cardinality
 
         # Origin detection
-        self._container_id = None
+        self._container_id = None  # type: Optional[Text]
         origin_detection_enabled = self._is_origin_detection_enabled(
             container_id, origin_detection_enabled
         )
@@ -476,7 +484,7 @@ class DogStatsd(object):
         self._disable_aggregation = disable_aggregation
 
         self._flush_interval = flush_interval
-        self._flush_thread = None
+        self._flush_thread = None  # type: Optional[threading.Thread]
         self._flush_thread_stop = threading.Event()
         self.aggregator = Aggregator(max_metric_samples_per_context, self.cardinality)
         # Indicates if the process is about to fork, so we shouldn't start any new threads yet.
@@ -492,8 +500,8 @@ class DogStatsd(object):
         else:
             log.debug("Statsd buffering and aggregation is disabled")
 
-        self._queue = None
-        self._sender_thread = None
+        self._queue = None  # type: Optional[queue.Queue[Any]]
+        self._sender_thread = None  # type: Optional[threading.Thread]
         self._sender_enabled = False
 
         if not disable_background_sender:
@@ -504,20 +512,25 @@ class DogStatsd(object):
 
     @property
     def socket_path(self):
+        # type: () -> Optional[Text]
         return self._socket_path
 
     @socket_path.setter
     def socket_path(self, path):
+        # type: (Optional[Text]) -> None
         with self._socket_lock:
             self._socket_path = path
 
     @property
     def socket(self):
+        # type: () -> Optional[_Socket]
         return self._socket
 
     @socket.setter
     def socket(self, new_socket):
+        # type: (Optional[_Socket]) -> None
         self._socket = new_socket
+        self._socket_kind = None  # type: Optional[int]
         if new_socket:
             try:
                 self._socket_kind = new_socket.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
@@ -540,11 +553,14 @@ class DogStatsd(object):
 
     @property
     def telemetry_socket(self):
+        # type: () -> Optional[_Socket]
         return self._telemetry_socket
 
     @telemetry_socket.setter
     def telemetry_socket(self, t_socket):
+        # type: (Optional[_Socket]) -> None
         self._telemetry_socket = t_socket
+        self._telemetry_socket_kind = None  # type: Optional[int]
         if t_socket:
             try:
                 self._telemetry_socket_kind = t_socket.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
@@ -554,6 +570,7 @@ class DogStatsd(object):
         self._telemetry_socket_kind = None
 
     def enable_background_sender(self, sender_queue_size=0, sender_queue_timeout=0):
+        # type: (int, Optional[float]) -> None
         """
         Use a background thread to communicate with the dogstatsd server.
         When enabled, a background thread will be used to send metric payloads to the Agent.
@@ -588,6 +605,7 @@ class DogStatsd(object):
             self._start_sender_thread()
 
     def disable_background_sender(self):
+        # type: () -> None
         """Disable background sender mode.
 
         This call will block until all previously queued payloads are sent.
@@ -597,13 +615,16 @@ class DogStatsd(object):
             self._stop_sender_thread()
 
     def disable_telemetry(self):
+        # type: () -> None
         self._telemetry = False
 
     def enable_telemetry(self):
+        # type: () -> None
         self._telemetry = True
 
     # Note: Invocations of this method should be thread-safe
     def _start_flush_thread(self):
+        # type: () -> None
         if self._disable_aggregation and self.disable_buffering:
             log.debug("Statsd periodic buffer and aggregation flush is disabled")
             return
@@ -621,6 +642,7 @@ class DogStatsd(object):
             return
 
         def _flush_thread_loop(self, flush_interval):
+            # type: (DogStatsd, float) -> None
             while not self._flush_thread_stop.is_set():
                 time.sleep(flush_interval)
                 if not self._disable_aggregation:
@@ -641,6 +663,7 @@ class DogStatsd(object):
 
     # Note: Invocations of this method should be thread-safe
     def _stop_flush_thread(self):
+        # type: () -> None
         if not self._flush_thread:
             return
         try:
@@ -657,24 +680,29 @@ class DogStatsd(object):
         self._flush_thread_stop.clear()
 
     def _dedicated_telemetry_destination(self):
+        # type: () -> bool
         return bool(self.telemetry_socket_path or self.telemetry_host)
 
     # Context manager helper
     def __enter__(self):
+        # type: () -> DogStatsd
         self.open_buffer()
         return self
 
     # Context manager helper
     def __exit__(self, exc_type, value, traceback):
+        # type: (Optional[Type[BaseException]], Optional[BaseException], Optional[Any]) -> None
         self.close_buffer()
 
     @property
     def disable_buffering(self):
+        # type: () -> bool
         with self._config_lock:
             return self._disable_buffering
 
     @disable_buffering.setter
     def disable_buffering(self, is_disabled):
+        # type: (bool) -> None
         with self._config_lock:
             # If the toggle didn't change anything, this method is a noop
             if self._disable_buffering == is_disabled:
@@ -694,6 +722,7 @@ class DogStatsd(object):
                 self._start_flush_thread()
 
     def disable_aggregation(self):
+        # type: () -> None
         with self._config_lock:
             # If the toggle didn't change anything, this method is a noop
             if self._disable_aggregation:
@@ -708,6 +737,7 @@ class DogStatsd(object):
             log.debug("Statsd aggregation is disabled")
 
     def enable_aggregation(self, flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL, max_samples_per_context=0):
+        # type: (float, Optional[int]) -> None
         with self._config_lock:
             if not self._disable_aggregation:
                 return
@@ -720,6 +750,7 @@ class DogStatsd(object):
 
     @staticmethod
     def resolve_host(host, use_default_route):
+        # type: (Optional[Text], bool) -> Optional[Text]
         """
         Resolve the DogStatsd host.
 
@@ -734,6 +765,7 @@ class DogStatsd(object):
         return get_default_route()
 
     def get_socket(self, telemetry=False):
+        # type: (bool) -> _Socket
         """
         Return a connected socket.
 
@@ -770,6 +802,7 @@ class DogStatsd(object):
             return self.socket
 
     def set_socket_timeout(self, timeout):
+        # type: (Optional[float]) -> None
         """
         Set timeout for socket operations, in seconds.
 
@@ -783,6 +816,7 @@ class DogStatsd(object):
 
     @classmethod
     def _ensure_min_send_buffer_size(cls, sock, min_size=MIN_SEND_BUFFER_SIZE):
+        # type: (_Socket, int) -> None
         # Increase the receiving buffer size where needed (e.g. MacOS has 4k RX
         # buffers which is half of the max packet size that the client will send.
         if os.name == 'posix':
@@ -796,6 +830,7 @@ class DogStatsd(object):
 
     @classmethod
     def _get_uds_socket(cls, socket_path, timeout):
+        # type: (Text, Optional[float]) -> _Socket
         valid_socket_kinds = [socket.SOCK_DGRAM, socket.SOCK_STREAM]
         if socket_path.startswith(UNIX_ADDRESS_DATAGRAM_SCHEME):
             valid_socket_kinds = [socket.SOCK_DGRAM]
@@ -806,7 +841,7 @@ class DogStatsd(object):
         elif socket_path.startswith(UNIX_ADDRESS_SCHEME):
             socket_path = socket_path[len(UNIX_ADDRESS_SCHEME):]
 
-        last_error = ValueError("Invalid socket path")
+        last_error = ValueError("Invalid socket path")  # type: Exception
         for socket_kind in valid_socket_kinds:
             # py2 stores socket kinds differently than py3, determine the name independently from version
             sk_name = {socket.SOCK_STREAM: "stream", socket.SOCK_DGRAM: "datagram"}[socket_kind]
@@ -822,7 +857,7 @@ class DogStatsd(object):
                 if sock is not None:
                     sock.close()
                 log.debug("Failed to connect to %s with kind %s: %s", socket_path, sk_name, e)
-                if e.errno == errno.EPROTOTYPE:
+                if isinstance(e, OSError) and e.errno == errno.EPROTOTYPE:
                     last_error = e
                     continue
                 raise e
@@ -830,6 +865,7 @@ class DogStatsd(object):
 
     @classmethod
     def _get_udp_socket(cls, host, port, timeout):
+        # type: (Optional[Text], Optional[int], Optional[float]) -> _Socket
         log.debug("Connecting to %s:%s", host, port)
         addrinfo = socket.getaddrinfo(host, port, 0, socket.SOCK_DGRAM)
         # Override gai.conf order for backwrads compatibility: prefer
@@ -857,6 +893,7 @@ class DogStatsd(object):
             raise ValueError("getaddrinfo returned no addresses to connect to")
 
     def open_buffer(self, max_buffer_size=None):
+        # type: (None) -> None
         """
         Open a buffer to send a batch of metrics.
 
@@ -877,6 +914,7 @@ class DogStatsd(object):
             log.warning("The parameter max_buffer_size is now deprecated and is not used anymore")
 
     def close_buffer(self):
+        # type: () -> None
         """
         Flush the buffer and switch back to single metric packets.
 
@@ -892,14 +930,17 @@ class DogStatsd(object):
             self._config_lock.release()
 
     def _reset_buffer(self):
+        # type: () -> None
         with self._buffer_lock:
             self._current_buffer_total_size = 0
             self._buffer = []
 
     def flush(self):
+        # type: () -> None
         self.flush_buffered_metrics()
 
     def flush_buffered_metrics(self):
+        # type: () -> None
         """
         Flush the metrics buffer by sending the data to the server.
         """
@@ -910,6 +951,7 @@ class DogStatsd(object):
                 self._reset_buffer()
 
     def flush_aggregated_metrics(self):
+        # type: () -> None
         """
         Flush the aggregated metrics
         """
@@ -928,7 +970,7 @@ class DogStatsd(object):
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
         cardinality=None,  # type: Optional[str]
-    ):  # type(...) -> None
+    ):  # type: (...) -> None
         """
         Record the value of a gauge, optionally setting a list of tags and a
         sample rate.
@@ -950,7 +992,7 @@ class DogStatsd(object):
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
         cardinality=None,  # type: Optional[str]
-    ):  # type(...) -> None
+    ):  # type: (...) -> None
         """u
         Record the value of a gauge with a Unix timestamp (in seconds),
         optionally setting a list of tags and a sample rate.
@@ -972,7 +1014,7 @@ class DogStatsd(object):
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
         cardinality=None,  # type: Optional[str]
-    ):  # type(...) -> None
+    ):  # type: (...) -> None
         """
         Count tracks how many times something happened per second, tags and a sample
         rate.
@@ -993,7 +1035,7 @@ class DogStatsd(object):
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
         cardinality=None,  # type: Optional[str]
-    ):  # type(...) -> None
+    ):  # type: (...) -> None
         """
         Count how many times something happened at a given Unix timestamp in seconds,
         tags and a sample rate.
@@ -1014,7 +1056,7 @@ class DogStatsd(object):
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
         cardinality=None,  # type: Optional[str]
-    ):  # type(...) -> None
+    ):  # type: (...) -> None
         """
         Increment a counter, optionally setting a value, tags and a sample
         rate.
@@ -1034,7 +1076,7 @@ class DogStatsd(object):
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
         cardinality=None,  # type: Optional[str]
-    ):  # type(...) -> None
+    ):  # type: (...) -> None
         """
         Decrement a counter, optionally setting a value, tags and a sample
         rate.
@@ -1055,7 +1097,7 @@ class DogStatsd(object):
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
         cardinality=None,  # type: Optional[str]
-    ):  # type(...) -> None
+    ):  # type: (...) -> None
         """
         Sample a histogram value, optionally setting tags and a sample rate.
 
@@ -1074,7 +1116,7 @@ class DogStatsd(object):
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
         cardinality=None,  # type: Optional[str]
-    ):  # type(...) -> None
+    ):  # type: (...) -> None
         """
         Send a global distribution value, optionally setting tags and a sample rate.
 
@@ -1093,7 +1135,7 @@ class DogStatsd(object):
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
         cardinality=None,  # type: Optional[str]
-    ):  # type(...) -> None
+    ):  # type: (...) -> None
         """
         Record a timing, optionally setting tags and a sample rate.
 
@@ -1110,7 +1152,7 @@ class DogStatsd(object):
         tags=None,  # type: Optional[List[str]]
         sample_rate=None,  # type: Optional[float]
         use_ms=None,  # type: Optional[bool]
-    ):  # type(...) -> TimedContextManagerDecorator
+    ):  # type: (...) -> TimedContextManagerDecorator
         """
         A decorator or context manager that will measure the distribution of a
         function's/context's run time. Optionally specify a list of tags or a
@@ -1139,6 +1181,7 @@ class DogStatsd(object):
         return TimedContextManagerDecorator(self, metric, tags, sample_rate, use_ms)
 
     def distributed(self, metric=None, tags=None, sample_rate=None, use_ms=None):
+        # type: (Optional[Text], Optional[List[str]], Optional[float], Optional[bool]) -> DistributedContextManagerDecorator
         """
         A decorator or context manager that will measure the distribution of a
         function's/context's run time using custom metric distribution.
@@ -1167,6 +1210,7 @@ class DogStatsd(object):
         return DistributedContextManagerDecorator(self, metric, tags, sample_rate, use_ms)
 
     def set(self, metric, value, tags=None, sample_rate=None, cardinality=None):
+        # type: (Text, Any, Optional[List[str]], Optional[float], Optional[str]) -> None
         """
         Sample a set value.
 
@@ -1178,6 +1222,7 @@ class DogStatsd(object):
             self.aggregator.set(metric, value, tags, sample_rate, cardinality=cardinality)
 
     def close_socket(self):
+        # type: () -> None
         """
         Closes connected socket if connected.
         """
@@ -1199,6 +1244,7 @@ class DogStatsd(object):
     def _serialize_metric(
         self, metric, metric_type, value, tags, sample_rate=1, timestamp=0, cardinality=None
     ):
+        # type: (Text, str, Any, Optional[List[str]], Optional[float], int, Optional[str]) -> str
         # Create/format the metric packet
         parts = [(self.namespace + ".") if self.namespace else "", metric, ":", text(value), "|", metric_type]
 
@@ -1229,6 +1275,7 @@ class DogStatsd(object):
         return "".join(parts)
 
     def _report(self, metric, metric_type, value, tags, sample_rate, timestamp=0, sampling=True, cardinality=None):
+        # type: (Text, str, Any, Optional[List[str]], Optional[float], int, bool, Optional[str]) -> None
         """
         Create a metric packet and send it.
 
@@ -1271,6 +1318,7 @@ class DogStatsd(object):
         self._send(payload)
 
     def _reset_telemetry(self):
+        # type: () -> None
         self.metrics_count = 0
         self.events_count = 0
         self.service_checks_count = 0
@@ -1285,13 +1333,16 @@ class DogStatsd(object):
     # Aliases for backwards compatibility.
     @property
     def packets_dropped(self):
+        # type: () -> int
         return self.packets_dropped_queue + self.packets_dropped_writer
 
     @property
     def bytes_dropped(self):
+        # type: () -> int
         return self.bytes_dropped_queue + self.bytes_dropped_writer
 
     def _flush_telemetry(self):
+        # type: () -> str
         tags = self._client_tags[:]
         tags.append("client_transport:{}".format(self._transport))
         tags.extend(self.constant_tags)
@@ -1323,10 +1374,12 @@ class DogStatsd(object):
         )
 
     def _is_telemetry_flush_time(self):
+        # type: () -> bool
         return self._telemetry and \
             self._last_flush_time + self._telemetry_flush_interval < time.time()
 
     def _send_to_server(self, packet):
+        # type: (str) -> None
         # Skip the lock if the queue is None. There is no race with enable_background_sender.
         if self._queue is not None:
             # Prevent a race with disable_background_sender.
@@ -1342,6 +1395,7 @@ class DogStatsd(object):
         self._xmit_packet_with_telemetry(packet + '\n')
 
     def _xmit_packet_with_telemetry(self, packet):
+        # type: (str) -> None
         self._xmit_packet(packet, False)
 
         if self._is_telemetry_flush_time():
@@ -1357,6 +1411,7 @@ class DogStatsd(object):
                 self.packets_dropped_writer += 1
 
     def _xmit_packet(self, packet, is_telemetry):
+        # type: (str, bool) -> bool
         socket_kind = None
         try:
             if is_telemetry and self._dedicated_telemetry_destination():
@@ -1422,6 +1477,7 @@ class DogStatsd(object):
         return False
 
     def _send_to_buffer(self, packet):
+        # type: (str) -> None
         with self._buffer_lock:
             if self._should_flush(len(packet)):
                 self.flush_buffered_metrics()
@@ -1432,16 +1488,19 @@ class DogStatsd(object):
             self._current_buffer_total_size += len(packet) + 1
 
     def _should_flush(self, length_to_be_added):
+        # type: (int) -> bool
         if self._current_buffer_total_size + length_to_be_added + 1 > self._max_payload_size:
             return True
         return False
 
     @staticmethod
     def _escape_event_content(string):
+        # type: (str) -> str
         return string.replace("\n", "\\n")
 
     @staticmethod
     def _escape_service_check_message(string):
+        # type: (str) -> str
         return string.replace("\n", "\\n").replace("m:", "m\\:")
 
     def event(
@@ -1457,6 +1516,7 @@ class DogStatsd(object):
         hostname=None,
         cardinality=None,
     ):
+        # type: (str, str, Optional[str], Optional[str], Optional[str], Optional[int], Optional[str], Optional[List[str]], Optional[str], Optional[str]) -> None
         """
         Send an event. Attributes are the same as the Event API.
             http://docs.datadoghq.com/api/
@@ -1468,7 +1528,7 @@ class DogStatsd(object):
         message = DogStatsd._escape_event_content(message)
 
         # pylint: disable=undefined-variable
-        if not is_p3k():
+        if sys.version_info[0] < 3:
             if not isinstance(title, unicode):                                       # noqa: F821
                 title = unicode(DogStatsd._escape_event_content(title), 'utf8')      # noqa: F821
             if not isinstance(message, unicode):                                     # noqa: F821
@@ -1530,6 +1590,7 @@ class DogStatsd(object):
         hostname=None,
         message=None,
     ):
+        # type: (str, int, Optional[List[str]], Optional[int], Optional[str], Optional[str], Optional[str]) -> None
         """
         Send a service check run.
 
@@ -1566,6 +1627,7 @@ class DogStatsd(object):
         self._send(string)
 
     def _add_constant_tags(self, tags):
+        # type: (Optional[List[str]]) -> Optional[List[str]]
         if self.constant_tags:
             if tags:
                 return tags + self.constant_tags
@@ -1574,6 +1636,7 @@ class DogStatsd(object):
         return tags
 
     def _is_origin_detection_enabled(self, container_id, origin_detection_enabled):
+        # type: (Optional[Text], bool) -> bool
         """
         Returns whether the client should fill the container field.
         If a user-defined container ID is provided, we don't ignore origin detection
@@ -1588,6 +1651,7 @@ class DogStatsd(object):
         return value.lower() not in {"no", "false", "0", "n", "off"}
 
     def _set_container_id(self, container_id, origin_detection_enabled):
+        # type: (Optional[Text], bool) -> None
         """
         Initializes the container ID.
         It can either be provided by the user or read from cgroups.
@@ -1604,6 +1668,7 @@ class DogStatsd(object):
                 self._container_id = None
 
     def _start_sender_thread(self):
+        # type: () -> None
         if not self._sender_enabled or self._forking:
             return
 
@@ -1622,6 +1687,7 @@ class DogStatsd(object):
         self._sender_thread.start()
 
     def _stop_sender_thread(self):
+        # type: () -> None
         # Lock ensures that nothing gets added to the queue after we disable it.
         with self._buffer_lock:
             if not self._queue:
@@ -1629,10 +1695,12 @@ class DogStatsd(object):
             self._queue.put(Stop)
             self._queue = None
 
-        self._sender_thread.join()
+        if self._sender_thread is not None:
+            self._sender_thread.join()
         self._sender_thread = None
 
     def _sender_main_loop(self, queue):
+        # type: (Any) -> None
         while True:
             item = queue.get()
             if item is Stop:
@@ -1642,6 +1710,7 @@ class DogStatsd(object):
             queue.task_done()
 
     def wait_for_pending(self):
+        # type: () -> None
         """
         Flush the buffer and wait for all queued payloads to be written to the server.
         """
@@ -1657,6 +1726,7 @@ class DogStatsd(object):
             queue.join()
 
     def pre_fork(self):
+        # type: () -> None
         """Prepare client for a process fork.
 
         Flush any pending payloads and stop all background threads.
@@ -1677,12 +1747,14 @@ class DogStatsd(object):
         self._stop_sender_thread()
 
     def post_fork_parent(self):
+        # type: () -> None
         """Restore the client state after a fork in the parent process."""
         self._start_flush_thread()
         self._start_sender_thread()
         self._config_lock.release()
 
     def post_fork_child(self):
+        # type: () -> None
         """Restore the client state after a fork in the child process."""
         self._config_lock.release()
 
@@ -1705,6 +1777,7 @@ class DogStatsd(object):
             self._start_sender_thread()
 
     def stop(self):
+        # type: () -> None
         """Stop the client.
 
         Disable buffering, aggregation, background sender and flush any pending payloads to the server.
