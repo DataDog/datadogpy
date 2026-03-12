@@ -1,6 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
+from typing import Any
+
 from datadog.api.resources import ActionAPIResource, SearchableAPIResource, ListableAPIResource
 
 
@@ -13,6 +15,7 @@ class Host(ActionAPIResource):
 
     @classmethod
     def mute(cls, host_name, **body):
+        # type: (str, **Any) -> Any
         """
         Mute a host.
 
@@ -36,6 +39,7 @@ class Host(ActionAPIResource):
 
     @classmethod
     def unmute(cls, host_name):
+        # type: (str) -> Any
         """
         Unmute a host.
 
@@ -57,6 +61,7 @@ class Hosts(ActionAPIResource, SearchableAPIResource, ListableAPIResource):
 
     @classmethod
     def search(cls, **params):
+        # type: (**Any) -> Any
         """
         Search among hosts live within the past 2 hours. Max 100
         results at a time.
@@ -83,6 +88,7 @@ class Hosts(ActionAPIResource, SearchableAPIResource, ListableAPIResource):
 
     @classmethod
     def totals(cls, **params):
+        # type: (**Any) -> Any
         """
         Get total number of hosts active and up.
 
@@ -95,6 +101,7 @@ class Hosts(ActionAPIResource, SearchableAPIResource, ListableAPIResource):
 
     @classmethod
     def get_all(cls, **params):
+        # type: (**Any) -> Any
         """
         Get all hosts.
 

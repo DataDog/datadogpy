@@ -4,6 +4,7 @@
 """
 Security Monitoring Rule API.
 """
+from typing import Any, Dict, Optional
 
 from datadog.api.resources import (
     GetableAPIResource,
@@ -32,6 +33,7 @@ class SecurityMonitoringRule(
 
     @classmethod
     def get_all(cls, **params):
+        # type: (**Any) -> Any
         """
         Get all security monitoring rules.
 
@@ -43,51 +45,57 @@ class SecurityMonitoringRule(
         return super(SecurityMonitoringRule, cls).get_all(**params)
 
     @classmethod
-    def get(cls, rule_id, **params):
+    def get(cls, id, **params):
+        # type: (str, **Any) -> Any
         """
         Get a security monitoring rule's details.
 
-        :param rule_id: ID of the security monitoring rule
-        :type rule_id: str
+        :param id: ID of the security monitoring rule
+        :type id: str
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(SecurityMonitoringRule, cls).get(rule_id, **params)
+        return super(SecurityMonitoringRule, cls).get(id, **params)
 
     @classmethod
-    def create(cls, **params):
+    def create(cls, attach_host_name=False, method="POST", id=None, params=None, **body):
+        # type: (bool, str, Optional[Any], Optional[Dict[str, Any]], **Any) -> Any
         """
         Create a security monitoring rule.
 
-        :param params: Parameters to create the security monitoring rule with
-        :type params: dict
+        :param body: Parameters to create the security monitoring rule with
+        :type body: dict
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(SecurityMonitoringRule, cls).create(**params)
+        return super(SecurityMonitoringRule, cls).create(
+            attach_host_name=attach_host_name, method=method, id=id, params=params, **body
+        )
 
     @classmethod
-    def update(cls, rule_id, **params):
+    def update(cls, id, params=None, **body):
+        # type: (Any, Optional[Dict[str, Any]], **Any) -> Any
         """
         Update a security monitoring rule.
 
-        :param rule_id: ID of the security monitoring rule to update
-        :type rule_id: str
-        :param params: Parameters to update the security monitoring rule with
-        :type params: dict
+        :param id: ID of the security monitoring rule to update
+        :type id: str
+        :param body: Parameters to update the security monitoring rule with
+        :type body: dict
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(SecurityMonitoringRule, cls).update(rule_id, **params)
+        return super(SecurityMonitoringRule, cls).update(id, params=params, **body)
 
     @classmethod
-    def delete(cls, rule_id, **params):
+    def delete(cls, id, **params):
+        # type: (str, **Any) -> Any
         """
         Delete a security monitoring rule.
 
-        :param rule_id: ID of the security monitoring rule to delete
-        :type rule_id: str
+        :param id: ID of the security monitoring rule to delete
+        :type id: str
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(SecurityMonitoringRule, cls).delete(rule_id, **params)
+        return super(SecurityMonitoringRule, cls).delete(id, **params)

@@ -4,6 +4,7 @@
 """
 Security Monitoring Signals API.
 """
+from typing import Any
 
 from datadog.api.resources import (
     GetableAPIResource,
@@ -27,19 +28,21 @@ class SecurityMonitoringSignal(
     _api_version = "v2"
 
     @classmethod
-    def get(cls, signal_id, **params):
+    def get(cls, id, **params):
+        # type: (str, **Any) -> Any
         """
         Get a security signal's details.
 
-        :param signal_id: ID of the security signal
-        :type signal_id: str
+        :param id: ID of the security signal
+        :type id: str
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(SecurityMonitoringSignal, cls).get(signal_id, **params)
+        return super(SecurityMonitoringSignal, cls).get(id, **params)
 
     @classmethod
     def get_all(cls, **params):
+        # type: (**Any) -> Any
         """
         Get all security signals.
 
@@ -59,6 +62,7 @@ class SecurityMonitoringSignal(
 
     @classmethod
     def change_triage_state(cls, signal_id, state, **params):
+        # type: (str, str, **Any) -> Any
         """
         Change the triage state of security signals.
 

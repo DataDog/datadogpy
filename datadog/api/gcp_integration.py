@@ -1,6 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
+from typing import Any, Dict, Optional
+
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, DeletableAPIResource, UpdatableAPIResource
 
 
@@ -14,6 +16,7 @@ class GcpIntegration(GetableAPIResource, CreateableAPIResource, DeletableAPIReso
 
     @classmethod
     def list(cls, **params):
+        # type: (**Any) -> Any
         """
         List all Datadog-Gcp integrations available in your Datadog organization.
 
@@ -22,7 +25,8 @@ class GcpIntegration(GetableAPIResource, CreateableAPIResource, DeletableAPIReso
         return super(GcpIntegration, cls).get(id=cls._resource_id, **params)
 
     @classmethod
-    def delete(cls, **body):
+    def delete(cls, id=None, **body):
+        # type: (Optional[Any], **Any) -> Any
         """
         Delete a given Datadog-GCP integration.
 
@@ -34,7 +38,8 @@ class GcpIntegration(GetableAPIResource, CreateableAPIResource, DeletableAPIReso
         return super(GcpIntegration, cls).delete(id=cls._resource_id, body=body)
 
     @classmethod
-    def create(cls, **params):
+    def create(cls, attach_host_name=False, method="POST", id=None, params=None, **body):
+        # type: (bool, str, Optional[Any], Optional[Dict[str, Any]], **Any) -> Any
         """
         Add a new GCP integration config.
 
@@ -64,10 +69,11 @@ class GcpIntegration(GetableAPIResource, CreateableAPIResource, DeletableAPIReso
         auth_provider_x509_cert_url=auth_provider_x509_cert_url, \
         client_x509_cert_url=client_x509_cert_url, host_filters=host_filters)
         """
-        return super(GcpIntegration, cls).create(id=cls._resource_id, **params)
+        return super(GcpIntegration, cls).create(id=cls._resource_id, **body)
 
     @classmethod
-    def update(cls, **body):
+    def update(cls, id=None, params=None, **body):
+        # type: (Optional[Any], Optional[Dict[str, Any]], **Any) -> Any
         """
         Update an existing service account partially (one or multiple fields), \
         by supplying a new value for the field(s) to be updated.
@@ -89,5 +95,5 @@ class GcpIntegration(GetableAPIResource, CreateableAPIResource, DeletableAPIReso
         client_email=client_email, host_filters=host_filters, \
         automute=automute)
         """
-        params = {}
-        return super(GcpIntegration, cls).update(id=cls._resource_id, params=params, **body)
+        actual_params = {}  # type: Dict[str, Any]
+        return super(GcpIntegration, cls).update(id=cls._resource_id, params=actual_params, **body)

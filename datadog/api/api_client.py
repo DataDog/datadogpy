@@ -6,6 +6,7 @@ import json
 import logging
 import time
 import zlib
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type
 
 # datadog
 from datadog.api import _api_version, _max_timeouts, _backoff_period
@@ -13,6 +14,9 @@ from datadog.api.exceptions import ClientError, ApiError, HttpBackoff, HttpTimeo
 from datadog.api.http_client import resolve_http_client
 from datadog.util.compat import is_p3k
 from datadog.util.format import construct_url, normalize_tags
+
+if TYPE_CHECKING:
+    from datadog.api.http_client import HTTPClient  # noqa: F401
 
 
 log = logging.getLogger("datadog.api")
@@ -27,7 +31,7 @@ class APIClient(object):
     # HTTP transport parameters
     _backoff_period = _backoff_period
     _max_timeouts = _max_timeouts
-    _backoff_timestamp = None
+    _backoff_timestamp = None  # type: Optional[float]
     _timeout_counter = 0
     _sort_keys = False
 
@@ -36,6 +40,7 @@ class APIClient(object):
 
     @classmethod
     def _get_http_client(cls):
+        # type: () -> Type[HTTPClient]
         """
         Getter for the embedded HTTP client.
         """
@@ -58,6 +63,7 @@ class APIClient(object):
         compress_payload=False,
         **params
     ):
+        # type: (str, str, Optional[str], Optional[Any], bool, Optional[Any], Optional[Any], Optional[List[int]], bool, **Any) -> Any
         """
         Make an HTTP API request
 
@@ -154,6 +160,7 @@ class APIClient(object):
                 headers["Content-Type"] = "application/json"
 
             if compress_payload:
+                assert body is not None
                 body = zlib.compress(body.encode("utf-8"))
                 headers["Content-Encoding"] = "deflate"
 
@@ -237,6 +244,7 @@ class APIClient(object):
 
     @classmethod
     def _should_submit(cls):
+        # type: () -> bool
         """
         Returns True if we're in a state where we should make a request
         (backoff expired, no backoff in effect), false otherwise.
@@ -281,10 +289,12 @@ class APIClient(object):
 
     @classmethod
     def _backoff_status(cls):
+        # type: () -> Tuple[float, float]
         """
         Get a backoff report, i.e. backoff total and remaining time.
         """
         now = time.time()
+        assert cls._backoff_timestamp is not None
         backed_off_time = now - cls._backoff_timestamp
         backoff_time_left = cls._backoff_period - backed_off_time
         return round(backed_off_time, 2), round(backoff_time_left, 2)

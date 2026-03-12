@@ -1,6 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
+from typing import Any
+
 from datadog.api.resources import (
     GetableAPIResource,
     CreateableAPIResource,
@@ -27,6 +29,7 @@ class Monitor(
 
     @classmethod
     def get(cls, id, **params):
+        # type: (Any, **Any) -> Any
         """
         Get monitor's details.
 
@@ -46,6 +49,7 @@ class Monitor(
 
     @classmethod
     def get_all(cls, **params):
+        # type: (**Any) -> Any
         """
         Get all monitor details.
 
@@ -73,6 +77,7 @@ class Monitor(
 
     @classmethod
     def mute(cls, id, **body):
+        # type: (Any, **Any) -> Any
         """
         Mute a monitor.
 
@@ -89,6 +94,7 @@ class Monitor(
 
     @classmethod
     def unmute(cls, id, **body):
+        # type: (Any, **Any) -> Any
         """
         Unmute a monitor.
 
@@ -104,6 +110,7 @@ class Monitor(
 
     @classmethod
     def mute_all(cls):
+        # type: () -> Any
         """
         Globally mute monitors.
 
@@ -113,6 +120,7 @@ class Monitor(
 
     @classmethod
     def unmute_all(cls):
+        # type: () -> Any
         """
         Cancel global monitor mute setting (does not remove mute settings for individual monitors).
 
@@ -122,6 +130,7 @@ class Monitor(
 
     @classmethod
     def search(cls, **params):
+        # type: (**Any) -> Any
         """
         Search monitors.
 
@@ -131,6 +140,7 @@ class Monitor(
 
     @classmethod
     def search_groups(cls, **params):
+        # type: (**Any) -> Any
         """
         Search monitor groups.
 
@@ -140,6 +150,7 @@ class Monitor(
 
     @classmethod
     def can_delete(cls, **params):
+        # type: (**Any) -> Any
         """
         Checks if the monitors corresponding to the monitor ids can be deleted.
 
@@ -149,6 +160,7 @@ class Monitor(
 
     @classmethod
     def validate(cls, **body):
+        # type: (**Any) -> Any
         """
         Checks if the monitors definition is valid.
 

@@ -4,6 +4,7 @@
 """
 Datadog API resources.
 """
+from typing import Any, Dict, Optional
 
 from datadog.api.api_client import APIClient
 
@@ -13,8 +14,12 @@ class CreateableAPIResource(object):
     Creatable API Resource
     """
 
+    _resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def create(cls, attach_host_name=False, method="POST", id=None, params=None, **body):
+        # type: (bool, str, Optional[Any], Optional[Dict[str, Any]], **Any) -> Any
         """
         Create a new API resource object
 
@@ -55,8 +60,12 @@ class SendableAPIResource(object):
     Fork of CreateableAPIResource class with different method names
     """
 
+    _resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def send(cls, attach_host_name=False, id=None, compress_payload=False, **body):
+        # type: (bool, Optional[Any], bool, **Any) -> Any
         """
         Create an API resource object
 
@@ -97,8 +106,12 @@ class UpdatableAPIResource(object):
     Updatable API Resource
     """
 
+    _resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def update(cls, id, params=None, **body):
+        # type: (Any, Optional[Dict[str, Any]], **Any) -> Any
         """
         Update an API resource object
 
@@ -124,8 +137,12 @@ class CustomUpdatableAPIResource(object):
     Updatable API Resource with custom HTTP Verb
     """
 
+    _resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def update(cls, method=None, id=None, params=None, **body):
+        # type: (Optional[str], Optional[Any], Optional[Dict[str, Any]], **Any) -> Any
         """
         Update an API resource object
 
@@ -160,8 +177,12 @@ class DeletableAPIResource(object):
     Deletable API Resource
     """
 
+    _resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def delete(cls, id, **params):
+        # type: (Any, **Any) -> Any
         """
         Delete an API resource object
 
@@ -181,8 +202,12 @@ class GetableAPIResource(object):
     Getable API Resource
     """
 
+    _resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def get(cls, id, **params):
+        # type: (Any, **Any) -> Any
         """
         Get information about an API resource object
 
@@ -205,8 +230,12 @@ class ListableAPIResource(object):
     Listable API Resource
     """
 
+    _resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def get_all(cls, **params):
+        # type: (**Any) -> Any
         """
         List API resource objects
 
@@ -225,8 +254,13 @@ class ListableAPISubResource(object):
     Listable API Sub-Resource
     """
 
+    _resource_name = ""  # type: str
+    _sub_resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def get_items(cls, id, **params):
+        # type: (Any, **Any) -> Any
         """
         List API sub-resource objects from a resource
 
@@ -252,8 +286,13 @@ class AddableAPISubResource(object):
     Addable API Sub-Resource
     """
 
+    _resource_name = ""  # type: str
+    _sub_resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def add_items(cls, id, params=None, **body):
+        # type: (Any, Optional[Dict[str, Any]], **Any) -> Any
         """
         Add new API sub-resource objects to a resource
 
@@ -284,8 +323,13 @@ class UpdatableAPISubResource(object):
     Updatable API Sub-Resource
     """
 
+    _resource_name = ""  # type: str
+    _sub_resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def update_items(cls, id, params=None, **body):
+        # type: (Any, Optional[Dict[str, Any]], **Any) -> Any
         """
         Update API sub-resource objects of a resource
 
@@ -316,8 +360,13 @@ class DeletableAPISubResource(object):
     Deletable API Sub-Resource
     """
 
+    _resource_name = ""  # type: str
+    _sub_resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def delete_items(cls, id, params=None, **body):
+        # type: (Any, Optional[Dict[str, Any]], **Any) -> Any
         """
         Delete API sub-resource objects from a resource
 
@@ -348,8 +397,12 @@ class SearchableAPIResource(object):
     Fork of ListableAPIResource class with different method names
     """
 
+    _resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def _search(cls, **params):
+        # type: (**Any) -> Any
         """
         Query an API resource stream
 
@@ -368,8 +421,12 @@ class ActionAPIResource(object):
     Actionable API Resource
     """
 
+    _resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def _trigger_class_action(cls, method, action_name, id=None, params=None, **body):
+        # type: (str, str, Optional[Any], Optional[Dict[str, Any]], **Any) -> Any
         """
         Trigger an action
 
@@ -401,13 +458,12 @@ class ActionAPIResource(object):
             path = "{resource_name}/{resource_id}/{action_name}".format(
                 resource_name=cls._resource_name, resource_id=id, action_name=action_name
             )
-        if method == "GET":
-            # Do not add body to GET requests, it causes 400 Bad request responses on EU site
-            body = None
-        return APIClient.submit(method, path, api_version, body, **params)
+        body_request = None if method == "GET" else body  # type: Optional[Dict[str, Any]]
+        return APIClient.submit(method, path, api_version, body_request, **params)
 
     @classmethod
     def _trigger_action(cls, method, name, id=None, **body):
+        # type: (str, str, Optional[Any], **Any) -> Any
         """
         Trigger an action
 
@@ -430,10 +486,8 @@ class ActionAPIResource(object):
             return APIClient.submit(method, name, api_version, body)
 
         path = "{action_name}/{resource_id}".format(action_name=name, resource_id=id)
-        if method == "GET":
-            # Do not add body to GET requests, it causes 400 Bad request responses on EU site
-            body = None
-        return APIClient.submit(method, path, api_version, body)
+        body_request = None if method == "GET" else body  # type: Optional[Dict[str, Any]]
+        return APIClient.submit(method, path, api_version, body_request)
 
 
 class UpdatableAPISyntheticsSubResource(object):
@@ -441,8 +495,13 @@ class UpdatableAPISyntheticsSubResource(object):
     Update Synthetics sub resource
     """
 
+    _resource_name = ""  # type: str
+    _sub_resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def update_synthetics_items(cls, id, params=None, **body):
+        # type: (Any, Optional[Dict[str, Any]], **Any) -> Any
         """
         Update API sub-resource objects of a resource
 
@@ -473,8 +532,12 @@ class UpdatableAPISyntheticsResource(object):
     Update Synthetics resource
     """
 
+    _resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def update_synthetics(cls, id, params=None, **body):
+        # type: (Any, Optional[Dict[str, Any]], **Any) -> Any
         """
         Update an API resource object
 
@@ -500,8 +563,12 @@ class ActionAPISyntheticsResource(object):
     Actionable Synthetics API Resource
     """
 
+    _resource_name = ""  # type: str
+    _api_version = None  # type: Optional[str]
+
     @classmethod
     def _trigger_synthetics_class_action(cls, method, name, id=None, params=None, **body):
+        # type: (str, str, Optional[Any], Optional[Dict[str, Any]], **Any) -> Any
         """
         Trigger an action
 
@@ -533,7 +600,5 @@ class ActionAPISyntheticsResource(object):
             path = "{resource_name}/{action_name}/{resource_id}".format(
                 resource_name=cls._resource_name, resource_id=id, action_name=name
             )
-        if method == "GET":
-            # Do not add body to GET requests, it causes 400 Bad request responses on EU site
-            body = None
-        return APIClient.submit(method, path, api_version, body, **params)
+        body_request = None if method == "GET" else body  # type: Optional[Dict[str, Any]]
+        return APIClient.submit(method, path, api_version, body_request, **params)

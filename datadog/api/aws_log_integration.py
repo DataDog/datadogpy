@@ -1,6 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
+from typing import Any
+
 from datadog.api.resources import DeletableAPISubResource, ListableAPISubResource, AddableAPISubResource
 
 
@@ -11,9 +13,11 @@ class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource, Addabl
 
     _resource_name = "integration"
     _resource_id = "aws"
+    _sub_resource_name = ""  # type: str
 
     @classmethod
     def list_log_services(cls, **params):
+        # type: (**Any) -> Any
         """
         List all namespace rules available as options.
 
@@ -24,6 +28,7 @@ class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource, Addabl
 
     @classmethod
     def add_log_lambda_arn(cls, **params):
+        # type: (**Any) -> Any
         """
         Attach the Lambda ARN of the Lambda created for the Datadog-AWS \
         log collection to your AWS account ID to enable log collection.
@@ -38,6 +43,7 @@ class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource, Addabl
 
     @classmethod
     def save_services(cls, **params):
+        # type: (**Any) -> Any
         """
         Enable Automatic Log collection for your AWS services.
 
@@ -51,6 +57,7 @@ class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource, Addabl
 
     @classmethod
     def delete_config(cls, **params):
+        # type: (**Any) -> Any
         """
         Delete a Datadog-AWS log collection configuration by removing the specific Lambda ARN \
         associated with a given AWS account.
@@ -65,6 +72,7 @@ class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource, Addabl
 
     @classmethod
     def check_lambda(cls, **params):
+        # type: (**Any) -> Any
         """
         Check function to see if a lambda_arn exists within an account. \
         This sends a job on our side if it does not exist, then immediately returns \
@@ -86,6 +94,7 @@ class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource, Addabl
 
     @classmethod
     def check_services(cls, **params):
+        # type: (**Any) -> Any
         """
         Test if permissions are present to add log-forwarding triggers for the \
         given services + AWS account. Input is the same as for save_services.
@@ -102,6 +111,7 @@ class AwsLogsIntegration(DeletableAPISubResource, ListableAPISubResource, Addabl
 
     @classmethod
     def list(cls, **params):
+        # type: (**Any) -> Any
         """
         List all Datadog-AWS Logs integrations available in your Datadog organization.
 

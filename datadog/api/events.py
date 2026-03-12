@@ -1,6 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
+from typing import Any, Dict, Optional
+
 from datadog.api.exceptions import ApiError
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, SearchableAPIResource
 from datadog.util.compat import iteritems
@@ -15,7 +17,8 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
     _timestamp_keys = set(["start", "end"])
 
     @classmethod
-    def create(cls, attach_host_name=True, **params):
+    def create(cls, attach_host_name=True, method="POST", id=None, params=None, **body):
+        # type: (bool, str, Optional[Any], Optional[Dict[str, Any]], **Any) -> Any
         """
         Post an event.
 
@@ -62,14 +65,15 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
 
         >>> api.Event.create(title=title, text=text, tags=tags)
         """
-        if params.get("alert_type"):
-            if params["alert_type"] not in ["error", "warning", "info", "success"]:
+        if body.get("alert_type"):
+            if body["alert_type"] not in ["error", "warning", "info", "success"]:
                 raise ApiError("Parameter alert_type must be either error, warning, info or success")
 
-        return super(Event, cls).create(attach_host_name=attach_host_name, **params)
+        return super(Event, cls).create(attach_host_name=attach_host_name, method=method, id=id, params=params, **body)
 
     @classmethod
     def query(cls, **params):
+        # type: (**Any) -> Any
         """
         Get the events that occurred between the *start* and *end* POSIX timestamps,
         optional filtered by *priority* ("low" or "normal"), *sources* and
@@ -85,6 +89,7 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
         """
 
         def timestamp_to_integer(k, v):
+            # type: (str, Any) -> Any
             if k in cls._timestamp_keys:
                 return int(v)
             else:
