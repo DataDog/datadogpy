@@ -7,6 +7,14 @@ Imports for compatibility with Python 2, Python 3 and Google App Engine.
 """
 import logging
 import sys
+from typing import Any, Callable, Dict, Iterator, Tuple, TYPE_CHECKING, TypeVar
+
+if TYPE_CHECKING:
+    from configparser import ConfigParser as ConfigParserType # noqa: F401Type
+
+    K = TypeVar('K')
+    V = TypeVar('V')
+
 
 # Logging
 log = logging.getLogger("datadog.util")
@@ -26,9 +34,11 @@ if sys.version_info[0] >= 3:
 
     class LazyLoader(object):
         def __init__(self, module_name):
+            # type: (str) -> None
             self.module_name = module_name
 
         def __getattr__(self, name):
+            # type: (str) -> Any
             # defer the importing of the module to when one of its attributes
             # is accessed
             import importlib
@@ -39,6 +49,7 @@ if sys.version_info[0] >= 3:
     configparser = LazyLoader('configparser')
 
     def ConfigParser():
+        # type: () -> ConfigParserType
         return configparser.ConfigParser()
 
     imap = map
@@ -46,9 +57,11 @@ if sys.version_info[0] >= 3:
     text = str
 
     def iteritems(d):
+        # type: (Dict[K, V]) -> Iterator[Tuple[K, V]]
         return iter(d.items())
 
     def iternext(iter):
+        # type: (Iterator[V]) -> V
         return next(iter)
 
 
@@ -67,9 +80,11 @@ else:
     text = unicode
 
     def iteritems(d):
+        # type: (Dict[K, V]) -> Iterator[Tuple[K, V]]
         return d.iteritems()
 
     def iternext(iter):
+        # type: (Iterator[V]) -> V
         return iter.next()
 
 
@@ -94,6 +109,7 @@ else:
 
 
 def _is_py_version_higher_than(major, minor=0):
+    # type: (int, int) -> bool
     """
     Assert that the Python version is higher than `$maj.$min`.
     """
@@ -101,6 +117,7 @@ def _is_py_version_higher_than(major, minor=0):
 
 
 def is_p3k():
+    # type: () -> bool
     """
     Assert that Python is version 3 or higher.
     """
@@ -108,6 +125,7 @@ def is_p3k():
 
 
 def is_higher_py32():
+    # type: () -> bool
     """
     Assert that Python is version 3.2 or higher.
     """
@@ -115,6 +133,7 @@ def is_higher_py32():
 
 
 def is_higher_py35():
+    # type: () -> bool
     """
     Assert that Python is version 3.5 or higher.
     """
@@ -122,6 +141,7 @@ def is_higher_py35():
 
 
 def is_pypy():
+    # type: () -> bool
     """
     Assert that PyPy is being used (regardless of 2 or 3)
     """
@@ -129,6 +149,7 @@ def is_pypy():
 
 
 def conditional_lru_cache(func):
+    # type: (Callable[..., V]) -> Callable[..., V]
     """
     A decorator that conditionally enables a lru_cache of size 512 if
     the version of Python can support it (>3.2) and otherwise returns

@@ -2,8 +2,8 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
 import os
-import string
 import sys
+from typing import Any, Dict, IO, Optional, List
 
 # datadog
 from datadog.util.compat import configparser, StringIO, is_p3k
@@ -22,6 +22,7 @@ class PathNotFound(Exception):
 
 
 def get_os():
+    # type: () -> str
     "Human-friendly OS name"
     if sys.platform == "darwin":
         return "mac"
@@ -38,20 +39,24 @@ def get_os():
 
 
 def skip_leading_wsp(f):
+    # type: (IO[str]) -> StringIO
     "Works on a file, returns a file-like object"
     if is_p3k():
         return StringIO("\n".join(x.strip(" ") for x in f.readlines()))
     else:
-        return StringIO("\n".join(map(string.strip, f.readlines())))
+        return StringIO("\n".join(map(str.strip, f.readlines())))
 
 
 def _windows_commondata_path():
+    # type: () -> str
     """Return the common appdata path, using ctypes
     From http://stackoverflow.com/questions/626796/\
     how-do-i-find-the-windows-common-application-data-folder-using-python
     """
     import ctypes
-    from ctypes import wintypes, windll
+    from ctypes import wintypes
+    ctypes_any = ctypes  # type: Any
+    windll = ctypes_any.windll
 
     CSIDL_COMMON_APPDATA = 35
 
@@ -64,6 +69,7 @@ def _windows_commondata_path():
 
 
 def _windows_config_path():
+    # type: () -> str
     common_data = _windows_commondata_path()
     path = os.path.join(common_data, "Datadog", DATADOG_CONF)
     if os.path.exists(path):
@@ -72,6 +78,7 @@ def _windows_config_path():
 
 
 def _unix_config_path():
+    # type: () -> str
     path = os.path.join("/etc/dd-agent", DATADOG_CONF)
     if os.path.exists(path):
         return path
@@ -79,6 +86,7 @@ def _unix_config_path():
 
 
 def _mac_config_path():
+    # type: () -> str
     path = os.path.join("~/.datadog-agent/agent", DATADOG_CONF)
     path = os.path.expanduser(path)
     if os.path.exists(path):
@@ -87,6 +95,7 @@ def _mac_config_path():
 
 
 def get_config_path(cfg_path=None, os_name=None):
+    # type: (Optional[str], Optional[str]) -> str
     # Check if there's an override and if it exists
     if cfg_path is not None and os.path.exists(cfg_path):
         return cfg_path
@@ -104,7 +113,8 @@ def get_config_path(cfg_path=None, os_name=None):
 
 
 def get_config(cfg_path=None, options=None):
-    agentConfig = {}
+    # type: (Optional[str], Optional[List[str]]) -> Dict[str, str]
+    agentConfig = {}  # type: Dict[str, str]
 
     # Config handling
     try:
@@ -131,6 +141,7 @@ def get_config(cfg_path=None, options=None):
 
 
 def get_pkg_version():
+    # type: () -> str
     """
     Resolve `datadog` package version.
 
@@ -140,6 +151,7 @@ def get_pkg_version():
 
 
 def get_version():
+    # type: () -> str
     """
     Resolve `datadog` package version.
 

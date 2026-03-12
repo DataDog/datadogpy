@@ -201,7 +201,7 @@ def trim_text(text, max_len):
 
 
 def build_event_body(cmd, returncode, stdout, stderr, notifications):
-    # type: (str, Union[int, Type[Timeout]], bytes, bytes, str) -> str
+    # type: (str, Union[int, Type[Timeout]], bytes, bytes, Union[str, bytes]) -> str
     """
     Format and return an event body.
 
@@ -263,7 +263,7 @@ class DogwrapOption(optparse.Option):
 
 
 def parse_options(raw_args=None):
-    # type: (Optional[List[str]]) -> Tuple[optparse.Values, str]
+    # type: (Optional[List[Union[str, bytes]]]) -> Tuple[optparse.Values, str]
     """
     Parse the raw command line options into an options object and the remaining command string
     """
@@ -408,13 +408,9 @@ returned (the command outputs remains buffered in dogwrap meanwhile)",
         "--tags", action="store", type="string", dest="tags", default="", help="comma separated list of tags"
     )
 
-    options, args = parser.parse_args(args=raw_args)
+    options, args = parser.parse_args(args=raw_args) # type: ignore[arg-type]
 
-    if is_p3k():
-        cmd = " ".join(args)
-    else:
-        cmd = b" ".join(a.encode("utf-8") for a in args).decode("utf-8")
-
+    cmd = " ".join(args) if is_p3k() else b" ".join(a.encode("utf-8") for a in args).decode("utf-8")
     return options, cmd
 
 
