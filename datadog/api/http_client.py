@@ -32,10 +32,13 @@ try:
 except ImportError:
     pass
 
+urlfetch = None  # type: Optional[types.ModuleType]
+urlfetch_errors = None  # type: Optional[types.ModuleType]
 try:
-    from google.appengine.api import urlfetch, urlfetch_errors
+    urlfetch = __import__("google.appengine.api.urlfetch")
+    urlfetch_errors = __import__("google.appengine.api.urlfetch_errors")
 except ImportError:
-    urlfetch, urlfetch_errors = None, None
+    pass
 
 urllib3 = None  # type: Optional[types.ModuleType]
 try:
