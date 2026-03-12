@@ -2,6 +2,7 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
 # stdlib
+import argparse
 import json
 import sys
 
@@ -13,6 +14,7 @@ from datadog.dogshell.common import report_errors, report_warnings
 class CommentClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
+        # type: (argparse._SubParsersAction[argparse.ArgumentParser]) -> None
         parser = subparsers.add_parser("comment", help="Post, update, and delete comments.")
 
         verb_parsers = parser.add_subparsers(title="Verbs", dest="verb")
@@ -41,6 +43,7 @@ class CommentClient(object):
 
     @classmethod
     def _post(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         handle = args.handle
         comment = args.comment
@@ -70,6 +73,7 @@ class CommentClient(object):
 
     @classmethod
     def _update(cls, args):
+        # type: (argparse.Namespace) -> None
         handle = args.handle
         comment = args.comment
         id = args.comment_id
@@ -99,6 +103,7 @@ class CommentClient(object):
 
     @classmethod
     def _reply(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         handle = args.handle
         comment = args.comment
@@ -129,6 +134,7 @@ class CommentClient(object):
 
     @classmethod
     def _show(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         id = args.comment_id
         format = args.format
