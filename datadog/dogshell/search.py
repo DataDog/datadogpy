@@ -2,6 +2,7 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
 # stdlib
+import argparse
 import json
 
 # datadog
@@ -13,6 +14,7 @@ from datadog.dogshell.common import report_errors, report_warnings
 class SearchClient(object):
     @classmethod
     def setup_parser(cls, subparsers):
+        # type: (argparse._SubParsersAction[argparse.ArgumentParser]) -> None
         parser = subparsers.add_parser("search", help="search datadog")
         verb_parsers = parser.add_subparsers(title="Verbs", dest="verb")
         verb_parsers.required = True
@@ -23,6 +25,7 @@ class SearchClient(object):
 
     @classmethod
     def _query(cls, args):
+        # type: (argparse.Namespace) -> None
         api._timeout = args.timeout
         format = args.format
         res = api.Infrastructure.search(q=args.query)
