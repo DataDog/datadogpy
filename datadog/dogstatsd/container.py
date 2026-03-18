@@ -75,8 +75,8 @@ class Cgroup(object):
                     if not match:
                         continue
                     _, _, path = match.groups()
-                    parts = [p for p in path.split("/")]
-                    if len(parts):
+                    parts = list(path.split("/"))
+                    if parts:
                         match = self.CONTAINER_RE.match(parts.pop())
                         if match:
                             return "ci-{0}".format(match.group(1))

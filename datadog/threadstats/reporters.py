@@ -11,7 +11,7 @@ from datadog import api
 
 class Reporter(object):
     def flush(self, metrics):
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class HttpReporter(Reporter):

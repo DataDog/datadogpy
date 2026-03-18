@@ -21,11 +21,11 @@ class Metric(object):
 
     def add_point(self, value):
         """ Add a point to the given metric. """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def flush(self, timestamp, interval):
         """ Flush all metrics up to the given timestamp. """
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class Set(Metric):
@@ -175,7 +175,7 @@ class MetricsAggregator(object):
 
     def __init__(self, roll_up_interval=10):
         self._lock = threading.RLock()
-        self._metrics = defaultdict(lambda: {})
+        self._metrics = defaultdict(dict)
         self._roll_up_interval = roll_up_interval
 
     def add_point(self, metric, tags, timestamp, value, metric_class, sample_rate=1, host=None):

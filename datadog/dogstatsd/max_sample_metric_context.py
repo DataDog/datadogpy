@@ -19,14 +19,12 @@ class MaxSampleMetricContexts:
 
     def flush(self):
         # type: () -> List[List[MetricAggregator]]
-        metrics = []  # type: List[List[MetricAggregator]]
         """Flush the metrics and reset the stored values."""
         with self.lock:
             temp = self.values
             self.values = {}
-        for _, metric in temp.items():
-            metrics.append(metric.flush())
-        return metrics
+
+        return [metric.flush() for metric in temp.values()]
 
     def sample(self, name, value, tags, rate, context_key, max_samples_per_context, cardinality=None):
         # type: (str, Any, Optional[List[str]], float, str, int, Optional[str]) -> None

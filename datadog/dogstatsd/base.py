@@ -997,8 +997,8 @@ class DogStatsd(object):
                 if i < lastaddr:
                     continue
                 raise e
-        else:
-            raise ValueError("getaddrinfo returned no addresses to connect to")
+
+        raise ValueError("getaddrinfo returned no addresses to connect to")
 
     def open_buffer(self, max_buffer_size=None):
         # type: (Optional[int]) -> None

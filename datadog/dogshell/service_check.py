@@ -39,7 +39,7 @@ class ServiceCheckClient(object):
         api._timeout = args.timeout
         format = args.format
         if args.tags:
-            tags = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
+            tags = sorted({t.strip() for t in args.tags.split(",") if t.strip()})
         else:
             tags = None
         res = api.ServiceCheck.check(

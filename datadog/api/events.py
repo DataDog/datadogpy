@@ -5,7 +5,6 @@ from typing import Any, Dict, Optional
 
 from datadog.api.exceptions import ApiError
 from datadog.api.resources import GetableAPIResource, CreateableAPIResource, SearchableAPIResource
-from datadog.util.compat import iteritems
 
 
 class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
@@ -14,7 +13,7 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
     """
 
     _resource_name = "events"
-    _timestamp_keys = set(["start", "end"])
+    _timestamp_keys = frozenset({"start", "end"})
 
     @classmethod
     def create(cls, attach_host_name=True, method="POST", id=None, params=None, **body):
@@ -95,6 +94,6 @@ class Event(GetableAPIResource, CreateableAPIResource, SearchableAPIResource):
             else:
                 return v
 
-        params = dict((k, timestamp_to_integer(k, v)) for k, v in iteritems(params))
+        params = {k: timestamp_to_integer(k, v) for k, v in params.items()}
 
         return super(Event, cls)._search(**params)
