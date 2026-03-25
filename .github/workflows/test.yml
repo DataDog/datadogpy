@@ -17,19 +17,24 @@ concurrency:
 
 jobs:
   lint:
-    name: Lint datadogpy files
+    name: Lint datadogpy files on Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # In the future, we need to add support for Python 2.7 and Python 3.14+
+        # but for now, those are failing.
+        python-version: ['3.8']
     steps:
     - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
 
-    - name: Set up Python 3.8
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4.9.1
       with:
-        python-version: "3.8"
+        python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
       run: |
-        python -m pip install pre-commit
         python -m pip install tox
 
     # - name: Run black
@@ -48,12 +53,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04]
-        python-version: ['pypy2.7', '3.7', 'pypy3.8']
+        # In the future, we need to add support for Python 2.7 and 3.4, as we officially
+        # support those versions. However, support for those versions has been removed from
+        # setup-python so we will need to find a workaround.
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14', 'pypy2.7', 'pypy3.8']
         # os: [ubuntu-latest, windows-latest, macos-latest]
         # python-version: ['2.7', '3.7', '3.8', '3.9', '3.10', 'pypy-2.7', 'pypy-3.8']
-    env:
-      TOXENV: ${{ matrix.python-version }}
-
     steps:
     - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
 
@@ -62,13 +67,22 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Set constrains for python2.7
+    - name: Set constraints for python2.7
       # Latest PyYaml supported version for python 2.7 is 5.4.1 which requires
       # cython<3 to build. See: https://github.com/yaml/pyyaml/issues/724
       if: ${{ matrix.python-version == 'pypy2.7' }}
       run: |
         echo "cython<3" > /tmp/constraints.txt
         echo "PIP_CONSTRAINT=/tmp/constraints.txt" >> $GITHUB_ENV
+
+    - name: Set TOXENV
+      run: |
+        version="${{ matrix.python-version }}"
+        if [[ "$version" == pypy* ]]; then
+          echo "TOXENV=$version" >> $GITHUB_ENV
+        else
+          echo "TOXENV=py${version//./}" >> $GITHUB_ENV
+        fi
 
     - name: Install tox
       run: pip install tox

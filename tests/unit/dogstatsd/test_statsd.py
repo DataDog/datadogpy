@@ -1029,11 +1029,14 @@ async def print_foo():
     time.sleep(0.5)
     print("foo")
         """
-        exec(source, {}, locals())
+        ns = locals()
+        exec(source, {}, ns)
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(locals()['print_foo']())
-        loop.close()
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(ns['print_foo']())
+        finally:
+            loop.close()
 
         # Assert
         packet = self.recv(2).split("\n")[0] # ignore telemetry packet
