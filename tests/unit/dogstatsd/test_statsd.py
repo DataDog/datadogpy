@@ -2124,6 +2124,30 @@ async def print_foo():
     def test_sender_queue_no_timeout(self):
         statsd = DogStatsd(disable_background_sender=False, sender_queue_timeout=None)
 
+    def test_bytes_dropped_queue_counts_actual_bytes(self):
+        # Use a queue of size 1 and a non-blocking timeout so packets are dropped
+        # when the queue is full, then verify bytes_dropped_queue reflects the real
+        # byte length of the dropped packet (including the appended newline).
+        statsd = DogStatsd(
+            disable_background_sender=False,
+            sender_queue_size=1,
+            sender_queue_timeout=0,
+        )
+        statsd.socket = FakeSocket()
+
+        # Build a packet whose serialised form we know, then compute its length.
+        metric_name = "test.metric"
+
+        # Send two packets: the first fills the queue, the second is dropped.
+        statsd._send_to_server(metric_name)
+        statsd._send_to_server(metric_name)
+
+        expected_bytes = len((metric_name + '\n').encode("utf-8"))
+        self.assertEqual(statsd.bytes_dropped_queue, expected_bytes)
+        self.assertEqual(statsd.packets_dropped_queue, 1)
+
+        statsd.stop()
+
     def test_set_socket_timeout(self):
         statsd = DogStatsd(disable_background_sender=False)
         statsd.socket = FakeSocket()
