@@ -426,6 +426,36 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.histogram('histo', 123.4, cardinality="low")
         self.assert_equal_telemetry('histo:123.4|h|card:low\n', self.recv(2))
 
+    def test_sampled_metrics_with_cardinality_when_aggregation_enabled(self):
+        statsd = DogStatsd(
+            disable_aggregation=False,
+            disable_telemetry=True,
+            origin_detection_enabled=False,
+            flush_interval=10000,
+            max_metric_samples_per_context=10,
+        )
+        statsd.socket = FakeSocket()
+
+        try:
+            statsd.histogram("histo", 1, cardinality="high")
+            statsd.distribution("dist", 2, cardinality="high")
+            statsd.timing("timer", 3, cardinality="high")
+            statsd.flush_aggregated_metrics()
+
+            packets = [statsd.socket.recv(no_wait=True) for _ in range(3)]
+            self.assertEqual(
+                sorted(
+                    [
+                        "histo:1|h|card:high\n",
+                        "dist:2|d|card:high\n",
+                        "timer:3|ms|card:high\n",
+                    ]
+                ),
+                sorted(packets),
+            )
+        finally:
+            statsd.stop()
+
     def test_pipe_in_tags(self):
         self.statsd.gauge('gt', 123.4, tags=['pipe|in:tag', 'red'])
         self.assert_equal_telemetry('gt:123.4|g|#pipe_in:tag,red\n', self.recv(2))
