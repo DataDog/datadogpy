@@ -961,7 +961,16 @@ class DogStatsd(object):
 
         sampled_metrics = self.aggregator.flush_aggregated_sampled_metrics()
         for m in sampled_metrics:
-            self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp, False)
+            self._report(
+                m.name,
+                m.metric_type,
+                m.value,
+                m.tags,
+                m.rate,
+                m.timestamp,
+                False,
+                cardinality=m.cardinality,
+            )
 
     def gauge(
         self,
