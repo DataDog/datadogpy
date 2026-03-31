@@ -49,8 +49,8 @@ class MaxSampleMetric(object):
 
     def flush(self):
         # type: () -> List[MetricAggregator]
-        rate = self.stored_metric_samples / self.total_metric_samples
         with self.lock:
+            rate = self.stored_metric_samples / self.total_metric_samples
             return [
                 # casting self.data[i] to float as it is officially Optional[float]
                 # but always float between 0 and self.stored_metric_samples - 1
