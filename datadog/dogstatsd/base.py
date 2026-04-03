@@ -925,15 +925,15 @@ class DogStatsd(object):
     @classmethod
     def _ensure_min_send_buffer_size(cls, sock, min_size=MIN_SEND_BUFFER_SIZE):
         # type: (_Socket, int) -> None
-        # Increase the receiving buffer size where needed (e.g. MacOS has 4k RX
+        # Increase the send buffer size where needed (e.g. MacOS has 4k TX
         # buffers which is half of the max packet size that the client will send.
         if os.name == 'posix':
             try:
-                recv_buff_size = sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
-                if recv_buff_size <= min_size:
+                send_buff_size = sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
+                if send_buff_size <= min_size:
                     sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, min_size)
                     log.debug("Socket send buffer increased to %dkb", min_size / 1024)
-            finally:
+            except Exception:
                 pass
 
     @classmethod
@@ -1110,7 +1110,7 @@ class DogStatsd(object):
         sample_rate=None,  # type: Optional[float]
         cardinality=None,  # type: Optional[str]
     ):  # type: (...) -> None
-        """u
+        """
         Record the value of a gauge with a Unix timestamp (in seconds),
         optionally setting a list of tags and a sample rate.
 
@@ -1590,7 +1590,6 @@ class DogStatsd(object):
                 )
                 self.close_socket()
         except Exception as exc:
-            print("Unexpected error: ", exc)
             log.error("Unexpected error: %s", str(exc))
 
         if not is_telemetry and self._telemetry:
