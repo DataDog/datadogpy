@@ -86,9 +86,9 @@ class DogshellConfig(IterableUserDict):
                                     "What is your api key? (Get it here: "
                                     "https://app.datadoghq.com/account/settings#api) "
                                 )
-                                if api_key.replace("_", "").isalnum():
+                                if api_key.isalnum():
                                     break
-                                print("Datadog api keys can only contain alphanumeric characters and underscores.")
+                                print("Datadog api keys can only contain alphanumeric characters.")
                             while True:
                                 app_key = get_input(
                                     "What is your app key? (Get it here: "
