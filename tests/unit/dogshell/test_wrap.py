@@ -239,7 +239,7 @@ class TestDogwrapStartSignals(unittest.TestCase):
     @mock.patch("datadog.dogshell.wrap.api.Metric.send")
     @mock.patch("datadog.dogshell.wrap.initialize")
     @mock.patch("datadog.dogshell.wrap.parse_options")
-    def test_start_signal_failure_does_not_block_execute(
+    def test_start_metric_failure_does_not_block_start_event(
         self,
         mock_parse,
         mock_init,
@@ -248,7 +248,7 @@ class TestDogwrapStartSignals(unittest.TestCase):
         mock_execute,
         mock_exit,
     ):
-        """API failure on start signals must not prevent command execution."""
+        """Start metric failure must not prevent start event or command execution."""
         opts = mock.Mock()
         opts.name = "test-job"
         opts.api_key = "fake-key"
@@ -273,8 +273,13 @@ class TestDogwrapStartSignals(unittest.TestCase):
 
         main()
 
-        # execute() must still have been called despite the API failure
+        # execute() must still have been called despite the metric failure
         mock_execute.assert_called_once()
+
+        # Start event must still have fired despite the metric failure
+        first_event_call = mock_event_create.call_args_list[0]
+        self.assertEqual(first_event_call[1]["alert_type"], "info")
+        self.assertIn("started", first_event_call[1]["title"])
 
     @mock.patch("sys.exit")
     @mock.patch("datadog.dogshell.wrap.execute", return_value=(0, b"", b"", 1.0))
@@ -282,7 +287,7 @@ class TestDogwrapStartSignals(unittest.TestCase):
     @mock.patch("datadog.dogshell.wrap.api.Event.create")
     @mock.patch("datadog.dogshell.wrap.initialize")
     @mock.patch("datadog.dogshell.wrap.parse_options")
-    def test_start_event_failure_does_not_block_execute(
+    def test_start_event_failure_does_not_block_start_metric(
         self,
         mock_parse,
         mock_init,
@@ -291,13 +296,13 @@ class TestDogwrapStartSignals(unittest.TestCase):
         mock_execute,
         mock_exit,
     ):
-        """API failure on start event must not prevent command execution."""
+        """Start event failure must not prevent start metric or command execution."""
         opts = mock.Mock()
         opts.name = "test-job"
         opts.api_key = "fake-key"
         opts.site = "datadoghq.com"
         opts.submit_mode = "all"
-        opts.send_metric = False
+        opts.send_metric = True
         opts.tags = ""
         opts.timeout = 60
         opts.sigterm_timeout = 120
@@ -311,10 +316,14 @@ class TestDogwrapStartSignals(unittest.TestCase):
         opts.notify_warning = ""
         mock_parse.return_value = (opts, "echo hi")
 
-        # Simulate API failure on the start event call
+        # Simulate API failure on the start event call (first Event.create)
         mock_event_create.side_effect = [Exception("Connection refused"), mock.DEFAULT]
 
         main()
 
-        # execute() must still have been called despite the API failure
+        # execute() must still have been called despite the event failure
         mock_execute.assert_called_once()
+
+        # Start metric must still have fired despite the event failure
+        first_metric_call = mock_metric_send.call_args_list[0]
+        self.assertEqual(first_metric_call[1]["metric"], "dogwrap.started")

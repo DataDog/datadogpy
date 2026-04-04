@@ -469,23 +469,28 @@ def main():
     initialize(api_key=options.api_key, api_host=api_host)
     host = api._host_name
 
-    # Build tags before execute() so start signals can use them
+    # Build tags early so start signals can reuse them
     if options.tags:
         tags = [t.strip() for t in options.tags.split(",")]
     else:
         tags = None
 
-    # Emit start signals before executing the command.
-    # Wrapped in try/except so API failures never block command execution.
-    try:
-        if options.send_metric:
+    # Start signals — failures must not block command execution.
+    if options.send_metric:
+        try:
             event_name_tag = "event_name:{}".format(options.name)
             start_tags = (tags or []) + [event_name_tag]
             api.Metric.send(
                 metric="dogwrap.started", points=1, tags=start_tags, type="gauge"
             )
+        except Exception as e:
+            print(
+                "Failed to send start metric: %s" % e,
+                file=sys.stderr,
+            )
 
-        if options.submit_mode == "all":
+    if options.submit_mode == "all":
+        try:
             api.Event.create(
                 title="[%s] %s started" % (host, options.name),
                 text="Job triggered",
@@ -493,11 +498,11 @@ def main():
                 aggregation_key=options.name,
                 tags=tags,
             )
-    except Exception as e:
-        print(
-            "Failed to send start signals, proceeding with command execution: %s" % e,
-            file=sys.stderr,
-        )
+        except Exception as e:
+            print(
+                "Failed to send start event: %s" % e,
+                file=sys.stderr,
+            )
 
     # If silent is checked we force the outputs to be buffered (and therefore
     # not forwarded to the Terminal streams) and we just avoid printing the
