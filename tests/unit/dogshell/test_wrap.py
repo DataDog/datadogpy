@@ -232,3 +232,89 @@ class TestDogwrapStartSignals(unittest.TestCase):
         sent_tags = started_call[1]["tags"]
         self.assertIn("env:prod", sent_tags)
         self.assertIn("event_name:test-job", sent_tags)
+
+    @mock.patch("sys.exit")
+    @mock.patch("datadog.dogshell.wrap.execute", return_value=(0, b"", b"", 1.0))
+    @mock.patch("datadog.dogshell.wrap.api.Event.create")
+    @mock.patch("datadog.dogshell.wrap.api.Metric.send")
+    @mock.patch("datadog.dogshell.wrap.initialize")
+    @mock.patch("datadog.dogshell.wrap.parse_options")
+    def test_start_signal_failure_does_not_block_execute(
+        self,
+        mock_parse,
+        mock_init,
+        mock_metric_send,
+        mock_event_create,
+        mock_execute,
+        mock_exit,
+    ):
+        """API failure on start signals must not prevent command execution."""
+        opts = mock.Mock()
+        opts.name = "test-job"
+        opts.api_key = "fake-key"
+        opts.site = "datadoghq.com"
+        opts.submit_mode = "all"
+        opts.send_metric = True
+        opts.tags = ""
+        opts.timeout = 60
+        opts.sigterm_timeout = 120
+        opts.sigkill_timeout = 60
+        opts.proc_poll_interval = 0.5
+        opts.buffer_outs = False
+        opts.priority = None
+        opts.warning_codes = None
+        opts.notify_success = ""
+        opts.notify_error = ""
+        opts.notify_warning = ""
+        mock_parse.return_value = (opts, "echo hi")
+
+        # Simulate API failure on the start metric call
+        mock_metric_send.side_effect = [Exception("API timeout"), mock.DEFAULT]
+
+        main()
+
+        # execute() must still have been called despite the API failure
+        mock_execute.assert_called_once()
+
+    @mock.patch("sys.exit")
+    @mock.patch("datadog.dogshell.wrap.execute", return_value=(0, b"", b"", 1.0))
+    @mock.patch("datadog.dogshell.wrap.api.Metric.send")
+    @mock.patch("datadog.dogshell.wrap.api.Event.create")
+    @mock.patch("datadog.dogshell.wrap.initialize")
+    @mock.patch("datadog.dogshell.wrap.parse_options")
+    def test_start_event_failure_does_not_block_execute(
+        self,
+        mock_parse,
+        mock_init,
+        mock_event_create,
+        mock_metric_send,
+        mock_execute,
+        mock_exit,
+    ):
+        """API failure on start event must not prevent command execution."""
+        opts = mock.Mock()
+        opts.name = "test-job"
+        opts.api_key = "fake-key"
+        opts.site = "datadoghq.com"
+        opts.submit_mode = "all"
+        opts.send_metric = False
+        opts.tags = ""
+        opts.timeout = 60
+        opts.sigterm_timeout = 120
+        opts.sigkill_timeout = 60
+        opts.proc_poll_interval = 0.5
+        opts.buffer_outs = False
+        opts.priority = None
+        opts.warning_codes = None
+        opts.notify_success = ""
+        opts.notify_error = ""
+        opts.notify_warning = ""
+        mock_parse.return_value = (opts, "echo hi")
+
+        # Simulate API failure on the start event call
+        mock_event_create.side_effect = [Exception("Connection refused"), mock.DEFAULT]
+
+        main()
+
+        # execute() must still have been called despite the API failure
+        mock_execute.assert_called_once()
