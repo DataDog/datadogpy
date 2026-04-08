@@ -750,7 +750,7 @@ class TestDogshell:
             "type": "log_detection"
         }
         
-        with open(rule_file, "w") as f:
+        with open(str(rule_file), "w") as f:
             json.dump(rule_data, f)
             
         # Create rule
@@ -772,7 +772,7 @@ class TestDogshell:
         updated_name = "Updated Rule {}".format(unique)
         rule_data["name"] = updated_name
         
-        with open(rule_file, "w") as f:
+        with open(str(rule_file), "w") as f:
             json.dump(rule_data, f)
             
         out, _, _ = dogshell(["security-monitoring", "rules", "update", rule_id, "--file", str(rule_file)])

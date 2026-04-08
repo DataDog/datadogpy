@@ -53,9 +53,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04]
-        # In the future, we need to add support for Python 2.7 and 3.4, as we officially
-        # support those versions. However, support for those versions has been removed from
-        # setup-python so we will need to find a workaround.
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14', 'pypy2.7', 'pypy3.8']
         # os: [ubuntu-latest, windows-latest, macos-latest]
         # python-version: ['2.7', '3.7', '3.8', '3.9', '3.10', 'pypy-2.7', 'pypy-3.8']
@@ -94,4 +91,69 @@ jobs:
       run: tox -e integration -- --vcr-record=none
 
     - name: Run admin integration tests on cassettes
+      run: tox -e integration-admin -- --vcr-record=none
+
+  run-legacy:
+    # actions/setup-python dropped support for Python 2.7 and 3.4, so we use
+    # official Python Docker images instead to test those EOL-but-supported versions.
+    name: Python ${{ matrix.python-version }} (legacy) on Linux
+    runs-on: ubuntu-latest
+    container:
+      image: python:${{ matrix.python-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['2.7', '3.4']
+    steps:
+    # All actions/checkout versions now use Node.js >= 20 (glibc >= 2.25).
+    # python:3.4 is Debian Stretch (glibc 2.24) so Node.js can't run there.
+    # Use a plain git clone instead — no Node.js needed.
+    - name: Checkout
+      run: |
+        git init .
+        git remote add origin https://github.com/${{ github.repository }}
+        git fetch --depth 1 origin ${{ github.sha }}
+        git checkout FETCH_HEAD
+
+    - name: Set constraints for python2.7
+      # Latest PyYaml supported version for python 2.7 is 5.4.1 which requires
+      # cython<3 to build. See: https://github.com/yaml/pyyaml/issues/724
+      if: ${{ matrix.python-version == '2.7' }}
+      run: |
+        echo "cython<3" > /tmp/constraints.txt
+        echo "PIP_CONSTRAINT=/tmp/constraints.txt" >> $GITHUB_ENV
+
+    - name: Set constraints for python3.4
+      # PyYAML 5.3+ dropped Python 3.4 support; vcrpy pulls it in.
+      if: ${{ matrix.python-version == '3.4' }}
+      run: |
+        echo "PyYAML<5.3" > /tmp/constraints.txt
+        echo "PIP_CONSTRAINT=/tmp/constraints.txt" >> $GITHUB_ENV
+
+    - name: Set TOXENV
+      # Use tr instead of ${//} because the container runs sh, not bash.
+      run: |
+        version="${{ matrix.python-version }}"
+        echo "TOXENV=py$(echo "$version" | tr -d '.')" >> $GITHUB_ENV
+
+    - name: Install tox
+      # tox 4+ requires Python 3.7+; virtualenv 20.22+ dropped Python 2.7 support.
+      run: pip install 'tox<4' 'virtualenv<20.22'
+
+    - name: Run unit tests
+      # Disable origin detection: the job runs inside a Docker container, so
+      # the client would detect the container ID and append |c:<id> to every
+      # metric, which the tests don't expect.
+      env:
+        DD_ORIGIN_DETECTION_ENABLED: "false"
+      run: tox
+
+    - name: Run integration tests on cassettes
+      env:
+        DD_ORIGIN_DETECTION_ENABLED: "false"
+      run: tox -e integration -- --vcr-record=none
+
+    - name: Run admin integration tests on cassettes
+      env:
+        DD_ORIGIN_DETECTION_ENABLED: "false"
       run: tox -e integration-admin -- --vcr-record=none
