@@ -94,9 +94,9 @@ class DogshellConfig(IterableUserDict):
                                     "What is your app key? (Get it here: "
                                     "https://app.datadoghq.com/account/settings#api) "
                                 )
-                                if app_key.isalnum():
+                                if app_key.replace("_", "").isalnum():
                                     break
-                                print("Datadog app keys can only contain alphanumeric characters.")
+                                print("Datadog app keys can only contain alphanumeric characters and underscores.")
 
                             # Write the config file
                             config.add_section("Connection")
