@@ -183,6 +183,12 @@ class APIClient(object):
             # Format response content
             content = result.content
 
+            if content and result.headers.get("Content-Encoding") == "gzip":
+                try:
+                    content = zlib.decompress(content, zlib.MAX_WBITS | 16)
+                except zlib.error:
+                    pass
+
             if content:
                 try:
                     if is_p3k():

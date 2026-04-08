@@ -56,7 +56,7 @@ def dogshell(capsys, config_file, dog):
     import click
     from click.testing import CliRunner
 
-    runner = CliRunner(mix_stderr=False)
+    runner = CliRunner(mix_stderr=False) if sys.version_info[:2] < (3, 10) else CliRunner()
 
     @click.command(context_settings={"ignore_unknown_options": True})
     @click.argument('args', nargs=-1, type=click.UNPROCESSED)
