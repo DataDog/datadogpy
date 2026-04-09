@@ -413,7 +413,7 @@ returned (the command outputs remains buffered in dogwrap meanwhile)",
     if is_p3k():
         cmd = " ".join(args)
     else:
-        cmd = b" ".join(a.encode("utf-8") for a in args).decode("utf-8")
+        cmd = b" ".join(a if isinstance(a, bytes) else a.encode("utf-8") for a in args).decode("utf-8")
 
     return options, cmd
 
