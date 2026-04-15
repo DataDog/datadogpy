@@ -7,8 +7,11 @@ import logging
 import re
 import socket
 import subprocess
+import sys
 import types
-from typing import Dict, Optional
+
+if sys.version_info[:2] >= (3, 5):
+    from typing import Dict, Optional  # noqa: F401
 
 # datadog
 from datadog.util.compat import url_lib, is_p3k, iteritems

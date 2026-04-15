@@ -13,7 +13,10 @@ without hindering performance.
 # stdlib
 import logging
 import os
-from typing import Any, List, Optional  # noqa: F401
+import sys
+
+if sys.version_info[0] >= 3:
+    from typing import Any, List, Optional  # noqa: F401
 
 # datadog
 from datadog import api

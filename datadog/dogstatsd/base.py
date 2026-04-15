@@ -19,7 +19,9 @@ import threading
 import time
 from threading import Lock, RLock
 import weakref
-from typing import TYPE_CHECKING
+
+if sys.version_info[:2] >= (3, 5):
+    from typing import TYPE_CHECKING  # noqa: F401
 
 try:
     import queue
@@ -29,7 +31,13 @@ except ImportError:
 
 
 # pylint: disable=unused-import
-from typing import Any, Optional, List, Text, Type, Union
+if sys.version_info[:2] >= (3, 5):
+    from typing import Any, Optional, List, Text, Type, Union, Iterable, Callable, overload  # noqa: F401
+
+try:
+    from typing import SupportsIndex
+except ImportError:
+    SupportsIndex = int  # type: ignore[assignment,misc]
 # pylint: enable=unused-import
 
 # Datadog libraries
@@ -45,8 +53,103 @@ from datadog.util.compat import text
 from datadog.util.format import normalize_tags, validate_cardinality
 from datadog.version import __version__
 
-if TYPE_CHECKING:
-    from socket import socket as _Socket
+
+if sys.version_info[:2] >= (3, 5):
+    if TYPE_CHECKING:
+        from socket import socket as _Socket
+
+    BaseListClass = List[str]
+else:
+    BaseListClass = list
+
+
+class TagList(BaseListClass):
+    """A list subclass that calls on_change() after any mutation."""
+
+    def __init__(self, iterable=(), on_change=None):
+        # type: (Iterable[str], Optional[Callable[[], None]]) -> None
+        super(TagList, self).__init__(iterable)
+        self._on_change = on_change
+
+    def _notify(self):
+        # type: () -> None
+        if self._on_change is not None:
+            self._on_change()
+
+    if sys.version_info[:2] >= (3, 5):
+        @overload
+        def __setitem__(self, index, value):  # noqa: F811
+            # type: (SupportsIndex, str) -> None
+            pass
+
+        @overload
+        def __setitem__(self, index, value):  # noqa: F811
+            # type: (slice, Iterable[str]) -> None
+            pass
+
+    def __setitem__(self, index, value):  # noqa: F811
+        # type: (Union[SupportsIndex, slice], Union[str, Iterable[str]]) -> None
+        super(TagList, self).__setitem__(index, value)  # type: ignore
+        self._notify()
+
+    def __delitem__(self, index):  # noqa: F811
+        # type: (Union[SupportsIndex, slice]) -> None
+        super(TagList, self).__delitem__(index)
+        self._notify()
+
+    def __iadd__(self, other):  # type: ignore[misc,override]  # noqa: F811
+        # type: (Iterable[str]) -> "TagList"
+        super(TagList, self).__iadd__(other)
+        self._notify()
+        return self
+
+    def __imul__(self, n):  # noqa: F811
+        # type: (SupportsIndex) -> "TagList"
+        super(TagList, self).__imul__(n)
+        self._notify()
+        return self
+
+    def append(self, value):  # noqa: F811
+        # type: (str) -> None
+        super(TagList, self).append(value)
+        self._notify()
+
+    def extend(self, iterable):  # noqa: F811
+        # type: (Iterable[str]) -> None
+        super(TagList, self).extend(iterable)
+        self._notify()
+
+    def insert(self, index, value):  # noqa: F811
+        # type: (SupportsIndex, str) -> None
+        super(TagList, self).insert(index, value)
+        self._notify()
+
+    def remove(self, value):  # noqa: F811
+        # type: (str) -> None
+        super(TagList, self).remove(value)
+        self._notify()
+
+    def pop(self, index=-1):  # noqa: F811
+        # type: (SupportsIndex) -> str
+        value = super(TagList, self).pop(index)
+        self._notify()
+        return value
+
+    def clear(self):  # noqa: F811
+        # type: () -> None
+        super(TagList, self).__delitem__(slice(None))
+        self._notify()
+
+    def sort(self, *args, **kwargs):
+        # type: (*Any, **Any) -> None
+        super(TagList, self).sort(*args, **kwargs)
+        self._notify()
+
+    def reverse(self):
+        # type: () -> None
+        super(TagList, self).reverse()
+        self._notify()
+
 
 # Logging
 log = logging.getLogger("datadog.dogstatsd")
@@ -442,9 +545,18 @@ class DogStatsd(object):
             value = os.environ.get(var, "")
             if value:
                 env_tags.append("{name}:{value}".format(name=tag_name, value=value))
+
+        # This lock is used for all cases where client configuration is being changed: buffering,
+        # aggregation, sender mode.
+        self._config_lock = RLock()
+
         if constant_tags is None:
             constant_tags = []
-        self.constant_tags = constant_tags + env_tags
+
+        self._constant_tags_str = ""
+        self._constant_tags = TagList()
+        self.constant_tags = TagList(constant_tags + env_tags)
+
         if namespace is not None:
             namespace = text(namespace)
         self.namespace = namespace
@@ -475,10 +587,6 @@ class DogStatsd(object):
         self._buffer_lock = RLock()
 
         self._reset_buffer()
-
-        # This lock is used for all cases where client configuration is being changed: buffering,
-        # aggregation, sender mode.
-        self._config_lock = RLock()
 
         self._disable_buffering = disable_buffering
         self._disable_aggregation = disable_aggregation
@@ -1267,9 +1375,16 @@ class DogStatsd(object):
             parts.append("|@")
             parts.append(text(sample_rate))
 
-        if tags:
+        constant_tags_str = self._constant_tags_str
+        if tags or constant_tags_str:
             parts.append("|#")
-            parts.append(",".join(normalize_tags(tags)))
+            if tags:
+                parts.append(",".join(normalize_tags(tags)))
+                if constant_tags_str:
+                    parts.append(",")
+                    parts.append(constant_tags_str)
+            else:
+                parts.append(constant_tags_str)
 
         if self._container_id:
             parts.append("|c:")
@@ -1323,8 +1438,6 @@ class DogStatsd(object):
 
         validate_cardinality(cardinality)
 
-        # Resolve the full tag list
-        tags = self._add_constant_tags(tags)
         payload = self._serialize_metric(
             metric, metric_type, value, tags, sample_rate, timestamp, cardinality
         )
@@ -1642,13 +1755,40 @@ class DogStatsd(object):
 
         self._send(string)
 
+    @staticmethod
+    def _normalize_and_join_tags(tags):
+        # type: (List[str]) -> str
+        """Normalize a tag list and join into a comma-separated string."""
+        if tags:
+            return ",".join(normalize_tags(tags))
+
+        return ""
+
+    def _rebuild_constant_tags_str(self):
+        # type: () -> None
+        with self._config_lock:
+            self._constant_tags_str = self._normalize_and_join_tags(self._constant_tags)
+
+    @property
+    def constant_tags(self):
+        # type: () -> TagList
+        return self._constant_tags
+
+    @constant_tags.setter
+    def constant_tags(self, value):
+        # type: (Union[TagList, List[str]]) -> None
+        with self._config_lock:
+            self._constant_tags = TagList(value or [], on_change=self._rebuild_constant_tags_str)
+            self._rebuild_constant_tags_str()
+
     def _add_constant_tags(self, tags):
         # type: (Optional[List[str]]) -> Optional[List[str]]
-        if self.constant_tags:
-            if tags:
-                return tags + self.constant_tags
+        with self._config_lock:
+            if self._constant_tags:
+                if tags:
+                    return tags + self._constant_tags
 
-            return self.constant_tags
+                return list(self._constant_tags)
         return tags
 
     def _is_origin_detection_enabled(self, container_id, origin_detection_enabled):

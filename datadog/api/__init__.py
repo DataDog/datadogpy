@@ -3,7 +3,11 @@
 # Copyright 2015-Present Datadog, Inc
 # flake8: noqa
 
-from typing import Optional
+import sys
+
+
+if sys.version_info[0] >= 3:
+    from typing import Optional  # noqa: F401
 
 # API settings
 _api_key = None  # type: Optional[str]

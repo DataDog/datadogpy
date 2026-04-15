@@ -1,5 +1,12 @@
 import random
-from typing import List, Optional, cast
+import sys
+
+if sys.version_info[:2] >= (3, 5):
+    from typing import List, Optional, cast  # noqa: F401
+else:
+    from typing import List, Optional  # noqa: F401
+
+    from datadog.util.compat import cast
 
 from datadog.dogstatsd.metric_types import MetricType
 from datadog.dogstatsd.metrics import MetricAggregator
