@@ -62,7 +62,7 @@ If `DATADOG_API_KEY` or `DATADOG_APP_KEY` are not set, the library attempts to f
 ```python
 from datadog import initialize, api
 
-# Assuming you've set `DD_API_KEY` and `DD_APP_KEY` in your env,
+# Assuming you've set `DD_API_KEY` or `DD_APP_KEY` in your env,
 # initialize() will pick it up automatically
 initialize()
 
