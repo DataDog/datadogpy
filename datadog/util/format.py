@@ -7,6 +7,7 @@ import datetime
 import json
 import logging
 import re
+from typing import Any, List, Optional, Tuple, Union
 
 from datadog.util.compat import conditional_lru_cache
 
@@ -15,18 +16,22 @@ TAG_INVALID_CHARS_SUBS = "_"
 
 
 def pretty_json(obj):
+    # type: (Any) -> str
     return json.dumps(obj, sort_keys=True, indent=2)
 
 
 def construct_url(host, api_version, path):
+    # type: (str, str, str) -> str
     return "{}/api/{}/{}".format(host.strip("/"), api_version.strip("/"), path.strip("/"))
 
 
 def construct_path(api_version, path):
+    # type: (str, str) -> str
     return "{}/{}".format(api_version.strip("/"), path.strip("/"))
 
 
 def force_to_epoch_seconds(epoch_sec_or_dt):
+    # type: (Union[float, int, datetime.datetime]) -> Union[float, int]
     if isinstance(epoch_sec_or_dt, datetime.datetime):
         return calendar.timegm(epoch_sec_or_dt.timetuple())
     return epoch_sec_or_dt
@@ -34,16 +39,19 @@ def force_to_epoch_seconds(epoch_sec_or_dt):
 
 @conditional_lru_cache
 def _normalize_tags_with_cache(tag_list):
+    # type: (Tuple[str, ...]) -> List[str]
     return [TAG_INVALID_CHARS_RE.sub(TAG_INVALID_CHARS_SUBS, tag) for tag in tag_list]
 
 
 def normalize_tags(tag_list):
+    # type: (List[str]) -> List[str]
     # We have to turn our input tag list into a non-mutable tuple for it to
     # be hashable (and thus usable) by the @lru_cache decorator.
     return _normalize_tags_with_cache(tuple(tag_list))
 
 
 def validate_cardinality(cardinality):
+    # type: (Optional[str]) -> Optional[str]
     if cardinality not in (None, "none", "low", "orchestrator", "high"):
         logging.warning(
             "Cardinality must be one of the following: 'none', 'low', 'orchestrator' or 'high'. "

@@ -8,13 +8,12 @@ import re
 import socket
 import subprocess
 import sys
-import types
 
 if sys.version_info[:2] >= (3, 5):
-    from typing import Dict, Optional  # noqa: F401
+    from typing import Dict, Optional, Any, List  # noqa: F401
 
 # datadog
-from datadog.util.compat import url_lib, is_p3k, iteritems
+from datadog.util.compat import url_lib, iteritems
 from datadog.util.config import get_config, get_os, CfgNotFound
 
 VALID_HOSTNAME_RFC_1123_PATTERN = re.compile(
@@ -26,6 +25,7 @@ log = logging.getLogger("datadog.api")
 
 
 def is_valid_hostname(hostname):
+    # type: (str) -> bool
     if hostname.lower() in set(
         [
             "localhost",
@@ -58,8 +58,8 @@ def get_hostname(hostname_from_config):
       * socket.gethostname()
     """
 
-    hostname = None
-    config = None
+    hostname = None  # type: Optional[str]
+    config = None  # type: Optional[Dict[str, str]]
 
     # first, try the config if hostname_from_config is set to True
     try:
@@ -78,7 +78,7 @@ def get_hostname(hostname_from_config):
 
     # Try to get GCE instance name
     if hostname is None:
-        gce_hostname = GCE.get_hostname(config)
+        gce_hostname = GCE.get_hostname(config or {})
         if gce_hostname is not None:
             if is_valid_hostname(gce_hostname):
                 return gce_hostname
@@ -86,17 +86,16 @@ def get_hostname(hostname_from_config):
     if hostname is None:
 
         def _get_hostname_unix():
+            # type: () -> Optional[str]
             try:
                 # try fqdn
                 p = subprocess.Popen(["/bin/hostname", "-f"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
                 out, err = p.communicate()
                 if p.returncode == 0:
-                    if is_p3k():
-                        return out.decode("utf-8").strip()
-                    else:
-                        return out.strip()
+                    return out.decode("utf-8").strip()
             except Exception:
                 return None
+            return None
 
         os_name = get_os()
         if os_name in ["mac", "freebsd", "linux", "solaris"]:
@@ -106,7 +105,7 @@ def get_hostname(hostname_from_config):
 
     # if we have an ec2 default hostname, see if there's an instance-id available
     if hostname is not None and True in [hostname.lower().startswith(p) for p in [u"ip-", u"domu"]]:
-        instanceid = EC2.get_instance_id(config)
+        instanceid = EC2.get_instance_id(config or {})
         if instanceid:
             hostname = instanceid
 
@@ -129,6 +128,7 @@ def get_hostname(hostname_from_config):
 
 
 def get_ec2_instance_id():
+    # type: () -> Optional[str]
     try:
         # Remember the previous default timeout
         old_timeout = socket.getdefaulttimeout()
@@ -149,10 +149,11 @@ class GCE(object):
     URL = "http://169.254.169.254/computeMetadata/v1/?recursive=true"
     TIMEOUT = 0.1  # second
     SOURCE_TYPE_NAME = "google cloud platform"
-    metadata = None
+    metadata = None  # type: Optional[Dict[str, Any]]
 
     @staticmethod
     def _get_metadata(agentConfig):
+        # type: (Dict[str, Any]) -> Dict[str, Any]
         if GCE.metadata is not None:
             return GCE.metadata
 
@@ -186,6 +187,7 @@ class GCE(object):
 
     @staticmethod
     def get_hostname(agentConfig):
+        # type: (Dict[str, Any]) -> Optional[str]
         try:
             host_metadata = GCE._get_metadata(agentConfig)
             return host_metadata["instance"]["hostname"].split(".")[0]
@@ -202,6 +204,7 @@ class EC2(object):
 
     @staticmethod
     def get_tags(agentConfig):
+        # type: (Dict[str, Any]) -> List[str]
         if not agentConfig["collect_instance_metadata"]:
             log.info("Instance metadata collection is disabled. Not collecting it.")
             return []
@@ -244,6 +247,7 @@ class EC2(object):
 
     @staticmethod
     def get_metadata(agentConfig):
+        # type: (Dict[str, Any]) -> Dict[str, str]
         """Use the ec2 http service to introspect the instance. This adds latency \
         if not running on EC2
         """
@@ -286,8 +290,8 @@ class EC2(object):
         ):
             try:
                 v = url_lib.urlopen(EC2.URL + "/" + str(k)).read().strip()
-                assert type(v) in (types.StringType, types.UnicodeType) and len(v) > 0, "%s is not a string" % v
-                EC2.metadata[k] = v
+                assert isinstance(v, (bytes, str)) and len(v) > 0, "%s is not a string" % v
+                EC2.metadata[k] = v.decode("utf-8") if isinstance(v, bytes) else v
             except Exception:
                 pass
 
@@ -302,6 +306,7 @@ class EC2(object):
 
     @staticmethod
     def get_instance_id(agentConfig):
+        # type: (Dict[str, Any]) -> Optional[str]
         try:
             return EC2.get_metadata(agentConfig).get("instance-id", None)
         except Exception:

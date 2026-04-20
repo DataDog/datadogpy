@@ -158,6 +158,7 @@ class APIClient(object):
                 headers["Content-Encoding"] = "deflate"
 
             # Construct the URL
+            assert _api_host is not None
             url = construct_url(_api_host, api_version, path)
 
             # Process requesting
