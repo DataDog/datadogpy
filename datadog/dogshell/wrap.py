@@ -20,6 +20,7 @@ And you can give the command a timeout too:
 dogwrap -n test-job -k $API_KEY --timeout=1 "sleep 3"
 
 """
+
 # stdlib
 from __future__ import print_function
 
@@ -109,7 +110,9 @@ def poll_proc(proc, sleep_interval, timeout):
     return returncode
 
 
-def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout, proc_poll_interval, buffer_outs):
+def execute(
+    cmd, cmd_timeout, sigterm_timeout, sigkill_timeout, proc_poll_interval, buffer_outs
+):
     # type: (str, float, float, float, float, bool) -> Tuple[Union[int, Type[Timeout]], bytes, bytes, float]
     """
     Launches the process and monitors its outputs
@@ -119,9 +122,11 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout, proc_poll_interv
     stdout = b""
     stderr = b""
     try:
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+        )
     except Exception:
-        print(u"Failed to execute %s" % (repr(cmd)), file=sys.stderr)
+        print("Failed to execute %s" % (repr(cmd)), file=sys.stderr)
         raise
     try:
         # Let's that the threads collecting the output from the command in the
@@ -130,8 +135,12 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout, proc_poll_interv
         stderr_buffer = sys.stderr.buffer if is_p3k() else sys.stderr
         assert proc.stdout is not None
         assert proc.stderr is not None
-        out_reader = OutputReader(proc.stdout, stdout_buffer if not buffer_outs else None)
-        err_reader = OutputReader(proc.stderr, stderr_buffer if not buffer_outs else None)
+        out_reader = OutputReader(
+            proc.stdout, stdout_buffer if not buffer_outs else None
+        )
+        err_reader = OutputReader(
+            proc.stderr, stderr_buffer if not buffer_outs else None
+        )
         out_reader.start()
         err_reader.start()
 
@@ -141,14 +150,19 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout, proc_poll_interv
     except Timeout:
         returncode = Timeout
         sigterm_start = time.time()
-        print("Command timed out after %.2fs, killing with SIGTERM" % (time.time() - start_time), file=sys.stderr)
+        print(
+            "Command timed out after %.2fs, killing with SIGTERM"
+            % (time.time() - start_time),
+            file=sys.stderr,
+        )
         try:
             proc.terminate()
             try:
                 poll_proc(proc, proc_poll_interval, sigterm_timeout)
             except Timeout:
                 print(
-                    "SIGTERM timeout failed after %.2fs, killing with SIGKILL" % (time.time() - sigterm_start),
+                    "SIGTERM timeout failed after %.2fs, killing with SIGKILL"
+                    % (time.time() - sigterm_start),
                     file=sys.stderr,
                 )
                 sigkill_start = time.time()
@@ -157,7 +171,9 @@ def execute(cmd, cmd_timeout, sigterm_timeout, sigkill_timeout, proc_poll_interv
                     poll_proc(proc, proc_poll_interval, sigkill_timeout)
                 except Timeout:
                     print(
-                        "SIGKILL timeout failed after %.2fs, exiting" % (time.time() - sigkill_start), file=sys.stderr
+                        "SIGKILL timeout failed after %.2fs, exiting"
+                        % (time.time() - sigkill_start),
+                        file=sys.stderr,
                     )
         except OSError as e:
             # Ignore OSError 3: no process found.
@@ -188,12 +204,9 @@ def trim_text(text, max_len):
         return text
 
     trimmed_text = (
-        u"{top_third}\n"
-        u"```\n"
-        u"*...trimmed...*\n"
-        u"```\n"
-        u"{bottom_two_third}\n".format(
-            top_third=text[: max_len // 3], bottom_two_third=text[len(text) - (2 * max_len) // 3 :]
+        "{top_third}\n```\n*...trimmed...*\n```\n{bottom_two_third}\n".format(
+            top_third=text[: max_len // 3],
+            bottom_two_third=text[len(text) - (2 * max_len) // 3 :],
         )
     )
 
@@ -207,34 +220,42 @@ def build_event_body(cmd, returncode, stdout, stderr, notifications):
 
     Note: do not exceed MAX_EVENT_BODY_LENGTH length.
     """
-    fmt_stdout = u""
-    fmt_stderr = u""
-    fmt_notifications = u""
+    fmt_stdout = ""
+    fmt_stderr = ""
+    fmt_notifications = ""
 
-    max_length = MAX_EVENT_BODY_LENGTH // 2 if stdout and stderr else MAX_EVENT_BODY_LENGTH
+    max_length = (
+        MAX_EVENT_BODY_LENGTH // 2 if stdout and stderr else MAX_EVENT_BODY_LENGTH
+    )
 
     if stdout:
-        fmt_stdout = u"**>>>> STDOUT <<<<**\n```\n{stdout} \n```\n".format(
+        fmt_stdout = "**>>>> STDOUT <<<<**\n```\n{stdout} \n```\n".format(
             stdout=trim_text(stdout.decode("utf-8", "replace"), max_length)
         )
 
     if stderr:
-        fmt_stderr = u"**>>>> STDERR <<<<**\n```\n{stderr} \n```\n".format(
+        fmt_stderr = "**>>>> STDERR <<<<**\n```\n{stderr} \n```\n".format(
             stderr=trim_text(stderr.decode("utf-8", "replace"), max_length)
         )
 
     if notifications:
-        notifications = notifications.decode("utf-8", "replace") if isinstance(notifications, bytes) else notifications
-        fmt_notifications = u"**>>>> NOTIFICATIONS <<<<**\n\n {notifications}\n".format(notifications=notifications)
+        notifications = (
+            notifications.decode("utf-8", "replace")
+            if isinstance(notifications, bytes)
+            else notifications
+        )
+        fmt_notifications = "**>>>> NOTIFICATIONS <<<<**\n\n {notifications}\n".format(
+            notifications=notifications
+        )
 
     return (
-        u"%%%\n"
-        u"**>>>> CMD <<<<**\n```\n{command} \n```\n"
-        u"**>>>> EXIT CODE <<<<**\n\n {returncode}\n\n\n"
-        u"{stdout}"
-        u"{stderr}"
-        u"{notifications}"
-        u"%%%\n".format(
+        "%%%\n"
+        "**>>>> CMD <<<<**\n```\n{command} \n```\n"
+        "**>>>> EXIT CODE <<<<**\n\n {returncode}\n\n\n"
+        "{stdout}"
+        "{stderr}"
+        "{notifications}"
+        "%%%\n".format(
             command=cmd,
             returncode=returncode,
             stdout=fmt_stdout,
@@ -252,7 +273,9 @@ def generate_warning_codes(option, opt, options_warning):
         warning_codes = options_warning.split(",")
         return warning_codes
     except ValueError:
-        raise optparse.OptionValueError("option %s: invalid warning codes value(s): %r" % (opt, options_warning))
+        raise optparse.OptionValueError(
+            "option %s: invalid warning codes value(s): %r" % (opt, options_warning)
+        )
 
 
 class DogwrapOption(optparse.Option):
@@ -405,7 +428,12 @@ returned (the command outputs remains buffered in dogwrap meanwhile)",
         help="sends a metric for event duration",
     )
     parser.add_option(
-        "--tags", action="store", type="string", dest="tags", default="", help="comma separated list of tags"
+        "--tags",
+        action="store",
+        type="string",
+        dest="tags",
+        default="",
+        help="comma separated list of tags",
     )
 
     options, args = parser.parse_args(args=raw_args)
@@ -422,18 +450,7 @@ def main():
     # type: () -> None
     options, cmd = parse_options()
 
-    # If silent is checked we force the outputs to be buffered (and therefore
-    # not forwarded to the Terminal streams) and we just avoid printing the
-    # buffers at the end
-    returncode, stdout, stderr, duration = execute(
-        cmd,
-        options.timeout,
-        options.sigterm_timeout,
-        options.sigkill_timeout,
-        options.proc_poll_interval,
-        options.buffer_outs,
-    )
-
+    # Resolve API host from site option
     if options.site in ("datadoghq.com", "us"):
         api_host = "https://api.datadoghq.com"
     elif options.site in ("datadoghq.eu", "eu"):
@@ -452,6 +469,53 @@ def main():
     initialize(api_key=options.api_key, api_host=api_host)
     host = api._host_name
 
+    # Build tags early so start signals can reuse them
+    if options.tags:
+        tags = [t.strip() for t in options.tags.split(",")]
+    else:
+        tags = None
+
+    # Start signals — failures must not block command execution.
+    if options.send_metric:
+        try:
+            event_name_tag = "event_name:{}".format(options.name)
+            start_tags = (tags or []) + [event_name_tag]
+            api.Metric.send(
+                metric="dogwrap.started", points=1, tags=start_tags, type="gauge"
+            )
+        except Exception as e:
+            print(
+                "Failed to send start metric: %s" % e,
+                file=sys.stderr,
+            )
+
+    if options.submit_mode == "all":
+        try:
+            api.Event.create(
+                title="[%s] %s started" % (host, options.name),
+                text="Job triggered",
+                alert_type="info",
+                aggregation_key=options.name,
+                tags=tags,
+            )
+        except Exception as e:
+            print(
+                "Failed to send start event: %s" % e,
+                file=sys.stderr,
+            )
+
+    # If silent is checked we force the outputs to be buffered (and therefore
+    # not forwarded to the Terminal streams) and we just avoid printing the
+    # buffers at the end
+    returncode, stdout, stderr, duration = execute(
+        cmd,
+        options.timeout,
+        options.sigterm_timeout,
+        options.sigkill_timeout,
+        options.proc_poll_interval,
+        options.buffer_outs,
+    )
+
     warning_codes = None
 
     if options.warning_codes:
@@ -461,7 +525,7 @@ def main():
     if returncode == 0:
         alert_type = SUCCESS
         event_priority = "low"
-        event_title = u"[%s] %s succeeded in %.2fs" % (host, options.name, duration)
+        event_title = "[%s] %s succeeded in %.2fs" % (host, options.name, duration)
     elif returncode != 0 and options.submit_mode == "warnings":
         if not warning_codes:
             # the list of warning codes is empty - the option was not specified
@@ -470,7 +534,7 @@ def main():
         elif returncode in warning_codes:
             alert_type = WARNING
             event_priority = "normal"
-            event_title = u"[%s] %s failed in %.2fs" % (host, options.name, duration)
+            event_title = "[%s] %s failed in %.2fs" % (host, options.name, duration)
         else:
             print("Command exited with a different exit code that the one(s) provided")
             sys.exit()
@@ -479,10 +543,14 @@ def main():
         event_priority = "normal"
 
         if returncode is Timeout:
-            event_title = u"[%s] %s timed out after %.2fs" % (host, options.name, duration)
+            event_title = "[%s] %s timed out after %.2fs" % (
+                host,
+                options.name,
+                duration,
+            )
             returncode = -1
         else:
-            event_title = u"[%s] %s failed in %.2fs" % (host, options.name, duration)
+            event_title = "[%s] %s failed in %.2fs" % (host, options.name, duration)
 
     notifications = ""
 
@@ -492,11 +560,6 @@ def main():
         notifications = options.notify_error
     elif alert_type == WARNING and options.notify_warning:
         notifications = options.notify_warning
-
-    if options.tags:
-        tags = [t.strip() for t in options.tags.split(",")]
-    else:
-        tags = None
 
     event_body = build_event_body(cmd, returncode, stdout, stderr, notifications)
 
@@ -522,7 +585,12 @@ def main():
                 duration_tags = tags + [event_name_tag]
             else:
                 duration_tags = [event_name_tag]
-            api.Metric.send(metric="dogwrap.duration", points=duration, tags=duration_tags, type="gauge")
+            api.Metric.send(
+                metric="dogwrap.duration",
+                points=duration,
+                tags=duration_tags,
+                type="gauge",
+            )
         api.Event.create(title=event_title, text=event_body, **event)
 
     assert isinstance(returncode, int)
@@ -531,5 +599,8 @@ def main():
 
 if __name__ == "__main__":
     if sys.argv[0].endswith("dogwrap"):
-        warnings.warn("dogwrap is pending deprecation. Please use dogshellwrap instead.", PendingDeprecationWarning)
+        warnings.warn(
+            "dogwrap is pending deprecation. Please use dogshellwrap instead.",
+            PendingDeprecationWarning,
+        )
     main()
