@@ -2,6 +2,8 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
 # datadog
+from typing import Any, Dict, Optional
+
 from datadog.api.exceptions import ApiError
 from datadog.api.format import format_points
 from datadog.api.resources import SearchableAPIResource, SendableAPIResource, ListableAPIResource
@@ -12,7 +14,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
     A wrapper around Metric HTTP API
     """
 
-    _resource_name = None
+    _resource_name = ""  # type: str
 
     _METRIC_QUERY_ENDPOINT = "query"
     _METRIC_SUBMIT_ENDPOINT = "series"
@@ -20,6 +22,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
 
     @classmethod
     def list(cls, from_epoch):
+        # type: (Any) -> Any
         """
         Get a list of active metrics since a given time (Unix Epoc)
 
@@ -40,6 +43,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
 
     @staticmethod
     def _rename_metric_type(metric):
+        # type: (Dict[str, Any]) -> None
         """
         FIXME DROPME in 1.0:
 
@@ -51,7 +55,14 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
             metric["type"] = metric.pop("metric_type")
 
     @classmethod
-    def send(cls, metrics=None, attach_host_name=True, compress_payload=False, **single_metric):
+    def send(  # type: ignore[override]
+        cls,
+        metrics=None,  # type: Optional[Any]
+        attach_host_name=True,  # type: bool
+        compress_payload=False,  # type: bool
+        **single_metric  # type: Any
+    ):
+        # type: (...) -> Any
         """
         Submit a metric or a list of metrics to the metric API
         A metric dictionary should consist of 5 keys: metric, points, host, tags, type (some of which optional),
@@ -112,6 +123,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
 
     @classmethod
     def query(cls, **params):
+        # type: (**Any) -> Any
         """
         Query metrics from Datadog
 

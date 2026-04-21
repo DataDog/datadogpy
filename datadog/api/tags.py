@@ -1,6 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
+from typing import Any
+
 from datadog.api.resources import (
     CreateableAPIResource,
     UpdatableAPIResource,
@@ -18,7 +20,8 @@ class Tag(CreateableAPIResource, UpdatableAPIResource, GetableAPIResource, Lista
     _resource_name = "tags/hosts"
 
     @classmethod
-    def create(cls, host, **body):
+    def create(cls, host, **body):  # type: ignore[override]
+        # type: (str, **Any) -> Any
         """
         Add tags to a host
 
@@ -36,7 +39,8 @@ class Tag(CreateableAPIResource, UpdatableAPIResource, GetableAPIResource, Lista
         return super(Tag, cls).create(id=host, params=params, **body)
 
     @classmethod
-    def update(cls, host, **body):
+    def update(cls, host, **body):  # type: ignore[override]
+        # type: (str, **Any) -> Any
         """
         Update all tags for a given host
 

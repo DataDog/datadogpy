@@ -1,6 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
+from typing import Any
+
 from datadog.api.exceptions import ApiError
 from datadog.api.resources import (
     CreateableAPIResource,
@@ -29,6 +31,7 @@ class Synthetics(
 
     @classmethod
     def get_test(cls, id, **params):
+        # type: (str, **Any) -> Any
         """
         Get test's details.
 
@@ -46,6 +49,7 @@ class Synthetics(
 
     @classmethod
     def get_all_tests(cls, **params):
+        # type: (**Any) -> Any
         """
         Get all tests' details.
 
@@ -62,6 +66,7 @@ class Synthetics(
 
     @classmethod
     def get_devices(cls, **params):
+        # type: (**Any) -> Any
         """
         Get a list of devices for browser checks
 
@@ -76,6 +81,7 @@ class Synthetics(
 
     @classmethod
     def get_locations(cls, **params):
+        # type: (**Any) -> Any
         """
         Get a list of all available locations
 
@@ -90,6 +96,7 @@ class Synthetics(
 
     @classmethod
     def get_results(cls, id, **params):
+        # type: (str, **Any) -> Any
         """
         Get the most recent results for a test
 
@@ -107,6 +114,7 @@ class Synthetics(
 
     @classmethod
     def get_result(cls, id, result_id, **params):
+        # type: (str, str, **Any) -> Any
         """
         Get a specific result for a given test.
 
@@ -127,6 +135,7 @@ class Synthetics(
 
     @classmethod
     def create_test(cls, **params):
+        # type: (**Any) -> Any
         """
         Create a test
 
@@ -164,6 +173,7 @@ class Synthetics(
 
     @classmethod
     def edit_test(cls, id, **params):
+        # type: (str, **Any) -> Any
         """
         Edit a test
 
@@ -179,6 +189,7 @@ class Synthetics(
 
     @classmethod
     def start_or_pause_test(cls, id, **body):
+        # type: (str, **Any) -> Any
         """
         Pause a given test
 
@@ -197,6 +208,7 @@ class Synthetics(
 
     @classmethod
     def delete_test(cls, **body):
+        # type: (**Any) -> Any
         """
         Delete a test
 

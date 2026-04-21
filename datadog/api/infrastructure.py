@@ -1,6 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
+from typing import Any
+
 from datadog.api.resources import SearchableAPIResource
 
 
@@ -13,6 +15,7 @@ class Infrastructure(SearchableAPIResource):
 
     @classmethod
     def search(cls, **params):
+        # type: (**Any) -> Any
         """
         Search for entities in Datadog.
 

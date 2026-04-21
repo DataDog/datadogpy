@@ -1,6 +1,8 @@
 # Unless explicitly stated otherwise all files in this repository are licensed under the BSD-3-Clause License.
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
+from typing import Any, Dict, Optional
+
 from datadog.util.compat import urlparse
 from datadog.api.resources import CreateableAPIResource, ActionAPIResource, GetableAPIResource, ListableAPIResource
 
@@ -13,7 +15,8 @@ class Graph(CreateableAPIResource, ActionAPIResource):
     _resource_name = "graph/snapshot"
 
     @classmethod
-    def create(cls, **params):
+    def create(cls, attach_host_name=False, method="GET", id=None, params=None, **body):
+        # type: (bool, str, Optional[Any], Optional[Dict[str, Any]], **Any) -> Any
         """
         Take a snapshot of a graph, returning the full url to the snapshot.
 
@@ -31,10 +34,11 @@ class Graph(CreateableAPIResource, ActionAPIResource):
 
         :returns: Dictionary representing the API's JSON response
         """
-        return super(Graph, cls).create(method="GET", **params)
+        return super(Graph, cls).create(method="GET", **body)
 
     @classmethod
     def status(cls, snapshot_url):
+        # type: (str) -> Any
         """
         Returns the status code of snapshot. Can be used to know when the
         snapshot is ready for download.
@@ -61,6 +65,7 @@ class Embed(ListableAPIResource, GetableAPIResource, ActionAPIResource, Createab
 
     @classmethod
     def enable(cls, embed_id):
+        # type: (str) -> Any
         """
         Enable a specified embed.
 
@@ -73,6 +78,7 @@ class Embed(ListableAPIResource, GetableAPIResource, ActionAPIResource, Createab
 
     @classmethod
     def revoke(cls, embed_id):
+        # type: (str) -> Any
         """
         Revoke a specified embed.
 

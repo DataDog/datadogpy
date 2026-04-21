@@ -2,6 +2,8 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2015-Present Datadog, Inc
 # datadog
+from typing import Any
+
 from datadog.api.resources import GetableAPIResource, UpdatableAPIResource
 
 
@@ -13,7 +15,8 @@ class Metadata(GetableAPIResource, UpdatableAPIResource):
     _resource_name = "metrics"
 
     @classmethod
-    def get(cls, metric_name):
+    def get(cls, metric_name):  # type: ignore[override]
+        # type: (str) -> Any
         """
         Get metadata information on an existing Datadog metric
 
@@ -27,7 +30,8 @@ class Metadata(GetableAPIResource, UpdatableAPIResource):
         return super(Metadata, cls).get(metric_name)
 
     @classmethod
-    def update(cls, metric_name, **params):
+    def update(cls, metric_name, **params):  # type: ignore[override]
+        # type: (str, **Any) -> Any
         """
         Update metadata fields for an existing Datadog metric.
         If the metadata does not exist for the metric it is created by
