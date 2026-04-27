@@ -20,6 +20,7 @@ class MaxSampleMetricContexts:
     def flush(self):
         # type: () -> List[List[MetricAggregator]]
         """Flush the metrics and reset the stored values."""
+        metrics = []  # type: List[List[MetricAggregator]]
         with self.lock:
             temp = self.values
             self.values = {}
