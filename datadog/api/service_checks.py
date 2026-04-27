@@ -42,7 +42,7 @@ class ServiceCheck(ActionAPIResource):
 
         # Validate checks, include only non-null values
         for param, value in body.items():
-            if param == "status" and body[param] not in CheckStatus.ALL:
+            if param == "status" and value not in CheckStatus.ALL:
                 raise ApiError("Invalid status, expected one of: %s" % ", ".join(str(v) for v in CheckStatus.ALL))
 
         return super(ServiceCheck, cls)._trigger_action("POST", "check_run", **body)

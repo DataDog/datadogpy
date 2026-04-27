@@ -88,7 +88,7 @@ class TimedContextManagerDecorator(object):
     ):  # type: (...) -> None
         elapsed = monotonic() - start
         use_ms = self.use_ms if self.use_ms is not None else self.statsd.use_ms
-        elapsed = int(round(1000 * elapsed)) if use_ms else elapsed
+        elapsed = round(1000 * elapsed) if use_ms else elapsed
         self.timing_func(self.metric, elapsed, self.tags, self.sample_rate)  # type: ignore
         self.elapsed = elapsed
 

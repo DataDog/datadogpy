@@ -26,14 +26,12 @@ log = logging.getLogger("datadog.api")
 
 def is_valid_hostname(hostname):
     # type: (str) -> bool
-    if hostname.lower() in set(
-        [
-            "localhost",
-            "localhost.localdomain",
-            "localhost6.localdomain6",
-            "ip6-localhost",
-        ]
-    ):
+    if hostname.lower() in {
+        "localhost",
+        "localhost.localdomain",
+        "localhost6.localdomain6",
+        "ip6-localhost",
+    }:
         log.warning("Hostname: %s is local" % hostname)
         return False
     if len(hostname) > MAX_HOSTNAME_LEN:
@@ -90,7 +88,7 @@ def get_hostname(hostname_from_config):
             try:
                 # try fqdn
                 p = subprocess.Popen(["/bin/hostname", "-f"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-                out, err = p.communicate()
+                out, _ = p.communicate()
                 if p.returncode == 0:
                     return out.decode("utf-8").strip()
             except Exception:

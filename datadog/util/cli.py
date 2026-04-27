@@ -125,7 +125,7 @@ def parse_date(date_str, to_epoch_ts=False):
         assert short_unit, short_unit
         units = ["weeks", "days", "hours", "minutes", "seconds"]
         # translate 'h' -> 'hours'
-        short_units = dict([(u[:1], u) for u in units])
+        short_units = {u[:1]: u for u in units}
         unit = short_units.get(short_unit, short_unit)
         # translate 'hour' -> 'hours'
         if unit[-1] != "s":

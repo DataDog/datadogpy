@@ -184,7 +184,7 @@ class ServiceLevelObjectiveClient(object):
         params = {"type": args.type, "name": args.name}
 
         if args.tags:
-            tags = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
+            tags = sorted({t.strip() for t in args.tags.split(",") if t.strip()})
             params["tags"] = tags
 
         thresholds = []
@@ -298,7 +298,7 @@ class ServiceLevelObjectiveClient(object):
                 params["groups"] = groups
 
         if args.tags:
-            tags = sorted(set([t.strip() for t in args.tags if t.strip()]))
+            tags = sorted({t.strip() for t in args.tags if t.strip()})
             params["tags"] = tags
         res = api.ServiceLevelObjective.update(args.slo_id, return_raw=True, **params)
         report_warnings(res)

@@ -178,12 +178,12 @@ class MonitorClient(object):
             options = json.loads(args.options)
 
         if args.tags:
-            tags = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
+            tags = sorted({t.strip() for t in args.tags.split(",") if t.strip()})
         else:
             tags = None
 
         if args.restricted_roles:
-            restricted_roles = sorted(set([rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()]))
+            restricted_roles = sorted({rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()})
         else:
             restricted_roles = None
 
@@ -276,9 +276,9 @@ class MonitorClient(object):
                 to_update["restricted_roles"] = None
             else:
                 to_update["restricted_roles"] = sorted(
-                    set([rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()]))
+                    {rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()})
         if args.tags:
-            to_update["tags"] = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
+            to_update["tags"] = sorted({t.strip() for t in args.tags.split(",") if t.strip()})
         if args.priority:
             to_update["priority"] = args.priority
 
@@ -465,12 +465,12 @@ class MonitorClient(object):
             options = json.loads(args.options)
 
         if args.tags:
-            tags = sorted(set([t.strip() for t in args.tags.split(",") if t.strip()]))
+            tags = sorted({t.strip() for t in args.tags.split(",") if t.strip()})
         else:
             tags = None
 
         if args.restricted_roles:
-            restricted_roles = sorted(set([rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()]))
+            restricted_roles = sorted({rr.strip() for rr in args.restricted_roles.split(",") if rr.strip()})
         else:
             restricted_roles = None
 

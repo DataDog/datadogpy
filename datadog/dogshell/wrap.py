@@ -103,7 +103,7 @@ def poll_proc(proc, sleep_interval, timeout):
     while returncode is None:
         returncode = proc.poll()
         if time.time() - start_time > timeout:
-            raise Timeout()
+            raise Timeout
         else:
             time.sleep(sleep_interval)
     return returncode
@@ -519,7 +519,7 @@ def main():
         if options.send_metric:
             event_name_tag = "event_name:{}".format(options.name)
             if tags:
-                duration_tags = tags + [event_name_tag]
+                duration_tags = list(tags) + [event_name_tag]
             else:
                 duration_tags = [event_name_tag]
             api.Metric.send(metric="dogwrap.duration", points=duration, tags=duration_tags, type="gauge")

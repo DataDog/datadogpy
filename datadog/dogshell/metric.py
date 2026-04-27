@@ -53,7 +53,7 @@ class MetricClient(object):
         host = None if args.no_host else args.host
 
         if args.tags:
-            tags = sorted(set([t.strip() for t in args.tags.split(",") if t]))
+            tags = sorted({t.strip() for t in args.tags.split(",") if t})
         else:
             tags = None
 
