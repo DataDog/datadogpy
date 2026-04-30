@@ -19,7 +19,7 @@ jobs:
     environment: secure_publish_environment
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
-      - uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2.7.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         # Include all history and tags, needed for building the right version
         with:
           fetch-depth: 0
