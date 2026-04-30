@@ -15,7 +15,7 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/stale@0649bd81195b7ac109fbf9dde113af7e58a78b8e # v1.1.1
+    - uses: actions/stale@b5d41d4e1d5dceea10e7104786b73624c18a190f # v10.2.0
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
         stale-issue-message: >-
