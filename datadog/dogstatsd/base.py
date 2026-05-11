@@ -928,13 +928,10 @@ class DogStatsd(object):
         # Increase the send buffer size where needed (e.g. MacOS has 4k TX
         # buffers which is half of the max packet size that the client will send.
         if os.name == 'posix':
-            try:
-                send_buff_size = sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
-                if send_buff_size <= min_size:
-                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, min_size)
-                    log.debug("Socket send buffer increased to %dkb", min_size / 1024)
-            except Exception:
-                pass
+            send_buff_size = sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
+            if send_buff_size <= min_size:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, min_size)
+                log.debug("Socket send buffer increased to %dkb", min_size / 1024)
 
     @classmethod
     def _get_uds_socket(cls, socket_path, timeout):
