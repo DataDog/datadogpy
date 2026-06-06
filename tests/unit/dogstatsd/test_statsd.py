@@ -460,6 +460,30 @@ class TestDogStatsd(unittest.TestCase):
         self.statsd.gauge('gt', 123.4, tags=['pipe|in:tag', 'red'])
         self.assert_equal_telemetry('gt:123.4|g|#pipe_in:tag,red\n', self.recv(2))
 
+    def test_pipe_in_event_tags(self):
+        self.statsd.event('Title', 'msg', tags=['env:prod', 'key:val|injected_field'])
+        raw = self.recv(2)
+        assert '|injected_field' not in raw, "pipe in event tag must be replaced with '_'"
+        assert 'key:val_injected_field' in raw
+
+    def test_newline_in_event_tags(self):
+        self.statsd.event('Title', 'msg', tags=['env:prod', 'key:val\nfake_metric:1|g'])
+        raw = self.recv(2)
+        assert '\nfake_metric:1' not in raw, "newline in event tag must be replaced with '_'"
+        assert 'key:val_fake_metric:1_g' in raw
+
+    def test_pipe_in_service_check_tags(self):
+        self.statsd.service_check('my.check', self.statsd.OK, tags=['env:prod', 'key:val|h:fake_host'])
+        raw = self.recv(2)
+        assert '|h:fake_host' not in raw, "pipe in service_check tag must be replaced with '_'"
+        assert 'key:val_h:fake_host' in raw
+
+    def test_newline_in_service_check_tags(self):
+        self.statsd.service_check('my.check', self.statsd.OK, tags=['env:prod', 'key:val\nfake_metric:1|g'])
+        raw = self.recv(2)
+        assert '\nfake_metric:1' not in raw, "newline in service_check tag must be replaced with '_'"
+        assert 'key:val_fake_metric:1_g' in raw
+
     def test_tagged_gauge(self):
         self.statsd.gauge('gt', 123.4, tags=['country:china', 'age:45', 'blue'])
         self.assert_equal_telemetry('gt:123.4|g|#country:china,age:45,blue\n', self.recv(2))

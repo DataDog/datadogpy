@@ -1687,7 +1687,7 @@ class DogStatsd(object):
         if alert_type:
             string = "%s|t:%s" % (string, alert_type)
         if tags:
-            string = "%s|#%s" % (string, ",".join(tags))
+            string = "%s|#%s" % (string, ",".join(normalize_tags(tags)))
         if self._container_id:
             string = "%s|c:%s" % (string, self._container_id)
         if cardinality:
@@ -1738,7 +1738,7 @@ class DogStatsd(object):
         if hostname:
             string = u"{0}|h:{1}".format(string, hostname)
         if tags:
-            string = u"{0}|#{1}".format(string, ",".join(tags))
+            string = u"{0}|#{1}".format(string, ",".join(normalize_tags(tags)))
         if message:
             string = u"{0}|m:{1}".format(string, message)
         if self._container_id:
