@@ -24,6 +24,10 @@ To install from source:
 
     python setup.py install
 
+To install [dogshell](https://docs.datadoghq.com/developers/guide/dogshell/) via [Homebrew](https://brew.sh):
+
+    brew tap heathdutton/dogshell && brew install dogshell
+
 ## Datadog API
 
 To support all Datadog HTTP APIs, a generated library is
