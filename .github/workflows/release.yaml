@@ -24,11 +24,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install datadog_checks_dev
-        run: |
-          python3 -m venv .venv
-          .venv/bin/pip install datadog_checks_dev[cli]==20.0.1
-
       # Publish wheels to PyPI using Trusted Publishers.
       # https://docs.pypi.org/trusted-publishers/using-a-publisher/
       # This job needs to run from within the pypi-datadog-checks-base environment. PyPi
