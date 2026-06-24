@@ -26,7 +26,8 @@ jobs:
 
       - name: Install datadog_checks_dev
         run: |
-          python -m pip install datadog_checks_dev[cli]==20.0.1
+          python3 -m venv .venv
+          .venv/bin/pip install datadog_checks_dev[cli]==20.0.1
 
       # Publish wheels to PyPI using Trusted Publishers.
       # https://docs.pypi.org/trusted-publishers/using-a-publisher/
