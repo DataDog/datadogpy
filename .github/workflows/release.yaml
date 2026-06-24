@@ -24,6 +24,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Build distributions
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install build
+          .venv/bin/python -m build
+
       # Publish wheels to PyPI using Trusted Publishers.
       # https://docs.pypi.org/trusted-publishers/using-a-publisher/
       # This job needs to run from within the pypi-datadog-checks-base environment. PyPi
