@@ -24,14 +24,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@e9aba2c848f5ebd159c070c61ea2c4e2b122355e # v2.3.4
-        name: Install Python
-        with:
-          python-version: '3.9'
-
-      - name: Install datadog_checks_dev
+      - name: Build distributions
         run: |
-          python -m pip install datadog_checks_dev[cli]==20.0.1
+          python3 -m venv .venv
+          .venv/bin/pip install build
+          .venv/bin/python -m build
 
       # Publish wheels to PyPI using Trusted Publishers.
       # https://docs.pypi.org/trusted-publishers/using-a-publisher/
