@@ -984,6 +984,7 @@ class DogStatsd(object):
                         deadline is not None
                         and getattr(e, "errno", None) in UDS_TRANSIENT_CONNECT_ERRORS
                     ):
+                        last_error = e
                         remaining_time = max(0, deadline - time.time())
                         sleep_time = min(backoff, remaining_time)
                         if sleep_time > 0:
@@ -991,6 +992,9 @@ class DogStatsd(object):
                             backoff = min(backoff * 2, UDS_CONNECT_RETRY_MAX_BACKOFF)
                             continue
                     raise e
+            if getattr(last_error, "errno", None) == errno.EPROTOTYPE:
+                continue
+            raise last_error
         raise last_error
 
     @classmethod
