@@ -30,7 +30,7 @@ import pytest
 # Datadog libraries
 from datadog import initialize, statsd
 from datadog import __version__ as version
-from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DogStatsd, MIN_SEND_BUFFER_SIZE, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_OPTIMAL_PAYLOAD_LENGTH
+from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DogStatsd, MIN_SEND_BUFFER_SIZE, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_CONNECT_RETRY_INITIAL_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
 from tests.util.contextmanagers import preserve_environment_variable, EnvVars
@@ -887,7 +887,7 @@ class TestDogStatsd(unittest.TestCase):
         self.assertEqual(mock_socket_create.call_count, 2)
         first_socket.close.assert_called_once()
         second_socket.close.assert_not_called()
-        mock_sleep.assert_called_once()
+        mock_sleep.assert_any_call(UDS_CONNECT_RETRY_INITIAL_BACKOFF)
 
     @patch('datadog.dogstatsd.base.time.sleep')
     @patch('socket.socket')
@@ -908,7 +908,7 @@ class TestDogStatsd(unittest.TestCase):
         self.assertEqual(mock_socket_create.call_count, 2)
         first_socket.close.assert_called_once()
         second_socket.close.assert_not_called()
-        mock_sleep.assert_called_once()
+        mock_sleep.assert_any_call(UDS_CONNECT_RETRY_INITIAL_BACKOFF)
 
     @patch('socket.socket')
     def test_udp_socket_ensures_min_receive_buffer(self, mock_socket_create):
