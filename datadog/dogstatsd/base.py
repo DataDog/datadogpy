@@ -179,6 +179,9 @@ UDS_OPTIMAL_PAYLOAD_LENGTH = 8192
 
 # Socket options
 MIN_SEND_BUFFER_SIZE = 32 * 1024
+UDS_CONNECT_RETRY_INITIAL_BACKOFF = 0.025
+UDS_CONNECT_RETRY_MAX_BACKOFF = 1.0
+UDS_TRANSIENT_CONNECT_ERRORS = set([errno.ENOENT, errno.ECONNREFUSED])
 
 # Mapping of each "DD_" prefixed environment variable to a specific tag name
 DD_ENV_TAGS_MAPPING = {
@@ -951,21 +954,43 @@ class DogStatsd(object):
             # py2 stores socket kinds differently than py3, determine the name independently from version
             sk_name = {socket.SOCK_STREAM: "stream", socket.SOCK_DGRAM: "datagram"}[socket_kind]
 
-            try:
-                sock = socket.socket(socket.AF_UNIX, socket_kind)
-                sock.settimeout(timeout)
-                cls._ensure_min_send_buffer_size(sock)
-                sock.connect(socket_path)
-                log.debug("Connected to socket %s with kind %s", socket_path, sk_name)
-                return sock
-            except Exception as e:
-                if sock is not None:
-                    sock.close()
-                log.debug("Failed to connect to %s with kind %s: %s", socket_path, sk_name, e)
-                if getattr(e, "errno", None) == errno.EPROTOTYPE:
-                    last_error = e
-                    continue
-                raise e
+            deadline = None
+            if timeout and timeout > 0:
+                deadline = time.time() + timeout
+
+            backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
+
+            while deadline is None or time.time() < deadline:
+                sock = None
+                try:
+                    sock = socket.socket(socket.AF_UNIX, socket_kind)
+                    if deadline is not None:
+                        sock.settimeout(max(0, deadline - time.time()))
+                    else:
+                        sock.settimeout(timeout)
+                    cls._ensure_min_send_buffer_size(sock)
+                    sock.connect(socket_path)
+                    sock.settimeout(timeout)
+                    log.debug("Connected to socket %s with kind %s", socket_path, sk_name)
+                    return sock
+                except Exception as e:
+                    if sock is not None:
+                        sock.close()
+                    log.debug("Failed to connect to %s with kind %s: %s", socket_path, sk_name, e)
+                    if getattr(e, "errno", None) == errno.EPROTOTYPE:
+                        last_error = e
+                        break
+                    if (
+                        deadline is not None
+                        and getattr(e, "errno", None) in UDS_TRANSIENT_CONNECT_ERRORS
+                    ):
+                        remaining_time = max(0, deadline - time.time())
+                        sleep_time = min(backoff, remaining_time)
+                        if sleep_time > 0:
+                            time.sleep(sleep_time)
+                            backoff = min(backoff * 2, UDS_CONNECT_RETRY_MAX_BACKOFF)
+                            continue
+                    raise e
         raise last_error
 
     @classmethod

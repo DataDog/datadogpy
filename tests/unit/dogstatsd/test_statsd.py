@@ -868,6 +868,48 @@ class TestDogStatsd(unittest.TestCase):
             MIN_SEND_BUFFER_SIZE,
         )
 
+    @patch('datadog.dogstatsd.base.time.sleep')
+    @patch('socket.socket')
+    def test_uds_socket_retries_missing_socket_until_timeout(self, mock_socket_create, mock_sleep):
+        missing_socket_error = socket.error(errno.ENOENT, os.strerror(errno.ENOENT))
+        first_socket = Mock()
+        first_socket.connect.side_effect = missing_socket_error
+        first_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
+        second_socket = Mock()
+        second_socket.connect.return_value = None
+        second_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
+        mock_socket_create.side_effect = [first_socket, second_socket]
+
+        datadog = DogStatsd(socket_path="/fake/uds/socket/path", socket_timeout=1)
+        datadog.gauge('some value', 1)
+        datadog.flush()
+
+        self.assertEqual(mock_socket_create.call_count, 2)
+        first_socket.close.assert_called_once()
+        second_socket.close.assert_not_called()
+        mock_sleep.assert_called_once()
+
+    @patch('datadog.dogstatsd.base.time.sleep')
+    @patch('socket.socket')
+    def test_uds_socket_retries_refused_socket_until_timeout(self, mock_socket_create, mock_sleep):
+        refused_socket_error = socket.error(errno.ECONNREFUSED, os.strerror(errno.ECONNREFUSED))
+        first_socket = Mock()
+        first_socket.connect.side_effect = refused_socket_error
+        first_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
+        second_socket = Mock()
+        second_socket.connect.return_value = None
+        second_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
+        mock_socket_create.side_effect = [first_socket, second_socket]
+
+        datadog = DogStatsd(socket_path="unixstream:///fake/uds/socket/path", socket_timeout=1)
+        datadog.gauge('some value', 1)
+        datadog.flush()
+
+        self.assertEqual(mock_socket_create.call_count, 2)
+        first_socket.close.assert_called_once()
+        second_socket.close.assert_not_called()
+        mock_sleep.assert_called_once()
+
     @patch('socket.socket')
     def test_udp_socket_ensures_min_receive_buffer(self, mock_socket_create):
         mock_socket = mock_socket_create.return_value
