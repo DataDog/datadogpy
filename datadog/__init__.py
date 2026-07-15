@@ -147,6 +147,11 @@ def initialize(
             statsd.host = statsd.resolve_host(statsd_host, statsd_use_default_route)
         if statsd_port:
             statsd.port = int(statsd_port)
+        # Selecting a UDP destination must clear any socket path (e.g. one inherited
+        # from DD_DOGSTATSD_URL=unix://...), otherwise get_socket() keeps using the
+        # UDS and the manual host/port override is silently ignored.
+        if statsd_host or statsd_use_default_route or statsd_port:
+            statsd.socket_path = None
     statsd.close_socket()
     if statsd_namespace:
         statsd.namespace = text(statsd_namespace)

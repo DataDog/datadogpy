@@ -747,9 +747,10 @@ class DogStatsd(object):
         dogstatsd_url = os.environ.get("DD_DOGSTATSD_URL")
         if host is None and port is None and socket_path is None and dogstatsd_url is not None:
             parsed = urlparse(dogstatsd_url)
-            if parsed.scheme == "unix":
-                # The scheme is stripped later by _get_uds_socket, so the full URL
-                # is stored as the socket path (this also preserves unixgram/unixstream).
+            if parsed.scheme in ("unix", "unixstream", "unixgram"):
+                # The scheme is stripped later by _get_uds_socket (which also uses it
+                # to pick the SOCK_STREAM/SOCK_DGRAM kind), so the full URL is stored
+                # as the socket path.
                 log.debug("DD_DOGSTATSD_URL %r resolved to a unix socket path.", dogstatsd_url)
                 return None, None, dogstatsd_url
             elif parsed.scheme == "udp":
@@ -771,7 +772,8 @@ class DogStatsd(object):
                 return parsed.hostname, url_port, socket_path
             else:
                 log.warning(
-                    "DD_DOGSTATSD_URL %r had unsupported scheme %r, must be one of 'unix://', 'udp://'",
+                    "DD_DOGSTATSD_URL %r had unsupported scheme %r, must be one of "
+                    "'udp://', 'unix://', 'unixstream://', 'unixgram://'",
                     dogstatsd_url, parsed.scheme,
                 )
 

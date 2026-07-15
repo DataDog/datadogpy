@@ -296,6 +296,26 @@ class TestDogStatsd(unittest.TestCase):
         initialize(**options)
         self.assertEqual(statsd.cardinality, 'none')
 
+    def test_initialization_udp_clears_socket_path(self):
+        """
+        Selecting a UDP destination via `initialize` clears a previously set
+        socket_path (e.g. one inherited from DD_DOGSTATSD_URL=unix://...), so the
+        manual host/port override is not silently ignored by get_socket().
+        """
+        original_socket_path = statsd.socket_path
+        try:
+            # Simulate a client that picked up a UDS from DD_DOGSTATSD_URL.
+            initialize(statsd_socket_path='/var/run/datadog/dsd.socket')
+            self.assertEqual(statsd.socket_path, '/var/run/datadog/dsd.socket')
+
+            # A manual UDP override must win: socket_path cleared, host/port set.
+            initialize(statsd_host='myhost', statsd_port=1234)
+            self.assertIsNone(statsd.socket_path)
+            self.assertEqual(statsd.host, 'myhost')
+            self.assertEqual(statsd.port, 1234)
+        finally:
+            statsd.socket_path = original_socket_path
+
     def test_dogstatsd_initialization_with_env_vars_agent_host(self):
         """
         Dogstatsd can retrieve its config from DD_AGENT_HOST / DD_DOGSTATSD_PORT
@@ -324,6 +344,14 @@ class TestDogStatsd(unittest.TestCase):
         self.assertEqual(dogstatsd.socket_path, 'unix:///hello/world.sock')
         self.assertIsNone(dogstatsd.host)
         self.assertIsNone(dogstatsd.port)
+
+        # The unixstream:// and unixgram:// schemes are UDS too
+        for uds_url in ('unixstream:///hello/world.sock', 'unixgram:///hello/world.sock'):
+            with EnvVars(env_vars={'DD_DOGSTATSD_URL': uds_url}):
+                dogstatsd = DogStatsd()
+            self.assertEqual(dogstatsd.socket_path, uds_url)
+            self.assertIsNone(dogstatsd.host)
+            self.assertIsNone(dogstatsd.port)
 
         # Explicit host wins over the url
         with EnvVars(env_vars={'DD_DOGSTATSD_URL': 'unix:///hello/world.sock'}):
