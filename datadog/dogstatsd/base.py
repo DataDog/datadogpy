@@ -179,6 +179,7 @@ UDS_OPTIMAL_PAYLOAD_LENGTH = 8192
 
 # Socket options
 MIN_SEND_BUFFER_SIZE = 32 * 1024
+DEFAULT_SOCKET_CONNECT_TIMEOUT = 0
 UDS_CONNECT_RETRY_INITIAL_BACKOFF = 0.025
 UDS_CONNECT_RETRY_MAX_BACKOFF = 1.0
 UDS_TRANSIENT_CONNECT_ERRORS = set([errno.ENOENT, errno.ECONNREFUSED])
@@ -296,6 +297,7 @@ class DogStatsd(object):
         sender_queue_size=0,                    # type: int
         sender_queue_timeout=0,                 # type: Optional[float]
         track_instance=True,                    # type: bool
+        socket_connect_timeout=DEFAULT_SOCKET_CONNECT_TIMEOUT,  # type: Optional[float]
     ):  # type: (...) -> None
         """
         Initialize a DogStatsd object.
@@ -453,6 +455,11 @@ class DogStatsd(object):
         This option does not affect hostname resolution when using UDP.
         :type socket_timeout: float
 
+        :param socket_connect_timeout: Set the timeout for connecting to a UNIX socket, in seconds. Optional.
+        Transient connection failures are retried within this timeout. If set to zero or None, do not retry.
+        Default: 0 (no retries).
+        :type socket_connect_timeout: float
+
         :param telemetry_socket_timeout: Set timeout for the telemetry socket operations. Optional.
         Effective only if either telemetry_host or telemetry_socket_path are set.
         If sets to zero, never wait if operation can not be completed immediately. If set to None, wait forever.
@@ -518,6 +525,7 @@ class DogStatsd(object):
         # Connection
         self._max_buffer_len = max_buffer_len
         self.socket_timeout = socket_timeout
+        self.socket_connect_timeout = socket_connect_timeout
         if socket_path is not None:
             self.socket_path = socket_path  # type: Optional[text]
             self.host = None
@@ -890,6 +898,7 @@ class DogStatsd(object):
                         self.telemetry_socket = self._get_uds_socket(
                             self.telemetry_socket_path,
                             self.telemetry_socket_timeout,
+                            self.socket_connect_timeout,
                         )
                     else:
                         self.telemetry_socket = self._get_udp_socket(
@@ -902,7 +911,11 @@ class DogStatsd(object):
 
             if not self.socket:
                 if self.socket_path is not None:
-                    self.socket = self._get_uds_socket(self.socket_path, self.socket_timeout)
+                    self.socket = self._get_uds_socket(
+                        self.socket_path,
+                        self.socket_timeout,
+                        self.socket_connect_timeout,
+                    )
                 else:
                     self.socket = self._get_udp_socket(
                         self.host,
@@ -937,8 +950,8 @@ class DogStatsd(object):
                 log.debug("Socket send buffer increased to %dkb", min_size / 1024)
 
     @classmethod
-    def _get_uds_socket(cls, socket_path, timeout):
-        # type: (Text, Optional[float]) -> _Socket
+    def _get_uds_socket(cls, socket_path, timeout, connect_timeout):
+        # type: (Text, Optional[float], Optional[float]) -> _Socket
         valid_socket_kinds = [socket.SOCK_DGRAM, socket.SOCK_STREAM]
         if socket_path.startswith(UNIX_ADDRESS_DATAGRAM_SCHEME):
             valid_socket_kinds = [socket.SOCK_DGRAM]
@@ -955,8 +968,8 @@ class DogStatsd(object):
             sk_name = {socket.SOCK_STREAM: "stream", socket.SOCK_DGRAM: "datagram"}[socket_kind]
 
             deadline = None
-            if timeout and timeout > 0:
-                deadline = time.time() + timeout
+            if connect_timeout and connect_timeout > 0:
+                deadline = time.time() + connect_timeout
 
             backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
 

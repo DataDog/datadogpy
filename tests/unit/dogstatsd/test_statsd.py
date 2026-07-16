@@ -880,13 +880,18 @@ class TestDogStatsd(unittest.TestCase):
         second_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
         mock_socket_create.side_effect = [first_socket, second_socket]
 
-        datadog = DogStatsd(socket_path="/fake/uds/socket/path", socket_timeout=1)
+        datadog = DogStatsd(
+            socket_path="/fake/uds/socket/path",
+            socket_timeout=0.1,
+            socket_connect_timeout=1,
+        )
         datadog.gauge('some value', 1)
         datadog.flush()
 
         self.assertEqual(mock_socket_create.call_count, 2)
         first_socket.close.assert_called_once()
         second_socket.close.assert_not_called()
+        second_socket.settimeout.assert_called_with(0.1)
         mock_sleep.assert_any_call(UDS_CONNECT_RETRY_INITIAL_BACKOFF)
 
     @patch('datadog.dogstatsd.base.time.sleep')
@@ -901,13 +906,18 @@ class TestDogStatsd(unittest.TestCase):
         second_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
         mock_socket_create.side_effect = [first_socket, second_socket]
 
-        datadog = DogStatsd(socket_path="unixstream:///fake/uds/socket/path", socket_timeout=1)
+        datadog = DogStatsd(
+            socket_path="unixstream:///fake/uds/socket/path",
+            socket_timeout=0.1,
+            socket_connect_timeout=1,
+        )
         datadog.gauge('some value', 1)
         datadog.flush()
 
         self.assertEqual(mock_socket_create.call_count, 2)
         first_socket.close.assert_called_once()
         second_socket.close.assert_not_called()
+        second_socket.settimeout.assert_called_with(0.1)
         mock_sleep.assert_any_call(UDS_CONNECT_RETRY_INITIAL_BACKOFF)
 
     @patch('socket.socket')
