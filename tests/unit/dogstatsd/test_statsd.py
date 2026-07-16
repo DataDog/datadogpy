@@ -920,6 +920,31 @@ class TestDogStatsd(unittest.TestCase):
         second_socket.settimeout.assert_called_with(0.1)
         mock_sleep.assert_any_call(UDS_CONNECT_RETRY_INITIAL_BACKOFF)
 
+    @patch('datadog.dogstatsd.base.time.sleep')
+    @patch('datadog.dogstatsd.base.time.time', side_effect=[0, 0, 0, 0.5, 0.9, 1.1])
+    @patch('socket.socket')
+    def test_uds_socket_never_sets_expired_deadline(self, mock_socket_create, mock_time, mock_sleep):
+        missing_socket_error = socket.error(errno.ENOENT, os.strerror(errno.ENOENT))
+        mock_socket = mock_socket_create.return_value
+        mock_socket.connect.side_effect = missing_socket_error
+        mock_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
+
+        with self.assertRaises(socket.error) as raised:
+            DogStatsd._get_uds_socket("unixgram:///fake/uds/socket/path", 0.1, 1)
+
+        self.assertEqual(raised.exception.errno, errno.ENOENT)
+        mock_socket_create.assert_called_once_with(socket.AF_UNIX, socket.SOCK_DGRAM)
+        mock_socket.settimeout.assert_called_once_with(1)
+
+    @patch('datadog.dogstatsd.base.time.time', side_effect=[0, 0.9, 1.1])
+    @patch('socket.socket')
+    def test_uds_socket_raises_timeout_before_first_attempt(self, mock_socket_create, mock_time):
+        with self.assertRaises(socket.timeout) as raised:
+            DogStatsd._get_uds_socket("unixgram:///fake/uds/socket/path", 0.1, 1)
+
+        self.assertEqual(str(raised.exception), "timed out connecting to UDS socket")
+        mock_socket_create.assert_not_called()
+
     @patch('socket.socket')
     def test_udp_socket_ensures_min_receive_buffer(self, mock_socket_create):
         mock_socket = mock_socket_create.return_value

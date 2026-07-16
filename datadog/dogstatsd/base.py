@@ -962,7 +962,7 @@ class DogStatsd(object):
         elif socket_path.startswith(UNIX_ADDRESS_SCHEME):
             socket_path = socket_path[len(UNIX_ADDRESS_SCHEME):]
 
-        last_error = ValueError("Invalid socket path")  # type: Exception
+        last_error = socket.timeout("timed out connecting to UDS socket")  # type: Exception
         for socket_kind in valid_socket_kinds:
             # py2 stores socket kinds differently than py3, determine the name independently from version
             sk_name = {socket.SOCK_STREAM: "stream", socket.SOCK_DGRAM: "datagram"}[socket_kind]
@@ -976,11 +976,14 @@ class DogStatsd(object):
             while deadline is None or time.time() < deadline:
                 sock = None
                 try:
-                    sock = socket.socket(socket.AF_UNIX, socket_kind)
+                    connect_attempt_timeout = timeout
                     if deadline is not None:
-                        sock.settimeout(max(0, deadline - time.time()))
-                    else:
-                        sock.settimeout(timeout)
+                        connect_attempt_timeout = deadline - time.time()
+                        if connect_attempt_timeout <= 0:
+                            break
+
+                    sock = socket.socket(socket.AF_UNIX, socket_kind)
+                    sock.settimeout(connect_attempt_timeout)
                     cls._ensure_min_send_buffer_size(sock)
                     sock.connect(socket_path)
                     sock.settimeout(timeout)
