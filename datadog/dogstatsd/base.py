@@ -963,13 +963,13 @@ class DogStatsd(object):
             socket_path = socket_path[len(UNIX_ADDRESS_SCHEME):]
 
         last_error = socket.timeout("timed out connecting to UDS socket")  # type: Exception
+        deadline = None
+        if connect_timeout and connect_timeout > 0:
+            deadline = time.time() + connect_timeout
+
         for socket_kind in valid_socket_kinds:
             # py2 stores socket kinds differently than py3, determine the name independently from version
             sk_name = {socket.SOCK_STREAM: "stream", socket.SOCK_DGRAM: "datagram"}[socket_kind]
-
-            deadline = None
-            if connect_timeout and connect_timeout > 0:
-                deadline = time.time() + connect_timeout
 
             backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
 
