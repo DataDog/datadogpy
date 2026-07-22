@@ -313,6 +313,21 @@ class TestDogStatsd(unittest.TestCase):
             self.assertIsNone(statsd.socket_path)
             self.assertEqual(statsd.host, 'myhost')
             self.assertEqual(statsd.port, 1234)
+
+            # host-only override on a UDS-configured client backfills the default port
+            # (the client had port=None), so the UDP socket is valid.
+            initialize(statsd_socket_path='/var/run/datadog/dsd.socket')
+            initialize(statsd_host='hostonly')
+            self.assertIsNone(statsd.socket_path)
+            self.assertEqual(statsd.host, 'hostonly')
+            self.assertEqual(statsd.port, DEFAULT_PORT)
+
+            # port-only override likewise backfills the default host
+            initialize(statsd_socket_path='/var/run/datadog/dsd.socket')
+            initialize(statsd_port=9999)
+            self.assertIsNone(statsd.socket_path)
+            self.assertEqual(statsd.host, DEFAULT_HOST)
+            self.assertEqual(statsd.port, 9999)
         finally:
             statsd.socket_path = original_socket_path
 

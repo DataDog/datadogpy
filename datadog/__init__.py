@@ -21,6 +21,7 @@ if sys.version_info[0] >= 3:
 # datadog
 from datadog import api
 from datadog.dogstatsd import DogStatsd, statsd  # noqa
+from datadog.dogstatsd.base import DEFAULT_HOST, DEFAULT_PORT
 from datadog.threadstats import ThreadStats, datadog_lambda_wrapper, lambda_metric  # noqa
 from datadog.util.compat import iteritems, NullHandler, text
 from datadog.util.hostname import get_hostname
@@ -152,6 +153,12 @@ def initialize(
         # UDS and the manual host/port override is silently ignored.
         if statsd_host or statsd_use_default_route or statsd_port:
             statsd.socket_path = None
+            # The client may have been UDS-configured (host/port None). Backfill any
+            # side not supplied here so the UDP socket has a valid host and port.
+            if statsd.host is None:
+                statsd.host = DEFAULT_HOST
+            if statsd.port is None:
+                statsd.port = DEFAULT_PORT
     statsd.close_socket()
     if statsd_namespace:
         statsd.namespace = text(statsd_namespace)
