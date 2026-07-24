@@ -30,7 +30,7 @@ import pytest
 # Datadog libraries
 from datadog import initialize, statsd
 from datadog import __version__ as version
-from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DogStatsd, MIN_SEND_BUFFER_SIZE, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_CONNECT_RETRY_INITIAL_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
+from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_CONNECT_RETRY_INITIAL_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
 from tests.util.contextmanagers import preserve_environment_variable, EnvVars
@@ -296,21 +296,129 @@ class TestDogStatsd(unittest.TestCase):
         initialize(**options)
         self.assertEqual(statsd.cardinality, 'none')
 
-    def test_dogstatsd_initialization_with_env_vars(self):
+    def test_initialization_udp_clears_socket_path(self):
         """
-        Dogstatsd can retrieve its config from env vars when
-        not provided in constructor.
+        Selecting a UDP destination via `initialize` clears a previously set
+        socket_path (e.g. one inherited from DD_DOGSTATSD_URL=unix://...), so the
+        manual host/port override is not silently ignored by get_socket().
         """
-        # Setup
-        with preserve_environment_variable('DD_AGENT_HOST'):
-            os.environ['DD_AGENT_HOST'] = 'myenvvarhost'
-            with preserve_environment_variable('DD_DOGSTATSD_PORT'):
-                os.environ['DD_DOGSTATSD_PORT'] = '4321'
-                dogstatsd = DogStatsd()
+        original_socket_path = statsd.socket_path
+        try:
+            # Simulate a client that picked up a UDS from DD_DOGSTATSD_URL.
+            initialize(statsd_socket_path='/var/run/datadog/dsd.socket')
+            self.assertEqual(statsd.socket_path, '/var/run/datadog/dsd.socket')
 
-        # Assert
+            # A manual UDP override must win: socket_path cleared, host/port set.
+            initialize(statsd_host='myhost', statsd_port=1234)
+            self.assertIsNone(statsd.socket_path)
+            self.assertEqual(statsd.host, 'myhost')
+            self.assertEqual(statsd.port, 1234)
+
+            # host-only override on a UDS-configured client backfills the default port
+            # (the client had port=None), so the UDP socket is valid.
+            initialize(statsd_socket_path='/var/run/datadog/dsd.socket')
+            initialize(statsd_host='hostonly')
+            self.assertIsNone(statsd.socket_path)
+            self.assertEqual(statsd.host, 'hostonly')
+            self.assertEqual(statsd.port, DEFAULT_PORT)
+
+            # port-only override likewise backfills the default host
+            initialize(statsd_socket_path='/var/run/datadog/dsd.socket')
+            initialize(statsd_port=9999)
+            self.assertIsNone(statsd.socket_path)
+            self.assertEqual(statsd.host, DEFAULT_HOST)
+            self.assertEqual(statsd.port, 9999)
+        finally:
+            statsd.socket_path = original_socket_path
+
+    def test_dogstatsd_initialization_with_env_vars_agent_host(self):
+        """
+        Dogstatsd can retrieve its config from DD_AGENT_HOST / DD_DOGSTATSD_PORT
+        env vars when not provided in the constructor.
+        """
+        with EnvVars(env_vars={'DD_AGENT_HOST': 'myenvvarhost', 'DD_DOGSTATSD_PORT': '4321'}):
+            dogstatsd = DogStatsd()
         self.assertEqual(dogstatsd.host, "myenvvarhost")
         self.assertEqual(dogstatsd.port, 4321)
+
+    def test_dogstatsd_initialization_with_env_vars_dogstatsd_url(self):
+        """
+        Dogstatsd can retrieve its config from the DD_DOGSTATSD_URL env var, but
+        an explicit constructor argument always takes precedence over it.
+        """
+        # UDP url
+        with EnvVars(env_vars={'DD_DOGSTATSD_URL': 'udp://myenvvarhost:4321'}):
+            dogstatsd = DogStatsd()
+        self.assertEqual(dogstatsd.host, "myenvvarhost")
+        self.assertEqual(dogstatsd.port, 4321)
+        self.assertIsNone(dogstatsd.socket_path)
+
+        # UDS url: the full url is stored as the socket path
+        with EnvVars(env_vars={'DD_DOGSTATSD_URL': 'unix:///hello/world.sock'}):
+            dogstatsd = DogStatsd()
+        self.assertEqual(dogstatsd.socket_path, 'unix:///hello/world.sock')
+        self.assertIsNone(dogstatsd.host)
+        self.assertIsNone(dogstatsd.port)
+
+        # The unixstream:// and unixgram:// schemes are UDS too
+        for uds_url in ('unixstream:///hello/world.sock', 'unixgram:///hello/world.sock'):
+            with EnvVars(env_vars={'DD_DOGSTATSD_URL': uds_url}):
+                dogstatsd = DogStatsd()
+            self.assertEqual(dogstatsd.socket_path, uds_url)
+            self.assertIsNone(dogstatsd.host)
+            self.assertIsNone(dogstatsd.port)
+
+        # Explicit host wins over the url
+        with EnvVars(env_vars={'DD_DOGSTATSD_URL': 'unix:///hello/world.sock'}):
+            dogstatsd = DogStatsd(host="myhost")
+        self.assertIsNone(dogstatsd.socket_path)
+        self.assertEqual(dogstatsd.host, 'myhost')
+        self.assertEqual(dogstatsd.port, DEFAULT_PORT)
+
+        # Explicit port wins over the url
+        with EnvVars(env_vars={'DD_DOGSTATSD_URL': 'unix:///hello/world.sock'}):
+            dogstatsd = DogStatsd(port=8240)
+        self.assertIsNone(dogstatsd.socket_path)
+        self.assertEqual(dogstatsd.host, DEFAULT_HOST)
+        self.assertEqual(dogstatsd.port, 8240)
+
+        # Explicit socket_path wins over the url
+        with EnvVars(env_vars={'DD_DOGSTATSD_URL': 'unix:///hello/world.sock'}):
+            dogstatsd = DogStatsd(socket_path='/var/run/datadog/dsd.sock')
+        self.assertEqual(dogstatsd.socket_path, '/var/run/datadog/dsd.sock')
+        self.assertIsNone(dogstatsd.host)
+        self.assertIsNone(dogstatsd.port)
+
+        # An explicit default host is NOT clobbered by the url
+        with EnvVars(env_vars={'DD_DOGSTATSD_URL': 'udp://other:9999'}):
+            dogstatsd = DogStatsd(host=DEFAULT_HOST)
+        self.assertEqual(dogstatsd.host, DEFAULT_HOST)
+        self.assertEqual(dogstatsd.port, DEFAULT_PORT)
+        self.assertIsNone(dogstatsd.socket_path)
+
+        # Unsupported scheme falls back to defaults without raising
+        with EnvVars(env_vars={'DD_DOGSTATSD_URL': 'http://myenvvarhost:4321'}):
+            dogstatsd = DogStatsd()
+        self.assertEqual(dogstatsd.host, DEFAULT_HOST)
+        self.assertEqual(dogstatsd.port, DEFAULT_PORT)
+        self.assertIsNone(dogstatsd.socket_path)
+
+        # A UDP url without a port falls back to the default port
+        with EnvVars(env_vars={'DD_DOGSTATSD_URL': 'udp://myenvvarhost'}):
+            dogstatsd = DogStatsd()
+        self.assertEqual(dogstatsd.host, "myenvvarhost")
+        self.assertEqual(dogstatsd.port, DEFAULT_PORT)
+        self.assertIsNone(dogstatsd.socket_path)
+
+        # DD_DOGSTATSD_URL takes precedence over DD_AGENT_HOST / DD_DOGSTATSD_PORT
+        with EnvVars(env_vars={
+            'DD_DOGSTATSD_URL': 'udp://urlhost:1111',
+            'DD_AGENT_HOST': 'legacyhost',
+            'DD_DOGSTATSD_PORT': '2222',
+        }):
+            dogstatsd = DogStatsd()
+        self.assertEqual(dogstatsd.host, "urlhost")
+        self.assertEqual(dogstatsd.port, 1111)
 
     def test_initialization_closes_socket(self):
         statsd.socket = FakeSocket()

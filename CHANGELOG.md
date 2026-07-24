@@ -1,11 +1,20 @@
 # Changelog
 
+## v0.52.2 / 2026-06-22
+
+* [Fixed] Fix dogshell to accept app keys with underscore prefixes. See [#931](https://github.com/DataDog/datadogpy/pull/931).
+* [Fixed] Push cardinality for sampled metrics. See [#929](https://github.com/DataDog/datadogpy/pull/929).
+* [Fixed] Compute rate under lock. See [#928](https://github.com/DataDog/datadogpy/pull/928).
+* [Fixed] Report the right number of dropped bytes. See [#927](https://github.com/DataDog/datadogpy/pull/927).
+* [Fixed] Pass missing parameter in `MaxSampleMetricContexts`. See [#916](https://github.com/DataDog/datadogpy/pull/916).
+* [Fixed] Restore `--pretty`/`--raw` support in dogshell. See [#917](https://github.com/DataDog/datadogpy/pull/917).
+* [Fixed] Fix SLO update via dogshell. See [#889](https://github.com/DataDog/datadogpy/pull/889).
+* [Changed] Cache constant tags for performance. See [#915](https://github.com/DataDog/datadogpy/pull/915).
+* [Added] Add typing for `api`, `util`, `dogstatsd`, and `dogshell` modules. See [#920](https://github.com/DataDog/datadogpy/pull/920), [#922](https://github.com/DataDog/datadogpy/pull/922), [#921](https://github.com/DataDog/datadogpy/pull/921), [#919](https://github.com/DataDog/datadogpy/pull/919), [#918](https://github.com/DataDog/datadogpy/pull/918).
+
 ## v0.52.1 / 2025-07-31
 
 * [Fixed] Fix missing transport attribute when flushing telemetry. See [#902](https://github.com/DataDog/datadogpy/pull/902).
-
-## Unreleased
-* [Fixed] Fix missing transport attribute when flushing telemetry.
 
 ## v0.52.0 / 2025-07-08
 

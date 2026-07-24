@@ -32,7 +32,7 @@ except ImportError:
 
 # pylint: disable=unused-import
 if sys.version_info[:2] >= (3, 5):
-    from typing import Any, Optional, List, Text, Type, Union, Iterable, Callable, overload  # noqa: F401
+    from typing import Any, Optional, List, Text, Tuple, Type, Union, Iterable, Callable, overload  # noqa: F401
 
 try:
     from typing import SupportsIndex
@@ -49,7 +49,7 @@ from datadog.dogstatsd.context import (
 )
 from datadog.dogstatsd.route import get_default_route
 from datadog.dogstatsd.container import Cgroup
-from datadog.util.compat import text
+from datadog.util.compat import text, urlparse
 from datadog.util.format import normalize_tags, validate_cardinality
 from datadog.version import __version__
 
@@ -269,8 +269,8 @@ class DogStatsd(object):
 
     def __init__(
         self,
-        host=DEFAULT_HOST,                      # type: Text
-        port=DEFAULT_PORT,                      # type: int
+        host=None,                              # type: Optional[Text]
+        port=None,                              # type: Optional[int]
         max_buffer_size=None,                   # type: Optional[int]
         flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL,  # type: float
         disable_aggregation=True,               # type: bool
@@ -304,12 +304,20 @@ class DogStatsd(object):
 
         >>> statsd = DogStatsd()
 
+        :envvar DD_DOGSTATSD_URL: the connection information for the DogStatsd server.
+        If set, and no connection was provided explicitly, it takes precedence over
+        DD_AGENT_HOST / DD_DOGSTATSD_PORT.
+        Example for a UDP url: `DD_DOGSTATSD_URL=udp://localhost:8125`
+        Example for a UDS url: `DD_DOGSTATSD_URL=unix:///var/run/datadog/dsd.socket`
+        Windows named pipes are currently unsupported.
+        :type DD_DOGSTATSD_URL: string
+
         :envvar DD_AGENT_HOST: the host of the DogStatsd server.
-        If set, it overrides default value.
+        If set, it overrides default value. DD_DOGSTATSD_URL takes precedence over this value.
         :type DD_AGENT_HOST: string
 
         :envvar DD_DOGSTATSD_PORT: the port of the DogStatsd server.
-        If set, it overrides default value.
+        If set, it overrides default value. DD_DOGSTATSD_URL takes precedence over this value.
         :type DD_DOGSTATSD_PORT: integer
 
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by dogstatsd client.
@@ -495,22 +503,17 @@ class DogStatsd(object):
         # Check for deprecated option
         if max_buffer_size is not None:
             log.warning("The parameter max_buffer_size is now deprecated and is not used anymore")
-        # Check host and port env vars
-        agent_host = os.environ.get("DD_AGENT_HOST")
-        if agent_host and host == DEFAULT_HOST:
-            host = agent_host
+        # Resolve host/port/socket from env vars when not set explicitly. An
+        # explicit constructor argument always wins over any environment variable.
+        host, port, socket_path = self._parse_env_connection_overrides(host, port, socket_path)
 
-        dogstatsd_port = os.environ.get("DD_DOGSTATSD_PORT")
-        if dogstatsd_port and port == DEFAULT_PORT:
-            try:
-                port = int(dogstatsd_port)
-            except ValueError:
-                log.warning(
-                    "Port number provided in DD_DOGSTATSD_PORT env var is not an integer: \
-                %s, using %s as port number",
-                    dogstatsd_port,
-                    port,
-                )
+        # Apply the hard-coded defaults last, once env resolution is done. When a
+        # socket transport is selected these are ignored (host/port become None
+        # below), but resolving them keeps `port` a concrete int for telemetry.
+        if host is None:
+            host = DEFAULT_HOST
+        if port is None:
+            port = DEFAULT_PORT
 
         # Assuming environment variables always override
         telemetry_host = os.environ.get("DD_TELEMETRY_HOST", telemetry_host)
@@ -740,6 +743,67 @@ class DogStatsd(object):
     def enable_telemetry(self):
         # type: () -> None
         self._telemetry = True
+
+    @staticmethod
+    def _parse_env_connection_overrides(host, port, socket_path):
+        # type: (Optional[Text], Optional[int], Optional[Text]) -> Tuple[Optional[Text], Optional[int], Optional[Text]]
+        """
+        Resolve the connection host/port/socket_path from environment variables,
+        without overriding values already provided explicitly to the constructor.
+
+        DD_DOGSTATSD_URL takes precedence over DD_AGENT_HOST / DD_DOGSTATSD_PORT and
+        is only honored when no connection information was passed explicitly. It
+        supports 'udp://host:port' and 'unix:///path/to/socket' URLs.
+        """
+        dogstatsd_url = os.environ.get("DD_DOGSTATSD_URL")
+        if host is None and port is None and socket_path is None and dogstatsd_url is not None:
+            parsed = urlparse(dogstatsd_url)
+            if parsed.scheme in ("unix", "unixstream", "unixgram"):
+                # The scheme is stripped later by _get_uds_socket (which also uses it
+                # to pick the SOCK_STREAM/SOCK_DGRAM kind), so the full URL is stored
+                # as the socket path.
+                log.debug("DD_DOGSTATSD_URL %r resolved to a unix socket path.", dogstatsd_url)
+                return None, None, dogstatsd_url
+            elif parsed.scheme == "udp":
+                try:
+                    url_port = parsed.port
+                    # Python 2's urlparse does not bounds-check the port.
+                    if url_port is None or url_port < 0 or url_port > 65535:
+                        log.warning(
+                            "DD_DOGSTATSD_URL %r had no or invalid port number, reverting to default %s",
+                            dogstatsd_url, DEFAULT_PORT,
+                        )
+                        url_port = DEFAULT_PORT
+                except ValueError as e:
+                    log.warning(
+                        "DD_DOGSTATSD_URL %r contained an invalid port number, falling back to %d: %s",
+                        dogstatsd_url, DEFAULT_PORT, e,
+                    )
+                    url_port = DEFAULT_PORT
+                return parsed.hostname, url_port, socket_path
+            else:
+                log.warning(
+                    "DD_DOGSTATSD_URL %r had unsupported scheme %r, must be one of "
+                    "'udp://', 'unix://', 'unixstream://', 'unixgram://'",
+                    dogstatsd_url, parsed.scheme,
+                )
+
+        # Fall back to the legacy per-field env vars (only when the arg is unset).
+        agent_host = os.environ.get("DD_AGENT_HOST")
+        if agent_host and host is None:
+            host = agent_host
+
+        dogstatsd_port = os.environ.get("DD_DOGSTATSD_PORT")
+        if dogstatsd_port and port is None:
+            try:
+                port = int(dogstatsd_port)
+            except ValueError:
+                log.warning(
+                    "DD_DOGSTATSD_PORT value %r is not an integer, falling back to default",
+                    dogstatsd_port,
+                )
+
+        return host, port, socket_path
 
     # Note: Invocations of this method should be thread-safe
     def _start_flush_thread(self):
