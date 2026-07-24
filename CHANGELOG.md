@@ -2,7 +2,7 @@
 
 ## v0.53.0 / 2026-07-24
 
-* [Fixed] Add DD_DOGSTATSD_URL support for unix and udp urls. See [#968](https://github.com/DataDog/datadogpy/pull/968).
+* [Fixed] Add DD_DOGSTATSD_URL support for Unix and UDP URLs. See [#968](https://github.com/DataDog/datadogpy/pull/968).
 * [Added] Retry DogStatsD UDS connect failures. See [#964](https://github.com/DataDog/datadogpy/pull/964).
 
 ## v0.52.2 / 2026-06-22
