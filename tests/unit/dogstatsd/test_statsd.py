@@ -920,6 +920,39 @@ class TestDogStatsd(unittest.TestCase):
                 mock.ANY,
             )
 
+    @patch('datadog.dogstatsd.base.DogStatsd._get_udp_socket')
+    def test_socket_connection_error_reconnects_and_resends(self, mock_get_udp_socket):
+        working_socket = FakeSocket()
+        mock_get_udp_socket.return_value = working_socket
+        self.statsd.socket = BrokenSocket(error_number=errno.ECONNREFUSED)
+
+        with mock.patch("datadog.dogstatsd.base.log") as mock_log:
+            self.statsd.gauge('reconnected', 1)
+            self.statsd.flush()
+
+            mock_log.error.assert_not_called()
+            mock_log.warning.assert_not_called()
+
+        # The packet was not dropped: it was resent once a fresh socket was obtained.
+        mock_get_udp_socket.assert_called_once()
+        self.assertEqual(self.statsd.packets_dropped_writer, 0)
+        self.assertEqual(working_socket.payloads[0].decode('utf-8'), 'reconnected:1|g\n')
+
+    def test_socket_connection_error_drops_packet_if_reconnect_also_fails(self):
+        self.statsd.socket = BrokenSocket(error_number=errno.ECONNREFUSED)
+
+        with mock.patch.object(
+            DogStatsd, '_get_udp_socket', side_effect=socket.error(errno.ECONNREFUSED, "still refused")
+        ):
+            with mock.patch("datadog.dogstatsd.base.log") as mock_log:
+                self.statsd.gauge('no error', 1)
+                self.statsd.flush()
+
+                mock_log.error.assert_not_called()
+
+        # Both the metric and the telemetry flush hit the same broken reconnect and get dropped.
+        self.assertEqual(self.statsd.packets_dropped_writer, 2)
+
     def test_socket_overflown(self):
         self.statsd.socket = OverflownSocket()
         with mock.patch("datadog.dogstatsd.base.log") as mock_log:

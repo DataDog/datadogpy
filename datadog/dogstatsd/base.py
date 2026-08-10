@@ -183,6 +183,16 @@ DEFAULT_SOCKET_CONNECT_TIMEOUT = 0
 UDS_CONNECT_RETRY_INITIAL_BACKOFF = 0.025
 UDS_CONNECT_RETRY_MAX_BACKOFF = 1.0
 UDS_TRANSIENT_CONNECT_ERRORS = set([errno.ENOENT, errno.ECONNREFUSED])
+# Errors seen while sending on an already-connected socket that indicate the
+# peer went away (e.g. the agent crashed/restarted). These are worth a single
+# reconnect-and-resend attempt instead of dropping the packet outright.
+UDS_TRANSIENT_SEND_ERRORS = set([
+    errno.ECONNREFUSED,
+    errno.ECONNRESET,
+    errno.ENOTCONN,
+    errno.EPIPE,
+    errno.ENOENT,
+])
 
 # Mapping of each "DD_" prefixed environment variable to a specific tag name
 DD_ENV_TAGS_MAPPING = {
@@ -1647,6 +1657,10 @@ class DogStatsd(object):
 
     def _xmit_packet(self, packet, is_telemetry):
         # type: (str, bool) -> bool
+        return self._xmit_packet_attempt(packet, is_telemetry, retry_on_conn_error=True)
+
+    def _xmit_packet_attempt(self, packet, is_telemetry, retry_on_conn_error):
+        # type: (str, bool, bool) -> bool
         socket_kind = None
         try:
             if is_telemetry and self._dedicated_telemetry_destination():
@@ -1689,6 +1703,12 @@ class DogStatsd(object):
                     "Packet size too big (size: %d): %s, dropping the packet",
                     len(packet.encode(self.encoding)),
                     socket_err)
+            elif retry_on_conn_error and socket_err.errno in UDS_TRANSIENT_SEND_ERRORS:
+                log.debug(
+                    "Connection error submitting packet: %s, reconnecting and retrying", socket_err
+                )
+                self.close_socket()
+                return self._xmit_packet_attempt(packet, is_telemetry, retry_on_conn_error=False)
             else:
                 log.warning(
                     "Error submitting packet: %s, dropping the packet and closing the socket",
