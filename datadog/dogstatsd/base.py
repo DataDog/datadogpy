@@ -17,7 +17,7 @@ import struct
 import sys
 import threading
 import time
-from threading import Lock, RLock
+from threading import RLock
 import weakref
 
 if sys.version_info[:2] >= (3, 5):
@@ -508,7 +508,9 @@ class DogStatsd(object):
         :type track_instance: boolean
         """
 
-        self._socket_lock = Lock()
+        # RLock: _xmit_packet_attempt holds this across get_socket()/close_socket()
+        # calls, which also take it themselves.
+        self._socket_lock = RLock()
 
         # Check for deprecated option
         if max_buffer_size is not None:
@@ -1697,21 +1699,24 @@ class DogStatsd(object):
         """
         socket_kind = None
         try:
-            if is_telemetry and self._dedicated_telemetry_destination():
-                mysocket = self.telemetry_socket or self.get_socket(telemetry=True)
-                socket_kind = self._telemetry_socket_kind
-            else:
-                # If set, use socket directly
-                mysocket = self.socket or self.get_socket()
-                socket_kind = self._socket_kind
+            # Held across the fetch-and-send so a concurrent close_socket() (e.g.
+            # from another thread's failed send) can't close the fd out from
+            # under a send that's already in flight (which raises EBADF).
+            with self._socket_lock:
+                if is_telemetry and self._dedicated_telemetry_destination():
+                    mysocket = self.telemetry_socket or self.get_socket(telemetry=True)
+                    socket_kind = self._telemetry_socket_kind
+                else:
+                    # If set, use socket directly
+                    mysocket = self.socket or self.get_socket()
+                    socket_kind = self._socket_kind
 
-            encoded_packet = packet.encode(self.encoding)
-            if socket_kind == socket.SOCK_STREAM:
-                with self._socket_lock:
+                encoded_packet = packet.encode(self.encoding)
+                if socket_kind == socket.SOCK_STREAM:
                     mysocket.sendall(struct.pack('<I', len(encoded_packet)))
                     mysocket.sendall(encoded_packet)
-            else:
-                mysocket.send(encoded_packet)
+                else:
+                    mysocket.send(encoded_packet)
 
             if not is_telemetry and self._telemetry:
                 self.packets_sent += 1
@@ -2079,7 +2084,7 @@ class DogStatsd(object):
         # Discard the locks that could have been locked at the time
         # when we forked. This may cause inconsistent internal state,
         # which we will fix in the next steps.
-        self._socket_lock = Lock()
+        self._socket_lock = RLock()
         self._buffer_lock = RLock()
 
         # Reset the buffer so we don't send metrics from the parent

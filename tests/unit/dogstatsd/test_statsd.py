@@ -979,6 +979,38 @@ class TestDogStatsd(unittest.TestCase):
         self.assertEqual(self.statsd.packets_dropped_writer, 0)
         self.assertTrue(working_socket.payloads[0].decode('utf-8').startswith('reconnected after retries:1|g'))
 
+    def test_close_socket_waits_for_in_flight_send(self):
+        # A concurrent close_socket() (e.g. triggered by another thread's failed
+        # send) must not be able to close the fd out from under a send that's
+        # already in flight - that races and can raise EBADF.
+        send_started = threading.Event()
+        release_send = threading.Event()
+
+        class SlowSocket(FakeSocket):
+            def send(self, payload):
+                send_started.set()
+                release_send.wait(2)
+
+        self.statsd.socket = SlowSocket()
+
+        sender_thread = Thread(target=lambda: self.statsd.gauge('foo', 1))
+        sender_thread.start()
+        self.assertTrue(send_started.wait(2), "send did not start in time")
+
+        closer_thread = Thread(target=self.statsd.close_socket)
+        closer_thread.start()
+        # Give closer_thread a chance to call close_socket() and block on it.
+        time.sleep(0.1)
+
+        # The in-flight send still holds _socket_lock, so close_socket() must
+        # still be waiting on it here rather than having already closed the socket.
+        self.assertTrue(closer_thread.is_alive())
+
+        release_send.set()
+        sender_thread.join(2)
+        closer_thread.join(2)
+        self.assertFalse(closer_thread.is_alive())
+
     def test_socket_connection_error_does_not_retry_without_connect_timeout(self):
         # socket_connect_timeout defaults to 0 (unset): no reconnect attempt should be made
         # for this packet, it should be dropped immediately instead.
