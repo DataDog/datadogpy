@@ -940,7 +940,8 @@ class TestDogStatsd(unittest.TestCase):
         self.assertEqual(working_socket.payloads[0].decode('utf-8'), 'reconnected:1|g\n')
 
     def test_socket_connection_error_drops_packet_if_reconnect_also_fails(self):
-        self.statsd.socket_connect_timeout = 5
+        # Small deadline so the retry loop gives up quickly in the test.
+        self.statsd.socket_connect_timeout = 0.05
         self.statsd.socket = BrokenSocket(error_number=errno.ECONNREFUSED)
 
         with mock.patch.object(
@@ -952,8 +953,31 @@ class TestDogStatsd(unittest.TestCase):
 
                 mock_log.error.assert_not_called()
 
-        # Both the metric and the telemetry flush hit the same broken reconnect and get dropped.
+        # Both the metric and the telemetry flush hit the same broken reconnect and get dropped
+        # once the retry deadline is exhausted.
         self.assertEqual(self.statsd.packets_dropped_writer, 2)
+
+    @patch('datadog.dogstatsd.base.DogStatsd._get_udp_socket')
+    def test_socket_connection_error_retries_multiple_times_before_success(self, mock_get_udp_socket):
+        working_socket = FakeSocket()
+        mock_get_udp_socket.side_effect = [
+            socket.error(errno.ECONNREFUSED, "still refused"),
+            socket.error(errno.ECONNREFUSED, "still refused"),
+            working_socket,
+        ]
+        # Long enough to cover a few backoff sleeps well under a second.
+        self.statsd.socket_connect_timeout = 5
+        self.statsd.socket = BrokenSocket(error_number=errno.ECONNREFUSED)
+
+        with mock.patch("datadog.dogstatsd.base.log") as mock_log:
+            self.statsd.gauge('reconnected after retries', 1)
+
+            mock_log.warning.assert_not_called()
+
+        # Two failed reconnect attempts, then a third that finally succeeds.
+        self.assertEqual(mock_get_udp_socket.call_count, 3)
+        self.assertEqual(self.statsd.packets_dropped_writer, 0)
+        self.assertTrue(working_socket.payloads[0].decode('utf-8').startswith('reconnected after retries:1|g'))
 
     def test_socket_connection_error_does_not_retry_without_connect_timeout(self):
         # socket_connect_timeout defaults to 0 (unset): no reconnect attempt should be made

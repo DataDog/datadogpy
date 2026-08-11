@@ -1657,11 +1657,44 @@ class DogStatsd(object):
 
     def _xmit_packet(self, packet, is_telemetry):
         # type: (str, bool) -> bool
-        retry_on_conn_error = bool(self.socket_connect_timeout and self.socket_connect_timeout > 0)
-        return self._xmit_packet_attempt(packet, is_telemetry, retry_on_conn_error=retry_on_conn_error)
+        retry_deadline = None
+        if self.socket_connect_timeout and self.socket_connect_timeout > 0:
+            retry_deadline = time.time() + self.socket_connect_timeout
 
-    def _xmit_packet_attempt(self, packet, is_telemetry, retry_on_conn_error):
-        # type: (str, bool, bool) -> bool
+        backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
+        while True:
+            sent = self._xmit_packet_attempt(packet, is_telemetry, retry_eligible=retry_deadline is not None)
+            if sent:
+                return True
+            # `sent` is False for a definitive failure (already logged/dropped
+            # above), or None for a transient one that's worth reconnecting
+            # and retrying, bounded by socket_connect_timeout.
+            if sent is not None:
+                break
+            remaining = retry_deadline - time.time()
+            if remaining <= 0:
+                log.warning(
+                    "Gave up reconnecting after socket_connect_timeout (%ss), dropping the packet",
+                    self.socket_connect_timeout,
+                )
+                break
+            time.sleep(min(backoff, remaining))
+            backoff = min(backoff * 2, UDS_CONNECT_RETRY_MAX_BACKOFF)
+
+        if not is_telemetry and self._telemetry:
+            self.bytes_dropped_writer += len(packet)
+            self.packets_dropped_writer += 1
+        return False
+
+    def _xmit_packet_attempt(self, packet, is_telemetry, retry_eligible):
+        # type: (str, bool, bool) -> Optional[bool]
+        """
+        Attempt to send a single packet.
+
+        Returns True if the packet was sent, False if it should be dropped
+        without retrying, or None if the failure is transient (the peer went
+        away), `retry_eligible` is set, and it's worth a reconnect-and-retry.
+        """
         socket_kind = None
         try:
             if is_telemetry and self._dedicated_telemetry_destination():
@@ -1687,13 +1720,14 @@ class DogStatsd(object):
             return True
         except socket.timeout:
             # dogstatsd is overflowing, drop the packets (mimics the UDP behaviour)
-            pass
+            return False
         except (socket.herror, socket.gaierror) as socket_err:
             log.warning(
                 "Error submitting packet: %s, dropping the packet and closing the socket",
                 socket_err,
             )
             self.close_socket()
+            return False
         except socket.error as socket_err:
             if socket_err.errno == errno.EAGAIN:
                 log.debug("Socket send would block: %s, dropping the packet", socket_err)
@@ -1704,24 +1738,22 @@ class DogStatsd(object):
                     "Packet size too big (size: %d): %s, dropping the packet",
                     len(packet.encode(self.encoding)),
                     socket_err)
-            elif retry_on_conn_error and socket_err.errno in UDS_TRANSIENT_SEND_ERRORS:
+            elif retry_eligible and socket_err.errno in UDS_TRANSIENT_SEND_ERRORS:
                 log.debug(
                     "Connection error submitting packet: %s, reconnecting and retrying", socket_err
                 )
                 self.close_socket()
-                return self._xmit_packet_attempt(packet, is_telemetry, retry_on_conn_error=False)
+                return None
             else:
                 log.warning(
                     "Error submitting packet: %s, dropping the packet and closing the socket",
                     socket_err,
                 )
                 self.close_socket()
+            return False
         except Exception as exc:
             log.error("Unexpected error: %s", str(exc))
-
-        if not is_telemetry and self._telemetry:
-            self.bytes_dropped_writer += len(packet)
-            self.packets_dropped_writer += 1
+            return False
 
         # if in stream mode we need to shut down the socket; we can't recover from a
         # partial send
