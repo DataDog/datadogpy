@@ -924,6 +924,7 @@ class TestDogStatsd(unittest.TestCase):
     def test_socket_connection_error_reconnects_and_resends(self, mock_get_udp_socket):
         working_socket = FakeSocket()
         mock_get_udp_socket.return_value = working_socket
+        self.statsd.socket_connect_timeout = 5
         self.statsd.socket = BrokenSocket(error_number=errno.ECONNREFUSED)
 
         with mock.patch("datadog.dogstatsd.base.log") as mock_log:
@@ -939,6 +940,7 @@ class TestDogStatsd(unittest.TestCase):
         self.assertEqual(working_socket.payloads[0].decode('utf-8'), 'reconnected:1|g\n')
 
     def test_socket_connection_error_drops_packet_if_reconnect_also_fails(self):
+        self.statsd.socket_connect_timeout = 5
         self.statsd.socket = BrokenSocket(error_number=errno.ECONNREFUSED)
 
         with mock.patch.object(
@@ -952,6 +954,25 @@ class TestDogStatsd(unittest.TestCase):
 
         # Both the metric and the telemetry flush hit the same broken reconnect and get dropped.
         self.assertEqual(self.statsd.packets_dropped_writer, 2)
+
+    def test_socket_connection_error_does_not_retry_without_connect_timeout(self):
+        # socket_connect_timeout defaults to 0 (unset): no reconnect attempt should be made
+        # for this packet, it should be dropped immediately instead.
+        self.assertEqual(self.statsd.socket_connect_timeout, 0)
+        broken_socket = BrokenSocket(error_number=errno.ECONNREFUSED)
+        self.statsd.socket = broken_socket
+
+        with mock.patch.object(broken_socket, 'send', wraps=broken_socket.send) as mock_send:
+            with mock.patch("datadog.dogstatsd.base.log") as mock_log:
+                self.statsd.gauge('not reconnected', 1)
+
+                mock_log.warning.assert_called_once_with(
+                    "Error submitting packet: %s, dropping the packet and closing the socket",
+                    mock.ANY,
+                )
+
+            # Only one send attempt was made on the broken socket: no reconnect-and-resend.
+            mock_send.assert_called_once()
 
     def test_socket_overflown(self):
         self.statsd.socket = OverflownSocket()

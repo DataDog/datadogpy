@@ -1657,7 +1657,8 @@ class DogStatsd(object):
 
     def _xmit_packet(self, packet, is_telemetry):
         # type: (str, bool) -> bool
-        return self._xmit_packet_attempt(packet, is_telemetry, retry_on_conn_error=True)
+        retry_on_conn_error = bool(self.socket_connect_timeout and self.socket_connect_timeout > 0)
+        return self._xmit_packet_attempt(packet, is_telemetry, retry_on_conn_error=retry_on_conn_error)
 
     def _xmit_packet_attempt(self, packet, is_telemetry, retry_on_conn_error):
         # type: (str, bool, bool) -> bool
