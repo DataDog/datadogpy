@@ -959,14 +959,23 @@ class DogStatsd(object):
 
         return get_default_route()
 
-    def get_socket(self, telemetry=False):
-        # type: (bool) -> _Socket
+    def get_socket(self, telemetry=False, connect_timeout=None):
+        # type: (bool, Optional[float]) -> _Socket
         """
         Return a connected socket.
 
         Note: connect the socket before assigning it to the class instance to
         avoid bad thread race conditions.
+
+        :param connect_timeout: Optional override for the UDS connect-retry
+            budget passed to _get_uds_socket, in place of
+            self.socket_connect_timeout. The send-retry loop in _xmit_packet
+            uses this to pass down how much of its overall deadline is left,
+            so a retried attempt doesn't get a brand-new full budget.
         """
+        if connect_timeout is None:
+            connect_timeout = self.socket_connect_timeout
+
         with self._socket_lock:
             if telemetry and self._dedicated_telemetry_destination():
                 if not self.telemetry_socket:
@@ -974,7 +983,7 @@ class DogStatsd(object):
                         self.telemetry_socket = self._get_uds_socket(
                             self.telemetry_socket_path,
                             self.telemetry_socket_timeout,
-                            self.socket_connect_timeout,
+                            connect_timeout,
                         )
                     else:
                         self.telemetry_socket = self._get_udp_socket(
@@ -990,7 +999,7 @@ class DogStatsd(object):
                     self.socket = self._get_uds_socket(
                         self.socket_path,
                         self.socket_timeout,
-                        self.socket_connect_timeout,
+                        connect_timeout,
                     )
                 else:
                     self.socket = self._get_udp_socket(
@@ -1665,7 +1674,16 @@ class DogStatsd(object):
 
         backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
         while True:
-            sent = self._xmit_packet_attempt(packet, is_telemetry, retry_eligible=retry_deadline is not None)
+            # Shrink the connect timeout passed down on every attempt to what's
+            # actually left of retry_deadline, so the UDS connect-retry loop
+            # inside get_socket() shares this loop's overall budget instead of
+            # getting a fresh full socket_connect_timeout allowance each time.
+            connect_timeout = self.socket_connect_timeout
+            if retry_deadline is not None:
+                connect_timeout = max(0, retry_deadline - time.time())
+            sent = self._xmit_packet_attempt(
+                packet, is_telemetry, retry_eligible=retry_deadline is not None, connect_timeout=connect_timeout
+            )
             if sent:
                 return True
             # `sent` is False for a definitive failure (already logged/dropped
@@ -1688,27 +1706,29 @@ class DogStatsd(object):
             self.packets_dropped_writer += 1
         return False
 
-    def _xmit_packet_attempt(self, packet, is_telemetry, retry_eligible):
-        # type: (str, bool, bool) -> Optional[bool]
+    def _xmit_packet_attempt(self, packet, is_telemetry, retry_eligible, connect_timeout=None):
+        # type: (str, bool, bool, Optional[float]) -> Optional[bool]
         """
         Attempt to send a single packet.
 
         Returns True if the packet was sent, False if it should be dropped
         without retrying, or None if the failure is transient (the peer went
         away), `retry_eligible` is set, and it's worth a reconnect-and-retry.
+
+        :param connect_timeout: Optional override forwarded to get_socket(),
+            see its docstring.
         """
         socket_kind = None
-        try:
-            # Held across the fetch-and-send so a concurrent close_socket() (e.g.
-            # from another thread's failed send) can't close the fd out from
-            # under a send that's already in flight (which raises EBADF).
-            with self._socket_lock:
+        with self._socket_lock:
+            try:
                 if is_telemetry and self._dedicated_telemetry_destination():
-                    mysocket = self.telemetry_socket or self.get_socket(telemetry=True)
+                    mysocket = self.telemetry_socket or self.get_socket(
+                        telemetry=True, connect_timeout=connect_timeout
+                    )
                     socket_kind = self._telemetry_socket_kind
                 else:
                     # If set, use socket directly
-                    mysocket = self.socket or self.get_socket()
+                    mysocket = self.socket or self.get_socket(connect_timeout=connect_timeout)
                     socket_kind = self._socket_kind
 
                 encoded_packet = packet.encode(self.encoding)
@@ -1718,55 +1738,55 @@ class DogStatsd(object):
                 else:
                     mysocket.send(encoded_packet)
 
-            if not is_telemetry and self._telemetry:
-                self.packets_sent += 1
-                self.bytes_sent += len(packet)
+                if not is_telemetry and self._telemetry:
+                    self.packets_sent += 1
+                    self.bytes_sent += len(packet)
 
-            return True
-        except socket.timeout:
-            # dogstatsd is overflowing, drop the packets (mimics the UDP behaviour)
-            return False
-        except (socket.herror, socket.gaierror) as socket_err:
-            log.warning(
-                "Error submitting packet: %s, dropping the packet and closing the socket",
-                socket_err,
-            )
-            self.close_socket()
-            return False
-        except socket.error as socket_err:
-            if socket_err.errno == errno.EAGAIN:
-                log.debug("Socket send would block: %s, dropping the packet", socket_err)
-            elif socket_err.errno == errno.ENOBUFS:
-                log.debug("Socket buffer full: %s, dropping the packet", socket_err)
-            elif socket_err.errno == errno.EMSGSIZE:
-                log.debug(
-                    "Packet size too big (size: %d): %s, dropping the packet",
-                    len(packet.encode(self.encoding)),
-                    socket_err)
-            elif retry_eligible and socket_err.errno in UDS_TRANSIENT_SEND_ERRORS:
-                log.debug(
-                    "Connection error submitting packet: %s, reconnecting and retrying", socket_err
-                )
-                self.close_socket()
-                return None
-            else:
+                return True
+            except socket.timeout:
+                # dogstatsd is overflowing, drop the packets (mimics the UDP behaviour)
+                pass
+            except (socket.herror, socket.gaierror) as socket_err:
                 log.warning(
                     "Error submitting packet: %s, dropping the packet and closing the socket",
                     socket_err,
                 )
                 self.close_socket()
-            return False
-        except Exception as exc:
-            log.error("Unexpected error: %s", str(exc))
-            return False
+                return False
+            except socket.error as socket_err:
+                if socket_err.errno == errno.EAGAIN:
+                    log.debug("Socket send would block: %s, dropping the packet", socket_err)
+                elif socket_err.errno == errno.ENOBUFS:
+                    log.debug("Socket buffer full: %s, dropping the packet", socket_err)
+                elif socket_err.errno == errno.EMSGSIZE:
+                    log.debug(
+                        "Packet size too big (size: %d): %s, dropping the packet",
+                        len(packet.encode(self.encoding)),
+                        socket_err)
+                elif retry_eligible and socket_err.errno in UDS_TRANSIENT_SEND_ERRORS:
+                    log.debug(
+                        "Connection error submitting packet: %s, reconnecting and retrying", socket_err
+                    )
+                    self.close_socket()
+                    return None
+                else:
+                    log.warning(
+                        "Error submitting packet: %s, dropping the packet and closing the socket",
+                        socket_err,
+                    )
+                    self.close_socket()
+                pass
+            except Exception as exc:
+                log.error("Unexpected error: %s", str(exc))
+                return False
 
-        # if in stream mode we need to shut down the socket; we can't recover from a
-        # partial send
-        if socket_kind == socket.SOCK_STREAM:
-            log.debug("Confirming socket closure after error streaming")
-            self.close_socket()
+            # if in stream mode we need to shut down the socket; we can't recover from a
+            # partial send
+            if socket_kind == socket.SOCK_STREAM:
+                log.debug("Confirming socket closure after error streaming")
+                self.close_socket()
 
-        return False
+            return False
 
     def _send_to_buffer(self, packet):
         # type: (str) -> None
