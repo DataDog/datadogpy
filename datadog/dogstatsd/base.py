@@ -1680,7 +1680,14 @@ class DogStatsd(object):
             # getting a fresh full socket_connect_timeout allowance each time.
             connect_timeout = self.socket_connect_timeout
             if retry_deadline is not None:
-                connect_timeout = max(0, retry_deadline - time.time())
+                connect_timeout = retry_deadline - time.time()
+                if connect_timeout <= 0:
+                    # The deadline already elapsed.
+                    log.warning(
+                        "Gave up reconnecting after socket_connect_timeout (%ss), dropping the packet",
+                        self.socket_connect_timeout,
+                    )
+                    break
             sent = self._xmit_packet_attempt(
                 packet, is_telemetry, retry_eligible=retry_deadline is not None, connect_timeout=connect_timeout
             )
