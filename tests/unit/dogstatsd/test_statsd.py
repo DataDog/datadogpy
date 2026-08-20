@@ -564,6 +564,36 @@ class TestDogStatsd(unittest.TestCase):
         finally:
             statsd.stop()
 
+    def test_aggregated_metrics_with_cardinality_when_aggregation_enabled(self):
+        statsd = DogStatsd(
+            disable_aggregation=False,
+            disable_telemetry=True,
+            origin_detection_enabled=False,
+            flush_interval=10000,
+            max_metric_samples_per_context=10,
+        )
+        statsd.socket = FakeSocket()
+
+        try:
+            statsd.gauge("gauge", 1, cardinality="high")
+            statsd.increment("count", 2, cardinality="high")
+            statsd.set("set", "value", cardinality="high")
+            statsd.flush_aggregated_metrics()
+
+            packets = [statsd.socket.recv(no_wait=True) for _ in range(3)]
+            self.assertEqual(
+                sorted(
+                    [
+                        "gauge:1|g|card:high\n",
+                        "count:2|c|card:high\n",
+                        "set:value|s|card:high\n",
+                    ]
+                ),
+                sorted(packets),
+            )
+        finally:
+            statsd.stop()
+
     def test_pipe_in_tags(self):
         self.statsd.gauge('gt', 123.4, tags=['pipe|in:tag', 'red'])
         self.assert_equal_telemetry('gt:123.4|g|#pipe_in:tag,red\n', self.recv(2))
