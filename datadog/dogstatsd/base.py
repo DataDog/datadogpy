@@ -1668,28 +1668,29 @@ class DogStatsd(object):
 
     def _xmit_packet(self, packet, is_telemetry):
         # type: (str, bool) -> bool
+
+        if is_telemetry and self._dedicated_telemetry_destination():
+            uses_uds = self.telemetry_socket_path is not None
+        else:
+            uses_uds = self.socket_path is not None
+
         retry_deadline = None
-        if self.socket_connect_timeout and self.socket_connect_timeout > 0:
+        if uses_uds and self.socket_connect_timeout and self.socket_connect_timeout > 0:
             retry_deadline = time.time() + self.socket_connect_timeout
 
         backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
         while True:
-            # Shrink the connect timeout passed down on every attempt to what's
-            # actually left of retry_deadline, so the UDS connect-retry loop
-            # inside get_socket() shares this loop's overall budget instead of
-            # getting a fresh full socket_connect_timeout allowance each time.
-            connect_timeout = self.socket_connect_timeout
-            if retry_deadline is not None:
-                connect_timeout = retry_deadline - time.time()
-                if connect_timeout <= 0:
-                    # The deadline already elapsed.
-                    log.warning(
-                        "Gave up reconnecting after socket_connect_timeout (%ss), dropping the packet",
-                        self.socket_connect_timeout,
-                    )
-                    break
+            # Cheap fast-path check before even trying to acquire _socket_lock:
+            # if the budget is already spent, don't bother contending for it.
+            if retry_deadline is not None and retry_deadline - time.time() <= 0:
+                log.warning(
+                    "Gave up reconnecting after socket_connect_timeout (%ss), dropping the packet",
+                    self.socket_connect_timeout,
+                )
+                break
+
             sent = self._xmit_packet_attempt(
-                packet, is_telemetry, retry_eligible=retry_deadline is not None, connect_timeout=connect_timeout
+                packet, is_telemetry, retry_eligible=retry_deadline is not None, retry_deadline=retry_deadline
             )
             if sent:
                 return True
@@ -1713,7 +1714,7 @@ class DogStatsd(object):
             self.packets_dropped_writer += 1
         return False
 
-    def _xmit_packet_attempt(self, packet, is_telemetry, retry_eligible, connect_timeout=None):
+    def _xmit_packet_attempt(self, packet, is_telemetry, retry_eligible, retry_deadline=None):
         # type: (str, bool, bool, Optional[float]) -> Optional[bool]
         """
         Attempt to send a single packet.
@@ -1722,12 +1723,31 @@ class DogStatsd(object):
         without retrying, or None if the failure is transient (the peer went
         away), `retry_eligible` is set, and it's worth a reconnect-and-retry.
 
-        :param connect_timeout: Optional override forwarded to get_socket(),
-            see its docstring.
+        :param retry_deadline: Optional absolute time.time()-based deadline
+            for the overall _xmit_packet retry operation. The connect_timeout
+            handed to get_socket() is computed from this only after
+            _socket_lock is actually acquired (not before), so time spent
+            waiting on a contended lock counts against the budget instead of
+            silently extending it.
         """
         socket_kind = None
         with self._socket_lock:
             try:
+                connect_timeout = self.socket_connect_timeout
+                if retry_deadline is not None:
+                    connect_timeout = retry_deadline - time.time()
+                    if connect_timeout <= 0:
+                        # The deadline elapsed while we were waiting to
+                        # acquire the lock -- give up rather than handing a
+                        # <= 0 connect_timeout to get_socket(), which treats
+                        # 0 as "no timeout configured" (unbounded), not
+                        # "already expired".
+                        log.warning(
+                            "Gave up reconnecting after socket_connect_timeout (%ss), dropping the packet",
+                            self.socket_connect_timeout,
+                        )
+                        return False
+
                 if is_telemetry and self._dedicated_telemetry_destination():
                     mysocket = self.telemetry_socket or self.get_socket(
                         telemetry=True, connect_timeout=connect_timeout
