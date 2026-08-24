@@ -1666,6 +1666,20 @@ class DogStatsd(object):
                 self.bytes_dropped_writer += len(telemetry)
                 self.packets_dropped_writer += 1
 
+    def _installed_socket(self, is_telemetry):
+        # type: (bool) -> Optional[_Socket]
+        """
+        The socket a send for this packet would use, if one is already installed.
+
+        Returns None when a fresh connection would have to be established, which
+        is the only situation where the socket_connect_timeout budget applies.
+        Callers that mean to gate on "would we have to connect?" must use this
+        rather than the deadline alone.
+        """
+        if is_telemetry and self._dedicated_telemetry_destination():
+            return self.telemetry_socket
+        return self.socket
+
     def _xmit_packet(self, packet, is_telemetry):
         # type: (str, bool) -> bool
 
@@ -1680,9 +1694,12 @@ class DogStatsd(object):
 
         backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
         while True:
-            # Cheap fast-path check before even trying to acquire _socket_lock:
-            # if the budget is already spent, don't bother contending for it.
-            if retry_deadline is not None and retry_deadline - time.time() <= 0:
+            # Cheap fast-path check before even trying to acquire _socket_lock.
+            if (
+                retry_deadline is not None
+                and retry_deadline - time.time() <= 0
+                and not self._installed_socket(is_telemetry)
+            ):
                 log.warning(
                     "Gave up reconnecting after socket_connect_timeout (%ss), dropping the packet",
                     self.socket_connect_timeout,
@@ -1697,7 +1714,11 @@ class DogStatsd(object):
             # `sent` is False for a definitive failure (already logged/dropped
             # above), or None for a transient one that's worth reconnecting
             # and retrying, bounded by socket_connect_timeout.
-            if sent is not None:
+            #
+            # A None result implies retry_eligible, which implies a deadline was
+            # set; the explicit check keeps that invariant locally provable
+            # (for readers and for the type checker) instead of implicit.
+            if sent is not None or retry_deadline is None:
                 break
             remaining = retry_deadline - time.time()
             if remaining <= 0:
@@ -1733,15 +1754,15 @@ class DogStatsd(object):
         socket_kind = None
         with self._socket_lock:
             try:
+                # Captured under the lock, before the deadline check: whether a
+                # socket already exists decides whether that deadline is even
+                # relevant to this attempt.
+                existing_socket = self._installed_socket(is_telemetry)
+
                 connect_timeout = self.socket_connect_timeout
                 if retry_deadline is not None:
                     connect_timeout = retry_deadline - time.time()
-                    if connect_timeout <= 0:
-                        # The deadline elapsed while we were waiting to
-                        # acquire the lock -- give up rather than handing a
-                        # <= 0 connect_timeout to get_socket(), which treats
-                        # 0 as "no timeout configured" (unbounded), not
-                        # "already expired".
+                    if connect_timeout <= 0 and not existing_socket:
                         log.warning(
                             "Gave up reconnecting after socket_connect_timeout (%ss), dropping the packet",
                             self.socket_connect_timeout,
@@ -1749,13 +1770,13 @@ class DogStatsd(object):
                         return False
 
                 if is_telemetry and self._dedicated_telemetry_destination():
-                    mysocket = self.telemetry_socket or self.get_socket(
+                    mysocket = existing_socket or self.get_socket(
                         telemetry=True, connect_timeout=connect_timeout
                     )
                     socket_kind = self._telemetry_socket_kind
                 else:
                     # If set, use socket directly
-                    mysocket = self.socket or self.get_socket(connect_timeout=connect_timeout)
+                    mysocket = existing_socket or self.get_socket(connect_timeout=connect_timeout)
                     socket_kind = self._socket_kind
 
                 encoded_packet = packet.encode(self.encoding)
