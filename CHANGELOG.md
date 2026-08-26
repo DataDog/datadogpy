@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.54.0 / 2026-08-26
+
+* [Changed] Retry sending DogStatsD packets over UDS when the connection drops (opt-in via `socket_connect_timeout`). See [#979](https://github.com/DataDog/datadogpy/pull/979).
+
 ## v0.53.0 / 2026-07-24
 
 * [Fixed] Add DD_DOGSTATSD_URL support for Unix and UDP URLs. See [#968](https://github.com/DataDog/datadogpy/pull/968).
