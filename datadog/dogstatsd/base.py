@@ -1659,11 +1659,11 @@ class DogStatsd(object):
             if self._xmit_packet(telemetry, True):
                 self._reset_telemetry()
                 self.packets_sent += 1
-                self.bytes_sent += len(telemetry)
+                self.bytes_sent += len(telemetry.encode(self.encoding))
             else:
                 # Telemetry packet has been dropped, keep telemetry data for the next flush
                 self._last_flush_time = time.time()
-                self.bytes_dropped_writer += len(telemetry)
+                self.bytes_dropped_writer += len(telemetry.encode(self.encoding))
                 self.packets_dropped_writer += 1
 
     def _installed_socket(self, is_telemetry):
@@ -1731,7 +1731,7 @@ class DogStatsd(object):
             backoff = min(backoff * 2, UDS_CONNECT_RETRY_MAX_BACKOFF)
 
         if not is_telemetry and self._telemetry:
-            self.bytes_dropped_writer += len(packet)
+            self.bytes_dropped_writer += len(packet.encode(self.encoding))
             self.packets_dropped_writer += 1
         return False
 
@@ -1788,7 +1788,7 @@ class DogStatsd(object):
 
                 if not is_telemetry and self._telemetry:
                     self.packets_sent += 1
-                    self.bytes_sent += len(packet)
+                    self.bytes_sent += len(encoded_packet)
 
                 return True
             except socket.timeout:
