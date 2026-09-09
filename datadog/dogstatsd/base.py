@@ -23,12 +23,6 @@ import weakref
 if sys.version_info[:2] >= (3, 5):
     from typing import TYPE_CHECKING  # noqa: F401
 
-try:
-    import queue
-except ImportError:
-    # pypy has the same module, but capitalized.
-    import Queue as queue  # type: ignore[no-redef]
-
 
 # pylint: disable=unused-import
 if sys.version_info[:2] >= (3, 5):
@@ -49,6 +43,13 @@ from datadog.dogstatsd.context import (
 )
 from datadog.dogstatsd.route import get_default_route
 from datadog.dogstatsd.container import Cgroup
+from datadog.dogstatsd.sender_queue import (
+    SenderQueue,
+    PendingPayload,
+    Stop,
+    PENDING_PAYLOAD_EXPIRY_SECONDS,
+    coalesce_enqueue_time,
+)
 from datadog.util.compat import text, urlparse
 from datadog.util.format import normalize_tags, validate_cardinality
 from datadog.version import __version__
@@ -223,8 +224,6 @@ TELEMETRY_FORMATTING_STR = "\n".join(
         "datadog.dogstatsd.client.packets_dropped_writer:%s|c|#%s",
     ]
 ) + "\n"
-
-Stop = object()
 
 SUPPORTS_FORKING = hasattr(os, "register_at_fork") and not os.environ.get("DD_DOGSTATSD_DISABLE_FORK_SUPPORT", None)
 TRACK_INSTANCES = not os.environ.get("DD_DOGSTATSD_DISABLE_INSTANCE_TRACKING", None)
@@ -490,16 +489,19 @@ class DogStatsd(object):
         Default: True.
         :type disable_background_sender: boolean
 
-        :param sender_queue_size: Set the maximum number of packets to queue for the sender. Optional
-        How may packets to queue before blocking or dropping the packet if the packet queue is already full.
+        :param sender_queue_size: Set the maximum number of packets to queue for the sender. Optional.
+        Once the queue is full, adding a new packet drops the oldest queued packet (and any additional
+        expired packets at the front of the queue) to make room, instead of blocking or dropping the new
+        packet. Packets aren't held indefinitely either: a queued packet that hasn't been sent within
+        PENDING_PAYLOAD_EXPIRY_SECONDS is dropped when it's pulled off the queue, unless it carries its own
+        explicit timestamp (e.g. gauge_with_timestamp, or count/service_check/event with an explicit
+        timestamp), in which case it's kept until it can actually be sent.
         Default: 0 (unlimited).
         :type sender_queue_size: integer
 
-        :param sender_queue_timeout: Set timeout for packet queue operations, in seconds. Optional.
-        How long the application thread is willing to wait for the queue clear up before dropping the metric packet.
-        If set to None, wait forever.
-        If set to zero drop the packet immediately if the queue is full.
-        Default: 0 (no wait)
+        :param sender_queue_timeout: Deprecated and ignored. The sender queue no longer blocks: it always
+        makes room for a new packet by dropping older or expired entries instead. Kept only for backwards
+        compatibility with existing call sites.
         :type sender_queue_timeout: float
 
         :param track_instance: Keep track of this instance and automatically handle cleanup when os.fork() is called,
@@ -634,7 +636,7 @@ class DogStatsd(object):
         else:
             log.debug("Statsd buffering and aggregation is disabled")
 
-        self._queue = None  # type: Optional[queue.Queue[Union[str, object]]]
+        self._queue = None  # type: Optional[SenderQueue]
         self._sender_thread = None  # type: Optional[threading.Thread]
         self._sender_enabled = False
 
@@ -716,25 +718,19 @@ class DogStatsd(object):
         to os.fork().
 
         :param sender_queue_size: Set the maximum number of packets to queue for the sender.
-            How many packets to queue before blocking or dropping the packet if the packet queue is already full.
+            Once the queue is full, adding a new packet drops the oldest queued packet (and any additional
+            expired packets at the front of the queue) to make room, instead of blocking or dropping the new
+            packet.
             Default: 0 (unlimited).
         :type sender_queue_size: integer, optional
-        :param sender_queue_timeout: Set timeout for packet queue operations, in seconds.
-            How long the application thread is willing to wait for the queue clear up before dropping the metric packet.
-            If set to None, wait forever. If set to zero drop the packet immediately if the queue is full.
-            Default: 0 (no wait).
+        :param sender_queue_timeout: Deprecated and ignored: the sender queue no longer blocks. Kept only
+            for backwards compatibility with existing call sites.
         :type sender_queue_timeout: float, optional
         """
 
         with self._config_lock:
             self._sender_enabled = True
             self._sender_queue_size = sender_queue_size
-            if sender_queue_timeout is None:
-                self._queue_blocking = True
-                self._queue_timeout = None
-            else:
-                self._queue_blocking = sender_queue_timeout > 0
-                self._queue_timeout = max(0, sender_queue_timeout)
 
             self._start_sender_thread()
 
@@ -1169,6 +1165,10 @@ class DogStatsd(object):
         with self._buffer_lock:
             self._current_buffer_total_size = 0
             self._buffer = []
+            # A freshly (re)started buffer starts out replay-safe; it's
+            # downgraded to False as soon as anything not-replay-safe is
+            # appended to it. See _send_to_buffer().
+            self._buffer_replay_safe = True
 
     def flush(self):
         # type: () -> None
@@ -1182,7 +1182,7 @@ class DogStatsd(object):
         with self._buffer_lock:
             # Only send packets if there are packets to send
             if self._buffer:
-                self._send_to_server("\n".join(self._buffer))
+                self._send_to_server("\n".join(self._buffer), self._buffer_replay_safe)
                 self._reset_buffer()
 
     def flush_aggregated_metrics(self):
@@ -1569,8 +1569,13 @@ class DogStatsd(object):
             metric, metric_type, value, tags, sample_rate, timestamp, cardinality
         )
 
+        # A metric carrying its own explicit timestamp is replay-safe: sending
+        # it late (e.g. after sitting in the background sender queue) doesn't
+        # change what it means.
+        replay_safe = timestamp > 0
+
         # Send it
-        self._send(payload)
+        self._send(payload, replay_safe)
 
     def _reset_telemetry(self):
         # type: () -> None
@@ -1580,21 +1585,35 @@ class DogStatsd(object):
         self.bytes_sent = 0
         self.bytes_dropped_queue = 0
         self.bytes_dropped_writer = 0
+        self.bytes_dropped_expired = 0
         self.packets_sent = 0
         self.packets_dropped_queue = 0
         self.packets_dropped_writer = 0
+        self.packets_dropped_expired = 0
         self._last_flush_time = time.time()
 
     # Aliases for backwards compatibility.
     @property
     def packets_dropped(self):
         # type: () -> int
-        return self.packets_dropped_queue + self.packets_dropped_writer
+        return self.packets_dropped_queue + self.packets_dropped_writer + self.packets_dropped_expired
 
     @property
     def bytes_dropped(self):
         # type: () -> int
-        return self.bytes_dropped_queue + self.bytes_dropped_writer
+        return self.bytes_dropped_queue + self.bytes_dropped_writer + self.bytes_dropped_expired
+
+    def _account_dropped_queue_full(self, item):
+        # type: (PendingPayload) -> None
+        """A payload was evicted from the sender queue to make room for a new one."""
+        self.packets_dropped_queue += 1
+        self.bytes_dropped_queue += len(item.payload.encode(self.encoding))
+
+    def _account_dropped_expired(self, item):
+        # type: (PendingPayload) -> None
+        """A payload sat in the sender queue longer than PENDING_PAYLOAD_EXPIRY_SECONDS."""
+        self.packets_dropped_expired += 1
+        self.bytes_dropped_expired += len(item.payload.encode(self.encoding))
 
     def _flush_telemetry(self):
         # type: () -> str
@@ -1633,26 +1652,34 @@ class DogStatsd(object):
         return self._telemetry and \
             self._last_flush_time + self._telemetry_flush_interval < time.time()
 
-    def _send_to_server(self, packet):
-        # type: (str) -> None
+    def _send_to_server(self, packet, replay_safe=False):
+        # type: (str, bool) -> None
         # Skip the lock if the queue is None. There is no race with enable_background_sender.
         if self._queue is not None:
             # Prevent a race with disable_background_sender.
             with self._buffer_lock:
                 packet_with_newline = packet + '\n'
                 if self._queue is not None:
-                    try:
-                        self._queue.put(packet_with_newline, self._queue_blocking, self._queue_timeout)
-                    except queue.Full:
-                        self.packets_dropped_queue += 1
-                        self.bytes_dropped_queue += len(packet_with_newline.encode(self.encoding))
+                    # replay_safe payloads never have their enqueued_at read
+                    # (see SenderQueue._expired()'s short-circuit), so skip
+                    # both the clock read and the float allocation for them.
+                    enqueued_at = None if replay_safe else coalesce_enqueue_time()
+                    self._queue.put(PendingPayload(packet_with_newline, enqueued_at, replay_safe))
                     return
 
         self._xmit_packet_with_telemetry(packet + '\n')
 
-    def _xmit_packet_with_telemetry(self, packet):
-        # type: (str) -> None
-        self._xmit_packet(packet, False)
+    def _xmit_packet_with_telemetry(self, packet, queue_mode=False):
+        # type: (str, bool) -> Optional[bool]
+        """Send one packet, optionally piggy-backing a telemetry flush.
+
+        :param queue_mode: True when called from the background sender
+            thread on behalf of a queued PendingPayload. In that mode, a
+            connection failure is reported back as None (rather than being
+            accounted for and dropped) so the caller can requeue the payload
+            and retry once reconnected, instead of losing it.
+        """
+        sent = self._xmit_packet(packet, False, queue_mode=queue_mode)
 
         if self._is_telemetry_flush_time():
             telemetry = self._flush_telemetry()
@@ -1665,6 +1692,8 @@ class DogStatsd(object):
                 self._last_flush_time = time.time()
                 self.bytes_dropped_writer += len(telemetry)
                 self.packets_dropped_writer += 1
+
+        return sent
 
     def _installed_socket(self, is_telemetry):
         # type: (bool) -> Optional[_Socket]
@@ -1680,8 +1709,16 @@ class DogStatsd(object):
             return self.telemetry_socket
         return self.socket
 
-    def _xmit_packet(self, packet, is_telemetry):
-        # type: (str, bool) -> bool
+    def _xmit_packet(self, packet, is_telemetry, queue_mode=False):
+        # type: (str, bool, bool) -> Optional[bool]
+        """Attempt to send packet, retrying a reconnect within this call as budget allows.
+
+        Returns True if sent. Otherwise returns False for a definitive,
+        non-retryable failure (already accounted for as a dropped packet),
+        or -- only when queue_mode is True -- None for a connection failure
+        that the sender queue should retry by requeuing the payload rather
+        than have accounted for here as a drop.
+        """
 
         if is_telemetry and self._dedicated_telemetry_destination():
             uses_uds = self.telemetry_socket_path is not None
@@ -1693,6 +1730,7 @@ class DogStatsd(object):
             retry_deadline = time.time() + self.socket_connect_timeout
 
         backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
+        sent = None  # type: Optional[bool]
         while True:
             # Cheap fast-path check before even trying to acquire _socket_lock.
             if (
@@ -1704,6 +1742,7 @@ class DogStatsd(object):
                     "Gave up reconnecting after socket_connect_timeout (%ss), dropping the packet",
                     self.socket_connect_timeout,
                 )
+                sent = None
                 break
 
             sent = self._xmit_packet_attempt(
@@ -1729,6 +1768,12 @@ class DogStatsd(object):
                 break
             time.sleep(min(backoff, remaining))
             backoff = min(backoff * 2, UDS_CONNECT_RETRY_MAX_BACKOFF)
+
+        if sent is None and queue_mode:
+            # Connection trouble, and the caller is the background sender
+            # queue: let it requeue the payload and retry once reconnected,
+            # instead of dropping it here.
+            return None
 
         if not is_telemetry and self._telemetry:
             self.bytes_dropped_writer += len(packet)
@@ -1836,8 +1881,8 @@ class DogStatsd(object):
 
             return False
 
-    def _send_to_buffer(self, packet):
-        # type: (str) -> None
+    def _send_to_buffer(self, packet, replay_safe=False):
+        # type: (str, bool) -> None
         with self._buffer_lock:
             if self._should_flush(len(packet)):
                 self.flush_buffered_metrics()
@@ -1846,6 +1891,10 @@ class DogStatsd(object):
             # Update the current buffer length, including line break to anticipate
             # the final packet size
             self._current_buffer_total_size += len(packet) + 1
+            # The flushed batch is only as replay-safe as its least safe
+            # member: if anything in it needs to be treated as time-sensitive,
+            # treat the whole batch that way.
+            self._buffer_replay_safe = self._buffer_replay_safe and replay_safe
 
     def _should_flush(self, length_to_be_added):
         # type: (int) -> bool
@@ -1938,7 +1987,9 @@ class DogStatsd(object):
         if self._telemetry:
             self.events_count += 1
 
-        self._send(string)
+        # An event carrying its own explicit date_happened is replay-safe:
+        # sending it late doesn't change what it means.
+        self._send(string, replay_safe=bool(date_happened))
 
     def service_check(
         self,
@@ -1984,7 +2035,9 @@ class DogStatsd(object):
         if self._telemetry:
             self.service_checks_count += 1
 
-        self._send(string)
+        # A service check carrying its own explicit timestamp is replay-safe:
+        # sending it late doesn't change what it means.
+        self._send(string, replay_safe=bool(timestamp))
 
     @staticmethod
     def _normalize_and_join_tags(tags):
@@ -2062,7 +2115,12 @@ class DogStatsd(object):
         if self._queue is not None:
             return
 
-        self._queue = queue.Queue(self._sender_queue_size)
+        self._queue = SenderQueue(
+            self._sender_queue_size,
+            PENDING_PAYLOAD_EXPIRY_SECONDS,
+            self._account_dropped_queue_full,
+            self._account_dropped_expired,
+        )
 
         log.debug("Starting background sender thread")
         self._sender_thread = threading.Thread(
@@ -2086,19 +2144,35 @@ class DogStatsd(object):
             self._sender_thread.join()
         self._sender_thread = None
 
-    def _sender_main_loop(self, queue):
-        # type: (queue.Queue[Union[str, object]]) -> None
+    def _sender_main_loop(self, pending_queue):
+        # type: (SenderQueue) -> None
+        backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
         while True:
-            item = queue.get()
+            item = pending_queue.get()
             if item is Stop:
-                queue.task_done()
+                pending_queue.task_done()
                 return
 
             # next line has type ignore because the type checker cannot
             # know that 'if item is Stop' is the only case where item is
             # of object type.
-            self._xmit_packet_with_telemetry(item)  # type: ignore[arg-type]  # noqa: F821
-            queue.task_done()
+            sent = self._xmit_packet_with_telemetry(item.payload, queue_mode=True)  # type: ignore[attr-defined]  # noqa: F821
+
+            if sent is None:
+                # Connection trouble: keep the payload for the next attempt
+                # instead of losing it. The queue's own expiry check (on a
+                # future get()) is what eventually gives up on a payload
+                # that's been stuck for too long, unless it's replay-safe.
+                pending_queue.requeue_front(item)  # type: ignore[arg-type]
+                time.sleep(backoff)
+                backoff = min(backoff * 2, UDS_CONNECT_RETRY_MAX_BACKOFF)
+                continue
+
+            # Sent, or a definitive failure that _xmit_packet already
+            # accounted for as a dropped packet -- either way, this
+            # payload's story is over.
+            pending_queue.task_done()
+            backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
 
     def wait_for_pending(self):
         # type: () -> None
