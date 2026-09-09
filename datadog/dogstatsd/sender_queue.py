@@ -23,39 +23,6 @@ Stop = object()
 # around until they can actually be sent.
 PENDING_PAYLOAD_EXPIRY_SECONDS = 10.0
 
-# Granularity for coalesce_enqueue_time() below. Deliberately far below
-# PENDING_PAYLOAD_EXPIRY_SECONDS (by two orders of magnitude with the default
-# above), so it has no meaningful effect on expiry accuracy, but lets many
-# payloads enqueued within the same short window share one float object
-# instead of each allocating their own -- which is exactly when it matters:
-# under sustained load or a backlog, not when the queue is lightly used.
-_TIMESTAMP_COALESCE_SECONDS = 0.1
-
-# Bucket + cached value for coalesce_enqueue_time(). Plain module globals,
-# not a lock: under a race between threads, the worst outcome is a
-# redundant allocation (two threads each compute a fresh reading for the
-# same bucket), never an incorrect timestamp.
-_coalesce_bucket = None  # type: Optional[int]
-_coalesce_value = 0.0  # type: float
-
-
-def coalesce_enqueue_time():
-    # type: () -> float
-    """A monotonic() reading coalesced to _TIMESTAMP_COALESCE_SECONDS granularity.
-
-    Only meant for stamping payloads that DO need expiry tracking (see
-    PendingPayload.enqueued_at). The slop this introduces (at most one
-    bucket width, 0.1s by default) is negligible next to the multi-second
-    expiry window it feeds into.
-    """
-    global _coalesce_bucket, _coalesce_value
-    raw = monotonic()
-    bucket = int(raw / _TIMESTAMP_COALESCE_SECONDS)
-    if bucket != _coalesce_bucket:
-        _coalesce_bucket = bucket
-        _coalesce_value = raw
-    return _coalesce_value
-
 
 class PendingPayload(object):
     """A single packet queued for the background sender.

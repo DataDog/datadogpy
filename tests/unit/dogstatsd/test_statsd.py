@@ -31,7 +31,7 @@ import pytest
 from datadog import initialize, statsd
 from datadog import __version__ as version
 from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, PendingPayload, SenderQueue, Stop, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_CONNECT_RETRY_INITIAL_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
-from datadog.dogstatsd.sender_queue import coalesce_enqueue_time, monotonic as sender_queue_clock
+from datadog.dogstatsd.sender_queue import monotonic as sender_queue_clock
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
 from tests.util.contextmanagers import preserve_environment_variable, EnvVars
@@ -2738,20 +2738,6 @@ async def print_foo():
         pending_queue.put(old_but_replay_safe)
 
         self.assertIs(pending_queue.get(), old_but_replay_safe)
-
-    def test_coalesce_enqueue_time_reuses_the_same_object_within_a_window(self):
-        # Back-to-back calls (well within the coalescing window) should
-        # return the exact same float object, not just an equal value --
-        # that's the whole point: fewer allocations under a burst.
-        a = coalesce_enqueue_time()
-        b = coalesce_enqueue_time()
-        self.assertIs(a, b)
-
-    def test_coalesce_enqueue_time_advances_across_windows(self):
-        first = coalesce_enqueue_time()
-        time.sleep(0.15)  # comfortably past the 0.1s coalescing granularity
-        second = coalesce_enqueue_time()
-        self.assertGreater(second, first)
 
     def test_sender_queue_requeue_front_when_room_available(self):
         pending_queue = SenderQueue(

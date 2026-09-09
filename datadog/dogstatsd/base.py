@@ -48,7 +48,7 @@ from datadog.dogstatsd.sender_queue import (
     PendingPayload,
     Stop,
     PENDING_PAYLOAD_EXPIRY_SECONDS,
-    coalesce_enqueue_time,
+    monotonic,
 )
 from datadog.util.compat import text, urlparse
 from datadog.util.format import normalize_tags, validate_cardinality
@@ -1663,7 +1663,7 @@ class DogStatsd(object):
                     # replay_safe payloads never have their enqueued_at read
                     # (see SenderQueue._expired()'s short-circuit), so skip
                     # both the clock read and the float allocation for them.
-                    enqueued_at = None if replay_safe else coalesce_enqueue_time()
+                    enqueued_at = None if replay_safe else monotonic()
                     self._queue.put(PendingPayload(packet_with_newline, enqueued_at, replay_safe))
                     return
 

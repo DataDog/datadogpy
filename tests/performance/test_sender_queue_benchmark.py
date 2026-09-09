@@ -58,7 +58,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from datadog.dogstatsd.sender_queue import (  # noqa: E402
     PendingPayload,
     SenderQueue,
-    coalesce_enqueue_time,
     monotonic,
 )
 
@@ -172,7 +171,7 @@ def scenario_1_unbounded_single_threaded():
         old.task_done()
 
     new = make_sender_queue(maxsize=0)
-    total, samples = time_puts(lambda: new.put(PendingPayload(PACKET, coalesce_enqueue_time(), False)), n)
+    total, samples = time_puts(lambda: new.put(PendingPayload(PACKET, monotonic(), False)), n)
     new_p = report("SenderQueue", n, total, samples)
     for _ in range(n):
         new.get()
@@ -198,8 +197,8 @@ def scenario_2_sustained_overflow():
 
     new = make_sender_queue(maxsize=maxsize)
     for _ in range(maxsize):
-        new.put(PendingPayload(PACKET, coalesce_enqueue_time(), False))
-    total, samples = time_puts(lambda: new.put(PendingPayload(PACKET, coalesce_enqueue_time(), False)), n)
+        new.put(PendingPayload(PACKET, monotonic(), False))
+    total, samples = time_puts(lambda: new.put(PendingPayload(PACKET, monotonic(), False)), n)
     new_p = report("SenderQueue", n, total, samples)
 
     ratio = new_p["p99"] / old_p["p99"] if old_p["p99"] else float("inf")
@@ -227,7 +226,7 @@ def scenario_3_large_expired_backlog():
             q.put(PendingPayload(PACKET, stale_at, False))
 
         t0 = time.perf_counter()
-        q.put(PendingPayload(PACKET, coalesce_enqueue_time(), False))
+        q.put(PendingPayload(PACKET, monotonic(), False))
         elapsed_us = (time.perf_counter() - t0) * 1e6
 
         note("backlog={:>5d} stale entries -> single put() took {:>9.3f}us, evicted {:d}".format(
@@ -316,7 +315,7 @@ def scenario_4_concurrency():
 
     new = make_sender_queue(maxsize=1000)
     elapsed, total_ops, samples = _run_concurrent(
-        lambda: new.put(PendingPayload(PACKET, coalesce_enqueue_time(), False)),
+        lambda: new.put(PendingPayload(PACKET, monotonic(), False)),
         lambda: (new.get(), new.task_done()),
         n_producers,
         n_per_producer,
@@ -356,25 +355,20 @@ def scenario_5_memory_footprint():
     ))
     print()
 
-    note("Non-replay-safe payloads DO need a real enqueued_at, but base.py uses coalesce_enqueue_time()")
-    note("instead of a bare monotonic() call: many payloads enqueued within the same ~0.1s window share")
-    note("ONE float object instead of each allocating their own. Demonstrating with {:,} back-to-back".format(2000))
-    note("puts (a burst, which is exactly when memory pressure from a growing queue matters most):")
-    n = 2000
-    timestamps = [coalesce_enqueue_time() for _ in range(n)]
-    distinct = len(set(id(t) for t in timestamps))
-    note("  {:,} enqueues -> {} distinct float objects allocated ({:.2f}% of naive per-item allocation)".format(
-        n, distinct, 100.0 * distinct / n
+    non_replay_safe_extra = wrapper_size + sys.getsizeof(monotonic())
+    note("Non-replay-safe payloads DO need a real enqueued_at -- one monotonic() reading per item,")
+    note("same as any other Python object holding a fresh timestamp. Extra overhead per item vs the")
+    note("old bare-string queue: ~{} bytes ({} wrapper + {} float).".format(
+        non_replay_safe_extra, wrapper_size, sys.getsizeof(monotonic())
     ))
-
-    worst_case_extra = wrapper_size + sys.getsizeof(monotonic())
-    print()
-    note("Worst case (every timestamp lands in a different coalesce bucket, i.e. low, spread-out")
-    note("traffic): extra overhead per item vs the old bare-string queue is still just ~{} bytes".format(worst_case_extra))
     for n in (100, 10000, 100000):
-        note("  at sender_queue_size={:<7d} that's ~{:.1f}KB worst-case additional resident overhead".format(
-            n, worst_case_extra * n / 1024.0
+        note("  at sender_queue_size={:<7d} that's ~{:.1f}KB of additional resident overhead".format(
+            n, non_replay_safe_extra * n / 1024.0
         ))
+    note("(An earlier version of this code coalesced timestamps to a shared per-100ms-bucket float")
+    note("to cut this under bursty load -- best case ~234KB saved at sender_queue_size=10,000, i.e.")
+    note("~0.09% of a typical 256MB container's RSS. Reverted: not worth the added global mutable")
+    note("state, cross-instance coupling, and dedicated concurrency tests for savings that small.)")
 
 
 # --------------------------------------------------------------------------
