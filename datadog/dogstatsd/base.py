@@ -490,18 +490,22 @@ class DogStatsd(object):
         :type disable_background_sender: boolean
 
         :param sender_queue_size: Set the maximum number of packets to queue for the sender. Optional.
-        Once the queue is full, adding a new packet drops the oldest queued packet (and any additional
-        expired packets at the front of the queue) to make room, instead of blocking or dropping the new
-        packet. Packets aren't held indefinitely either: a queued packet that hasn't been sent within
-        PENDING_PAYLOAD_EXPIRY_SECONDS is dropped when it's pulled off the queue, unless it carries its own
-        explicit timestamp (e.g. gauge_with_timestamp, or count/service_check/event with an explicit
-        timestamp), in which case it's kept until it can actually be sent.
+        Once the queue is full, adding a new packet waits (see sender_queue_timeout) and then, if still
+        full, drops the oldest queued packet (and any additional expired packets at the front of the
+        queue) to make room, instead of dropping the new packet. Packets aren't held indefinitely either:
+        a queued packet that hasn't been sent within PENDING_PAYLOAD_EXPIRY_SECONDS is dropped when it's
+        pulled off the queue, unless it carries its own explicit timestamp (e.g. gauge_with_timestamp, or
+        count/service_check/event with an explicit timestamp), in which case it's kept until it can
+        actually be sent.
         Default: 0 (unlimited).
         :type sender_queue_size: integer
 
-        :param sender_queue_timeout: Deprecated and ignored. The sender queue no longer blocks: it always
-        makes room for a new packet by dropping older or expired entries instead. Kept only for backwards
-        compatibility with existing call sites.
+        :param sender_queue_timeout: Set how long, in seconds, adding a packet to a full sender queue
+        will wait for the background sender to free up a slot before falling back to dropping the oldest
+        queued packet to make room. If set to zero or None (the default), no waiting happens: a full
+        queue makes room immediately by dropping the oldest packet. Note this blocks the calling thread
+        (the one emitting the metric), not just the background sender -- pick a value that fits how long
+        you're willing to let application code stall during a backlog.
         :type sender_queue_timeout: float
 
         :param track_instance: Keep track of this instance and automatically handle cleanup when os.fork() is called,
@@ -718,19 +722,23 @@ class DogStatsd(object):
         to os.fork().
 
         :param sender_queue_size: Set the maximum number of packets to queue for the sender.
-            Once the queue is full, adding a new packet drops the oldest queued packet (and any additional
-            expired packets at the front of the queue) to make room, instead of blocking or dropping the new
-            packet.
+            Once the queue is full, adding a new packet waits (see sender_queue_timeout) and then, if
+            still full, drops the oldest queued packet (and any additional expired packets at the front
+            of the queue) to make room, instead of dropping the new packet.
             Default: 0 (unlimited).
         :type sender_queue_size: integer, optional
-        :param sender_queue_timeout: Deprecated and ignored: the sender queue no longer blocks. Kept only
-            for backwards compatibility with existing call sites.
+        :param sender_queue_timeout: Set how long, in seconds, adding a packet to a full sender queue
+            will wait for the background sender to free up a slot before falling back to dropping the
+            oldest queued packet to make room. If set to zero or None (the default), no waiting happens.
+            Note this blocks the calling thread (the one emitting the metric), not just the background
+            sender.
         :type sender_queue_timeout: float, optional
         """
 
         with self._config_lock:
             self._sender_enabled = True
             self._sender_queue_size = sender_queue_size
+            self._sender_queue_timeout = sender_queue_timeout
 
             self._start_sender_thread()
 
@@ -2131,6 +2139,7 @@ class DogStatsd(object):
             PENDING_PAYLOAD_EXPIRY_SECONDS,
             self._account_dropped_queue_full,
             self._account_dropped_expired,
+            put_timeout=self._sender_queue_timeout,
         )
 
         log.debug("Starting background sender thread")

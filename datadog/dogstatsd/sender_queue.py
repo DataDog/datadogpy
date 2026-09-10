@@ -53,10 +53,14 @@ class PendingPayload(object):
 class SenderQueue(object):
     """Bounded hand-off queue between application threads and the background sender thread.
 
-    Unlike queue.Queue, put() never blocks and never rejects a payload. When
-    the queue is already at its maximum size, the oldest entry is dropped to
-    make room, along with any additional expired entries left at the front,
-    so a backlog of stale payloads can't shut out fresh metrics indefinitely.
+    put() never rejects a payload outright. When the queue is already at its
+    maximum size and put_timeout is falsy (the default), the oldest entry is dropped
+    immediately to make room, along with any additional expired entries left
+    at the front. When put_timeout is a positive number, put()
+    instead blocks the calling thread for up to that many seconds waiting
+    for the sender thread to drain a slot; only once that wait times out
+    (or immediately, if put_timeout is falsy) does it fall back to the same
+    drop-oldest eviction.
 
     get() drops expired entries lazily too, from the front, before returning
     the next payload actually worth handing to the sender.
@@ -65,18 +69,21 @@ class SenderQueue(object):
     handed back with requeue_front() so it's retried first. That still
     respects both the expiry check and the size limit though: the queue
     must never grow past maxsize, and a payload that's gone stale while it
-    was being (re)tried is dropped rather than requeued.
+    was being (re)tried is dropped rather than requeued. requeue_front()
+    never blocks on put_timeout.
     """
 
-    def __init__(self, maxsize, expiry_seconds, on_drop_queue_full, on_drop_expired):
-        # type: (int, float, Callable[[PendingPayload], None], Callable[[PendingPayload], None]) -> None
+    def __init__(self, maxsize, expiry_seconds, on_drop_queue_full, on_drop_expired, put_timeout=None):
+        # type: (int, float, Callable[[PendingPayload], None], Callable[[PendingPayload], None], Optional[float]) -> None
         self._maxsize = maxsize
         self._expiry_seconds = expiry_seconds
         self._on_drop_queue_full = on_drop_queue_full
         self._on_drop_expired = on_drop_expired
+        self._put_timeout = put_timeout
         self._deque = collections.deque()  # type: collections.deque
         self._lock = threading.Lock()
         self._not_empty = threading.Condition(self._lock)
+        self._not_full = threading.Condition(self._lock)
         self._all_tasks_done = threading.Condition(self._lock)
 
         # Keep track of the tasks that are being processed. A task pulled from the queue may
@@ -126,10 +133,27 @@ class SenderQueue(object):
 
     def put(self, item):
         # type: (Union[PendingPayload, object]) -> None
-        """Queue a payload (or the Stop sentinel), evicting old entries if needed."""
+        """Queue a payload (or the Stop sentinel).
+
+        If the queue is full: waits for room for up to put_timeout seconds
+        (if put_timeout is a positive number), then falls back to evicting
+        the oldest entry (see _make_room_locked()) if the wait timed out
+        without room opening up -- or immediately, with no wait at all, if
+        put_timeout is falsy. Either way, put() never rejects the payload
+        outright.
+        """
         with self._not_empty:
             if item is not Stop and self._maxsize > 0 and len(self._deque) >= self._maxsize:
-                self._make_room_locked()
+                if self._put_timeout:
+                    deadline = monotonic() + self._put_timeout
+                    while len(self._deque) >= self._maxsize:
+                        remaining = deadline - monotonic()
+                        if remaining <= 0:
+                            break
+                        self._not_full.wait(remaining)
+
+                if len(self._deque) >= self._maxsize:
+                    self._make_room_locked()
 
             self._deque.append(item)
             self._unfinished_tasks += 1
@@ -170,6 +194,9 @@ class SenderQueue(object):
                 while not self._deque:
                     self._not_empty.wait()
                 item = self._deque.popleft()
+                # A slot just opened up: wake one thread blocked in put()'s
+                # wait-for-room loop, if any (harmless no-op otherwise).
+                self._not_full.notify()
 
             if item is Stop:
                 return item

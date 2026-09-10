@@ -2671,6 +2671,33 @@ async def print_foo():
 
     def test_sender_queue_no_timeout(self):
         statsd = DogStatsd(disable_background_sender=False, sender_queue_timeout=None)
+        statsd.stop()
+
+    def test_sender_queue_timeout_blocks_the_calling_thread_through_the_client(self):
+        # End-to-end: sender_queue_timeout configured on the real client
+        # actually makes statsd.increment() (the calling/application thread)
+        # block waiting for room, not just an internal SenderQueue detail.
+        statsd = DogStatsd(
+            disable_background_sender=False,
+            sender_queue_size=1,
+            sender_queue_timeout=5.0,
+        )
+        # No socket assigned: the sender thread can never drain anything by
+        # actually sending, so the only way room opens up is via get()
+        # pulling an item off (which happens immediately, since nothing can
+        # succeed in sending it -- it gets hard-dropped as a writer failure
+        # and the sender loop moves on to the next get()).
+        statsd.socket = FakeSocket()
+
+        statsd.increment("first")
+
+        t0 = time.time()
+        statsd.increment("second")
+        elapsed = time.time() - t0
+
+        self.assertLess(elapsed, 5.0, "should not have waited out the full 5s timeout")
+        statsd.wait_for_pending()
+        statsd.stop()
 
     def test_bytes_dropped_queue_counts_actual_bytes(self):
         # Use a queue of size 1 so the second packet forces the first (oldest)
@@ -2701,6 +2728,109 @@ async def print_foo():
         self.assertEqual(statsd.socket.payloads[0].decode("utf-8"), metric_name + ".second\n")
 
         statsd.stop()
+
+    def test_sender_queue_put_timeout_none_evicts_immediately(self):
+        # Default behaviour (put_timeout falsy): no waiting at all, same as
+        # before this feature existed.
+        dropped_queue_full = []
+        pending_queue = SenderQueue(
+            maxsize=1,
+            expiry_seconds=100.0,
+            on_drop_queue_full=dropped_queue_full.append,
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+        )
+
+        pending_queue.put(PendingPayload("first\n", sender_queue_clock(), False))
+
+        t0 = time.time()
+        pending_queue.put(PendingPayload("second\n", sender_queue_clock(), False))
+        elapsed = time.time() - t0
+
+        self.assertLess(elapsed, 0.05, "put() should not have waited at all")
+        self.assertEqual([p.payload for p in dropped_queue_full], ["first\n"])
+        self.assertEqual(pending_queue.get().payload, "second\n")
+
+    def test_sender_queue_put_timeout_wakes_up_when_room_opens(self):
+        # A slot freed by get() (well within put_timeout) should wake a
+        # blocked put() immediately rather than making it wait out the full
+        # timeout, and nothing should be dropped.
+        dropped_queue_full = []
+        pending_queue = SenderQueue(
+            maxsize=1,
+            expiry_seconds=100.0,
+            on_drop_queue_full=dropped_queue_full.append,
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+            put_timeout=5.0,
+        )
+        pending_queue.put(PendingPayload("first\n", sender_queue_clock(), False))
+
+        result = {}
+
+        def blocked_put():
+            t0 = time.time()
+            pending_queue.put(PendingPayload("second\n", sender_queue_clock(), False))
+            result["elapsed"] = time.time() - t0
+
+        t = threading.Thread(target=blocked_put)
+        t.start()
+        time.sleep(0.2)
+        self.assertTrue(t.is_alive(), "put() should still be waiting for room")
+
+        # Drain the one slot: the blocked put() should wake up promptly.
+        self.assertEqual(pending_queue.get().payload, "first\n")
+        pending_queue.task_done()
+
+        t.join(timeout=5.0)
+        self.assertFalse(t.is_alive())
+        self.assertLess(result["elapsed"], 5.0, "should have woken up well before the 5s timeout")
+        self.assertEqual(dropped_queue_full, [], "nothing should have been dropped: room opened up in time")
+        self.assertEqual(pending_queue.get().payload, "second\n")
+
+    def test_sender_queue_put_timeout_falls_back_to_eviction(self):
+        # If room never opens up within put_timeout, put() falls back to
+        # the same drop-oldest eviction as the immediate (no-wait) case.
+        dropped_queue_full = []
+        pending_queue = SenderQueue(
+            maxsize=1,
+            expiry_seconds=100.0,
+            on_drop_queue_full=dropped_queue_full.append,
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+            put_timeout=0.2,
+        )
+        pending_queue.put(PendingPayload("first\n", sender_queue_clock(), False))
+
+        t0 = time.time()
+        pending_queue.put(PendingPayload("second\n", sender_queue_clock(), False))
+        elapsed = time.time() - t0
+
+        self.assertGreaterEqual(elapsed, 0.2)
+        self.assertEqual([p.payload for p in dropped_queue_full], ["first\n"])
+        self.assertEqual(pending_queue.get().payload, "second\n")
+
+    def test_sender_queue_requeue_front_never_blocks_on_put_timeout(self):
+        # requeue_front() runs on the background sender thread; it must
+        # never wait on put_timeout, or one stuck retry would stall every
+        # other queued payload behind it.
+        dropped_queue_full = []
+        pending_queue = SenderQueue(
+            maxsize=1,
+            expiry_seconds=100.0,
+            on_drop_queue_full=dropped_queue_full.append,
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+            put_timeout=5.0,
+        )
+        in_flight = PendingPayload("in-flight\n", sender_queue_clock(), False)
+        pending_queue.put(in_flight)
+        got = pending_queue.get()
+        pending_queue.put(PendingPayload("new\n", sender_queue_clock(), False))  # fills the one slot again
+
+        t0 = time.time()
+        pending_queue.requeue_front(got)
+        elapsed = time.time() - t0
+
+        self.assertLess(elapsed, 0.05, "requeue_front() must not block on put_timeout")
+        self.assertEqual([p.payload for p in dropped_queue_full], ["in-flight\n"])
+        self.assertEqual(pending_queue.get().payload, "new\n")
 
     def test_sender_queue_drops_oldest_and_stale_entries_on_overflow(self):
         dropped_queue_full = []
