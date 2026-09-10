@@ -124,20 +124,26 @@ class OverflownSocket(BrokenSocket):
         super(OverflownSocket, self).__init__(errno.EAGAIN)
 
 
-def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped_writer=0, packets_sent=1, packets_dropped_writer=0, transport="udp", tags="", bytes_dropped_queue=0, packets_dropped_queue=0):
+def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped_writer=0, packets_sent=1, packets_dropped_writer=0, transport="udp", tags="", bytes_dropped_queue=0, packets_dropped_queue=0, bytes_dropped_expired=0, packets_dropped_expired=0):
     tags = "," + tags if tags else ""
+
+    # Expired drops have no dedicated wire metric: they're folded into the
+    # *_dropped_queue lines (and totals) reported to the Agent. See
+    # DogStatsd._flush_telemetry().
+    reported_bytes_dropped_queue = bytes_dropped_queue + bytes_dropped_expired
+    reported_packets_dropped_queue = packets_dropped_queue + packets_dropped_expired
 
     return "\n".join([
         "datadog.dogstatsd.client.metrics:{}|c|#client:py,client_version:{},client_transport:{}{}".format(metrics, version, transport, tags),
         "datadog.dogstatsd.client.events:{}|c|#client:py,client_version:{},client_transport:{}{}".format(events, version, transport, tags),
         "datadog.dogstatsd.client.service_checks:{}|c|#client:py,client_version:{},client_transport:{}{}".format(service_checks, version, transport, tags),
         "datadog.dogstatsd.client.bytes_sent:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_sent, version, transport, tags),
-        "datadog.dogstatsd.client.bytes_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_dropped_queue + bytes_dropped_writer, version, transport, tags),
-        "datadog.dogstatsd.client.bytes_dropped_queue:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_dropped_queue, version, transport, tags),
+        "datadog.dogstatsd.client.bytes_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(reported_bytes_dropped_queue + bytes_dropped_writer, version, transport, tags),
+        "datadog.dogstatsd.client.bytes_dropped_queue:{}|c|#client:py,client_version:{},client_transport:{}{}".format(reported_bytes_dropped_queue, version, transport, tags),
         "datadog.dogstatsd.client.bytes_dropped_writer:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_dropped_writer, version, transport, tags),
         "datadog.dogstatsd.client.packets_sent:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_sent, version, transport, tags),
-        "datadog.dogstatsd.client.packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped_queue + packets_dropped_writer, version, transport, tags),
-        "datadog.dogstatsd.client.packets_dropped_queue:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped_queue, version, transport, tags),
+        "datadog.dogstatsd.client.packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(reported_packets_dropped_queue + packets_dropped_writer, version, transport, tags),
+        "datadog.dogstatsd.client.packets_dropped_queue:{}|c|#client:py,client_version:{},client_transport:{}{}".format(reported_packets_dropped_queue, version, transport, tags),
         "datadog.dogstatsd.client.packets_dropped_writer:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped_writer, version, transport, tags),
     ]) + "\n"
 
@@ -1954,6 +1960,51 @@ async def print_foo():
         self.assertEqual(0, self.statsd.packets_dropped_writer)
         self.assertEqual(0, self.statsd.bytes_dropped_queue)
         self.assertEqual(0, self.statsd.packets_dropped_queue)
+
+    def test_telemetry_folds_expired_drops_into_dropped_queue(self):
+        # There's no dedicated wire metric for expired drops: they're
+        # reported to the Agent as part of *_dropped_queue (and the combined
+        # *_dropped total), alongside capacity-based queue drops, since both
+        # never reach a socket write attempt. The distinction is still
+        # available in-process via bytes_dropped_expired/packets_dropped_expired.
+        # Avoid any real container-id auto-detected from the host/sandbox
+        # cgroup leaking into the expected payload below -- this test is
+        # about the telemetry counters, not the container-id field.
+        self.statsd._container_id = None
+
+        self.statsd.bytes_dropped_queue = 8
+        self.statsd.packets_dropped_queue = 9
+        self.statsd.bytes_dropped_expired = 10
+        self.statsd.packets_dropped_expired = 11
+        self.statsd.bytes_dropped_writer = 5
+        self.statsd.packets_dropped_writer = 7
+
+        self.statsd.open_buffer()
+        self.statsd.gauge('page.views', 123)
+        self.statsd.close_buffer()
+
+        payload = 'page.views:123|g\n'
+        telemetry = telemetry_metrics(
+            metrics=1,
+            bytes_sent=len(payload),
+            packets_sent=1,
+            bytes_dropped_queue=8,
+            packets_dropped_queue=9,
+            bytes_dropped_expired=10,
+            packets_dropped_expired=11,
+            bytes_dropped_writer=5,
+            packets_dropped_writer=7,
+        )
+
+        self.assert_equal_telemetry(payload, self.recv(2), telemetry=telemetry)
+
+        # The in-process counters stay separate even after the flush resets
+        # them -- confirming the fold happens only in the wire output, not
+        # by merging the underlying attributes.
+        self.assertEqual(0, self.statsd.bytes_dropped_queue)
+        self.assertEqual(0, self.statsd.packets_dropped_queue)
+        self.assertEqual(0, self.statsd.bytes_dropped_expired)
+        self.assertEqual(0, self.statsd.packets_dropped_expired)
 
     def test_telemetry_flush_interval(self):
         dogstatsd = DogStatsd(disable_buffering=False)

@@ -1622,6 +1622,17 @@ class DogStatsd(object):
         tags.extend(self.constant_tags)
         telemetry_tags = ",".join(tags)
 
+        # There's no dedicated wire-protocol metric for expired drops (see
+        # bytes_dropped_expired/packets_dropped_expired for that level of
+        # detail in-process): they're folded into the *_dropped_queue lines
+        # reported to the Agent, since both categories share the same root
+        # cause from the Agent's point of view -- the payload never reached
+        # a socket write attempt, dropped by the queue itself rather than by
+        # the writer. Without this, they'd silently vanish even from the
+        # combined dropped total sent to the Agent.
+        bytes_dropped_queue = self.bytes_dropped_queue + self.bytes_dropped_expired
+        packets_dropped_queue = self.packets_dropped_queue + self.packets_dropped_expired
+
         return TELEMETRY_FORMATTING_STR % (
             self.metrics_count,
             telemetry_tags,
@@ -1631,17 +1642,17 @@ class DogStatsd(object):
             telemetry_tags,
             self.bytes_sent,
             telemetry_tags,
-            self.bytes_dropped_queue + self.bytes_dropped_writer,
+            bytes_dropped_queue + self.bytes_dropped_writer,
             telemetry_tags,
-            self.bytes_dropped_queue,
+            bytes_dropped_queue,
             telemetry_tags,
             self.bytes_dropped_writer,
             telemetry_tags,
             self.packets_sent,
             telemetry_tags,
-            self.packets_dropped_queue + self.packets_dropped_writer,
+            packets_dropped_queue + self.packets_dropped_writer,
             telemetry_tags,
-            self.packets_dropped_queue,
+            packets_dropped_queue,
             telemetry_tags,
             self.packets_dropped_writer,
             telemetry_tags,
