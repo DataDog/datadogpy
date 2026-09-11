@@ -13,7 +13,7 @@ if sys.version_info[:2] >= (3, 5):
     from typing import Callable, Optional, Union  # noqa: F401
 
 
-# Sentinel telling the background sender thread to shut down. 
+# Sentinel telling the background sender thread to shut down.
 Stop = object()
 
 # How long (in seconds) a non-replay-safe payload may sit in the background
@@ -54,13 +54,18 @@ class SenderQueue(object):
     """Bounded hand-off queue between application threads and the background sender thread.
 
     put() never rejects a payload outright. When the queue is already at its
-    maximum size and put_timeout is falsy (the default), the oldest entry is dropped
-    immediately to make room, along with any additional expired entries left
-    at the front. When put_timeout is a positive number, put()
-    instead blocks the calling thread for up to that many seconds waiting
-    for the sender thread to drain a slot; only once that wait times out
-    (or immediately, if put_timeout is falsy) does it fall back to the same
-    drop-oldest eviction.
+    maximum size, what happens depends on put_timeout:
+      - 0 (the default): no waiting at all -- the oldest entry is dropped
+        immediately to make room, along with any additional expired entries
+        left at the front.
+      - None: put() blocks the calling thread indefinitely, waiting for the
+        sender thread to drain a slot. It will wait forever if nothing ever
+        does -- this is an explicit opt-in to unbounded backpressure on the
+        calling thread.
+      - a positive number: put() blocks the calling thread for up to that
+        many seconds waiting for a slot; if the wait times out without one
+        opening up, it falls back to the same drop-oldest eviction as the
+        0 case.
 
     get() drops expired entries lazily too, from the front, before returning
     the next payload actually worth handing to the sender.
@@ -73,8 +78,8 @@ class SenderQueue(object):
     never blocks on put_timeout.
     """
 
-    def __init__(self, maxsize, expiry_seconds, on_drop_queue_full, on_drop_expired, put_timeout=None):
-        # type: (int, float, Callable[[PendingPayload], None], Callable[[PendingPayload], None], Optional[float]) -> None
+    def __init__(self, maxsize, expiry_seconds, on_drop_queue_full, on_drop_expired, put_timeout=0):
+        # type: (int, float, Callable[[PendingPayload], None], Callable[[PendingPayload], None], Optional[float]) -> None  # noqa: E501
         self._maxsize = maxsize
         self._expiry_seconds = expiry_seconds
         self._on_drop_queue_full = on_drop_queue_full
@@ -135,22 +140,29 @@ class SenderQueue(object):
         # type: (Union[PendingPayload, object]) -> None
         """Queue a payload (or the Stop sentinel).
 
-        If the queue is full: waits for room for up to put_timeout seconds
-        (if put_timeout is a positive number), then falls back to evicting
-        the oldest entry (see _make_room_locked()) if the wait timed out
-        without room opening up -- or immediately, with no wait at all, if
-        put_timeout is falsy. Either way, put() never rejects the payload
-        outright.
+        If the queue is full: waits for room according to put_timeout --
+        forever if it's None, up to put_timeout seconds if it's a positive
+        number, or not at all if it's 0 (the default) -- then falls back to
+        evicting the oldest entry (see _make_room_locked()) if the queue is
+        still full once the wait is over. Either way, put() never rejects
+        the payload outright.
         """
         with self._not_empty:
             if item is not Stop and self._maxsize > 0 and len(self._deque) >= self._maxsize:
-                if self._put_timeout:
+                if self._put_timeout is None:
+                    # Wait forever: an explicit opt-in to unbounded
+                    # backpressure on the calling thread.
+                    while len(self._deque) >= self._maxsize:
+                        self._not_full.wait()
+                elif self._put_timeout > 0:
                     deadline = monotonic() + self._put_timeout
                     while len(self._deque) >= self._maxsize:
                         remaining = deadline - monotonic()
                         if remaining <= 0:
                             break
                         self._not_full.wait(remaining)
+                # else: put_timeout is 0 (or negative) -- no wait at all,
+                # straight to eviction below.
 
                 if len(self._deque) >= self._maxsize:
                     self._make_room_locked()
@@ -238,4 +250,3 @@ class SenderQueue(object):
         # type: () -> bool
         with self._lock:
             return not self._deque
-

@@ -2729,9 +2729,13 @@ async def print_foo():
 
         statsd.stop()
 
-    def test_sender_queue_put_timeout_none_evicts_immediately(self):
-        # Default behaviour (put_timeout falsy): no waiting at all, same as
-        # before this feature existed.
+    def test_sender_queue_put_timeout_default_evicts_immediately(self):
+        # Default put_timeout (0, whether omitted or explicit): no waiting
+        # at all, same as before this feature existed. Deliberately omits
+        # put_timeout here to prove the *default* -- not just 0 -- means
+        # "don't wait", since None means something very different (wait
+        # forever) and must not be the implicit default for anyone who
+        # constructs a SenderQueue without thinking about put_timeout at all.
         dropped_queue_full = []
         pending_queue = SenderQueue(
             maxsize=1,
@@ -2748,6 +2752,69 @@ async def print_foo():
 
         self.assertLess(elapsed, 0.05, "put() should not have waited at all")
         self.assertEqual([p.payload for p in dropped_queue_full], ["first\n"])
+        self.assertEqual(pending_queue.get().payload, "second\n")
+
+    def test_sender_queue_put_timeout_zero_evicts_immediately(self):
+        # Same as the default, but with put_timeout=0 passed explicitly.
+        dropped_queue_full = []
+        pending_queue = SenderQueue(
+            maxsize=1,
+            expiry_seconds=100.0,
+            on_drop_queue_full=dropped_queue_full.append,
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+            put_timeout=0,
+        )
+
+        pending_queue.put(PendingPayload("first\n", sender_queue_clock(), False))
+
+        t0 = time.time()
+        pending_queue.put(PendingPayload("second\n", sender_queue_clock(), False))
+        elapsed = time.time() - t0
+
+        self.assertLess(elapsed, 0.05, "put() should not have waited at all")
+        self.assertEqual([p.payload for p in dropped_queue_full], ["first\n"])
+        self.assertEqual(pending_queue.get().payload, "second\n")
+
+    def test_sender_queue_put_timeout_none_waits_forever_and_never_evicts(self):
+        # put_timeout=None is an explicit opt-in to unbounded blocking: put()
+        # must keep waiting indefinitely -- not fall back to eviction after
+        # some internal default -- until room actually opens up.
+        dropped_queue_full = []
+        pending_queue = SenderQueue(
+            maxsize=1,
+            expiry_seconds=100.0,
+            on_drop_queue_full=lambda item: dropped_queue_full.append(item),
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+            put_timeout=None,
+        )
+        pending_queue.put(PendingPayload("first\n", sender_queue_clock(), False))
+
+        result = {}
+
+        def blocked_put():
+            t0 = time.time()
+            pending_queue.put(PendingPayload("second\n", sender_queue_clock(), False))
+            result["elapsed"] = time.time() - t0
+
+        t = threading.Thread(target=blocked_put)
+        t.start()
+        try:
+            # Nothing is draining the queue: with a real timeout this would
+            # have already fired and evicted "first" well before 1s. With
+            # None it must still be waiting.
+            time.sleep(1.0)
+            self.assertTrue(t.is_alive(), "put(timeout=None) must keep waiting, never fall back to eviction on its own")
+            self.assertEqual(dropped_queue_full, [])
+
+            # Now free up room: the blocked put() should wake up and
+            # succeed without ever having dropped anything.
+            self.assertEqual(pending_queue.get().payload, "first\n")
+            pending_queue.task_done()
+        finally:
+            t.join(timeout=5.0)
+
+        self.assertFalse(t.is_alive())
+        self.assertEqual(dropped_queue_full, [], "put_timeout=None must never fall back to eviction")
         self.assertEqual(pending_queue.get().payload, "second\n")
 
     def test_sender_queue_put_timeout_wakes_up_when_room_opens(self):

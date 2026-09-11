@@ -490,22 +490,18 @@ class DogStatsd(object):
         :type disable_background_sender: boolean
 
         :param sender_queue_size: Set the maximum number of packets to queue for the sender. Optional.
-        Once the queue is full, adding a new packet waits (see sender_queue_timeout) and then, if still
-        full, drops the oldest queued packet (and any additional expired packets at the front of the
-        queue) to make room, instead of dropping the new packet. Packets aren't held indefinitely either:
-        a queued packet that hasn't been sent within PENDING_PAYLOAD_EXPIRY_SECONDS is dropped when it's
-        pulled off the queue, unless it carries its own explicit timestamp (e.g. gauge_with_timestamp, or
-        count/service_check/event with an explicit timestamp), in which case it's kept until it can
-        actually be sent.
+        How many packets to queue before blocking or dropping the packet if the packet queue is already full.
         Default: 0 (unlimited).
         :type sender_queue_size: integer
 
         :param sender_queue_timeout: Set how long, in seconds, adding a packet to a full sender queue
         will wait for the background sender to free up a slot before falling back to dropping the oldest
-        queued packet to make room. If set to zero or None (the default), no waiting happens: a full
-        queue makes room immediately by dropping the oldest packet. Note this blocks the calling thread
-        (the one emitting the metric), not just the background sender -- pick a value that fits how long
-        you're willing to let application code stall during a backlog.
+        queued packet to make room. Default: 0, meaning no waiting happens at all: a full queue makes
+        room immediately by dropping the oldest packet. If set to None, waits forever for room instead
+        of ever falling back to dropping the oldest packet -- an explicit opt-in to unbounded
+        backpressure; nothing bounds how long this can block if the sender can never catch up. Note this
+        blocks the calling thread (the one emitting the metric), not just the background sender -- pick a
+        value that fits how long you're willing to let application code stall during a backlog.
         :type sender_queue_timeout: float
 
         :param track_instance: Keep track of this instance and automatically handle cleanup when os.fork() is called,
@@ -729,9 +725,10 @@ class DogStatsd(object):
         :type sender_queue_size: integer, optional
         :param sender_queue_timeout: Set how long, in seconds, adding a packet to a full sender queue
             will wait for the background sender to free up a slot before falling back to dropping the
-            oldest queued packet to make room. If set to zero or None (the default), no waiting happens.
-            Note this blocks the calling thread (the one emitting the metric), not just the background
-            sender.
+            oldest queued packet to make room. Default: 0, meaning no waiting happens at all. If set to
+            None, waits forever for room instead of ever falling back to dropping the oldest packet --
+            an explicit opt-in to unbounded backpressure. Note this blocks the calling thread (the one
+            emitting the metric), not just the background sender.
         :type sender_queue_timeout: float, optional
         """
 
@@ -2176,7 +2173,9 @@ class DogStatsd(object):
             # next line has type ignore because the type checker cannot
             # know that 'if item is Stop' is the only case where item is
             # of object type.
-            sent = self._xmit_packet_with_telemetry(item.payload, queue_mode=True)  # type: ignore[attr-defined]  # noqa: F821
+            sent = self._xmit_packet_with_telemetry(
+                item.payload, queue_mode=True  # type: ignore[attr-defined]
+            )
 
             if sent is None:
                 # Connection trouble: keep the payload for the next attempt
