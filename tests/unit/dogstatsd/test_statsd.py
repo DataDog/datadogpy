@@ -30,7 +30,7 @@ import pytest
 # Datadog libraries
 from datadog import initialize, statsd
 from datadog import __version__ as version
-from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, PendingPayload, SenderQueue, Stop, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_CONNECT_RETRY_INITIAL_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
+from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, PENDING_PAYLOAD_EXPIRY_SECONDS, PendingPayload, SenderQueue, Stop, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_CONNECT_RETRY_INITIAL_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
 from datadog.dogstatsd.sender_queue import monotonic as sender_queue_clock
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
@@ -2773,32 +2773,34 @@ async def print_foo():
         statsd.stop()
 
     def test_bytes_dropped_queue_counts_actual_bytes(self):
-        # Use a queue of size 1 so the second packet forces the first (oldest)
-        # one out, then verify bytes_dropped_queue reflects the real byte
-        # length of the dropped packet (including the appended newline), and
-        # that the newer payload is the one that survives in the queue.
-        statsd = DogStatsd(
-            disable_background_sender=False,
-            sender_queue_size=1,
+        # No sender thread: a live one could drain the first payload before the
+        # third is queued, so nothing would be evicted and the counters below
+        # would describe a schedule that never happened. Size 2 rather than 1
+        # so the eviction order is observable -- with a single slot the evicted
+        # entry is both the oldest and the newest.
+        statsd = DogStatsd(disable_background_sender=True)
+        statsd._queue = SenderQueue(
+            2,
+            PENDING_PAYLOAD_EXPIRY_SECONDS,
+            statsd._account_dropped_queue_full,
+            statsd._account_dropped_expired,
         )
-        statsd.socket = FakeSocket()
 
-        # Build a packet whose serialised form we know, then compute its length.
-        metric_name = "test.metric"
+        first, second, third = "test.metric.first", "test.metric.second", "test.metric.third"
+        statsd._send_to_server(first)
+        statsd._send_to_server(second)
+        statsd._send_to_server(third)  # evicts the oldest (first) to make room
 
-        # Send two packets: the first is evicted (dropped) to make room for the second.
-        statsd._send_to_server(metric_name)
-        statsd._send_to_server(metric_name + ".second")
-
-        expected_bytes = len((metric_name + '\n').encode("utf-8"))
-        self.assertEqual(statsd.bytes_dropped_queue, expected_bytes)
+        # bytes_dropped_queue is the real byte length, including the newline
+        # _send_to_server() appends.
+        self.assertEqual(statsd.bytes_dropped_queue, len((first + "\n").encode("utf-8")))
         self.assertEqual(statsd.packets_dropped_queue, 1)
         self.assertEqual(statsd.bytes_dropped_expired, 0)
         self.assertEqual(statsd.packets_dropped_expired, 0)
 
-        # The surviving (newest) payload is the one the sender thread will send.
-        statsd.wait_for_pending()
-        self.assertEqual(statsd.socket.payloads[0].decode("utf-8"), metric_name + ".second\n")
+        # Dropping the oldest leaves the two newest queued, in order.
+        survivors = [statsd._queue.get().payload, statsd._queue.get().payload]
+        self.assertEqual(survivors, [second + "\n", third + "\n"])
 
         statsd.stop()
 
