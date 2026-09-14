@@ -6,14 +6,9 @@ from functools import wraps
 import sys
 
 
-try:
-    from time import monotonic  # type: ignore[attr-defined]
-except ImportError:
-    from time import time as monotonic
-
 # datadog
 from datadog.dogstatsd.context_async import _get_wrapped_co
-from datadog.util.compat import iscoroutinefunction
+from datadog.util.compat import iscoroutinefunction, monotonic
 
 
 if sys.version_info[:2] >= (3, 5):

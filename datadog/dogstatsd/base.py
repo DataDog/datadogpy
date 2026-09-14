@@ -50,9 +50,8 @@ from datadog.dogstatsd.sender_queue import (
     PendingPayload,
     Stop,
     PENDING_PAYLOAD_EXPIRY_SECONDS,
-    monotonic,
 )
-from datadog.util.compat import text, urlparse
+from datadog.util.compat import monotonic, text, urlparse
 from datadog.util.format import normalize_tags, validate_cardinality
 from datadog.version import __version__
 

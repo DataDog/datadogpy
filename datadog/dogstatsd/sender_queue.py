@@ -2,12 +2,7 @@ import collections
 import sys
 import threading
 
-try:
-    # Python 3.3+
-    from time import monotonic
-except ImportError:
-    # Python 2: no monotonic clock available, fall back to wall clock.
-    from time import time as monotonic
+from datadog.util.compat import monotonic
 
 if sys.version_info[:2] >= (3, 5):
     from typing import Callable, Optional, Union  # noqa: F401

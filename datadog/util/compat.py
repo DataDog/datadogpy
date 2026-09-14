@@ -109,6 +109,16 @@ else:
             pass
 
 
+# Python >= 3.3
+if sys.version_info >= (3, 3):
+    from time import monotonic
+# Python 2.x: there is no monotonic clock, so fall back to the wall clock.
+# Callers that compare two readings (elapsed time, queue entry age) are
+# therefore sensitive to the clock being stepped backwards on Python 2.
+else:
+    from time import time as monotonic
+
+
 def _is_py_version_higher_than(major, minor=0):
     # type: (int, int) -> bool
     """

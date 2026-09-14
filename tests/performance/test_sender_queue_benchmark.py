@@ -58,8 +58,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from datadog.dogstatsd.sender_queue import (  # noqa: E402
     PendingPayload,
     SenderQueue,
-    monotonic,
 )
+from datadog.util.compat import monotonic  # noqa: E402
 
 QUICK = "--quick" in sys.argv
 

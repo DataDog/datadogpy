@@ -31,7 +31,7 @@ import pytest
 from datadog import initialize, statsd
 from datadog import __version__ as version
 from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, PENDING_PAYLOAD_EXPIRY_SECONDS, PendingPayload, SenderQueue, Stop, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_CONNECT_RETRY_INITIAL_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
-from datadog.dogstatsd.sender_queue import monotonic as sender_queue_clock
+from datadog.util.compat import monotonic as sender_queue_clock
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
 from tests.util.contextmanagers import preserve_environment_variable, EnvVars
