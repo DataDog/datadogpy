@@ -16,17 +16,13 @@ from contextlib import contextmanager
 from functools import wraps
 from time import time
 
-try:
-    from time import monotonic  # type: ignore[attr-defined]
-except ImportError:
-    from time import time as monotonic
-
 # datadog
 from datadog.api.exceptions import ApiNotInitialized
 from datadog.threadstats.constants import MetricType
 from datadog.threadstats.events import EventsAggregator
 from datadog.threadstats.metrics import MetricsAggregator, Counter, Gauge, Histogram, Timing, Distribution, Set
 from datadog.threadstats.reporters import HttpReporter
+from datadog.util.compat import monotonic
 
 # Loggers
 log = logging.getLogger("datadog.threadstats")
