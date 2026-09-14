@@ -731,15 +731,21 @@ class DogStatsd(object):
 
             self._start_sender_thread()
 
-    def disable_background_sender(self):
-        # type: () -> None
+    def disable_background_sender(self, timeout=None):
+        # type: (Optional[float]) -> bool
         """Disable background sender mode.
 
         This call will block until all previously queued payloads are sent.
+
+        :param timeout: Maximum number of seconds to wait for the sender thread
+            to drain the queue and exit. None (the default) waits indefinitely.
+        :type timeout: float, optional
+        :return: True if the sender thread finished, False if timeout elapsed
+            while it was still running.
         """
         with self._config_lock:
             self._sender_enabled = False
-            self._stop_sender_thread()
+            return self._stop_sender_thread(timeout)
 
     def disable_telemetry(self):
         # type: () -> None
@@ -2154,18 +2160,28 @@ class DogStatsd(object):
         self._sender_thread.daemon = True
         self._sender_thread.start()
 
-    def _stop_sender_thread(self):
-        # type: () -> None
+    def _stop_sender_thread(self, timeout=None):
+        # type: (Optional[float]) -> bool
         # Lock ensures that nothing gets added to the queue after we disable it.
         with self._buffer_lock:
-            if not self._queue:
-                return
-            self._queue.put(Stop)
-            self._queue = None
+            if self._queue is not None:
+                # put() lets the Stop sentinel past the size limit, so this
+                # never blocks even when the queue is full.
+                self._queue.put(Stop)
+                self._queue = None
 
-        if self._sender_thread is not None:
-            self._sender_thread.join()
+        thread = self._sender_thread
+        if thread is None:
+            return True
+
+        thread.join(timeout)
+        if thread.is_alive():
+            # Timed out. Keep the handle so a later call can wait for it again
+            # rather than losing track of a still-running thread.
+            return False
+
         self._sender_thread = None
+        return True
 
     def _sender_main_loop(self, pending_queue):
         # type: (SenderQueue) -> None
@@ -2199,10 +2215,16 @@ class DogStatsd(object):
             pending_queue.task_done()
             backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
 
-    def wait_for_pending(self):
-        # type: () -> None
+    def wait_for_pending(self, timeout=None):
+        # type: (Optional[float]) -> bool
         """
         Flush the buffer and wait for all queued payloads to be written to the server.
+
+        :param timeout: Maximum number of seconds to wait for the queue to
+            drain. None (the default) waits indefinitely.
+        :type timeout: float, optional
+        :return: True if every queued payload has been sent, dropped or
+            expired, False if timeout elapsed with payloads still outstanding.
         """
 
         self.flush_buffered_metrics()
@@ -2212,8 +2234,10 @@ class DogStatsd(object):
         # check and join later.
         queue = self._queue
 
-        if queue is not None:
-            queue.join()
+        if queue is None:
+            return True
+
+        return queue.join(timeout)
 
     def pre_fork(self):
         # type: () -> None
@@ -2266,21 +2290,51 @@ class DogStatsd(object):
             self._start_flush_thread()
             self._start_sender_thread()
 
-    def stop(self):
-        # type: () -> None
+    def stop(self, timeout=None):
+        # type: (Optional[float]) -> bool
         """Stop the client.
 
         Disable buffering, aggregation, background sender and flush any pending payloads to the server.
 
         Client remains usable after this method, but sending metrics may block if socket_timeout is enabled.
+
+        :param timeout: Maximum number of seconds to wait for the background
+            sender to drain its queue and exit. None (the default) waits
+            indefinitely, however long that takes.
+        :type timeout: float, optional
+        :return: True if the background sender drained and stopped, and the
+            final flush and socket close ran. False if timeout elapsed first,
+            in which case the sender thread is still running, the final flush
+            and close were skipped (see below), and a later stop() call can
+            wait for the thread again.
         """
 
-        self.disable_background_sender()
+        stopped = self.disable_background_sender(timeout)
         self._disable_buffering = True
         self._disable_aggregation = True
+
+        if not stopped:
+            # We gave up waiting, so the sender thread is still running and
+            # still owns the socket -- it can be parked inside a send() with
+            # _socket_lock held. Flushing or closing here would block on that
+            # same lock for as long as the sender stays wedged, which would
+            # make timeout meaningless: the caller asked for a bounded stop().
+            # Pushing more data through that socket could not succeed anyway,
+            # and closing it from under a thread mid-write is not safe. Leave
+            # it open; the OS reclaims the fd when the process exits, and the
+            # sender thread is a daemon so it never holds up interpreter
+            # shutdown.
+            log.warning(
+                "stop() timed out after %ss with the background sender still running; "
+                "skipping the final flush and socket close",
+                timeout,
+            )
+            return False
+
         self.flush_aggregated_metrics()
         self.flush_buffered_metrics()
         self.close_socket()
+        return True
 
 
 statsd = DogStatsd()

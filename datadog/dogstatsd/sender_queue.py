@@ -233,11 +233,31 @@ class SenderQueue(object):
         with self._all_tasks_done:
             self._finish_task_locked()
 
-    def join(self):
-        # type: () -> None
+    def join(self, timeout=None):
+        # type: (Optional[float]) -> bool
+        """Wait until every queued payload has been sent, dropped or expired.
+
+        :param timeout: Maximum number of seconds to wait. None (the default)
+            waits indefinitely.
+        :return: True if nothing is outstanding any more, False if timeout
+            elapsed while payloads were still in flight.
+        """
         with self._all_tasks_done:
+            if timeout is None:
+                while self._unfinished_tasks:
+                    self._all_tasks_done.wait()
+                return True
+
+            # Condition.wait()'s return value can't be used to detect a
+            # timeout: on Python 2 it is always None. Track the deadline
+            # ourselves instead, the same way put() does for put_timeout.
+            deadline = monotonic() + timeout
             while self._unfinished_tasks:
-                self._all_tasks_done.wait()
+                remaining = deadline - monotonic()
+                if remaining <= 0:
+                    return False
+                self._all_tasks_done.wait(remaining)
+            return True
 
     def qsize(self):
         # type: () -> int

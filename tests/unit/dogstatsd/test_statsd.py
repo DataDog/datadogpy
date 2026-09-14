@@ -2758,6 +2758,221 @@ async def print_foo():
         statsd = DogStatsd(disable_background_sender=False, sender_queue_timeout=None)
         statsd.stop()
 
+    def _call_bounded(self, func, args=(), limit=5.0):
+        """Call func in a worker thread, failing if it doesn't return in time.
+
+        Everything exercised below exists to *bound* a wait, so a regression
+        that reintroduces an unbounded wait should surface as a clear failure
+        rather than hanging the whole suite until CI kills the job.
+        """
+        result = {}
+
+        def run():
+            result["value"] = func(*args)
+
+        t = threading.Thread(target=run)
+        t.daemon = True
+        t.start()
+        t.join(limit)
+        self.assertFalse(
+            t.is_alive(),
+            "{} did not return within {}s: timeout not honoured".format(getattr(func, "__name__", func), limit),
+        )
+        return result["value"]
+
+    def test_queue_join_timeout(self):
+        # join(timeout) must report whether the queue actually drained, and must
+        # not rely on Condition.wait()'s return value (always None on Python 2).
+        pending_queue = SenderQueue(
+            maxsize=0,
+            expiry_seconds=100.0,
+            on_drop_queue_full=lambda item: self.fail("unexpected full drop"),
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+        )
+        self.assertIs(pending_queue.join(0), True)
+        self.assertIs(pending_queue.join(), True)
+
+        pending_queue.put(PendingPayload("first\n", sender_queue_clock(), False))
+
+        # Nothing is draining it, so a bounded join must give up and say so
+        # rather than blocking forever or claiming success.
+        t0 = time.time()
+        self.assertIs(self._call_bounded(pending_queue.join, (0.2,)), False)
+        self.assertGreaterEqual(time.time() - t0, 0.2)
+
+        # timeout=0 is a non-blocking poll.
+        t0 = time.time()
+        self.assertIs(self._call_bounded(pending_queue.join, (0,)), False)
+        self.assertLess(time.time() - t0, 0.2)
+
+        # Once the payload is accounted for, join() succeeds.
+        pending_queue.get()
+        pending_queue.task_done()
+        self.assertIs(pending_queue.join(0), True)
+
+    def test_queue_join_timeout_returns_as_soon_as_the_queue_drains(self):
+        # A generous timeout must not be waited out: join() returns as soon as
+        # the last task is done.
+        pending_queue = SenderQueue(
+            maxsize=0,
+            expiry_seconds=100.0,
+            on_drop_queue_full=lambda item: None,
+            on_drop_expired=lambda item: None,
+        )
+        pending_queue.put(PendingPayload("first\n", sender_queue_clock(), False))
+
+        def drain():
+            time.sleep(0.2)
+            pending_queue.get()
+            pending_queue.task_done()
+
+        t = threading.Thread(target=drain)
+        t.start()
+        try:
+            t0 = time.time()
+            self.assertIs(pending_queue.join(10.0), True)
+            elapsed = time.time() - t0
+        finally:
+            t.join(timeout=5.0)
+        self.assertLess(elapsed, 5.0, "join() should return on drain, not wait out the whole timeout")
+
+    def test_wait_for_pending_timeout(self):
+        # A queue with no sender thread draining it: wait_for_pending() must
+        # give up and report False rather than blocking forever. Done without a
+        # thread on purpose -- the default transport is UDP, where a send
+        # succeeds even with nothing listening, so "assign no socket" would not
+        # reliably keep a payload pending.
+        statsd = DogStatsd(disable_background_sender=True, disable_telemetry=True)
+        statsd._queue = SenderQueue(
+            0,
+            PENDING_PAYLOAD_EXPIRY_SECONDS,
+            lambda item: None,
+            lambda item: None,
+        )
+        statsd._send_to_server("test.metric:1|c")
+
+        t0 = time.time()
+        self.assertIs(self._call_bounded(statsd.wait_for_pending, (0.2,)), False)
+        self.assertGreaterEqual(time.time() - t0, 0.2)
+
+        # timeout=0 is a non-blocking poll.
+        self.assertIs(self._call_bounded(statsd.wait_for_pending, (0,)), False)
+
+    def test_wait_for_pending_returns_true_with_no_queue(self):
+        # Nothing queued (background sender disabled) is trivially "drained".
+        statsd = DogStatsd(disable_background_sender=True, disable_telemetry=True)
+        self.assertIsNone(statsd._queue)
+        self.assertIs(statsd.wait_for_pending(), True)
+        self.assertIs(statsd.wait_for_pending(0), True)
+
+    def test_stop_timeout_reports_failure_and_keeps_the_thread_joinable(self):
+        # A wedged sender must not make stop() hang forever when a timeout is
+        # given, and stop() must say it didn't finish.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        release = threading.Event()
+        wedged = statsd._sender_thread
+
+        # Wedge the sender inside a send so it can't observe Stop.
+        def blocking_xmit(packet, queue_mode=False):
+            release.wait(10.0)
+            return True
+
+        statsd._xmit_packet_with_telemetry = blocking_xmit
+        statsd._send_to_server("test.metric:1|c")
+        time.sleep(0.1)  # let the sender pick it up and wedge
+
+        try:
+            t0 = time.time()
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            self.assertGreaterEqual(time.time() - t0, 0.2)
+            # The handle is retained so the thread isn't lost.
+            self.assertIs(statsd._sender_thread, wedged)
+            self.assertTrue(wedged.is_alive())
+
+            # Unwedge: a second stop() now succeeds and clears the handle.
+            release.set()
+            self.assertIs(statsd.stop(5.0), True)
+            self.assertIsNone(statsd._sender_thread)
+        finally:
+            release.set()
+            wedged.join(timeout=5.0)
+
+    def test_stop_timeout_is_bounded_while_the_sender_holds_the_socket_lock(self):
+        # The wedge that matters in practice: the sender is parked inside a
+        # blocking send() and therefore owns _socket_lock. stop()'s own
+        # close_socket()/flush calls want that same lock, so without care they
+        # block for as long as the sender stays stuck and the timeout means
+        # nothing. stop() must still return within its timeout.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        release = threading.Event()
+        entered_send = threading.Event()
+        wedged = statsd._sender_thread
+
+        class BlockingSocket(object):
+            def send(self, data):
+                entered_send.set()
+                release.wait(30.0)
+                return len(data)
+
+            def sendall(self, data):
+                return self.send(data)
+
+            def close(self):
+                pass
+
+            def setblocking(self, *args):
+                pass
+
+            def settimeout(self, *args):
+                pass
+
+            def getsockopt(self, *args):
+                return MIN_SEND_BUFFER_SIZE
+
+            def setsockopt(self, *args):
+                pass
+
+        statsd.socket = BlockingSocket()
+        for i in range(5):
+            statsd._send_to_server("test.metric.{}:1|c".format(i))
+        self.assertTrue(entered_send.wait(5.0), "sender never reached send()")
+
+        try:
+            t0 = time.time()
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            elapsed = time.time() - t0
+            self.assertGreaterEqual(elapsed, 0.2)
+            self.assertLess(elapsed, 5.0, "stop() blocked well past its timeout")
+
+            # The socket was deliberately left alone: closing it under a thread
+            # that is mid-send is both unsafe and the thing that would block.
+            self.assertIsNotNone(statsd.socket)
+            self.assertTrue(wedged.is_alive())
+            self.assertIs(statsd._sender_thread, wedged)
+        finally:
+            release.set()
+            wedged.join(timeout=5.0)
+
+    def test_stop_and_wait_for_pending_default_to_waiting_forever(self):
+        # The default must stay unbounded: a slow-but-progressing sender is
+        # waited out completely, with nothing left pending.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        sent = []
+
+        def slow_xmit(packet, queue_mode=False):
+            time.sleep(0.05)
+            sent.append(packet)
+            return True
+
+        statsd._xmit_packet_with_telemetry = slow_xmit
+        for i in range(5):
+            statsd._send_to_server("test.metric.{}:1|c".format(i))
+
+        self.assertIs(statsd.wait_for_pending(), True)
+        self.assertEqual(len(sent), 5, "unbounded wait_for_pending() must drain everything")
+        self.assertIs(statsd.stop(), True)
+        self.assertIsNone(statsd._sender_thread)
+
     def test_sender_queue_timeout_blocks_the_calling_thread_through_the_client(self):
         # End-to-end: sender_queue_timeout configured on the real client
         # actually makes statsd.increment() (the calling/application thread)
