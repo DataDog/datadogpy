@@ -1797,7 +1797,19 @@ async def print_foo():
         # buffer overflowing must not drag the other one out with it.
         sent = []
         self.statsd._send_to_server = lambda packet, replay_safe=False: sent.append((packet, replay_safe))
-        self.statsd._max_payload_size = 250
+
+        # Measure a real serialised line and size the cap from it. Hard-coding
+        # a byte count would make the test depend on how long constant/origin
+        # tags happen to make each line in this environment: too small and a
+        # single line breaches the cap, too large and nothing ever overflows.
+        self.statsd.open_buffer()
+        self.statsd.gauge("plain.filler.0", 0)
+        line_size = self.statsd._buffer_sizes[False]
+        self.statsd.close_buffer()
+        del sent[:]
+
+        # Room for two lines, so every third one forces a flush.
+        self.statsd._max_payload_size = line_size * 2 + 1
 
         self.statsd.open_buffer()
         # One small replay-safe line that should still be buffered while the
