@@ -26,7 +26,9 @@ if sys.version_info[:2] >= (3, 5):
 
 # pylint: disable=unused-import
 if sys.version_info[:2] >= (3, 5):
-    from typing import Any, Optional, List, Text, Tuple, Type, Union, Iterable, Callable, overload  # noqa: F401
+    from typing import (  # noqa: F401
+        Any, Callable, Dict, Iterable, List, Optional, Text, Tuple, Type, Union, overload,
+    )
 
 try:
     from typing import SupportsIndex
@@ -494,14 +496,11 @@ class DogStatsd(object):
         Default: 0 (unlimited).
         :type sender_queue_size: integer
 
-        :param sender_queue_timeout: Set how long, in seconds, adding a packet to a full sender queue
-        will wait for the background sender to free up a slot before falling back to dropping the oldest
-        queued packet to make room. Default: 0, meaning no waiting happens at all: a full queue makes
-        room immediately by dropping the oldest packet. If set to None, waits forever for room instead
-        of ever falling back to dropping the oldest packet -- an explicit opt-in to unbounded
-        backpressure; nothing bounds how long this can block if the sender can never catch up. Note this
-        blocks the calling thread (the one emitting the metric), not just the background sender -- pick a
-        value that fits how long you're willing to let application code stall during a backlog.
+        :param sender_queue_timeout: Set timeout for packet queue operations, in seconds. Optional.
+        How long the application thread is willing to wait for the queue clear up before dropping the metric packet.
+        If set to None, wait forever.
+        If set to zero drop the packet immediately if the queue is full.
+        Default: 0 (no wait)
         :type sender_queue_timeout: float
 
         :param track_instance: Keep track of this instance and automatically handle cleanup when os.fork() is called,
@@ -610,8 +609,6 @@ class DogStatsd(object):
         self._telemetry = not disable_telemetry
         self._last_flush_time = time.time()
 
-        self._current_buffer_total_size = 0
-        self._buffer = []  # type: List[Text]
         self._buffer_lock = RLock()
 
         self._reset_buffer()
@@ -718,17 +715,13 @@ class DogStatsd(object):
         to os.fork().
 
         :param sender_queue_size: Set the maximum number of packets to queue for the sender.
-            Once the queue is full, adding a new packet waits (see sender_queue_timeout) and then, if
-            still full, drops the oldest queued packet (and any additional expired packets at the front
-            of the queue) to make room, instead of dropping the new packet.
+            How many packets to queue before blocking or dropping the packet if the packet queue is already full.
             Default: 0 (unlimited).
         :type sender_queue_size: integer, optional
-        :param sender_queue_timeout: Set how long, in seconds, adding a packet to a full sender queue
-            will wait for the background sender to free up a slot before falling back to dropping the
-            oldest queued packet to make room. Default: 0, meaning no waiting happens at all. If set to
-            None, waits forever for room instead of ever falling back to dropping the oldest packet --
-            an explicit opt-in to unbounded backpressure. Note this blocks the calling thread (the one
-            emitting the metric), not just the background sender.
+        :param sender_queue_timeout: Set timeout for packet queue operations, in seconds.
+            How long the application thread is willing to wait for the queue clear up before dropping the metric packet.
+            If set to None, wait forever. If set to zero drop the packet immediately if the queue is full.
+            Default: 0 (no wait).
         :type sender_queue_timeout: float, optional
         """
 
@@ -1168,27 +1161,51 @@ class DogStatsd(object):
     def _reset_buffer(self):
         # type: () -> None
         with self._buffer_lock:
-            self._current_buffer_total_size = 0
-            self._buffer = []
-            # A freshly (re)started buffer starts out replay-safe; it's
-            # downgraded to False as soon as anything not-replay-safe is
-            # appended to it. See _send_to_buffer().
-            self._buffer_replay_safe = True
+            # Buffered lines are kept in two separate batches, keyed by
+            # whether they're replay-safe. Replay safe metrics are posted with
+            # the timestamp.
+            self._buffers = {False: [], True: []}  # type: Dict[bool, List[Text]]
+            # Running packet size per buffer, each including the newline that
+            # will join its lines, so both stay under _max_payload_size
+            # independently.
+            self._buffer_sizes = {False: 0, True: 0}  # type: Dict[bool, int]
 
     def flush(self):
         # type: () -> None
         self.flush_buffered_metrics()
 
+    def _flush_one_buffer(self, replay_safe):
+        # type: (bool) -> None
+        """Flush just the batch holding lines with the given expiry policy.
+
+        Caller must hold self._buffer_lock (an RLock, so a re-entrant flush
+        from _send_to_buffer() is fine). Only the named batch is touched: the
+        other one keeps accumulating, which is the whole point of splitting
+        them.
+        """
+        lines = self._buffers[replay_safe]
+        if not lines:
+            return
+        self._buffers[replay_safe] = []
+        self._buffer_sizes[replay_safe] = 0
+        self._send_to_server("\n".join(lines), replay_safe)
+
     def flush_buffered_metrics(self):
         # type: () -> None
         """
         Flush the metrics buffer by sending the data to the server.
+
+        Emits up to two packets, one per expiry policy. Lines keep their
+        relative order within each packet, but ordering *between* the two is
+        not preserved: replay-safe payloads carry their own explicit
+        timestamp, and non-replay-safe ones are timestamped on receipt, so
+        neither one's meaning depends on where the other lands.
         """
         with self._buffer_lock:
-            # Only send packets if there are packets to send
-            if self._buffer:
-                self._send_to_server("\n".join(self._buffer), self._buffer_replay_safe)
-                self._reset_buffer()
+            # Non-replay-safe first: it's the only batch subject to staleness
+            # expiry, so give it the earliest queue position.
+            self._flush_one_buffer(False)
+            self._flush_one_buffer(True)
 
     def flush_aggregated_metrics(self):
         # type: () -> None
@@ -1627,14 +1644,6 @@ class DogStatsd(object):
         tags.extend(self.constant_tags)
         telemetry_tags = ",".join(tags)
 
-        # There's no dedicated wire-protocol metric for expired drops (see
-        # bytes_dropped_expired/packets_dropped_expired for that level of
-        # detail in-process): they're folded into the *_dropped_queue lines
-        # reported to the Agent, since both categories share the same root
-        # cause from the Agent's point of view -- the payload never reached
-        # a socket write attempt, dropped by the queue itself rather than by
-        # the writer. Without this, they'd silently vanish even from the
-        # combined dropped total sent to the Agent.
         bytes_dropped_queue = self.bytes_dropped_queue + self.bytes_dropped_expired
         packets_dropped_queue = self.packets_dropped_queue + self.packets_dropped_expired
 
@@ -1900,21 +1909,19 @@ class DogStatsd(object):
     def _send_to_buffer(self, packet, replay_safe=False):
         # type: (str, bool) -> None
         with self._buffer_lock:
-            if self._should_flush(len(packet)):
-                self.flush_buffered_metrics()
+            replay_safe = bool(replay_safe)
 
-            self._buffer.append(packet)
+            if self._should_flush(len(packet), replay_safe):
+                self._flush_one_buffer(replay_safe)
+
+            self._buffers[replay_safe].append(packet)
             # Update the current buffer length, including line break to anticipate
             # the final packet size
-            self._current_buffer_total_size += len(packet) + 1
-            # The flushed batch is only as replay-safe as its least safe
-            # member: if anything in it needs to be treated as time-sensitive,
-            # treat the whole batch that way.
-            self._buffer_replay_safe = self._buffer_replay_safe and replay_safe
+            self._buffer_sizes[replay_safe] += len(packet) + 1
 
-    def _should_flush(self, length_to_be_added):
-        # type: (int) -> bool
-        if self._current_buffer_total_size + length_to_be_added + 1 > self._max_payload_size:
+    def _should_flush(self, length_to_be_added, replay_safe=False):
+        # type: (int, bool) -> bool
+        if self._buffer_sizes[bool(replay_safe)] + length_to_be_added + 1 > self._max_payload_size:
             return True
         return False
 

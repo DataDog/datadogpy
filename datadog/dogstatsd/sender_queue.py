@@ -120,21 +120,24 @@ class SenderQueue(object):
 
         now = monotonic()
         oldest = self._deque.popleft()
-        # The oldest entry is always dropped to make room. If it happens to
-        # also be expired, attribute it to staleness rather than to the
-        # queue being full, since that's the more useful signal.
+        # The oldest entry is always dropped to make room.
         if self._expired(oldest, now):
             self._on_drop_expired(oldest)
         else:
             self._on_drop_queue_full(oldest)
         self._finish_task_locked()
 
-        # Keep clearing out additional stale entries left at the front: they
-        # would otherwise just sit there consuming a slot until they're
-        # eventually popped.
+        # Keep clearing out additional stale entries left at the front.
+        # If any additional entries were cleared out notify not_full as the
+        # queue will now have available space for additional entries.
+        reclaimed = 0
         while self._deque and self._deque[0] is not Stop and self._expired(self._deque[0], now):
             self._on_drop_expired(self._deque.popleft())
             self._finish_task_locked()
+            reclaimed += 1
+
+        if reclaimed:
+            self._not_full.notify(reclaimed)
 
     def put(self, item):
         # type: (Union[PendingPayload, object]) -> None

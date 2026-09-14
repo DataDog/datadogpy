@@ -1749,6 +1749,79 @@ async def print_foo():
         self.statsd.close_buffer()
         self.assertEqual(mock_warn.call_count, 2)
 
+    def test_mixed_batch_splits_by_replay_safety(self):
+        # A queued packet expires as a single unit, so every line in it has to
+        # share one expiry policy. Batching timestamped lines together with
+        # plain ones would make the whole packet non-replay-safe and strip the
+        # timestamped lines of the staleness exemption they're supposed to
+        # have, dropping them with the batch after ~10s of backlog. The buffer
+        # must split by policy instead.
+        sent = []
+        self.statsd._send_to_server = lambda packet, replay_safe=False: sent.append((packet, replay_safe))
+
+        self.statsd.open_buffer()
+        self.statsd.gauge_with_timestamp("ts.one", 1, timestamp=1700000000)
+        self.statsd.gauge("plain.one", 2)
+        self.statsd.gauge_with_timestamp("ts.two", 3, timestamp=1700000001)
+        self.statsd.gauge("plain.two", 4)
+        self.statsd.close_buffer()
+
+        # One packet per expiry policy, not one per metric: interleaving must
+        # not defeat batching.
+        self.assertEqual(len(sent), 2, "expected exactly one packet per expiry policy, got: {!r}".format(sent))
+
+        by_policy = dict((replay_safe, packet) for packet, replay_safe in sent)
+        self.assertEqual(sorted(by_policy.keys()), [False, True])
+
+        # Assert on structure rather than exact packet text: constant/origin
+        # tags vary by environment, but which lines land in which packet, and
+        # in what order, does not.
+        def names(packet):
+            return [line.split(":")[0] for line in packet.split("\n")]
+
+        self.assertEqual(names(by_policy[True]), ["ts.one", "ts.two"])
+        self.assertEqual(names(by_policy[False]), ["plain.one", "plain.two"])
+
+        # The invariant that actually matters: no packet mixes the two, and no
+        # timestamped line ever rides in an expiring packet.
+        for packet, replay_safe in sent:
+            lines = packet.split("\n")
+            timestamped = [line for line in lines if "|T" in line]
+            if replay_safe:
+                self.assertEqual(timestamped, lines, "replay-safe packet must be entirely timestamped lines")
+            else:
+                self.assertEqual(timestamped, [], "timestamped line leaked into an expiring packet")
+
+    def test_mixed_batch_respects_max_payload_size_per_buffer(self):
+        # Each buffer has to stay under _max_payload_size on its own, and one
+        # buffer overflowing must not drag the other one out with it.
+        sent = []
+        self.statsd._send_to_server = lambda packet, replay_safe=False: sent.append((packet, replay_safe))
+        self.statsd._max_payload_size = 250
+
+        self.statsd.open_buffer()
+        # One small replay-safe line that should still be buffered while the
+        # plain buffer churns through several flushes.
+        self.statsd.gauge_with_timestamp("ts.keep", 1, timestamp=1700000000)
+        for i in range(12):
+            self.statsd.gauge("plain.filler.{}".format(i), i)
+        flushes_before_close = len(sent)
+        self.statsd.close_buffer()
+
+        self.assertGreater(flushes_before_close, 0, "the plain buffer should have overflowed at least once")
+        self.assertTrue(
+            all(not replay_safe for _, replay_safe in sent[:flushes_before_close]),
+            "overflow of the plain buffer must not flush the replay-safe buffer",
+        )
+        for packet, _ in sent:
+            self.assertLessEqual(len(packet) + 1, self.statsd._max_payload_size)
+
+        # The replay-safe line survived to the final flush, intact and alone.
+        final_packet, final_replay_safe = sent[-1]
+        self.assertTrue(final_replay_safe)
+        self.assertEqual([line.split(":")[0] for line in final_packet.split("\n")], ["ts.keep"])
+        self.assertIn("|T1700000000", final_packet)
+
     def test_batching_sequential(self):
         self.statsd.open_buffer()
         self.statsd.gauge('discarded.data', 123)
@@ -2873,6 +2946,73 @@ async def print_foo():
         self.assertGreaterEqual(elapsed, 0.2)
         self.assertEqual([p.payload for p in dropped_queue_full], ["first\n"])
         self.assertEqual(pending_queue.get().payload, "second\n")
+
+    def test_sender_queue_bulk_expired_reclaim_wakes_blocked_producers(self):
+        # When the eviction path's cleanup loop reclaims *more* than the one
+        # slot its caller needs, the surplus is real free capacity. Producers
+        # already parked in put()'s wait-for-room loop have to be told about
+        # it, otherwise they sleep out their full put_timeout while the queue
+        # sits half empty.
+        put_timeout = 1.0
+        maxsize = 4
+        dropped_expired = []
+        pending_queue = SenderQueue(
+            maxsize=maxsize,
+            expiry_seconds=100.0,
+            on_drop_queue_full=lambda item: self.fail("entries are stale: expect expiry drops, not full drops"),
+            on_drop_expired=dropped_expired.append,
+            put_timeout=put_timeout,
+        )
+        # Fill to capacity with entries that are already stale, so the
+        # cleanup loop has something to reclaim beyond the mandatory one.
+        stale_clock = sender_queue_clock() - 1000.0
+        for i in range(maxsize):
+            pending_queue.put(PendingPayload("stale-{}\n".format(i), stale_clock, False))
+
+        result = {}
+
+        def evictor():
+            # Queue is full and nothing drains it, so this waits out
+            # put_timeout and then falls back to eviction, whose cleanup loop
+            # reclaims all remaining stale entries in one go.
+            pending_queue.put(PendingPayload("evictor\n", sender_queue_clock(), False))
+
+        def late_waiter():
+            t0 = time.time()
+            pending_queue.put(PendingPayload("late\n", sender_queue_clock(), False))
+            result["elapsed"] = time.time() - t0
+
+        t_evictor = threading.Thread(target=evictor)
+        t_evictor.start()
+        # Start the second producer halfway through the first one's timeout so
+        # its own deadline is strictly later: it must be woken by the bulk
+        # reclaim, not by its own timeout firing.
+        time.sleep(put_timeout / 2.0)
+        t_late = threading.Thread(target=late_waiter)
+        t_late.start()
+
+        t_evictor.join(timeout=5.0)
+        t_late.join(timeout=5.0)
+        self.assertFalse(t_evictor.is_alive())
+        self.assertFalse(t_late.is_alive())
+
+        # All four stale entries went out through the cleanup path.
+        self.assertEqual(
+            [p.payload for p in dropped_expired],
+            ["stale-0\n", "stale-1\n", "stale-2\n", "stale-3\n"],
+        )
+        # Both live payloads made it, and the queue is well under maxsize.
+        self.assertEqual(pending_queue.qsize(), 2)
+
+        # The heart of it: the late producer had roughly put_timeout/2 left on
+        # its own clock when capacity opened up. Waking on the reclaim means
+        # ~put_timeout/2 elapsed; sleeping through it means the full
+        # put_timeout. Assert it beat its own deadline by a clear margin.
+        self.assertLess(
+            result["elapsed"],
+            put_timeout * 0.9,
+            "blocked producer slept through its put_timeout despite the bulk reclaim freeing capacity",
+        )
 
     def test_sender_queue_requeue_front_never_blocks_on_put_timeout(self):
         # requeue_front() runs on the background sender thread; it must
