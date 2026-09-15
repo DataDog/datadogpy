@@ -181,10 +181,11 @@ UDS_OPTIMAL_PAYLOAD_LENGTH = 8192
 
 # Socket options
 MIN_SEND_BUFFER_SIZE = 32 * 1024
-DEFAULT_SOCKET_CONNECT_TIMEOUT = 0
+# Backoff for the background sender's own retry-by-requeuing loop (see
+# _sender_main_loop). Not used for direct/synchronous sends, which never
+# retry a connection failure regardless of socket_connect_retry.
 UDS_CONNECT_RETRY_INITIAL_BACKOFF = 0.025
-UDS_CONNECT_RETRY_MAX_BACKOFF = 1.0
-UDS_TRANSIENT_CONNECT_ERRORS = set([errno.ENOENT, errno.ECONNREFUSED])
+UDS_CONNECT_RETRY_MAX_BACKOFF = 60.0
 # Errors seen while sending on an already-connected socket that indicate the
 # peer went away (e.g. the agent crashed/restarted). These are worth a single
 # reconnect-and-resend attempt instead of dropping the packet outright.
@@ -307,7 +308,7 @@ class DogStatsd(object):
         sender_queue_size=0,                    # type: int
         sender_queue_timeout=0,                 # type: Optional[float]
         track_instance=True,                    # type: bool
-        socket_connect_timeout=DEFAULT_SOCKET_CONNECT_TIMEOUT,  # type: Optional[float]
+        socket_connect_retry=False,              # type: bool
     ):  # type: (...) -> None
         """
         Initialize a DogStatsd object.
@@ -473,10 +474,15 @@ class DogStatsd(object):
         This option does not affect hostname resolution when using UDP.
         :type socket_timeout: float
 
-        :param socket_connect_timeout: Set the timeout for connecting to a UNIX socket, in seconds. Optional.
-        Transient connection failures are retried within this timeout. If set to zero or None, do not retry.
-        Default: 0 (no retries).
-        :type socket_connect_timeout: float
+        :param socket_connect_retry: Only affects the background sender (disable_background_sender=False).
+        If True, a connection failure while sending a queued payload to a UNIX socket is retried
+        indefinitely, backing off up to once a minute between attempts, instead of dropping the payload
+        immediately. This is safe to enable because a payload stuck retrying is still subject to the
+        sender queue's own expiry: it is eventually dropped as stale rather than retried forever if the
+        Agent never comes back. Direct/synchronous sends (the default mode) always fail fast on a
+        connection error and are unaffected by this setting.
+        Default: False (fail fast, matching the previous socket_connect_timeout=0 default).
+        :type socket_connect_retry: bool
 
         :param telemetry_socket_timeout: Set timeout for the telemetry socket operations. Optional.
         Effective only if either telemetry_host or telemetry_socket_path are set.
@@ -540,7 +546,7 @@ class DogStatsd(object):
         # Connection
         self._max_buffer_len = max_buffer_len
         self.socket_timeout = socket_timeout
-        self.socket_connect_timeout = socket_connect_timeout
+        self.socket_connect_retry = socket_connect_retry
         if socket_path is not None:
             self.socket_path = socket_path  # type: Optional[text]
             self.host = None
@@ -958,23 +964,14 @@ class DogStatsd(object):
 
         return get_default_route()
 
-    def get_socket(self, telemetry=False, connect_timeout=None):
-        # type: (bool, Optional[float]) -> _Socket
+    def get_socket(self, telemetry=False):
+        # type: (bool) -> _Socket
         """
         Return a connected socket.
 
         Note: connect the socket before assigning it to the class instance to
         avoid bad thread race conditions.
-
-        :param connect_timeout: Optional override for the UDS connect-retry
-            budget passed to _get_uds_socket, in place of
-            self.socket_connect_timeout. The send-retry loop in _xmit_packet
-            uses this to pass down how much of its overall deadline is left,
-            so a retried attempt doesn't get a brand-new full budget.
         """
-        if connect_timeout is None:
-            connect_timeout = self.socket_connect_timeout
-
         with self._socket_lock:
             if telemetry and self._dedicated_telemetry_destination():
                 if not self.telemetry_socket:
@@ -982,7 +979,6 @@ class DogStatsd(object):
                         self.telemetry_socket = self._get_uds_socket(
                             self.telemetry_socket_path,
                             self.telemetry_socket_timeout,
-                            connect_timeout,
                         )
                     else:
                         self.telemetry_socket = self._get_udp_socket(
@@ -998,7 +994,6 @@ class DogStatsd(object):
                     self.socket = self._get_uds_socket(
                         self.socket_path,
                         self.socket_timeout,
-                        connect_timeout,
                     )
                 else:
                     self.socket = self._get_udp_socket(
@@ -1034,8 +1029,10 @@ class DogStatsd(object):
                 log.debug("Socket send buffer increased to %dkb", min_size / 1024)
 
     @classmethod
-    def _get_uds_socket(cls, socket_path, timeout, connect_timeout):
-        # type: (Text, Optional[float], Optional[float]) -> _Socket
+    def _get_uds_socket(cls, socket_path, timeout):
+        # type: (Text, Optional[float]) -> _Socket
+        """Make one connect attempt per candidate socket kind.
+        """
         valid_socket_kinds = [socket.SOCK_DGRAM, socket.SOCK_STREAM]
         if socket_path.startswith(UNIX_ADDRESS_DATAGRAM_SCHEME):
             valid_socket_kinds = [socket.SOCK_DGRAM]
@@ -1047,54 +1044,27 @@ class DogStatsd(object):
             socket_path = socket_path[len(UNIX_ADDRESS_SCHEME):]
 
         last_error = socket.timeout("timed out connecting to UDS socket")  # type: Exception
-        deadline = None
-        if connect_timeout and connect_timeout > 0:
-            deadline = time.time() + connect_timeout
-
         for socket_kind in valid_socket_kinds:
             # py2 stores socket kinds differently than py3, determine the name independently from version
             sk_name = {socket.SOCK_STREAM: "stream", socket.SOCK_DGRAM: "datagram"}[socket_kind]
-
-            backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
-
-            while deadline is None or time.time() < deadline:
-                sock = None
-                try:
-                    connect_attempt_timeout = timeout
-                    if deadline is not None:
-                        connect_attempt_timeout = deadline - time.time()
-                        if connect_attempt_timeout <= 0:
-                            break
-
-                    sock = socket.socket(socket.AF_UNIX, socket_kind)
-                    sock.settimeout(connect_attempt_timeout)
-                    cls._ensure_min_send_buffer_size(sock)
-                    sock.connect(socket_path)
-                    sock.settimeout(timeout)
-                    log.debug("Connected to socket %s with kind %s", socket_path, sk_name)
-                    return sock
-                except Exception as e:
-                    if sock is not None:
-                        sock.close()
-                    log.debug("Failed to connect to %s with kind %s: %s", socket_path, sk_name, e)
-                    if getattr(e, "errno", None) == errno.EPROTOTYPE:
-                        last_error = e
-                        break
-                    if (
-                        deadline is not None
-                        and getattr(e, "errno", None) in UDS_TRANSIENT_CONNECT_ERRORS
-                    ):
-                        last_error = e
-                        remaining_time = max(0, deadline - time.time())
-                        sleep_time = min(backoff, remaining_time)
-                        if sleep_time > 0:
-                            time.sleep(sleep_time)
-                            backoff = min(backoff * 2, UDS_CONNECT_RETRY_MAX_BACKOFF)
-                            continue
-                    raise e
-            if getattr(last_error, "errno", None) == errno.EPROTOTYPE:
-                continue
-            raise last_error
+            sock = None
+            try:
+                sock = socket.socket(socket.AF_UNIX, socket_kind)
+                sock.settimeout(timeout)
+                cls._ensure_min_send_buffer_size(sock)
+                sock.connect(socket_path)
+                log.debug("Connected to socket %s with kind %s", socket_path, sk_name)
+                return sock
+            except Exception as e:
+                if sock is not None:
+                    sock.close()
+                log.debug("Failed to connect to %s with kind %s: %s", socket_path, sk_name, e)
+                last_error = e
+                if getattr(e, "errno", None) == errno.EPROTOTYPE:
+                    # Wrong socket kind for this address -- try the other one.
+                    continue
+                raise e
+        # Only reachable if every candidate kind failed with EPROTOTYPE.
         raise last_error
 
     @classmethod
@@ -1725,29 +1695,17 @@ class DogStatsd(object):
 
         return sent
 
-    def _installed_socket(self, is_telemetry):
-        # type: (bool) -> Optional[_Socket]
-        """
-        The socket a send for this packet would use, if one is already installed.
-
-        Returns None when a fresh connection would have to be established, which
-        is the only situation where the socket_connect_timeout budget applies.
-        Callers that mean to gate on "would we have to connect?" must use this
-        rather than the deadline alone.
-        """
-        if is_telemetry and self._dedicated_telemetry_destination():
-            return self.telemetry_socket
-        return self.socket
-
     def _xmit_packet(self, packet, is_telemetry, queue_mode=False):
         # type: (str, bool, bool) -> Optional[bool]
-        """Attempt to send packet, retrying a reconnect within this call as budget allows.
+        """Attempt to send a packet, once.
 
         Returns True if sent. Otherwise returns False for a definitive,
         non-retryable failure (already accounted for as a dropped packet),
-        or -- only when queue_mode is True -- None for a connection failure
-        that the sender queue should retry by requeuing the payload rather
-        than have accounted for here as a drop.
+        or -- only when queue_mode is True, the transport is UDS, and
+        socket_connect_retry is enabled -- None for a connection failure that
+        the sender queue should retry by requeuing the payload (with its own
+        backoff, capped at UDS_CONNECT_RETRY_MAX_BACKOFF) rather than have
+        accounted for here as a drop.
         """
 
         if is_telemetry and self._dedicated_telemetry_destination():
@@ -1755,51 +1713,18 @@ class DogStatsd(object):
         else:
             uses_uds = self.socket_path is not None
 
-        retry_deadline = None
-        if uses_uds and self.socket_connect_timeout and self.socket_connect_timeout > 0:
-            retry_deadline = time.time() + self.socket_connect_timeout
+        # Direct/synchronous sends (queue_mode=False) always fail fast on a
+        # connection error: there is no queue expiry to protect a calling
+        # thread from retrying indefinitely, so socket_connect_retry does not
+        # apply to them. Reconnect-and-retry also stays UDS-only, matching
+        # UDP's different (connectionless) failure semantics.
+        retry_eligible = queue_mode and uses_uds and self.socket_connect_retry
 
-        backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
-        sent = None  # type: Optional[bool]
-        while True:
-            # Cheap fast-path check before even trying to acquire _socket_lock.
-            if (
-                retry_deadline is not None
-                and retry_deadline - time.time() <= 0
-                and not self._installed_socket(is_telemetry)
-            ):
-                log.warning(
-                    "Gave up reconnecting after socket_connect_timeout (%ss), dropping the packet",
-                    self.socket_connect_timeout,
-                )
-                sent = None
-                break
+        sent = self._xmit_packet_attempt(packet, is_telemetry, retry_eligible)
+        if sent:
+            return True
 
-            sent = self._xmit_packet_attempt(
-                packet, is_telemetry, retry_eligible=retry_deadline is not None, retry_deadline=retry_deadline
-            )
-            if sent:
-                return True
-            # `sent` is False for a definitive failure (already logged/dropped
-            # above), or None for a transient one that's worth reconnecting
-            # and retrying, bounded by socket_connect_timeout.
-            #
-            # A None result implies retry_eligible, which implies a deadline was
-            # set; the explicit check keeps that invariant locally provable
-            # (for readers and for the type checker) instead of implicit.
-            if sent is not None or retry_deadline is None:
-                break
-            remaining = retry_deadline - time.time()
-            if remaining <= 0:
-                log.warning(
-                    "Gave up reconnecting after socket_connect_timeout (%ss), dropping the packet",
-                    self.socket_connect_timeout,
-                )
-                break
-            time.sleep(min(backoff, remaining))
-            backoff = min(backoff * 2, UDS_CONNECT_RETRY_MAX_BACKOFF)
-
-        if sent is None and queue_mode:
+        if sent is None:
             # Connection trouble, and the caller is the background sender
             # queue: let it requeue the payload and retry once reconnected,
             # instead of dropping it here.
@@ -1810,48 +1735,24 @@ class DogStatsd(object):
             self.packets_dropped_writer += 1
         return False
 
-    def _xmit_packet_attempt(self, packet, is_telemetry, retry_eligible, retry_deadline=None):
-        # type: (str, bool, bool, Optional[float]) -> Optional[bool]
+    def _xmit_packet_attempt(self, packet, is_telemetry, retry_eligible):
+        # type: (str, bool, bool) -> Optional[bool]
         """
         Attempt to send a single packet.
 
         Returns True if the packet was sent, False if it should be dropped
         without retrying, or None if the failure is transient (the peer went
-        away), `retry_eligible` is set, and it's worth a reconnect-and-retry.
-
-        :param retry_deadline: Optional absolute time.time()-based deadline
-            for the overall _xmit_packet retry operation. The connect_timeout
-            handed to get_socket() is computed from this only after
-            _socket_lock is actually acquired (not before), so time spent
-            waiting on a contended lock counts against the budget instead of
-            silently extending it.
+        away, which includes a failed reconnect), `retry_eligible` is set,
+        and it's worth a reconnect-and-retry by the caller.
         """
         socket_kind = None
         with self._socket_lock:
             try:
-                # Captured under the lock, before the deadline check: whether a
-                # socket already exists decides whether that deadline is even
-                # relevant to this attempt.
-                existing_socket = self._installed_socket(is_telemetry)
-
-                connect_timeout = self.socket_connect_timeout
-                if retry_deadline is not None:
-                    connect_timeout = retry_deadline - time.time()
-                    if connect_timeout <= 0 and not existing_socket:
-                        log.warning(
-                            "Gave up reconnecting after socket_connect_timeout (%ss), dropping the packet",
-                            self.socket_connect_timeout,
-                        )
-                        return False
-
                 if is_telemetry and self._dedicated_telemetry_destination():
-                    mysocket = existing_socket or self.get_socket(
-                        telemetry=True, connect_timeout=connect_timeout
-                    )
+                    mysocket = self.get_socket(telemetry=True)
                     socket_kind = self._telemetry_socket_kind
                 else:
-                    # If set, use socket directly
-                    mysocket = existing_socket or self.get_socket(connect_timeout=connect_timeout)
+                    mysocket = self.get_socket()
                     socket_kind = self._socket_kind
 
                 encoded_packet = packet.encode(self.encoding)

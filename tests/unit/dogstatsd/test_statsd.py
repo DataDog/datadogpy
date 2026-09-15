@@ -30,7 +30,7 @@ import pytest
 # Datadog libraries
 from datadog import initialize, statsd
 from datadog import __version__ as version
-from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, PENDING_PAYLOAD_EXPIRY_SECONDS, PendingPayload, SenderQueue, Stop, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_CONNECT_RETRY_INITIAL_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
+from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, PENDING_PAYLOAD_EXPIRY_SECONDS, PendingPayload, SenderQueue, Stop, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_CONNECT_RETRY_MAX_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
 from datadog.util.compat import monotonic as sender_queue_clock
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
@@ -927,79 +927,50 @@ class TestDogStatsd(unittest.TestCase):
                 mock.ANY,
             )
 
-    def _uds_statsd(self, connect_timeout):
+    def _uds_statsd(self, socket_connect_retry=False):
         """
         A UDS-backed client whose current socket is already broken.
 
         The reconnect-and-retry path in _xmit_packet is deliberately scoped to
         UDS only, so these tests must not use the default UDP client.
         """
-        statsd = DogStatsd(socket_path='/tmp/dogstatsd-test.sock', telemetry_min_flush_interval=0)
-        statsd.socket_connect_timeout = connect_timeout
+        statsd = DogStatsd(
+            socket_path='/tmp/dogstatsd-test.sock',
+            disable_telemetry=True,
+            socket_connect_retry=socket_connect_retry,
+        )
         statsd.socket = BrokenSocket(error_number=errno.ECONNREFUSED)
-        statsd._reset_telemetry()
         return statsd
 
     @patch('datadog.dogstatsd.base.DogStatsd._get_uds_socket')
-    def test_socket_connection_error_reconnects_and_resends(self, mock_get_uds_socket):
-        working_socket = FakeSocket()
-        mock_get_uds_socket.return_value = working_socket
-        statsd = self._uds_statsd(connect_timeout=5)
+    def test_direct_send_never_retries_uds_even_with_socket_connect_retry_enabled(self, mock_get_uds_socket):
+        # socket_connect_retry only affects the background sender: a direct/
+        # synchronous send (background sender disabled, the default) has no
+        # queue and no expiry to protect the calling thread, so it must always
+        # fail fast on a connection error regardless of this setting.
+        mock_get_uds_socket.return_value = FakeSocket()
+        statsd = self._uds_statsd(socket_connect_retry=True)
 
-        with mock.patch("datadog.dogstatsd.base.log") as mock_log:
-            statsd.gauge('reconnected', 1)
-            statsd.flush()
-
-            mock_log.error.assert_not_called()
-            mock_log.warning.assert_not_called()
-
-        # The packet was not dropped: it was resent once a fresh socket was obtained.
-        mock_get_uds_socket.assert_called_once()
-        self.assertEqual(statsd.packets_dropped_writer, 0)
-        self.assertEqual(working_socket.payloads[0].decode('utf-8'), 'reconnected:1|g\n')
-
-    def test_socket_connection_error_drops_packet_if_reconnect_also_fails(self):
-        # Small deadline so the retry loop gives up quickly in the test.
-        statsd = self._uds_statsd(connect_timeout=0.05)
-
-        with mock.patch.object(
-            DogStatsd, '_get_uds_socket', side_effect=socket.error(errno.ECONNREFUSED, "still refused")
-        ):
+        with mock.patch.object(statsd.socket, 'send', wraps=statsd.socket.send) as mock_send:
             with mock.patch("datadog.dogstatsd.base.log") as mock_log:
-                statsd.gauge('no error', 1)
-                statsd.flush()
+                statsd.gauge('not reconnected', 1)
 
                 mock_log.error.assert_not_called()
+                mock_log.warning.assert_called_once_with(
+                    "Error submitting packet: %s, dropping the packet and closing the socket",
+                    mock.ANY,
+                )
 
-        # Both the metric and the telemetry flush hit the same broken reconnect and get dropped
-        # once the retry deadline is exhausted.
-        self.assertEqual(statsd.packets_dropped_writer, 2)
+            # A single send attempt on the broken socket, then dropped -- no
+            # reconnect-and-resend, and no connect was ever attempted either.
+            mock_send.assert_called_once()
 
-    @patch('datadog.dogstatsd.base.DogStatsd._get_uds_socket')
-    def test_socket_connection_error_retries_multiple_times_before_success(self, mock_get_uds_socket):
-        working_socket = FakeSocket()
-        mock_get_uds_socket.side_effect = [
-            socket.error(errno.ECONNREFUSED, "still refused"),
-            socket.error(errno.ECONNREFUSED, "still refused"),
-            working_socket,
-        ]
-        # Long enough to cover a few backoff sleeps well under a second.
-        statsd = self._uds_statsd(connect_timeout=5)
-
-        with mock.patch("datadog.dogstatsd.base.log") as mock_log:
-            statsd.gauge('reconnected after retries', 1)
-
-            mock_log.warning.assert_not_called()
-
-        # Two failed reconnect attempts, then a third that finally succeeds.
-        self.assertEqual(mock_get_uds_socket.call_count, 3)
-        self.assertEqual(statsd.packets_dropped_writer, 0)
-        self.assertTrue(working_socket.payloads[0].decode('utf-8').startswith('reconnected after retries:1|g'))
+        mock_get_uds_socket.assert_not_called()
 
     def test_socket_connection_error_does_not_retry_for_udp(self):
         # Reconnect-and-retry is UDS-only: a UDP client drops the packet on a
-        # transient connection error even when socket_connect_timeout is set.
-        self.statsd.socket_connect_timeout = 5
+        # transient connection error even with socket_connect_retry enabled.
+        self.statsd.socket_connect_retry = True
         broken_socket = BrokenSocket(error_number=errno.ECONNREFUSED)
         self.statsd.socket = broken_socket
 
@@ -1016,67 +987,30 @@ class TestDogStatsd(unittest.TestCase):
             # No reconnect-and-resend: a single send attempt, then dropped.
             mock_send.assert_called_once()
 
-    @patch('datadog.dogstatsd.base.DogStatsd._get_uds_socket')
-    def test_expired_deadline_sends_on_socket_installed_by_another_thread(self, mock_get_uds_socket):
-        # socket_connect_timeout budgets *connecting*. If another thread already
-        # installed a healthy socket while this one waited for _socket_lock, the
-        # spent budget is irrelevant: sending on it does no connecting, so the
-        # packet must not be dropped at the moment of recovery.
-        statsd = self._uds_statsd(connect_timeout=5)
-        working_socket = FakeSocket()
-        statsd.socket = working_socket
-
-        with mock.patch("datadog.dogstatsd.base.log") as mock_log:
-            sent = statsd._xmit_packet_attempt(
-                'recovered:1|g\n',
-                is_telemetry=False,
-                retry_eligible=True,
-                retry_deadline=time.time() - 1,  # budget consumed while waiting for the lock
-            )
-
-            self.assertTrue(sent)
-            mock_log.warning.assert_not_called()
-
-        # The installed socket was used as-is; no connect was attempted.
-        mock_get_uds_socket.assert_not_called()
-        self.assertEqual(working_socket.payloads[0].decode('utf-8'), 'recovered:1|g\n')
-
-    @patch('datadog.dogstatsd.base.DogStatsd._get_uds_socket')
-    def test_expired_deadline_drops_when_a_connect_would_be_needed(self, mock_get_uds_socket):
-        # The complement of the case above, and the reason the guard exists at
-        # all: with no socket installed, an expired budget must not reach
-        # get_socket(), which treats a <= 0 connect_timeout as "unbounded".
-        statsd = self._uds_statsd(connect_timeout=5)
-        statsd.socket = None
-
-        with mock.patch("datadog.dogstatsd.base.log") as mock_log:
-            sent = statsd._xmit_packet_attempt(
-                'dropped:1|g\n',
-                is_telemetry=False,
-                retry_eligible=True,
-                retry_deadline=time.time() - 1,
-            )
-
-            self.assertFalse(sent)
-            mock_log.warning.assert_called_once_with(
-                "Gave up reconnecting after socket_connect_timeout (%ss), dropping the packet",
-                5,
-            )
-
-        mock_get_uds_socket.assert_not_called()
+    def test_socket_connect_retry_defaults_to_false(self):
+        self.assertFalse(self.statsd.socket_connect_retry)
 
     def test_concurrent_reconnect_does_not_drop_backlog_after_recovery(self):
-        # End-to-end ordering: thread A reconnects slowly while holding
-        # _socket_lock; B queues behind it and has its entire connect budget
-        # consumed by the wait. Once A installs a healthy socket, B must send on
-        # it rather than discard its packet.
-        statsd = self._uds_statsd(connect_timeout=0.2)
+        # End-to-end ordering: thread A connects slowly while holding
+        # _socket_lock (no socket installed yet); B queues right behind it on
+        # the same lock. Once A installs a healthy socket, B must send on it
+        # rather than also trying to connect -- get_socket() always prefers an
+        # already-installed socket over connecting again. Direct sends never
+        # retry now, so unlike the old version of this test, neither packet
+        # can survive a *failed* connect; this exercises the still-relevant
+        # part, concurrent first-time connects sharing one outcome.
+        statsd = DogStatsd(
+            socket_path='/tmp/dogstatsd-test-concurrent.sock',
+            disable_telemetry=True,
+        )
         working_socket = FakeSocket()
 
         a_is_connecting = threading.Event()
         release_connect = threading.Event()
+        connect_calls = []
 
         def slow_connect(*args, **kwargs):
+            connect_calls.append(1)
             a_is_connecting.set()
             release_connect.wait(5)
             return working_socket
@@ -1089,14 +1023,17 @@ class TestDogStatsd(unittest.TestCase):
             thread_b = Thread(target=lambda: statsd.gauge('from-b', 1))
             thread_b.start()
 
-            # Let B's whole 0.2s budget elapse while it blocks on _socket_lock,
-            # then let A's connect succeed and install the socket.
-            time.sleep(0.5)
+            # Give B a moment to reach and block on _socket_lock (held by A's
+            # in-progress connect), then let A's connect succeed and install
+            # the socket.
+            time.sleep(0.2)
             release_connect.set()
 
             thread_a.join(5)
             thread_b.join(5)
             self.assertFalse(thread_a.is_alive())
+            # B reused the socket A installed rather than connecting itself.
+            self.assertEqual(connect_calls, [1])
             self.assertFalse(thread_b.is_alive())
 
         payloads = [payload.decode('utf-8') for payload in working_socket.payloads]
@@ -1134,25 +1071,6 @@ class TestDogStatsd(unittest.TestCase):
         sender_thread.join(2)
         closer_thread.join(2)
         self.assertFalse(closer_thread.is_alive())
-
-    def test_socket_connection_error_does_not_retry_without_connect_timeout(self):
-        # socket_connect_timeout defaults to 0 (unset): no reconnect attempt should be made
-        # for this packet, it should be dropped immediately instead.
-        self.assertEqual(self.statsd.socket_connect_timeout, 0)
-        broken_socket = BrokenSocket(error_number=errno.ECONNREFUSED)
-        self.statsd.socket = broken_socket
-
-        with mock.patch.object(broken_socket, 'send', wraps=broken_socket.send) as mock_send:
-            with mock.patch("datadog.dogstatsd.base.log") as mock_log:
-                self.statsd.gauge('not reconnected', 1)
-
-                mock_log.warning.assert_called_once_with(
-                    "Error submitting packet: %s, dropping the packet and closing the socket",
-                    mock.ANY,
-                )
-
-            # Only one send attempt was made on the broken socket: no reconnect-and-resend.
-            mock_send.assert_called_once()
 
     def test_socket_overflown(self):
         self.statsd.socket = OverflownSocket()
@@ -1210,82 +1128,46 @@ class TestDogStatsd(unittest.TestCase):
             MIN_SEND_BUFFER_SIZE,
         )
 
-    @patch('datadog.dogstatsd.base.time.sleep')
     @patch('socket.socket')
-    def test_uds_socket_retries_missing_socket_until_timeout(self, mock_socket_create, mock_sleep):
-        missing_socket_error = socket.error(errno.ENOENT, os.strerror(errno.ENOENT))
-        first_socket = Mock()
-        first_socket.connect.side_effect = missing_socket_error
-        first_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
-        second_socket = Mock()
-        second_socket.connect.return_value = None
-        second_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
-        mock_socket_create.side_effect = [first_socket, second_socket]
-
-        datadog = DogStatsd(
-            socket_path="/fake/uds/socket/path",
-            socket_timeout=0.1,
-            socket_connect_timeout=1,
-        )
-        datadog.gauge('some value', 1)
-        datadog.flush()
-
-        self.assertEqual(mock_socket_create.call_count, 2)
-        first_socket.close.assert_called_once()
-        second_socket.close.assert_not_called()
-        second_socket.settimeout.assert_called_with(0.1)
-        mock_sleep.assert_any_call(UDS_CONNECT_RETRY_INITIAL_BACKOFF)
-
-    @patch('datadog.dogstatsd.base.time.sleep')
-    @patch('socket.socket')
-    def test_uds_socket_retries_refused_socket_until_timeout(self, mock_socket_create, mock_sleep):
-        refused_socket_error = socket.error(errno.ECONNREFUSED, os.strerror(errno.ECONNREFUSED))
-        first_socket = Mock()
-        first_socket.connect.side_effect = refused_socket_error
-        first_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
-        second_socket = Mock()
-        second_socket.connect.return_value = None
-        second_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
-        mock_socket_create.side_effect = [first_socket, second_socket]
-
-        datadog = DogStatsd(
-            socket_path="unixstream:///fake/uds/socket/path",
-            socket_timeout=0.1,
-            socket_connect_timeout=1,
-        )
-        datadog.gauge('some value', 1)
-        datadog.flush()
-
-        self.assertEqual(mock_socket_create.call_count, 2)
-        first_socket.close.assert_called_once()
-        second_socket.close.assert_not_called()
-        second_socket.settimeout.assert_called_with(0.1)
-        mock_sleep.assert_any_call(UDS_CONNECT_RETRY_INITIAL_BACKOFF)
-
-    @patch('datadog.dogstatsd.base.time.sleep')
-    @patch('datadog.dogstatsd.base.time.time', side_effect=[0, 0, 0, 0.5, 0.9, 1.1])
-    @patch('socket.socket')
-    def test_uds_socket_never_sets_expired_deadline(self, mock_socket_create, mock_time, mock_sleep):
+    def test_uds_socket_missing_socket_fails_immediately_no_retry(self, mock_socket_create):
+        # _get_uds_socket makes exactly one connect attempt now: retrying a
+        # connect failure, if at all, is the caller's job (socket_connect_retry
+        # for the background sender; never for a direct send).
         missing_socket_error = socket.error(errno.ENOENT, os.strerror(errno.ENOENT))
         mock_socket = mock_socket_create.return_value
         mock_socket.connect.side_effect = missing_socket_error
         mock_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
 
         with self.assertRaises(socket.error) as raised:
-            DogStatsd._get_uds_socket("unixgram:///fake/uds/socket/path", 0.1, 1)
+            DogStatsd._get_uds_socket("unixgram:///fake/uds/socket/path", 0.1)
 
         self.assertEqual(raised.exception.errno, errno.ENOENT)
         mock_socket_create.assert_called_once_with(socket.AF_UNIX, socket.SOCK_DGRAM)
-        mock_socket.settimeout.assert_called_once_with(1)
+        mock_socket.settimeout.assert_called_once_with(0.1)
+        mock_socket.close.assert_called_once()
 
-    @patch('datadog.dogstatsd.base.time.time', side_effect=[0, 0.9, 1.1])
     @patch('socket.socket')
-    def test_uds_socket_raises_timeout_before_first_attempt(self, mock_socket_create, mock_time):
-        with self.assertRaises(socket.timeout) as raised:
-            DogStatsd._get_uds_socket("unixgram:///fake/uds/socket/path", 0.1, 1)
+    def test_uds_socket_falls_back_to_the_other_kind_on_eprototype(self, mock_socket_create):
+        # EPROTOTYPE means "wrong socket kind for this address", not a
+        # transient failure: _get_uds_socket falls back to the other
+        # candidate kind for it (still one connect attempt per kind), rather
+        # than retrying the same kind or giving up.
+        wrong_kind_socket = Mock()
+        wrong_kind_socket.connect.side_effect = socket.error(errno.EPROTOTYPE, os.strerror(errno.EPROTOTYPE))
+        wrong_kind_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
+        right_kind_socket = Mock()
+        right_kind_socket.connect.return_value = None
+        right_kind_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
+        mock_socket_create.side_effect = [wrong_kind_socket, right_kind_socket]
 
-        self.assertEqual(str(raised.exception), "timed out connecting to UDS socket")
-        mock_socket_create.assert_not_called()
+        sock = DogStatsd._get_uds_socket("/fake/uds/socket/path", 0.1)
+
+        self.assertIs(sock, right_kind_socket)
+        mock_socket_create.assert_has_calls([
+            call(socket.AF_UNIX, socket.SOCK_DGRAM),
+            call(socket.AF_UNIX, socket.SOCK_STREAM),
+        ])
+        wrong_kind_socket.close.assert_called_once()
 
     @patch('socket.socket')
     def test_udp_socket_ensures_min_receive_buffer(self, mock_socket_create):
@@ -3649,13 +3531,14 @@ async def print_foo():
         statsd.stop()
 
     def test_connection_failure_requeues_and_resends_once_reconnected(self):
-        # A UDS client whose socket is broken, with a small connect budget so
-        # the internal reconnect-and-retry loop inside _xmit_packet gives up
-        # quickly and hands off to the sender queue's own retry-by-requeuing.
+        # A UDS client whose socket is broken. socket_connect_retry=True is
+        # what makes queue-mode sends hand off a connection failure to the
+        # sender queue's own retry-by-requeuing instead of dropping the
+        # payload on the first attempt -- direct sends never do this.
         working_socket = FakeSocket()
         attempts = {"count": 0}
 
-        def flaky_get_uds_socket(cls, socket_path, timeout, connect_timeout):
+        def flaky_get_uds_socket(cls, socket_path, timeout):
             attempts["count"] += 1
             if attempts["count"] < 4:
                 raise socket.error(errno.ECONNREFUSED, "still refused")
@@ -3666,8 +3549,8 @@ async def print_foo():
                 socket_path="/tmp/dogstatsd-test-requeue.sock",
                 disable_telemetry=True,
                 disable_background_sender=False,
+                socket_connect_retry=True,
             )
-            statsd.socket_connect_timeout = 0.05
 
             statsd.gauge("eventually.sent", 1)
             statsd.wait_for_pending()
@@ -3681,6 +3564,33 @@ async def print_foo():
         self.assertTrue(working_socket.payloads[0].decode("utf-8").startswith("eventually.sent:1|g"))
 
         statsd.stop()
+
+    def test_queue_mode_drops_immediately_by_default(self):
+        # socket_connect_retry defaults to False for the background sender
+        # too: without it, a connection failure on a queued payload is
+        # accounted as a writer drop on the very first attempt, exactly like
+        # a direct send, rather than requeued and retried.
+        statsd = DogStatsd(
+            socket_path="/tmp/dogstatsd-test-no-retry-queue.sock",
+            disable_background_sender=False,
+        )
+        self.assertFalse(statsd.socket_connect_retry)
+        statsd.socket = BrokenSocket(error_number=errno.ECONNREFUSED)
+
+        statsd.gauge("dropped.immediately", 1)
+        statsd.wait_for_pending()
+
+        self.assertGreaterEqual(statsd.packets_dropped_writer, 1)
+        self.assertEqual(statsd.packets_dropped_expired, 0)
+        statsd.stop()
+
+    def test_queue_mode_retry_backoff_caps_at_one_minute(self):
+        # "Backoff...to a maximum of once per minute": the doubling algorithm
+        # in _sender_main_loop is unchanged (already exercised end-to-end by
+        # test_connection_failure_requeues_and_resends_once_reconnected,
+        # which drives it through several real doublings below the cap); what
+        # changed is this constant, from the old 1-second cap to 60.
+        self.assertEqual(UDS_CONNECT_RETRY_MAX_BACKOFF, 60.0)
 
     def test_set_socket_timeout(self):
         statsd = DogStatsd(disable_background_sender=False)
