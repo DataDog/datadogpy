@@ -182,10 +182,12 @@ UDS_OPTIMAL_PAYLOAD_LENGTH = 8192
 # Socket options
 MIN_SEND_BUFFER_SIZE = 32 * 1024
 # Backoff for the background sender's own retry-by-requeuing loop (see
-# _sender_main_loop). Not used for direct/synchronous sends, which never
-# retry a connection failure regardless of socket_connect_retry.
-UDS_CONNECT_RETRY_INITIAL_BACKOFF = 0.025
-UDS_CONNECT_RETRY_MAX_BACKOFF = 60.0
+# _sender_main_loop). Covers every retryable failure it sees, connect and
+# mid-send alike -- not just connects, hence the transport-neutral name. Not
+# used for direct/synchronous sends, which never retry a connection failure
+# regardless of socket_connect_retry.
+SENDER_RETRY_INITIAL_BACKOFF = 0.025
+SENDER_RETRY_MAX_BACKOFF = 60.0
 # Errors seen while sending on an already-connected socket that indicate the
 # peer went away (e.g. the agent crashed/restarted). These are worth a single
 # reconnect-and-resend attempt instead of dropping the packet outright.
@@ -477,10 +479,10 @@ class DogStatsd(object):
         :param socket_connect_retry: Only affects the background sender (disable_background_sender=False).
         If True, a connection failure while sending a queued payload to a UNIX socket is retried
         indefinitely, backing off up to once a minute between attempts, instead of dropping the payload
-        immediately. This is safe to enable because a payload stuck retrying is still subject to the
-        sender queue's own expiry: it is eventually dropped as stale rather than retried forever if the
-        Agent never comes back. Direct/synchronous sends (the default mode) always fail fast on a
-        connection error and are unaffected by this setting.
+        immediately. Ordinary payloads stuck retrying are eventually dropped as stale by the sender
+        queue's own expiry stop() and pre_fork() interrupt the retrying rather than waiting for it.
+        Direct/synchronous sends (the default mode) always fail fast on a connection error and are
+        unaffected by this setting.
         Default: False (fail fast, matching the previous socket_connect_timeout=0 default).
         :type socket_connect_retry: bool
 
@@ -640,6 +642,9 @@ class DogStatsd(object):
 
         self._queue = None  # type: Optional[SenderQueue]
         self._sender_thread = None  # type: Optional[threading.Thread]
+        # Set to ask a running sender thread to stop. Also what makes its
+        # retry backoff interruptible -- see _sender_main_loop.
+        self._sender_stopping = threading.Event()
         self._sender_enabled = False
 
         if not disable_background_sender:
@@ -883,6 +888,15 @@ class DogStatsd(object):
         # type: () -> bool
         return bool(self.telemetry_socket_path or self.telemetry_host)
 
+    def _uses_dedicated_telemetry(self, is_telemetry):
+        # type: (bool) -> bool
+        """True when this packet goes to a separate telemetry destination.
+
+        Decides which socket/socket_path pair applies to a packet, so the
+        send path and its transport check can't disagree about it.
+        """
+        return is_telemetry and self._dedicated_telemetry_destination()
+
     # Context manager helper
     def __enter__(self):
         # type: () -> DogStatsd
@@ -1043,8 +1057,8 @@ class DogStatsd(object):
         elif socket_path.startswith(UNIX_ADDRESS_SCHEME):
             socket_path = socket_path[len(UNIX_ADDRESS_SCHEME):]
 
-        last_error = socket.timeout("timed out connecting to UDS socket")  # type: Exception
-        for socket_kind in valid_socket_kinds:
+        for index, socket_kind in enumerate(valid_socket_kinds):
+            is_last_kind = index == len(valid_socket_kinds) - 1
             # py2 stores socket kinds differently than py3, determine the name independently from version
             sk_name = {socket.SOCK_STREAM: "stream", socket.SOCK_DGRAM: "datagram"}[socket_kind]
             sock = None
@@ -1059,13 +1073,14 @@ class DogStatsd(object):
                 if sock is not None:
                     sock.close()
                 log.debug("Failed to connect to %s with kind %s: %s", socket_path, sk_name, e)
-                last_error = e
-                if getattr(e, "errno", None) == errno.EPROTOTYPE:
+                if getattr(e, "errno", None) == errno.EPROTOTYPE and not is_last_kind:
                     # Wrong socket kind for this address -- try the other one.
                     continue
-                raise e
-        # Only reachable if every candidate kind failed with EPROTOTYPE.
-        raise last_error
+                raise
+        # Unreachable: valid_socket_kinds is never empty, and every path above
+        # either returns or raises. Present only so this always has a return
+        # type of _Socket.
+        raise socket.error("no usable socket kind for {}".format(socket_path))
 
     @classmethod
     def _get_udp_socket(cls, host, port, timeout):
@@ -1704,11 +1719,11 @@ class DogStatsd(object):
         or -- only when queue_mode is True, the transport is UDS, and
         socket_connect_retry is enabled -- None for a connection failure that
         the sender queue should retry by requeuing the payload (with its own
-        backoff, capped at UDS_CONNECT_RETRY_MAX_BACKOFF) rather than have
+        backoff, capped at SENDER_RETRY_MAX_BACKOFF) rather than have
         accounted for here as a drop.
         """
 
-        if is_telemetry and self._dedicated_telemetry_destination():
+        if self._uses_dedicated_telemetry(is_telemetry):
             uses_uds = self.telemetry_socket_path is not None
         else:
             uses_uds = self.socket_path is not None
@@ -1748,7 +1763,7 @@ class DogStatsd(object):
         socket_kind = None
         with self._socket_lock:
             try:
-                if is_telemetry and self._dedicated_telemetry_destination():
+                if self._uses_dedicated_telemetry(is_telemetry):
                     mysocket = self.get_socket(telemetry=True)
                     socket_kind = self._telemetry_socket_kind
                 else:
@@ -2044,6 +2059,10 @@ class DogStatsd(object):
         if self._queue is not None:
             return
 
+        # A previous _stop_sender_thread() leaves this set; clear it before the
+        # new sender starts so it doesn't immediately think it's shutting down.
+        self._sender_stopping.clear()
+
         self._queue = SenderQueue(
             self._sender_queue_size,
             PENDING_PAYLOAD_EXPIRY_SECONDS,
@@ -2063,6 +2082,13 @@ class DogStatsd(object):
 
     def _stop_sender_thread(self, timeout=None):
         # type: (Optional[float]) -> bool
+        # Ask the sender to stop before anything else: this is what breaks it
+        # out of a retry backoff (which can be as long as
+        # SENDER_RETRY_MAX_BACKOFF) instead of having to wait that out, and
+        # what lets it give up on a payload that would otherwise starve the
+        # Stop sentinel forever (see _sender_main_loop).
+        self._sender_stopping.set()
+
         # Lock ensures that nothing gets added to the queue after we disable it.
         with self._buffer_lock:
             if self._queue is not None:
@@ -2095,18 +2121,30 @@ class DogStatsd(object):
         self._sender_thread = None
         return True
 
+    def _release_sender_state(self, pending_queue):
+        # type: (SenderQueue) -> None
+        """Drop the client's pointers to this sender's queue and thread.
+
+        Called by the sender thread on its way out so the client self-heals
+        and a later enable_background_sender() can start fresh -- even when
+        this exit wasn't awaited, e.g. a stop(timeout) that timed out and the
+        caller moved on. The guards check this thread still owns the fields: a
+        newer sender may have already taken over.
+        """
+        with self._buffer_lock:
+            if self._queue is pending_queue:
+                self._queue = None
+        if self._sender_thread is threading.current_thread():
+            self._sender_thread = None
+
     def _sender_main_loop(self, pending_queue):
         # type: (SenderQueue) -> None
-        backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
+        backoff = SENDER_RETRY_INITIAL_BACKOFF
         while True:
             item = pending_queue.get()
             if item is Stop:
                 pending_queue.task_done()
-                with self._buffer_lock:
-                    if self._queue is pending_queue:
-                        self._queue = None
-                if self._sender_thread is threading.current_thread():
-                    self._sender_thread = None
+                self._release_sender_state(pending_queue)
                 return
 
             # next line has type ignore because the type checker cannot
@@ -2122,15 +2160,24 @@ class DogStatsd(object):
                 # future get()) is what eventually gives up on a payload
                 # that's been stuck for too long, unless it's replay-safe.
                 pending_queue.requeue_front(item)  # type: ignore[arg-type]
-                time.sleep(backoff)
-                backoff = min(backoff * 2, UDS_CONNECT_RETRY_MAX_BACKOFF)
+
+                # Interruptible backoff. 
+                self._sender_stopping.wait(backoff)
+                if self._sender_stopping.is_set():
+                    # Checked rather than using wait()'s return value, which
+                    # is only meaningful on Python 2.7+ -- and this module
+                    # still supports 2.7, where several other wait() APIs
+                    # return None.
+                    self._release_sender_state(pending_queue)
+                    return
+                backoff = min(backoff * 2, SENDER_RETRY_MAX_BACKOFF)
                 continue
 
             # Sent, or a definitive failure that _xmit_packet already
             # accounted for as a dropped packet -- either way, this
             # payload's story is over.
             pending_queue.task_done()
-            backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
+            backoff = SENDER_RETRY_INITIAL_BACKOFF
 
     def wait_for_pending(self, timeout=None):
         # type: (Optional[float]) -> bool

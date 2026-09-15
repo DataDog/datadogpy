@@ -30,7 +30,7 @@ import pytest
 # Datadog libraries
 from datadog import initialize, statsd
 from datadog import __version__ as version
-from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, PENDING_PAYLOAD_EXPIRY_SECONDS, PendingPayload, SenderQueue, Stop, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_CONNECT_RETRY_MAX_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
+from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, PENDING_PAYLOAD_EXPIRY_SECONDS, PendingPayload, SenderQueue, Stop, UDP_OPTIMAL_PAYLOAD_LENGTH, SENDER_RETRY_MAX_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
 from datadog.util.compat import monotonic as sender_queue_clock
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
@@ -3590,7 +3590,101 @@ async def print_foo():
         # test_connection_failure_requeues_and_resends_once_reconnected,
         # which drives it through several real doublings below the cap); what
         # changed is this constant, from the old 1-second cap to 60.
-        self.assertEqual(UDS_CONNECT_RETRY_MAX_BACKOFF, 60.0)
+        self.assertEqual(SENDER_RETRY_MAX_BACKOFF, 60.0)
+
+    def _unreachable_retrying_client(self):
+        """Background-sender client whose UDS path will never exist.
+
+        socket_connect_retry=True, so every queued payload fails to connect
+        and gets requeued at the FRONT of the queue -- ahead of any Stop
+        sentinel.
+        """
+        sock_path = os.path.join(tempfile.mkdtemp(), "never-created.sock")
+        return DogStatsd(
+            socket_path="unix://" + sock_path,
+            socket_connect_retry=True,
+            disable_background_sender=False,
+            disable_telemetry=True,
+            # Keep these out of the module-level _instances WeakSet: the
+            # pre_fork test below abandons its instance with _config_lock
+            # still held, and the global os.register_at_fork hooks iterate
+            # _instances -- a later real fork() would deadlock on it.
+            track_instance=False,
+        )
+
+    def test_stop_is_bounded_with_a_stuck_replay_safe_payload(self):
+        # requeue_front() puts a failed payload back ahead of the Stop
+        # sentinel, and replay-safe payloads are exempt from the queue's
+        # expiry, so such a payload never resolves while the Agent is down.
+        # Without an interruptible shutdown signal the sender never reaches
+        # Stop at all and stop() hangs forever.
+        statsd = self._unreachable_retrying_client()
+        statsd.gauge_with_timestamp("replay.safe", 1, timestamp=int(time.time()))
+        time.sleep(0.1)  # let the sender pick it up and start retrying
+
+        t0 = time.time()
+        self.assertIs(self._call_bounded(statsd.stop, ()), True)
+        self.assertLess(time.time() - t0, 5.0, "stop() did not interrupt the retry loop")
+        self.assertIsNone(statsd._queue)
+
+    def test_pre_fork_is_bounded_with_a_stuck_replay_safe_payload(self):
+        # Same starvation, reached through pre_fork() -- which matters more:
+        # it is installed as an os.register_at_fork hook, has no timeout
+        # parameter, and would therefore block any fork() in the process.
+        statsd = self._unreachable_retrying_client()
+        statsd.gauge_with_timestamp("replay.safe", 1, timestamp=int(time.time()))
+        time.sleep(0.1)
+
+        # Run it on a worker so a regression fails this assertion instead of
+        # hanging the suite. That means _config_lock -- which pre_fork()
+        # deliberately acquires and leaves held for post_fork_parent() to
+        # release -- ends up owned by a thread that then exits, so this
+        # instance is deliberately abandoned rather than restored. It is
+        # constructed with track_instance=False precisely so nothing else can
+        # ever try to take that lock again.
+        t0 = time.time()
+        self._call_bounded(statsd.pre_fork, ())
+        self.assertLess(time.time() - t0, 5.0, "pre_fork() would have blocked os.fork()")
+        self.assertIsNone(statsd._sender_thread, "pre_fork() should have stopped the sender")
+
+    def test_stop_interrupts_a_long_retry_backoff_instead_of_waiting_it_out(self):
+        # The backoff cap is a full minute. A plain time.sleep() would make
+        # stop() wait out however much of it is left; the shutdown signal must
+        # cut it short.
+        statsd = self._unreachable_retrying_client()
+        with patch("datadog.dogstatsd.base.SENDER_RETRY_INITIAL_BACKOFF", 30.0):
+            statsd.gauge("ordinary", 1)
+            time.sleep(0.3)  # fail once, then settle into the 30s backoff
+
+            t0 = time.time()
+            self.assertIs(self._call_bounded(statsd.stop, ()), True)
+            self.assertLess(time.time() - t0, 5.0, "stop() waited out the backoff sleep")
+
+    def test_sender_can_restart_after_a_stop_cleared_the_stopping_signal(self):
+        # The shutdown signal is sticky, so it has to be cleared when a new
+        # sender starts or the replacement would exit immediately.
+        statsd = self._unreachable_retrying_client()
+        statsd.gauge("ordinary", 1)
+        time.sleep(0.1)
+        self.assertIs(self._call_bounded(statsd.stop, ()), True)
+
+        statsd.enable_background_sender()
+        try:
+            self.assertIsNotNone(statsd._queue)
+            fresh = statsd._sender_thread
+            self.assertIsNotNone(fresh)
+
+            # The stale signal only bites once the sender reaches its retry
+            # branch, so it has to actually fail a send here: an idle sender
+            # just blocks in get() and would mask the bug. With the signal
+            # left set, this first failure looks like a shutdown request and
+            # the fresh sender exits silently on it.
+            statsd.gauge("ordinary", 1)
+            time.sleep(0.3)
+            self.assertTrue(fresh.is_alive(), "fresh sender exited on a stale stopping signal")
+            self.assertIs(statsd._sender_thread, fresh)
+        finally:
+            statsd.stop(5.0)
 
     def test_set_socket_timeout(self):
         statsd = DogStatsd(disable_background_sender=False)
