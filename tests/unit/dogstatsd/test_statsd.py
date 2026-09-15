@@ -2953,6 +2953,197 @@ async def print_foo():
             release.set()
             wedged.join(timeout=5.0)
 
+    def test_stop_timeout_then_restart_does_not_orphan_the_sender(self):
+        # After a timed-out stop() the sender is still running and the queue is
+        # intentionally retained. Re-enabling the background sender must not
+        # mint a SECOND thread alongside the first (which is what happened when
+        # the queue was dropped on timeout): the client would leak a thread and
+        # end up with two senders sharing one socket/lock.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        release = threading.Event()
+        entered_send = threading.Event()
+        wedged = statsd._sender_thread
+
+        def blocking_send(self, data):
+            entered_send.set()
+            release.wait(30.0)
+            return len(data)
+
+        statsd.socket = type("W", (object,), {
+            "send": blocking_send,
+            "sendall": blocking_send,
+            "close": lambda self: None,
+            "setblocking": lambda self, *a: None,
+            "settimeout": lambda self, *a: None,
+            "getsockopt": lambda self, *a: MIN_SEND_BUFFER_SIZE,
+            "setsockopt": lambda self, *a: None,
+        })()
+        statsd._send_to_server("test.metric:1|c")
+        self.assertTrue(entered_send.wait(5.0))
+
+        try:
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            self.assertTrue(wedged.is_alive())
+            self.assertIsNotNone(statsd._queue, "queue must be retained so state stays coherent")
+
+            statsd.enable_background_sender()
+            # This identity check IS the proof there's no orphan: if a second
+            # thread had been minted, _sender_thread would now point at it
+            # instead of at wedged. (Deliberately not also scanning
+            # threading.enumerate() for same-named threads process-wide: this
+            # file has other, unrelated tests that spin up daemon
+            # "DogStatsd_sender_thread"s of their own, so a global count is not
+            # a property this test can own.)
+            self.assertIs(
+                statsd._sender_thread, wedged,
+                "re-enabling after a timed-out stop must not start a second sender thread",
+            )
+            self.assertTrue(wedged.is_alive())
+        finally:
+            release.set()
+            wedged.join(timeout=5.0)
+
+    def test_stop_timeout_then_unwedge_then_restart_starts_fresh(self):
+        # Once the timed-out thread finally drains and exits, the client
+        # self-heals: the next stop() reports success and cleans up, and a
+        # re-enabled background sender is a brand new thread over a new queue.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        release = threading.Event()
+        entered_send = threading.Event()
+        wedged = statsd._sender_thread
+
+        def blocking_send(self, data):
+            entered_send.set()
+            release.wait(30.0)
+            return len(data)
+
+        statsd.socket = type("W", (object,), {
+            "send": blocking_send,
+            "sendall": blocking_send,
+            "close": lambda self: None,
+            "setblocking": lambda self, *a: None,
+            "settimeout": lambda self, *a: None,
+            "getsockopt": lambda self, *a: MIN_SEND_BUFFER_SIZE,
+            "setsockopt": lambda self, *a: None,
+        })()
+        statsd._send_to_server("test.metric:1|c")
+        self.assertTrue(entered_send.wait(5.0))
+
+        try:
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            release.set()  # let the wedged send finish; the thread drains and exits
+            self.assertIs(self._call_bounded(statsd.stop, (5.0,)), True)
+            self.assertIsNone(statsd._queue)
+            self.assertIsNone(statsd._sender_thread)
+
+            statsd.enable_background_sender()
+            self.assertIsNotNone(statsd._sender_thread)
+            self.assertIsNot(statsd._sender_thread, wedged, "a fresh thread should start")
+            self.assertTrue(statsd._sender_thread.is_alive())
+            self.assertFalse(wedged.is_alive(), "the old thread must have actually exited, not just been forgotten")
+        finally:
+            release.set()
+            # The fresh thread's queue is empty and has never been sent a Stop
+            # sentinel, so joining statsd._sender_thread directly would just
+            # time out waiting on a get() that never returns -- leaking the
+            # thread into later tests. stop() sends Stop and joins correctly
+            # regardless of which thread/queue is current.
+            statsd.stop(5.0)
+
+    def test_sender_self_heals_when_the_timed_out_thread_finishes_on_its_own(self):
+        # The timed-out thread can exit without a second stop() ever being
+        # called. The client must detect that and allow a fresh sender, rather
+        # than keeping the dead thread / stale queue around and silently
+        # refusing to start a new one (metrics would then queue up and drop).
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        release = threading.Event()
+        entered_send = threading.Event()
+        wedged = statsd._sender_thread
+
+        def blocking_send(self, data):
+            entered_send.set()
+            release.wait(30.0)
+            return len(data)
+
+        statsd.socket = type("W", (object,), {
+            "send": blocking_send,
+            "sendall": blocking_send,
+            "close": lambda self: None,
+            "setblocking": lambda self, *a: None,
+            "settimeout": lambda self, *a: None,
+            "getsockopt": lambda self, *a: MIN_SEND_BUFFER_SIZE,
+            "setsockopt": lambda self, *a: None,
+        })()
+        statsd._send_to_server("test.metric:1|c")
+        self.assertTrue(entered_send.wait(5.0))
+
+        try:
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            self.assertIsNotNone(statsd._queue)
+            self.assertIs(statsd._sender_thread, wedged)
+
+            # Caller moved on and never called stop() again; the wedged send
+            # eventually completes and the thread drains and exits on its own.
+            release.set()
+            wedged.join(timeout=5.0)
+            self.assertFalse(wedged.is_alive())
+
+            # The exit must have healed the client state so a re-enable works.
+            self.assertIsNone(statsd._queue)
+            self.assertIsNone(statsd._sender_thread)
+            statsd.enable_background_sender()
+            self.assertIsNot(
+                statsd._sender_thread, wedged,
+                "a timed-out thread that finished on its own must not block a restart",
+            )
+            self.assertTrue(statsd._sender_thread.is_alive())
+        finally:
+            release.set()
+            # Same reason as the sibling test above: the fresh thread started
+            # by enable_background_sender() has an empty queue and was never
+            # sent Stop, so joining it directly would time out and leak it.
+            statsd.stop(5.0)
+
+    def test_wait_for_pending_is_honest_after_a_stop_timeout(self):
+        # After a timed-out stop(), the queue is retained (not shown as empty),
+        # so wait_for_pending() still reports the truth -- False while the
+        # sender is draining, True once it has actually drained -- rather than
+        # claiming "drained" while a live thread is still sending.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        release = threading.Event()
+        entered_send = threading.Event()
+        wedged = statsd._sender_thread
+
+        def blocking_send(self, data):
+            entered_send.set()
+            release.wait(30.0)
+            return len(data)
+
+        statsd.socket = type("W", (object,), {
+            "send": blocking_send,
+            "sendall": blocking_send,
+            "close": lambda self: None,
+            "setblocking": lambda self, *a: None,
+            "settimeout": lambda self, *a: None,
+            "getsockopt": lambda self, *a: MIN_SEND_BUFFER_SIZE,
+            "setsockopt": lambda self, *a: None,
+        })()
+        statsd._send_to_server("test.metric:1|c")
+        self.assertTrue(entered_send.wait(5.0))
+
+        try:
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            self.assertIs(
+                self._call_bounded(statsd.wait_for_pending, (0.2,)), False,
+                "wait_for_pending() must not claim drained while the sender is still running",
+            )
+
+            release.set()  # sender finishes the send, hits Stop, drains, exits
+            self.assertIs(self._call_bounded(statsd.wait_for_pending, (5.0,)), True)
+        finally:
+            release.set()
+            wedged.join(timeout=5.0)
+
     def test_stop_and_wait_for_pending_default_to_waiting_forever(self):
         # The default must stay unbounded: a slow-but-progressing sender is
         # waited out completely, with nothing left pending.

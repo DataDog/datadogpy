@@ -2168,18 +2168,29 @@ class DogStatsd(object):
                 # put() lets the Stop sentinel past the size limit, so this
                 # never blocks even when the queue is full.
                 self._queue.put(Stop)
-                self._queue = None
 
         thread = self._sender_thread
         if thread is None:
+            # Nothing left to stop: no thread ever runs, so clear any residual
+            # queue.
+            with self._buffer_lock:
+                self._queue = None
             return True
 
         thread.join(timeout)
         if thread.is_alive():
-            # Timed out. Keep the handle so a later call can wait for it again
-            # rather than losing track of a still-running thread.
+            # Timed out. Leave _queue in place: it is what stops
+            # _start_sender_thread() from minting a second sender, and it keeps
+            # wait_for_pending()/_send_to_server() targeting the real queue.
+            # The sender thread clears this state itself when it eventually
+            # exits (see _sender_main_loop).
             return False
 
+        # _sender_main_loop clears this state on its way out when the thread
+        # has drained the queue, so this may already be a no-op; it also covers
+        # a thread that exited without draining (e.g. never actually started).
+        with self._buffer_lock:
+            self._queue = None
         self._sender_thread = None
         return True
 
@@ -2190,6 +2201,11 @@ class DogStatsd(object):
             item = pending_queue.get()
             if item is Stop:
                 pending_queue.task_done()
+                with self._buffer_lock:
+                    if self._queue is pending_queue:
+                        self._queue = None
+                if self._sender_thread is threading.current_thread():
+                    self._sender_thread = None
                 return
 
             # next line has type ignore because the type checker cannot
@@ -2304,9 +2320,13 @@ class DogStatsd(object):
         :type timeout: float, optional
         :return: True if the background sender drained and stopped, and the
             final flush and socket close ran. False if timeout elapsed first,
-            in which case the sender thread is still running, the final flush
-            and close were skipped (see below), and a later stop() call can
-            wait for the thread again.
+            in which case the sender thread is still running and neither the
+            final flush nor the socket close ran (see below). Do not call
+            stop() again while that sender is still running: it queues a
+            second internal shutdown signal that is never drained, which can
+            make wait_for_pending() block forever on the abandoned queue. Use
+            wait_for_pending() to wait for the sender instead, then call
+            stop() again once it has actually stopped.
         """
 
         stopped = self.disable_background_sender(timeout)
