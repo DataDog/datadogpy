@@ -30,7 +30,7 @@ import pytest
 # Datadog libraries
 from datadog import initialize, statsd
 from datadog import __version__ as version
-from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, PENDING_PAYLOAD_EXPIRY_SECONDS, PendingPayload, SenderQueue, Stop, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_CONNECT_RETRY_INITIAL_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
+from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, PENDING_PAYLOAD_EXPIRY_SECONDS, PendingPayload, SenderQueue, Stop, UDP_OPTIMAL_PAYLOAD_LENGTH, SENDER_RETRY_MAX_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
 from datadog.util.compat import monotonic as sender_queue_clock
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
@@ -927,79 +927,50 @@ class TestDogStatsd(unittest.TestCase):
                 mock.ANY,
             )
 
-    def _uds_statsd(self, connect_timeout):
+    def _uds_statsd(self, socket_connect_retry=False):
         """
         A UDS-backed client whose current socket is already broken.
 
         The reconnect-and-retry path in _xmit_packet is deliberately scoped to
         UDS only, so these tests must not use the default UDP client.
         """
-        statsd = DogStatsd(socket_path='/tmp/dogstatsd-test.sock', telemetry_min_flush_interval=0)
-        statsd.socket_connect_timeout = connect_timeout
+        statsd = DogStatsd(
+            socket_path='/tmp/dogstatsd-test.sock',
+            disable_telemetry=True,
+            socket_connect_retry=socket_connect_retry,
+        )
         statsd.socket = BrokenSocket(error_number=errno.ECONNREFUSED)
-        statsd._reset_telemetry()
         return statsd
 
     @patch('datadog.dogstatsd.base.DogStatsd._get_uds_socket')
-    def test_socket_connection_error_reconnects_and_resends(self, mock_get_uds_socket):
-        working_socket = FakeSocket()
-        mock_get_uds_socket.return_value = working_socket
-        statsd = self._uds_statsd(connect_timeout=5)
+    def test_direct_send_never_retries_uds_even_with_socket_connect_retry_enabled(self, mock_get_uds_socket):
+        # socket_connect_retry only affects the background sender: a direct/
+        # synchronous send (background sender disabled, the default) has no
+        # queue and no expiry to protect the calling thread, so it must always
+        # fail fast on a connection error regardless of this setting.
+        mock_get_uds_socket.return_value = FakeSocket()
+        statsd = self._uds_statsd(socket_connect_retry=True)
 
-        with mock.patch("datadog.dogstatsd.base.log") as mock_log:
-            statsd.gauge('reconnected', 1)
-            statsd.flush()
-
-            mock_log.error.assert_not_called()
-            mock_log.warning.assert_not_called()
-
-        # The packet was not dropped: it was resent once a fresh socket was obtained.
-        mock_get_uds_socket.assert_called_once()
-        self.assertEqual(statsd.packets_dropped_writer, 0)
-        self.assertEqual(working_socket.payloads[0].decode('utf-8'), 'reconnected:1|g\n')
-
-    def test_socket_connection_error_drops_packet_if_reconnect_also_fails(self):
-        # Small deadline so the retry loop gives up quickly in the test.
-        statsd = self._uds_statsd(connect_timeout=0.05)
-
-        with mock.patch.object(
-            DogStatsd, '_get_uds_socket', side_effect=socket.error(errno.ECONNREFUSED, "still refused")
-        ):
+        with mock.patch.object(statsd.socket, 'send', wraps=statsd.socket.send) as mock_send:
             with mock.patch("datadog.dogstatsd.base.log") as mock_log:
-                statsd.gauge('no error', 1)
-                statsd.flush()
+                statsd.gauge('not reconnected', 1)
 
                 mock_log.error.assert_not_called()
+                mock_log.warning.assert_called_once_with(
+                    "Error submitting packet: %s, dropping the packet and closing the socket",
+                    mock.ANY,
+                )
 
-        # Both the metric and the telemetry flush hit the same broken reconnect and get dropped
-        # once the retry deadline is exhausted.
-        self.assertEqual(statsd.packets_dropped_writer, 2)
+            # A single send attempt on the broken socket, then dropped -- no
+            # reconnect-and-resend, and no connect was ever attempted either.
+            mock_send.assert_called_once()
 
-    @patch('datadog.dogstatsd.base.DogStatsd._get_uds_socket')
-    def test_socket_connection_error_retries_multiple_times_before_success(self, mock_get_uds_socket):
-        working_socket = FakeSocket()
-        mock_get_uds_socket.side_effect = [
-            socket.error(errno.ECONNREFUSED, "still refused"),
-            socket.error(errno.ECONNREFUSED, "still refused"),
-            working_socket,
-        ]
-        # Long enough to cover a few backoff sleeps well under a second.
-        statsd = self._uds_statsd(connect_timeout=5)
-
-        with mock.patch("datadog.dogstatsd.base.log") as mock_log:
-            statsd.gauge('reconnected after retries', 1)
-
-            mock_log.warning.assert_not_called()
-
-        # Two failed reconnect attempts, then a third that finally succeeds.
-        self.assertEqual(mock_get_uds_socket.call_count, 3)
-        self.assertEqual(statsd.packets_dropped_writer, 0)
-        self.assertTrue(working_socket.payloads[0].decode('utf-8').startswith('reconnected after retries:1|g'))
+        mock_get_uds_socket.assert_not_called()
 
     def test_socket_connection_error_does_not_retry_for_udp(self):
         # Reconnect-and-retry is UDS-only: a UDP client drops the packet on a
-        # transient connection error even when socket_connect_timeout is set.
-        self.statsd.socket_connect_timeout = 5
+        # transient connection error even with socket_connect_retry enabled.
+        self.statsd.socket_connect_retry = True
         broken_socket = BrokenSocket(error_number=errno.ECONNREFUSED)
         self.statsd.socket = broken_socket
 
@@ -1016,67 +987,30 @@ class TestDogStatsd(unittest.TestCase):
             # No reconnect-and-resend: a single send attempt, then dropped.
             mock_send.assert_called_once()
 
-    @patch('datadog.dogstatsd.base.DogStatsd._get_uds_socket')
-    def test_expired_deadline_sends_on_socket_installed_by_another_thread(self, mock_get_uds_socket):
-        # socket_connect_timeout budgets *connecting*. If another thread already
-        # installed a healthy socket while this one waited for _socket_lock, the
-        # spent budget is irrelevant: sending on it does no connecting, so the
-        # packet must not be dropped at the moment of recovery.
-        statsd = self._uds_statsd(connect_timeout=5)
-        working_socket = FakeSocket()
-        statsd.socket = working_socket
-
-        with mock.patch("datadog.dogstatsd.base.log") as mock_log:
-            sent = statsd._xmit_packet_attempt(
-                'recovered:1|g\n',
-                is_telemetry=False,
-                retry_eligible=True,
-                retry_deadline=time.time() - 1,  # budget consumed while waiting for the lock
-            )
-
-            self.assertTrue(sent)
-            mock_log.warning.assert_not_called()
-
-        # The installed socket was used as-is; no connect was attempted.
-        mock_get_uds_socket.assert_not_called()
-        self.assertEqual(working_socket.payloads[0].decode('utf-8'), 'recovered:1|g\n')
-
-    @patch('datadog.dogstatsd.base.DogStatsd._get_uds_socket')
-    def test_expired_deadline_drops_when_a_connect_would_be_needed(self, mock_get_uds_socket):
-        # The complement of the case above, and the reason the guard exists at
-        # all: with no socket installed, an expired budget must not reach
-        # get_socket(), which treats a <= 0 connect_timeout as "unbounded".
-        statsd = self._uds_statsd(connect_timeout=5)
-        statsd.socket = None
-
-        with mock.patch("datadog.dogstatsd.base.log") as mock_log:
-            sent = statsd._xmit_packet_attempt(
-                'dropped:1|g\n',
-                is_telemetry=False,
-                retry_eligible=True,
-                retry_deadline=time.time() - 1,
-            )
-
-            self.assertFalse(sent)
-            mock_log.warning.assert_called_once_with(
-                "Gave up reconnecting after socket_connect_timeout (%ss), dropping the packet",
-                5,
-            )
-
-        mock_get_uds_socket.assert_not_called()
+    def test_socket_connect_retry_defaults_to_false(self):
+        self.assertFalse(self.statsd.socket_connect_retry)
 
     def test_concurrent_reconnect_does_not_drop_backlog_after_recovery(self):
-        # End-to-end ordering: thread A reconnects slowly while holding
-        # _socket_lock; B queues behind it and has its entire connect budget
-        # consumed by the wait. Once A installs a healthy socket, B must send on
-        # it rather than discard its packet.
-        statsd = self._uds_statsd(connect_timeout=0.2)
+        # End-to-end ordering: thread A connects slowly while holding
+        # _socket_lock (no socket installed yet); B queues right behind it on
+        # the same lock. Once A installs a healthy socket, B must send on it
+        # rather than also trying to connect -- get_socket() always prefers an
+        # already-installed socket over connecting again. Direct sends never
+        # retry now, so unlike the old version of this test, neither packet
+        # can survive a *failed* connect; this exercises the still-relevant
+        # part, concurrent first-time connects sharing one outcome.
+        statsd = DogStatsd(
+            socket_path='/tmp/dogstatsd-test-concurrent.sock',
+            disable_telemetry=True,
+        )
         working_socket = FakeSocket()
 
         a_is_connecting = threading.Event()
         release_connect = threading.Event()
+        connect_calls = []
 
         def slow_connect(*args, **kwargs):
+            connect_calls.append(1)
             a_is_connecting.set()
             release_connect.wait(5)
             return working_socket
@@ -1089,14 +1023,17 @@ class TestDogStatsd(unittest.TestCase):
             thread_b = Thread(target=lambda: statsd.gauge('from-b', 1))
             thread_b.start()
 
-            # Let B's whole 0.2s budget elapse while it blocks on _socket_lock,
-            # then let A's connect succeed and install the socket.
-            time.sleep(0.5)
+            # Give B a moment to reach and block on _socket_lock (held by A's
+            # in-progress connect), then let A's connect succeed and install
+            # the socket.
+            time.sleep(0.2)
             release_connect.set()
 
             thread_a.join(5)
             thread_b.join(5)
             self.assertFalse(thread_a.is_alive())
+            # B reused the socket A installed rather than connecting itself.
+            self.assertEqual(connect_calls, [1])
             self.assertFalse(thread_b.is_alive())
 
         payloads = [payload.decode('utf-8') for payload in working_socket.payloads]
@@ -1134,25 +1071,6 @@ class TestDogStatsd(unittest.TestCase):
         sender_thread.join(2)
         closer_thread.join(2)
         self.assertFalse(closer_thread.is_alive())
-
-    def test_socket_connection_error_does_not_retry_without_connect_timeout(self):
-        # socket_connect_timeout defaults to 0 (unset): no reconnect attempt should be made
-        # for this packet, it should be dropped immediately instead.
-        self.assertEqual(self.statsd.socket_connect_timeout, 0)
-        broken_socket = BrokenSocket(error_number=errno.ECONNREFUSED)
-        self.statsd.socket = broken_socket
-
-        with mock.patch.object(broken_socket, 'send', wraps=broken_socket.send) as mock_send:
-            with mock.patch("datadog.dogstatsd.base.log") as mock_log:
-                self.statsd.gauge('not reconnected', 1)
-
-                mock_log.warning.assert_called_once_with(
-                    "Error submitting packet: %s, dropping the packet and closing the socket",
-                    mock.ANY,
-                )
-
-            # Only one send attempt was made on the broken socket: no reconnect-and-resend.
-            mock_send.assert_called_once()
 
     def test_socket_overflown(self):
         self.statsd.socket = OverflownSocket()
@@ -1210,82 +1128,46 @@ class TestDogStatsd(unittest.TestCase):
             MIN_SEND_BUFFER_SIZE,
         )
 
-    @patch('datadog.dogstatsd.base.time.sleep')
     @patch('socket.socket')
-    def test_uds_socket_retries_missing_socket_until_timeout(self, mock_socket_create, mock_sleep):
-        missing_socket_error = socket.error(errno.ENOENT, os.strerror(errno.ENOENT))
-        first_socket = Mock()
-        first_socket.connect.side_effect = missing_socket_error
-        first_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
-        second_socket = Mock()
-        second_socket.connect.return_value = None
-        second_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
-        mock_socket_create.side_effect = [first_socket, second_socket]
-
-        datadog = DogStatsd(
-            socket_path="/fake/uds/socket/path",
-            socket_timeout=0.1,
-            socket_connect_timeout=1,
-        )
-        datadog.gauge('some value', 1)
-        datadog.flush()
-
-        self.assertEqual(mock_socket_create.call_count, 2)
-        first_socket.close.assert_called_once()
-        second_socket.close.assert_not_called()
-        second_socket.settimeout.assert_called_with(0.1)
-        mock_sleep.assert_any_call(UDS_CONNECT_RETRY_INITIAL_BACKOFF)
-
-    @patch('datadog.dogstatsd.base.time.sleep')
-    @patch('socket.socket')
-    def test_uds_socket_retries_refused_socket_until_timeout(self, mock_socket_create, mock_sleep):
-        refused_socket_error = socket.error(errno.ECONNREFUSED, os.strerror(errno.ECONNREFUSED))
-        first_socket = Mock()
-        first_socket.connect.side_effect = refused_socket_error
-        first_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
-        second_socket = Mock()
-        second_socket.connect.return_value = None
-        second_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
-        mock_socket_create.side_effect = [first_socket, second_socket]
-
-        datadog = DogStatsd(
-            socket_path="unixstream:///fake/uds/socket/path",
-            socket_timeout=0.1,
-            socket_connect_timeout=1,
-        )
-        datadog.gauge('some value', 1)
-        datadog.flush()
-
-        self.assertEqual(mock_socket_create.call_count, 2)
-        first_socket.close.assert_called_once()
-        second_socket.close.assert_not_called()
-        second_socket.settimeout.assert_called_with(0.1)
-        mock_sleep.assert_any_call(UDS_CONNECT_RETRY_INITIAL_BACKOFF)
-
-    @patch('datadog.dogstatsd.base.time.sleep')
-    @patch('datadog.dogstatsd.base.time.time', side_effect=[0, 0, 0, 0.5, 0.9, 1.1])
-    @patch('socket.socket')
-    def test_uds_socket_never_sets_expired_deadline(self, mock_socket_create, mock_time, mock_sleep):
+    def test_uds_socket_missing_socket_fails_immediately_no_retry(self, mock_socket_create):
+        # _get_uds_socket makes exactly one connect attempt now: retrying a
+        # connect failure, if at all, is the caller's job (socket_connect_retry
+        # for the background sender; never for a direct send).
         missing_socket_error = socket.error(errno.ENOENT, os.strerror(errno.ENOENT))
         mock_socket = mock_socket_create.return_value
         mock_socket.connect.side_effect = missing_socket_error
         mock_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
 
         with self.assertRaises(socket.error) as raised:
-            DogStatsd._get_uds_socket("unixgram:///fake/uds/socket/path", 0.1, 1)
+            DogStatsd._get_uds_socket("unixgram:///fake/uds/socket/path", 0.1)
 
         self.assertEqual(raised.exception.errno, errno.ENOENT)
         mock_socket_create.assert_called_once_with(socket.AF_UNIX, socket.SOCK_DGRAM)
-        mock_socket.settimeout.assert_called_once_with(1)
+        mock_socket.settimeout.assert_called_once_with(0.1)
+        mock_socket.close.assert_called_once()
 
-    @patch('datadog.dogstatsd.base.time.time', side_effect=[0, 0.9, 1.1])
     @patch('socket.socket')
-    def test_uds_socket_raises_timeout_before_first_attempt(self, mock_socket_create, mock_time):
-        with self.assertRaises(socket.timeout) as raised:
-            DogStatsd._get_uds_socket("unixgram:///fake/uds/socket/path", 0.1, 1)
+    def test_uds_socket_falls_back_to_the_other_kind_on_eprototype(self, mock_socket_create):
+        # EPROTOTYPE means "wrong socket kind for this address", not a
+        # transient failure: _get_uds_socket falls back to the other
+        # candidate kind for it (still one connect attempt per kind), rather
+        # than retrying the same kind or giving up.
+        wrong_kind_socket = Mock()
+        wrong_kind_socket.connect.side_effect = socket.error(errno.EPROTOTYPE, os.strerror(errno.EPROTOTYPE))
+        wrong_kind_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
+        right_kind_socket = Mock()
+        right_kind_socket.connect.return_value = None
+        right_kind_socket.getsockopt.return_value = MIN_SEND_BUFFER_SIZE
+        mock_socket_create.side_effect = [wrong_kind_socket, right_kind_socket]
 
-        self.assertEqual(str(raised.exception), "timed out connecting to UDS socket")
-        mock_socket_create.assert_not_called()
+        sock = DogStatsd._get_uds_socket("/fake/uds/socket/path", 0.1)
+
+        self.assertIs(sock, right_kind_socket)
+        mock_socket_create.assert_has_calls([
+            call(socket.AF_UNIX, socket.SOCK_DGRAM),
+            call(socket.AF_UNIX, socket.SOCK_STREAM),
+        ])
+        wrong_kind_socket.close.assert_called_once()
 
     @patch('socket.socket')
     def test_udp_socket_ensures_min_receive_buffer(self, mock_socket_create):
@@ -2758,6 +2640,412 @@ async def print_foo():
         statsd = DogStatsd(disable_background_sender=False, sender_queue_timeout=None)
         statsd.stop()
 
+    def _call_bounded(self, func, args=(), limit=5.0):
+        """Call func in a worker thread, failing if it doesn't return in time.
+
+        Everything exercised below exists to *bound* a wait, so a regression
+        that reintroduces an unbounded wait should surface as a clear failure
+        rather than hanging the whole suite until CI kills the job.
+        """
+        result = {}
+
+        def run():
+            result["value"] = func(*args)
+
+        t = threading.Thread(target=run)
+        t.daemon = True
+        t.start()
+        t.join(limit)
+        self.assertFalse(
+            t.is_alive(),
+            "{} did not return within {}s: timeout not honoured".format(getattr(func, "__name__", func), limit),
+        )
+        return result["value"]
+
+    def test_queue_join_timeout(self):
+        # join(timeout) must report whether the queue actually drained, and must
+        # not rely on Condition.wait()'s return value (always None on Python 2).
+        pending_queue = SenderQueue(
+            maxsize=0,
+            expiry_seconds=100.0,
+            on_drop_queue_full=lambda item: self.fail("unexpected full drop"),
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+        )
+        self.assertIs(pending_queue.join(0), True)
+        self.assertIs(pending_queue.join(), True)
+
+        pending_queue.put(PendingPayload("first\n", sender_queue_clock(), False))
+
+        # Nothing is draining it, so a bounded join must give up and say so
+        # rather than blocking forever or claiming success.
+        t0 = time.time()
+        self.assertIs(self._call_bounded(pending_queue.join, (0.2,)), False)
+        self.assertGreaterEqual(time.time() - t0, 0.2)
+
+        # timeout=0 is a non-blocking poll.
+        t0 = time.time()
+        self.assertIs(self._call_bounded(pending_queue.join, (0,)), False)
+        self.assertLess(time.time() - t0, 0.2)
+
+        # Once the payload is accounted for, join() succeeds.
+        pending_queue.get()
+        pending_queue.task_done()
+        self.assertIs(pending_queue.join(0), True)
+
+    def test_queue_join_timeout_returns_as_soon_as_the_queue_drains(self):
+        # A generous timeout must not be waited out: join() returns as soon as
+        # the last task is done.
+        pending_queue = SenderQueue(
+            maxsize=0,
+            expiry_seconds=100.0,
+            on_drop_queue_full=lambda item: None,
+            on_drop_expired=lambda item: None,
+        )
+        pending_queue.put(PendingPayload("first\n", sender_queue_clock(), False))
+
+        def drain():
+            time.sleep(0.2)
+            pending_queue.get()
+            pending_queue.task_done()
+
+        t = threading.Thread(target=drain)
+        t.start()
+        try:
+            t0 = time.time()
+            self.assertIs(pending_queue.join(10.0), True)
+            elapsed = time.time() - t0
+        finally:
+            t.join(timeout=5.0)
+        self.assertLess(elapsed, 5.0, "join() should return on drain, not wait out the whole timeout")
+
+    def test_wait_for_pending_timeout(self):
+        # A queue with no sender thread draining it: wait_for_pending() must
+        # give up and report False rather than blocking forever. Done without a
+        # thread on purpose -- the default transport is UDP, where a send
+        # succeeds even with nothing listening, so "assign no socket" would not
+        # reliably keep a payload pending.
+        statsd = DogStatsd(disable_background_sender=True, disable_telemetry=True)
+        statsd._queue = SenderQueue(
+            0,
+            PENDING_PAYLOAD_EXPIRY_SECONDS,
+            lambda item: None,
+            lambda item: None,
+        )
+        statsd._send_to_server("test.metric:1|c")
+
+        t0 = time.time()
+        self.assertIs(self._call_bounded(statsd.wait_for_pending, (0.2,)), False)
+        self.assertGreaterEqual(time.time() - t0, 0.2)
+
+        # timeout=0 is a non-blocking poll.
+        self.assertIs(self._call_bounded(statsd.wait_for_pending, (0,)), False)
+
+    def test_wait_for_pending_returns_true_with_no_queue(self):
+        # Nothing queued (background sender disabled) is trivially "drained".
+        statsd = DogStatsd(disable_background_sender=True, disable_telemetry=True)
+        self.assertIsNone(statsd._queue)
+        self.assertIs(statsd.wait_for_pending(), True)
+        self.assertIs(statsd.wait_for_pending(0), True)
+
+    def test_stop_timeout_reports_failure_and_keeps_the_thread_joinable(self):
+        # A wedged sender must not make stop() hang forever when a timeout is
+        # given, and stop() must say it didn't finish.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        release = threading.Event()
+        wedged = statsd._sender_thread
+
+        # Wedge the sender inside a send so it can't observe Stop.
+        def blocking_xmit(packet, queue_mode=False):
+            release.wait(10.0)
+            return True
+
+        statsd._xmit_packet_with_telemetry = blocking_xmit
+        statsd._send_to_server("test.metric:1|c")
+        time.sleep(0.1)  # let the sender pick it up and wedge
+
+        try:
+            t0 = time.time()
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            self.assertGreaterEqual(time.time() - t0, 0.2)
+            # The handle is retained so the thread isn't lost.
+            self.assertIs(statsd._sender_thread, wedged)
+            self.assertTrue(wedged.is_alive())
+
+            # Unwedge: a second stop() now succeeds and clears the handle.
+            release.set()
+            self.assertIs(statsd.stop(5.0), True)
+            self.assertIsNone(statsd._sender_thread)
+        finally:
+            release.set()
+            wedged.join(timeout=5.0)
+
+    def test_stop_timeout_is_bounded_while_the_sender_holds_the_socket_lock(self):
+        # The wedge that matters in practice: the sender is parked inside a
+        # blocking send() and therefore owns _socket_lock. stop()'s own
+        # close_socket()/flush calls want that same lock, so without care they
+        # block for as long as the sender stays stuck and the timeout means
+        # nothing. stop() must still return within its timeout.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        release = threading.Event()
+        entered_send = threading.Event()
+        wedged = statsd._sender_thread
+
+        class BlockingSocket(object):
+            def send(self, data):
+                entered_send.set()
+                release.wait(30.0)
+                return len(data)
+
+            def sendall(self, data):
+                return self.send(data)
+
+            def close(self):
+                pass
+
+            def setblocking(self, *args):
+                pass
+
+            def settimeout(self, *args):
+                pass
+
+            def getsockopt(self, *args):
+                return MIN_SEND_BUFFER_SIZE
+
+            def setsockopt(self, *args):
+                pass
+
+        statsd.socket = BlockingSocket()
+        for i in range(5):
+            statsd._send_to_server("test.metric.{}:1|c".format(i))
+        self.assertTrue(entered_send.wait(5.0), "sender never reached send()")
+
+        try:
+            t0 = time.time()
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            elapsed = time.time() - t0
+            self.assertGreaterEqual(elapsed, 0.2)
+            self.assertLess(elapsed, 5.0, "stop() blocked well past its timeout")
+
+            # The socket was deliberately left alone: closing it under a thread
+            # that is mid-send is both unsafe and the thing that would block.
+            self.assertIsNotNone(statsd.socket)
+            self.assertTrue(wedged.is_alive())
+            self.assertIs(statsd._sender_thread, wedged)
+        finally:
+            release.set()
+            wedged.join(timeout=5.0)
+
+    def test_stop_timeout_then_restart_does_not_orphan_the_sender(self):
+        # After a timed-out stop() the sender is still running and the queue is
+        # intentionally retained. Re-enabling the background sender must not
+        # mint a SECOND thread alongside the first (which is what happened when
+        # the queue was dropped on timeout): the client would leak a thread and
+        # end up with two senders sharing one socket/lock.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        release = threading.Event()
+        entered_send = threading.Event()
+        wedged = statsd._sender_thread
+
+        def blocking_send(self, data):
+            entered_send.set()
+            release.wait(30.0)
+            return len(data)
+
+        statsd.socket = type("W", (object,), {
+            "send": blocking_send,
+            "sendall": blocking_send,
+            "close": lambda self: None,
+            "setblocking": lambda self, *a: None,
+            "settimeout": lambda self, *a: None,
+            "getsockopt": lambda self, *a: MIN_SEND_BUFFER_SIZE,
+            "setsockopt": lambda self, *a: None,
+        })()
+        statsd._send_to_server("test.metric:1|c")
+        self.assertTrue(entered_send.wait(5.0))
+
+        try:
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            self.assertTrue(wedged.is_alive())
+            self.assertIsNotNone(statsd._queue, "queue must be retained so state stays coherent")
+
+            statsd.enable_background_sender()
+            # This identity check IS the proof there's no orphan: if a second
+            # thread had been minted, _sender_thread would now point at it
+            # instead of at wedged. (Deliberately not also scanning
+            # threading.enumerate() for same-named threads process-wide: this
+            # file has other, unrelated tests that spin up daemon
+            # "DogStatsd_sender_thread"s of their own, so a global count is not
+            # a property this test can own.)
+            self.assertIs(
+                statsd._sender_thread, wedged,
+                "re-enabling after a timed-out stop must not start a second sender thread",
+            )
+            self.assertTrue(wedged.is_alive())
+        finally:
+            release.set()
+            wedged.join(timeout=5.0)
+
+    def test_stop_timeout_then_unwedge_then_restart_starts_fresh(self):
+        # Once the timed-out thread finally drains and exits, the client
+        # self-heals: the next stop() reports success and cleans up, and a
+        # re-enabled background sender is a brand new thread over a new queue.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        release = threading.Event()
+        entered_send = threading.Event()
+        wedged = statsd._sender_thread
+
+        def blocking_send(self, data):
+            entered_send.set()
+            release.wait(30.0)
+            return len(data)
+
+        statsd.socket = type("W", (object,), {
+            "send": blocking_send,
+            "sendall": blocking_send,
+            "close": lambda self: None,
+            "setblocking": lambda self, *a: None,
+            "settimeout": lambda self, *a: None,
+            "getsockopt": lambda self, *a: MIN_SEND_BUFFER_SIZE,
+            "setsockopt": lambda self, *a: None,
+        })()
+        statsd._send_to_server("test.metric:1|c")
+        self.assertTrue(entered_send.wait(5.0))
+
+        try:
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            release.set()  # let the wedged send finish; the thread drains and exits
+            self.assertIs(self._call_bounded(statsd.stop, (5.0,)), True)
+            self.assertIsNone(statsd._queue)
+            self.assertIsNone(statsd._sender_thread)
+
+            statsd.enable_background_sender()
+            self.assertIsNotNone(statsd._sender_thread)
+            self.assertIsNot(statsd._sender_thread, wedged, "a fresh thread should start")
+            self.assertTrue(statsd._sender_thread.is_alive())
+            self.assertFalse(wedged.is_alive(), "the old thread must have actually exited, not just been forgotten")
+        finally:
+            release.set()
+            # The fresh thread's queue is empty and has never been sent a Stop
+            # sentinel, so joining statsd._sender_thread directly would just
+            # time out waiting on a get() that never returns -- leaking the
+            # thread into later tests. stop() sends Stop and joins correctly
+            # regardless of which thread/queue is current.
+            statsd.stop(5.0)
+
+    def test_sender_self_heals_when_the_timed_out_thread_finishes_on_its_own(self):
+        # The timed-out thread can exit without a second stop() ever being
+        # called. The client must detect that and allow a fresh sender, rather
+        # than keeping the dead thread / stale queue around and silently
+        # refusing to start a new one (metrics would then queue up and drop).
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        release = threading.Event()
+        entered_send = threading.Event()
+        wedged = statsd._sender_thread
+
+        def blocking_send(self, data):
+            entered_send.set()
+            release.wait(30.0)
+            return len(data)
+
+        statsd.socket = type("W", (object,), {
+            "send": blocking_send,
+            "sendall": blocking_send,
+            "close": lambda self: None,
+            "setblocking": lambda self, *a: None,
+            "settimeout": lambda self, *a: None,
+            "getsockopt": lambda self, *a: MIN_SEND_BUFFER_SIZE,
+            "setsockopt": lambda self, *a: None,
+        })()
+        statsd._send_to_server("test.metric:1|c")
+        self.assertTrue(entered_send.wait(5.0))
+
+        try:
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            self.assertIsNotNone(statsd._queue)
+            self.assertIs(statsd._sender_thread, wedged)
+
+            # Caller moved on and never called stop() again; the wedged send
+            # eventually completes and the thread drains and exits on its own.
+            release.set()
+            wedged.join(timeout=5.0)
+            self.assertFalse(wedged.is_alive())
+
+            # The exit must have healed the client state so a re-enable works.
+            self.assertIsNone(statsd._queue)
+            self.assertIsNone(statsd._sender_thread)
+            statsd.enable_background_sender()
+            self.assertIsNot(
+                statsd._sender_thread, wedged,
+                "a timed-out thread that finished on its own must not block a restart",
+            )
+            self.assertTrue(statsd._sender_thread.is_alive())
+        finally:
+            release.set()
+            # Same reason as the sibling test above: the fresh thread started
+            # by enable_background_sender() has an empty queue and was never
+            # sent Stop, so joining it directly would time out and leak it.
+            statsd.stop(5.0)
+
+    def test_wait_for_pending_is_honest_after_a_stop_timeout(self):
+        # After a timed-out stop(), the queue is retained (not shown as empty),
+        # so wait_for_pending() still reports the truth -- False while the
+        # sender is draining, True once it has actually drained -- rather than
+        # claiming "drained" while a live thread is still sending.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        release = threading.Event()
+        entered_send = threading.Event()
+        wedged = statsd._sender_thread
+
+        def blocking_send(self, data):
+            entered_send.set()
+            release.wait(30.0)
+            return len(data)
+
+        statsd.socket = type("W", (object,), {
+            "send": blocking_send,
+            "sendall": blocking_send,
+            "close": lambda self: None,
+            "setblocking": lambda self, *a: None,
+            "settimeout": lambda self, *a: None,
+            "getsockopt": lambda self, *a: MIN_SEND_BUFFER_SIZE,
+            "setsockopt": lambda self, *a: None,
+        })()
+        statsd._send_to_server("test.metric:1|c")
+        self.assertTrue(entered_send.wait(5.0))
+
+        try:
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            self.assertIs(
+                self._call_bounded(statsd.wait_for_pending, (0.2,)), False,
+                "wait_for_pending() must not claim drained while the sender is still running",
+            )
+
+            release.set()  # sender finishes the send, hits Stop, drains, exits
+            self.assertIs(self._call_bounded(statsd.wait_for_pending, (5.0,)), True)
+        finally:
+            release.set()
+            wedged.join(timeout=5.0)
+
+    def test_stop_and_wait_for_pending_default_to_waiting_forever(self):
+        # The default must stay unbounded: a slow-but-progressing sender is
+        # waited out completely, with nothing left pending.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        sent = []
+
+        def slow_xmit(packet, queue_mode=False):
+            time.sleep(0.05)
+            sent.append(packet)
+            return True
+
+        statsd._xmit_packet_with_telemetry = slow_xmit
+        for i in range(5):
+            statsd._send_to_server("test.metric.{}:1|c".format(i))
+
+        self.assertIs(statsd.wait_for_pending(), True)
+        self.assertEqual(len(sent), 5, "unbounded wait_for_pending() must drain everything")
+        self.assertIs(statsd.stop(), True)
+        self.assertIsNone(statsd._sender_thread)
+
     def test_sender_queue_timeout_blocks_the_calling_thread_through_the_client(self):
         # End-to-end: sender_queue_timeout configured on the real client
         # actually makes statsd.increment() (the calling/application thread)
@@ -3243,13 +3531,14 @@ async def print_foo():
         statsd.stop()
 
     def test_connection_failure_requeues_and_resends_once_reconnected(self):
-        # A UDS client whose socket is broken, with a small connect budget so
-        # the internal reconnect-and-retry loop inside _xmit_packet gives up
-        # quickly and hands off to the sender queue's own retry-by-requeuing.
+        # A UDS client whose socket is broken. socket_connect_retry=True is
+        # what makes queue-mode sends hand off a connection failure to the
+        # sender queue's own retry-by-requeuing instead of dropping the
+        # payload on the first attempt -- direct sends never do this.
         working_socket = FakeSocket()
         attempts = {"count": 0}
 
-        def flaky_get_uds_socket(cls, socket_path, timeout, connect_timeout):
+        def flaky_get_uds_socket(cls, socket_path, timeout):
             attempts["count"] += 1
             if attempts["count"] < 4:
                 raise socket.error(errno.ECONNREFUSED, "still refused")
@@ -3260,8 +3549,8 @@ async def print_foo():
                 socket_path="/tmp/dogstatsd-test-requeue.sock",
                 disable_telemetry=True,
                 disable_background_sender=False,
+                socket_connect_retry=True,
             )
-            statsd.socket_connect_timeout = 0.05
 
             statsd.gauge("eventually.sent", 1)
             statsd.wait_for_pending()
@@ -3275,6 +3564,127 @@ async def print_foo():
         self.assertTrue(working_socket.payloads[0].decode("utf-8").startswith("eventually.sent:1|g"))
 
         statsd.stop()
+
+    def test_queue_mode_drops_immediately_by_default(self):
+        # socket_connect_retry defaults to False for the background sender
+        # too: without it, a connection failure on a queued payload is
+        # accounted as a writer drop on the very first attempt, exactly like
+        # a direct send, rather than requeued and retried.
+        statsd = DogStatsd(
+            socket_path="/tmp/dogstatsd-test-no-retry-queue.sock",
+            disable_background_sender=False,
+        )
+        self.assertFalse(statsd.socket_connect_retry)
+        statsd.socket = BrokenSocket(error_number=errno.ECONNREFUSED)
+
+        statsd.gauge("dropped.immediately", 1)
+        statsd.wait_for_pending()
+
+        self.assertGreaterEqual(statsd.packets_dropped_writer, 1)
+        self.assertEqual(statsd.packets_dropped_expired, 0)
+        statsd.stop()
+
+    def test_queue_mode_retry_backoff_caps_at_one_minute(self):
+        # "Backoff...to a maximum of once per minute": the doubling algorithm
+        # in _sender_main_loop is unchanged (already exercised end-to-end by
+        # test_connection_failure_requeues_and_resends_once_reconnected,
+        # which drives it through several real doublings below the cap); what
+        # changed is this constant, from the old 1-second cap to 60.
+        self.assertEqual(SENDER_RETRY_MAX_BACKOFF, 60.0)
+
+    def _unreachable_retrying_client(self):
+        """Background-sender client whose UDS path will never exist.
+
+        socket_connect_retry=True, so every queued payload fails to connect
+        and gets requeued at the FRONT of the queue -- ahead of any Stop
+        sentinel.
+        """
+        sock_path = os.path.join(tempfile.mkdtemp(), "never-created.sock")
+        return DogStatsd(
+            socket_path="unix://" + sock_path,
+            socket_connect_retry=True,
+            disable_background_sender=False,
+            disable_telemetry=True,
+            # Keep these out of the module-level _instances WeakSet: the
+            # pre_fork test below abandons its instance with _config_lock
+            # still held, and the global os.register_at_fork hooks iterate
+            # _instances -- a later real fork() would deadlock on it.
+            track_instance=False,
+        )
+
+    def test_stop_is_bounded_with_a_stuck_replay_safe_payload(self):
+        # requeue_front() puts a failed payload back ahead of the Stop
+        # sentinel, and replay-safe payloads are exempt from the queue's
+        # expiry, so such a payload never resolves while the Agent is down.
+        # Without an interruptible shutdown signal the sender never reaches
+        # Stop at all and stop() hangs forever.
+        statsd = self._unreachable_retrying_client()
+        statsd.gauge_with_timestamp("replay.safe", 1, timestamp=int(time.time()))
+        time.sleep(0.1)  # let the sender pick it up and start retrying
+
+        t0 = time.time()
+        self.assertIs(self._call_bounded(statsd.stop, ()), True)
+        self.assertLess(time.time() - t0, 5.0, "stop() did not interrupt the retry loop")
+        self.assertIsNone(statsd._queue)
+
+    def test_pre_fork_is_bounded_with_a_stuck_replay_safe_payload(self):
+        # Same starvation, reached through pre_fork() -- which matters more:
+        # it is installed as an os.register_at_fork hook, has no timeout
+        # parameter, and would therefore block any fork() in the process.
+        statsd = self._unreachable_retrying_client()
+        statsd.gauge_with_timestamp("replay.safe", 1, timestamp=int(time.time()))
+        time.sleep(0.1)
+
+        # Run it on a worker so a regression fails this assertion instead of
+        # hanging the suite. That means _config_lock -- which pre_fork()
+        # deliberately acquires and leaves held for post_fork_parent() to
+        # release -- ends up owned by a thread that then exits, so this
+        # instance is deliberately abandoned rather than restored. It is
+        # constructed with track_instance=False precisely so nothing else can
+        # ever try to take that lock again.
+        t0 = time.time()
+        self._call_bounded(statsd.pre_fork, ())
+        self.assertLess(time.time() - t0, 5.0, "pre_fork() would have blocked os.fork()")
+        self.assertIsNone(statsd._sender_thread, "pre_fork() should have stopped the sender")
+
+    def test_stop_interrupts_a_long_retry_backoff_instead_of_waiting_it_out(self):
+        # The backoff cap is a full minute. A plain time.sleep() would make
+        # stop() wait out however much of it is left; the shutdown signal must
+        # cut it short.
+        statsd = self._unreachable_retrying_client()
+        with patch("datadog.dogstatsd.base.SENDER_RETRY_INITIAL_BACKOFF", 30.0):
+            statsd.gauge("ordinary", 1)
+            time.sleep(0.3)  # fail once, then settle into the 30s backoff
+
+            t0 = time.time()
+            self.assertIs(self._call_bounded(statsd.stop, ()), True)
+            self.assertLess(time.time() - t0, 5.0, "stop() waited out the backoff sleep")
+
+    def test_sender_can_restart_after_a_stop_cleared_the_stopping_signal(self):
+        # The shutdown signal is sticky, so it has to be cleared when a new
+        # sender starts or the replacement would exit immediately.
+        statsd = self._unreachable_retrying_client()
+        statsd.gauge("ordinary", 1)
+        time.sleep(0.1)
+        self.assertIs(self._call_bounded(statsd.stop, ()), True)
+
+        statsd.enable_background_sender()
+        try:
+            self.assertIsNotNone(statsd._queue)
+            fresh = statsd._sender_thread
+            self.assertIsNotNone(fresh)
+
+            # The stale signal only bites once the sender reaches its retry
+            # branch, so it has to actually fail a send here: an idle sender
+            # just blocks in get() and would mask the bug. With the signal
+            # left set, this first failure looks like a shutdown request and
+            # the fresh sender exits silently on it.
+            statsd.gauge("ordinary", 1)
+            time.sleep(0.3)
+            self.assertTrue(fresh.is_alive(), "fresh sender exited on a stale stopping signal")
+            self.assertIs(statsd._sender_thread, fresh)
+        finally:
+            statsd.stop(5.0)
 
     def test_set_socket_timeout(self):
         statsd = DogStatsd(disable_background_sender=False)
