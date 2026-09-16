@@ -11,38 +11,66 @@ if sys.version_info[:2] >= (3, 5):
 # Sentinel telling the background sender thread to shut down.
 Stop = object()
 
+# What the queue can hold. A payload is either a bare string (replay-safe, no
+# expiry state needed) or a PendingPayload (subject to expiry); Stop is the
+# only other thing that ever goes in, and is matched by identity.
+if sys.version_info[:2] >= (3, 5):
+    QueuedItem = Union[str, "PendingPayload"]  # noqa: F401
+    QueuedItemOrStop = Union[str, "PendingPayload", object]  # noqa: F401
+
 # How long (in seconds) a non-replay-safe payload may sit in the background
 # sender queue before it's considered stale and dropped instead of sent.
-# Payloads that carry their own explicit timestamp (replay_safe) are exempt:
+# Payloads that carry their own explicit timestamp (replay-safe) are exempt:
 # delivering those late doesn't change what they mean, so they're kept
 # around until they can actually be sent.
 PENDING_PAYLOAD_EXPIRY_SECONDS = 10.0
 
 
 class PendingPayload(object):
-    """A single packet queued for the background sender.
+    """A packet queued for the background sender that can go stale.
+
+    Only payloads subject to expiry are wrapped in this. A replay-safe
+    payload -- one carrying its own explicit timestamp, so that delivering it
+    late doesn't change what it means -- is queued as the bare packet string
+    instead, because it needs none of the state here. The queue therefore
+    reads replay-safety off the entry's *type* rather than a stored flag (see
+    SenderQueue._expired() and is_replay_safe()), which keeps ~56 bytes per
+    replay-safe entry out of the queue and keeps those entries out of the
+    cyclic GC's traversal set entirely, since str holds no references.
 
     :ivar payload: The already-serialized packet text (including its
         trailing newline), ready to be written to the socket.
     :ivar enqueued_at: A monotonic timestamp recorded when the payload
         became eligible for sending (i.e. when it was put on the queue).
         Used to decide whether it has been sitting in the queue for too
-        long to still be worth sending. None when replay_safe is True: it's
-        never read in that case (see SenderQueue._expired()'s short-circuit),
-        so skipping the allocation costs nothing.
-    :ivar replay_safe: True when delayed delivery preserves the payload's
-        meaning because it carries its own explicit timestamp. Such
-        payloads are never dropped for being stale, and never need
-        enqueued_at.
+        long to still be worth sending.
     """
 
-    __slots__ = ("payload", "enqueued_at", "replay_safe")
+    __slots__ = ("payload", "enqueued_at")
 
-    def __init__(self, payload, enqueued_at, replay_safe):
-        # type: (str, Optional[float], bool) -> None
+    def __init__(self, payload, enqueued_at):
+        # type: (str, float) -> None
         self.payload = payload
         self.enqueued_at = enqueued_at
-        self.replay_safe = replay_safe
+
+
+def is_replay_safe(item):
+    # type: (Union[str, PendingPayload]) -> bool
+    """True when this queue entry is exempt from expiry.
+
+    Replay-safe entries are queued as bare strings; everything subject to
+    expiry is wrapped in PendingPayload. Centralised here so the type test
+    isn't repeated at every site that cares.
+    """
+    return not isinstance(item, PendingPayload)
+
+
+def payload_text(item):
+    # type: (Union[str, PendingPayload]) -> str
+    """The serialized packet text of a queue entry, whichever form it took."""
+    if isinstance(item, PendingPayload):
+        return item.payload
+    return item
 
 
 class SenderQueue(object):
@@ -74,7 +102,7 @@ class SenderQueue(object):
     """
 
     def __init__(self, maxsize, expiry_seconds, on_drop_queue_full, on_drop_expired, put_timeout=0):
-        # type: (int, float, Callable[[PendingPayload], None], Callable[[PendingPayload], None], Optional[float]) -> None  # noqa: E501
+        # type: (int, float, Callable[[QueuedItem], None], Callable[[QueuedItem], None], Optional[float]) -> None  # noqa: E501
         self._maxsize = maxsize
         self._expiry_seconds = expiry_seconds
         self._on_drop_queue_full = on_drop_queue_full
@@ -92,14 +120,12 @@ class SenderQueue(object):
         self._unfinished_tasks = 0
 
     def _expired(self, item, now):
-        # type: (PendingPayload, float) -> bool
-        if item.replay_safe:
+        # type: (QueuedItem, float) -> bool
+        if not isinstance(item, PendingPayload):
+            # A bare string is a replay-safe payload: it carries its own
+            # timestamp, so it never goes stale (see PendingPayload).
             return False
-        # enqueued_at is only ever None for replay_safe items (see
-        # PendingPayload), which are already excluded above -- it's a plain
-        # float here. mypy can't correlate that invariant across the two
-        # attributes, hence the ignore.
-        return (now - item.enqueued_at) > self._expiry_seconds  # type: ignore[operator]
+        return (now - item.enqueued_at) > self._expiry_seconds
 
     def _make_room_locked(self):
         # type: () -> None
@@ -135,7 +161,7 @@ class SenderQueue(object):
             self._not_full.notify(reclaimed)
 
     def put(self, item):
-        # type: (Union[PendingPayload, object]) -> None
+        # type: (QueuedItemOrStop) -> None
         """Queue a payload (or the Stop sentinel).
 
         If the queue is full: waits for room according to put_timeout --
@@ -170,7 +196,7 @@ class SenderQueue(object):
             self._not_empty.notify()
 
     def requeue_front(self, item):
-        # type: (PendingPayload) -> None
+        # type: (QueuedItem) -> None
         """Put an in-flight payload back at the front after a failed send attempt.
 
         The payload was already accounted for by the put() that originally
@@ -197,7 +223,7 @@ class SenderQueue(object):
             self._not_empty.notify()
 
     def get(self):
-        # type: () -> Union[PendingPayload, object]
+        # type: () -> QueuedItemOrStop
         """Block for the next payload, silently dropping expired entries along the way."""
         while True:
             with self._not_empty:

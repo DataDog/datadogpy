@@ -50,7 +50,11 @@ from datadog.dogstatsd.sender_queue import (
     PendingPayload,
     Stop,
     PENDING_PAYLOAD_EXPIRY_SECONDS,
+    payload_text,
 )
+
+if sys.version_info[:2] >= (3, 5):
+    from datadog.dogstatsd.sender_queue import QueuedItem  # noqa: F401
 from datadog.util.compat import monotonic, text, urlparse
 from datadog.util.format import normalize_tags, validate_cardinality
 from datadog.version import __version__
@@ -1625,16 +1629,16 @@ class DogStatsd(object):
         return self.bytes_dropped_queue + self.bytes_dropped_writer + self.bytes_dropped_expired
 
     def _account_dropped_queue_full(self, item):
-        # type: (PendingPayload) -> None
+        # type: (QueuedItem) -> None
         """A payload was evicted from the sender queue to make room for a new one."""
         self.packets_dropped_queue += 1
-        self.bytes_dropped_queue += len(item.payload.encode(self.encoding))
+        self.bytes_dropped_queue += len(payload_text(item).encode(self.encoding))
 
     def _account_dropped_expired(self, item):
-        # type: (PendingPayload) -> None
+        # type: (QueuedItem) -> None
         """A payload sat in the sender queue longer than PENDING_PAYLOAD_EXPIRY_SECONDS."""
         self.packets_dropped_expired += 1
-        self.bytes_dropped_expired += len(item.payload.encode(self.encoding))
+        self.bytes_dropped_expired += len(payload_text(item).encode(self.encoding))
 
     def _flush_telemetry(self):
         # type: () -> str
@@ -1684,11 +1688,15 @@ class DogStatsd(object):
             with self._buffer_lock:
                 packet_with_newline = packet + '\n'
                 if self._queue is not None:
-                    # replay_safe payloads never have their enqueued_at read
-                    # (see SenderQueue._expired()'s short-circuit), so skip
-                    # both the clock read and the float allocation for them.
-                    enqueued_at = None if replay_safe else monotonic()
-                    self._queue.put(PendingPayload(packet_with_newline, enqueued_at, replay_safe))
+                    if replay_safe:
+                        # Never expires, so it needs no enqueued_at and no
+                        # wrapper at all: queue the bare string and let the
+                        # queue infer replay-safety from the type. Saves the
+                        # PendingPayload object (~56 bytes) per entry and
+                        # keeps these out of the cyclic GC's traversal set.
+                        self._queue.put(packet_with_newline)
+                    else:
+                        self._queue.put(PendingPayload(packet_with_newline, monotonic()))
                     return
 
         self._xmit_packet_with_telemetry(packet + '\n')
@@ -2176,11 +2184,11 @@ class DogStatsd(object):
                 pending_queue.task_done()
                 return
 
-            # next line has type ignore because the type checker cannot
-            # know that 'if item is Stop' is the only case where item is
-            # of object type.
+            # payload_text() also narrows the type: 'if item is Stop' above is
+            # the only case where item is the bare object sentinel, which the
+            # type checker can't know on its own.
             sent = self._xmit_packet_with_telemetry(
-                item.payload, queue_mode=True  # type: ignore[attr-defined]
+                payload_text(item), queue_mode=True  # type: ignore[arg-type]
             )
 
             if sent is None:

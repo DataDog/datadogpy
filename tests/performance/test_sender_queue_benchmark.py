@@ -171,7 +171,7 @@ def scenario_1_unbounded_single_threaded():
         old.task_done()
 
     new = make_sender_queue(maxsize=0)
-    total, samples = time_puts(lambda: new.put(PendingPayload(PACKET, monotonic(), False)), n)
+    total, samples = time_puts(lambda: new.put(PendingPayload(PACKET, monotonic())), n)
     new_p = report("SenderQueue", n, total, samples)
     for _ in range(n):
         new.get()
@@ -197,8 +197,8 @@ def scenario_2_sustained_overflow():
 
     new = make_sender_queue(maxsize=maxsize)
     for _ in range(maxsize):
-        new.put(PendingPayload(PACKET, monotonic(), False))
-    total, samples = time_puts(lambda: new.put(PendingPayload(PACKET, monotonic(), False)), n)
+        new.put(PendingPayload(PACKET, monotonic()))
+    total, samples = time_puts(lambda: new.put(PendingPayload(PACKET, monotonic())), n)
     new_p = report("SenderQueue", n, total, samples)
 
     ratio = new_p["p99"] / old_p["p99"] if old_p["p99"] else float("inf")
@@ -223,10 +223,10 @@ def scenario_3_large_expired_backlog():
         q = make_sender_queue(maxsize=backlog, expiry_seconds=0.0)
         stale_at = monotonic() - 1000.0
         for _ in range(backlog):
-            q.put(PendingPayload(PACKET, stale_at, False))
+            q.put(PendingPayload(PACKET, stale_at))
 
         t0 = time.perf_counter()
-        q.put(PendingPayload(PACKET, monotonic(), False))
+        q.put(PendingPayload(PACKET, monotonic()))
         elapsed_us = (time.perf_counter() - t0) * 1e6
 
         note("backlog={:>5d} stale entries -> single put() took {:>9.3f}us, evicted {:d}".format(
@@ -315,7 +315,7 @@ def scenario_4_concurrency():
 
     new = make_sender_queue(maxsize=1000)
     elapsed, total_ops, samples = _run_concurrent(
-        lambda: new.put(PendingPayload(PACKET, monotonic(), False)),
+        lambda: new.put(PendingPayload(PACKET, monotonic())),
         lambda: (new.get(), new.task_done()),
         n_producers,
         n_per_producer,
@@ -333,42 +333,52 @@ def scenario_4_concurrency():
 # Scenario 5: per-item memory footprint.
 # --------------------------------------------------------------------------
 def scenario_5_memory_footprint():
-    section("5. Per-item memory footprint: PendingPayload wrapper vs a bare str")
+    section("5. Per-item memory footprint: bare str (replay-safe) vs PendingPayload (expiring)")
     note("sys.getsizeof() is shallow: PendingPayload holds a *reference* to the payload string,")
-    note("not a copy, so its own size doesn't include the string's bytes. The old queue.Queue held")
-    note("that same string directly with nothing wrapping it, so the real extra cost per item is")
-    note("the wrapper object itself, plus (for non-replay-safe items) a float object for enqueued_at.")
+    note("not a copy, so its own size doesn't include the string's bytes. The string is shared")
+    note("either way, so the real per-item cost is the wrapper object plus its enqueued_at float.")
 
     payload_str = PACKET
-    wrapper_size = sys.getsizeof(PendingPayload(payload_str, monotonic(), False))
+    str_size = sys.getsizeof(payload_str)
+    wrapper_size = sys.getsizeof(PendingPayload(payload_str, monotonic()))
+    float_size = sys.getsizeof(monotonic())
 
-    note("payload str (shared either way):                       {} bytes".format(sys.getsizeof(payload_str)))
+    note("payload str (shared either way):                       {} bytes".format(str_size))
     note("PendingPayload wrapper itself (__slots__, no __dict__): {} bytes".format(wrapper_size))
     print()
 
-    note("replay_safe=True payloads (gauge_with_timestamp, etc.) never have their enqueued_at read")
-    note("(SenderQueue._expired() short-circuits on replay_safe first), so base.py passes None")
-    note("instead of a fresh timestamp -- no float allocation at all for this class of payload:")
-    replay_safe_wrapped = PendingPayload(payload_str, None, True)
-    note("  PendingPayload(..., enqueued_at=None, replay_safe=True): {} bytes total, +0 for the timestamp".format(
-        sys.getsizeof(replay_safe_wrapped)
+    note("Replay-safe payloads (gauge_with_timestamp, event(date_happened=...),")
+    note("service_check(timestamp=...)) never expire, so they carry no enqueued_at and are queued")
+    note("as the BARE STRING -- SenderQueue infers replay-safety from the entry's type. That means")
+    note("zero wrapper overhead for them, not merely a skipped float:")
+    note("  replay-safe entry:  {} bytes (just the shared str) -> +0 bytes overhead".format(str_size))
+    note("  expiring entry:     {} + {} + {} = {} bytes -> +{} bytes overhead".format(
+        str_size, wrapper_size, float_size,
+        str_size + wrapper_size + float_size, wrapper_size + float_size,
     ))
     print()
 
-    non_replay_safe_extra = wrapper_size + sys.getsizeof(monotonic())
-    note("Non-replay-safe payloads DO need a real enqueued_at -- one monotonic() reading per item,")
-    note("same as any other Python object holding a fresh timestamp. Extra overhead per item vs the")
-    note("old bare-string queue: ~{} bytes ({} wrapper + {} float).".format(
-        non_replay_safe_extra, wrapper_size, sys.getsizeof(monotonic())
+    saved_per_entry = wrapper_size
+    note("Saving vs wrapping replay-safe payloads too (the previous design): {} bytes/entry,".format(
+        saved_per_entry
+    ))
+    note("which is {:.0f}% of what such an entry used to occupy.".format(
+        100.0 * saved_per_entry / (str_size + saved_per_entry)
     ))
     for n in (100, 10000, 100000):
-        note("  at sender_queue_size={:<7d} that's ~{:.1f}KB of additional resident overhead".format(
-            n, non_replay_safe_extra * n / 1024.0
+        note("  at sender_queue_size={:<7d} that's ~{:.1f}KB less resident memory".format(
+            n, saved_per_entry * n / 1024.0
         ))
-    note("(An earlier version of this code coalesced timestamps to a shared per-100ms-bucket float")
-    note("to cut this under bursty load -- best case ~234KB saved at sender_queue_size=10,000, i.e.")
-    note("~0.09% of a typical 256MB container's RSS. Reverted: not worth the added global mutable")
-    note("state, cross-instance coupling, and dedicated concurrency tests for savings that small.)")
+    print()
+
+    note("The second effect is GC pressure, and it is the bigger one in practice: PendingPayload")
+    note("holds references, so every instance is tracked by the cyclic collector and traversed on")
+    note("each gen-2 pass. str is atomic and never traversed. A queue full of replay-safe payloads")
+    note("therefore contributes nothing to GC pause time now -- see scenario 1's max latency, which")
+    note("was dominated by exactly this traversal when every entry was wrapped.")
+    note("(An earlier version coalesced timestamps into a shared per-100ms-bucket float to cut the")
+    note("expiring-entry cost too. Reverted: global mutable state and cross-instance coupling for")
+    note("~234KB at sender_queue_size=10,000, i.e. ~0.09% of a 256MB container's RSS.)")
 
 
 # --------------------------------------------------------------------------
