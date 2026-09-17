@@ -1167,15 +1167,6 @@ class DogStatsd(object):
             # Buffered lines are kept in two separate batches, one per expiry
             # policy: replay-safe metrics carry their own timestamp, the rest
             # are stamped on receipt.
-            #
-            # HELD AS FOUR PLAIN ATTRIBUTES, not as {False: ..., True: ...}
-            # dicts. This is the hottest path in the library -- touched once
-            # per metric, i.e. ~18k/s per client in the benchmark -- and the
-            # dict form cost a bool() coercion plus a subscript on every
-            # access. Measured: _send_to_buffer 0.6388us -> 0.7344us per metric
-            # (+15.0%) for the dict version, which was ~72% of this branch's
-            # entire per-metric CPU regression against master (+0.132us,
-            # +7.2%). Attribute access costs nothing extra and reads no worse.
             self._buffer = []  # type: List[Text]           # non-replay-safe
             self._buffer_rs = []  # type: List[Text]        # replay-safe
             # Running packet size per buffer, each including the newline that
