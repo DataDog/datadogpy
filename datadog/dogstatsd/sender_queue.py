@@ -237,7 +237,12 @@ class SenderQueue(object):
             if item is Stop:
                 return item
 
-            if self._expired(item, monotonic()):
+            # Guard the monotonic() call on the type test rather than letting
+            # _expired() do it: the argument is evaluated BEFORE the call, so
+            # `self._expired(item, monotonic())` read the clock on every get()
+            # including for bare strings, which are replay-safe and can never
+            # expire, so the value was computed and immediately discarded.
+            if isinstance(item, PendingPayload) and self._expired(item, monotonic()):
                 self._on_drop_expired(item)
                 self.task_done()
                 continue

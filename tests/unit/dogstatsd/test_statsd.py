@@ -1805,7 +1805,7 @@ async def print_foo():
         # single line breaches the cap, too large and nothing ever overflows.
         self.statsd.open_buffer()
         self.statsd.gauge("plain.filler.0", 0)
-        line_size = self.statsd._buffer_sizes[False]
+        line_size = self.statsd._buffer_size
         self.statsd.close_buffer()
         del sent[:]
 
