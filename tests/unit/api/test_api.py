@@ -11,6 +11,7 @@ import zlib
 
 # 3p
 import mock, pytest
+import requests
 
 # datadog
 from datadog import initialize, api, util
@@ -588,6 +589,42 @@ class TestLogsResource(DatadogAPIWithInitialization):
             "https://example.com/api/v1/logs-queries/list",
             data={"time": {"from": "2021-01-01T11:00:00Z", "to": "2021-01-02T11:00:00Z"}}
         )
+
+
+class TestNonJSONResponses(DatadogAPIWithInitialization):
+
+    def set_response(self, status_code, content):
+        response = requests.Response()
+        response.status_code = status_code
+        response._content = content
+        self.request_mock.request = mock.Mock(return_value=response)
+
+    def test_http_error_status_is_preserved(self):
+        for status_code in (400, 401, 403, 404, 409, 429):
+            self.set_response(status_code, b'<html>Request rejected</html>')
+            with pytest.raises(HTTPError) as excinfo:
+                MyGetable.get(1)
+            assert str(status_code) in str(excinfo.value)
+
+    def test_invalid_utf8_http_error_status_is_preserved(self):
+        self.set_response(403, b'\xff')
+        with pytest.raises(HTTPError) as excinfo:
+            MyGetable.get(1)
+        assert '403' in str(excinfo.value)
+
+    def test_success_with_invalid_json_still_raises_value_error(self):
+        self.set_response(200, b'<html>Not JSON</html>')
+        with pytest.raises(ValueError, match='Invalid JSON response'):
+            MyGetable.get(1)
+
+    def test_json_api_errors_keep_existing_behavior(self):
+        self.set_response(403, b'{"errors": ["Forbidden"]}')
+        with mock.patch.object(api, '_mute', False):
+            with pytest.raises(ApiError) as excinfo:
+                MyGetable.get(1)
+            assert excinfo.value.args[0] == {'errors': ['Forbidden']}
+        with mock.patch.object(api, '_mute', True):
+            assert MyGetable.get(1) == {'errors': ['Forbidden']}
 
 
 class TestMetricResource(DatadogAPIWithInitialization):
