@@ -300,7 +300,7 @@ class SenderQueue(object):
         self._in_flight[key] = item
 
     def _release_in_flight_locked(self, item, action):
-        # type: (QueuedItem, str) -> bool
+        # type: (QueuedItemOrStop, str) -> bool
         # Caller already holds self._lock (shared by _not_empty / _all_tasks_done).
         # Verifies `item` is currently in flight, then drops it from the
         # in-flight map. `action` names the caller ("requeue_front"/
