@@ -1,11 +1,14 @@
 import collections
+import logging
 import sys
 import threading
 
 from datadog.util.compat import monotonic
 
+log = logging.getLogger("datadog.dogstatsd")
+
 if sys.version_info[:2] >= (3, 5):
-    from typing import Callable, Optional, Union  # noqa: F401
+    from typing import Callable, Dict, Optional, Union  # noqa: F401
 
 
 # Sentinel telling the background sender thread to shut down.
@@ -119,6 +122,19 @@ class SenderQueue(object):
         # all tasks have been dropped or sent.
         self._unfinished_tasks = 0
 
+        # The items currently handed out by get() and not yet finished via
+        # requeue_front() or task_done(), keyed by id(item). SenderQueue is
+        # single-consumer by design (one background sender thread), so this
+        # normally holds at most one entry at a time. Tracking it lets
+        # requeue_front()/task_done() verify their precondition -- that the
+        # item they're handed really is the one get() currently has out of
+        # the queue -- so the misuse that would otherwise silently corrupt
+        # _unfinished_tasks (a double finish, a double requeue, or a requeue
+        # of an already-finished item) fails loudly instead of drifting the
+        # counter. The item itself is held in the value to keep it alive
+        # (and its id stable) for as long as the entry exists.
+        self._in_flight = {}  # type: Dict[int, QueuedItemOrStop]
+
     def _expired(self, item, now):
         # type: (QueuedItem, float) -> bool
         if not isinstance(item, PendingPayload):
@@ -209,6 +225,19 @@ class SenderQueue(object):
         Either way, a drop here finishes the task that put() started.
         """
         with self._not_empty:
+            # The item handed back must be exactly the one get() currently has
+            # out of the queue. SenderQueue is single-consumer; a double
+            # requeue or a requeue of an already-finished item would otherwise
+            # corrupt _unfinished_tasks. If the item isn't in flight, log and
+            # bail out without touching the deque or the counter -- it's
+            # already been accounted for elsewhere, so this is a no-op rather
+            # than a crash. (Releasing it from in flight here is correct in
+            # every branch below: it's either requeued back onto the deque --
+            # where a future get() will pick it up again -- or dropped for
+            # good.)
+            if not self._release_in_flight_locked(item, "requeue_front"):
+                return
+
             if self._expired(item, monotonic()):
                 self._on_drop_expired(item)
                 self._finish_task_locked()
@@ -233,6 +262,10 @@ class SenderQueue(object):
                 # A slot just opened up: wake one thread blocked in put()'s
                 # wait-for-room loop, if any (harmless no-op otherwise).
                 self._not_full.notify()
+                # Record this item as in flight, owned by the current thread,
+                # until requeue_front() or task_done() releases it (see
+                # _in_flight in __init__).
+                self._take_in_flight_locked(item)
 
             if item is Stop:
                 return item
@@ -244,24 +277,78 @@ class SenderQueue(object):
             # expire, so the value was computed and immediately discarded.
             if isinstance(item, PendingPayload) and self._expired(item, monotonic()):
                 self._on_drop_expired(item)
-                self.task_done()
+                self.task_done(item)
                 continue
 
             return item
+
+    def _take_in_flight_locked(self, item):
+        # type: (QueuedItemOrStop) -> None
+        # Caller already holds self._lock (shared by _not_empty / _all_tasks_done).
+        # Records `item` as the one currently handed out by get(). A duplicate
+        # here means a previous get() was never finished (or the same object
+        # was queued twice); we log it and overwrite so the new handout is the
+        # one tracked, rather than crashing the sender thread.
+        key = id(item)
+        if key in self._in_flight:
+            log.error(
+                "dogstatsd sender queue: get() handed out an item already tracked as "
+                "in flight; a previous get() was never finished with task_done() / "
+                "requeue_front(), or the same object was queued more than once. "
+                "Counter bookkeeping may drift."
+            )
+        self._in_flight[key] = item
+
+    def _release_in_flight_locked(self, item, action):
+        # type: (QueuedItem, str) -> bool
+        # Caller already holds self._lock (shared by _not_empty / _all_tasks_done).
+        # Verifies `item` is currently in flight, then drops it from the
+        # in-flight map. `action` names the caller ("requeue_front"/
+        # "task_done") for the log message. Returns False (after logging) when
+        # the item is not in flight, so the caller can skip the counter/deque
+        # mutation that would otherwise drift _unfinished_tasks -- without
+        # crashing the sender thread.
+        key = id(item)
+        if key not in self._in_flight:
+            log.error(
+                "dogstatsd sender queue: %s() was called on an item that is not "
+                "currently in flight (it was never returned by get(), or was "
+                "already finished). Ignoring it to keep the task counter consistent.",
+                action,
+            )
+            return False
+        del self._in_flight[key]
+        return True
 
     def _finish_task_locked(self):
         # type: () -> None
         # Caller already holds self._lock (shared by _not_empty / _all_tasks_done).
         unfinished = self._unfinished_tasks - 1
         if unfinished < 0:
-            raise ValueError("task_done() called too many times")
+            # More finishes than puts: a real bookkeeping bug. Log it and
+            # clamp at zero rather than raising, so the sender thread stays
+            # alive. Notify in case a join() is waiting, so it doesn't hang.
+            log.error(
+                "dogstatsd sender queue: task accounting went negative "
+                "(_unfinished_tasks below zero); clamping. This indicates a "
+                "double finish or a finish without a matching put()."
+            )
+            unfinished = 0
         self._unfinished_tasks = unfinished
         if unfinished == 0:
             self._all_tasks_done.notify_all()
 
-    def task_done(self):
-        # type: () -> None
+    def task_done(self, item):
+        # type: (QueuedItemOrStop) -> None
         with self._all_tasks_done:
+            # The item being finished must be the one get() currently has out
+            # of the queue. This is the counterpart to get()'s
+            # _take_in_flight_locked(); a second task_done() (double finish)
+            # would otherwise let _unfinished_tasks drift. If it's not in
+            # flight, log and bail out without decrementing -- the task was
+            # already finished elsewhere -- rather than crashing the sender.
+            if not self._release_in_flight_locked(item, "task_done"):
+                return
             self._finish_task_locked()
 
     def join(self):

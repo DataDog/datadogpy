@@ -10,6 +10,7 @@ Tests for dogstatsd.py
 # Standard libraries
 from collections import deque
 from contextlib import closing
+import logging
 import struct
 from threading import Thread
 import errno
@@ -2896,8 +2897,9 @@ async def print_foo():
 
             # Now free up room: the blocked put() should wake up and
             # succeed without ever having dropped anything.
-            self.assertEqual(pending_queue.get().payload, "first\n")
-            pending_queue.task_done()
+            first = pending_queue.get()
+            self.assertEqual(first.payload, "first\n")
+            pending_queue.task_done(first)
         finally:
             t.join(timeout=5.0)
 
@@ -2932,8 +2934,9 @@ async def print_foo():
         self.assertTrue(t.is_alive(), "put() should still be waiting for room")
 
         # Drain the one slot: the blocked put() should wake up promptly.
-        self.assertEqual(pending_queue.get().payload, "first\n")
-        pending_queue.task_done()
+        first = pending_queue.get()
+        self.assertEqual(first.payload, "first\n")
+        pending_queue.task_done(first)
 
         t.join(timeout=5.0)
         self.assertFalse(t.is_alive())
@@ -3215,6 +3218,184 @@ async def print_foo():
 
         self.assertEqual([p.payload for p in dropped_expired], ["stale\n"])
         self.assertEqual(pending_queue.qsize(), 0)
+
+    def test_sender_queue_requeue_front_ignores_item_not_in_flight(self):
+        # requeue_front() must be called on the exact item get() returned, and
+        # only while it's still in flight. Requeuing something that was never
+        # get() (or was already finished) would otherwise corrupt
+        # _unfinished_tasks. The guard logs the misuse and ignores the call
+        # (no deque change, no counter change) so the sender thread stays
+        # alive rather than crashing on a bookkeeping bug.
+        pending_queue = SenderQueue(
+            maxsize=0,
+            expiry_seconds=20.0,
+            on_drop_queue_full=lambda item: self.fail("unexpected queue-full drop"),
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+        )
+
+        never_got = PendingPayload("never-get\n", sender_queue_clock())
+        with self.assertLogs("datadog.dogstatsd", level="ERROR"):
+            pending_queue.requeue_front(never_got)
+        self.assertEqual(pending_queue.qsize(), 0, "never-got item was not added to the deque")
+        self.assertEqual(pending_queue._unfinished_tasks, 0, "counter untouched")
+
+        # And requeuing an item that was already finished (get then task_done)
+        # is equally ignored: it's no longer in flight, the counter stays put.
+        finished = PendingPayload("finished\n", sender_queue_clock())
+        pending_queue.put(finished)
+        got = pending_queue.get()
+        self.assertIs(got, finished)
+        pending_queue.task_done(got)
+        self.assertEqual(pending_queue._unfinished_tasks, 0, "finished -> counter back to zero")
+        with self.assertLogs("datadog.dogstatsd", level="ERROR"):
+            pending_queue.requeue_front(got)
+        self.assertEqual(pending_queue._unfinished_tasks, 0, "counter did not drift on the ignored requeue")
+        self.assertEqual(pending_queue.qsize(), 0, "already-finished item was not re-added")
+
+    def test_sender_queue_requeue_front_ignores_double_requeue(self):
+        # A second requeue_front() of the same item (e.g. two threads both
+        # handed the same in-flight reference) would put it in the deque twice
+        # while only one task was ever counted. The in-flight guard logs the
+        # second call and ignores it, so the deque and counter stay consistent.
+        pending_queue = SenderQueue(
+            maxsize=0,
+            expiry_seconds=20.0,
+            on_drop_queue_full=lambda item: self.fail("unexpected queue-full drop"),
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+        )
+
+        item = PendingPayload("once\n", sender_queue_clock())
+        pending_queue.put(item)
+        got = pending_queue.get()
+        self.assertIs(got, item)
+        pending_queue.requeue_front(got)  # first requeue: fine, back in the deque
+        self.assertEqual(pending_queue.qsize(), 1)
+        with self.assertLogs("datadog.dogstatsd", level="ERROR"):
+            pending_queue.requeue_front(got)  # second: no longer in flight
+        self.assertEqual(pending_queue.qsize(), 1, "item was NOT added to the deque a second time")
+        self.assertEqual(pending_queue._unfinished_tasks, 1, "counter unchanged")
+
+    def test_sender_queue_task_done_ignores_double_finish(self):
+        # A second task_done() on the same item (double finish) would drive
+        # _unfinished_tasks negative. The in-flight guard logs the second call
+        # and skips the decrement, so the counter stays at zero instead of
+        # going to -1 -- and the sender thread stays alive.
+        pending_queue = SenderQueue(
+            maxsize=0,
+            expiry_seconds=20.0,
+            on_drop_queue_full=lambda item: self.fail("unexpected queue-full drop"),
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+        )
+
+        item = PendingPayload("once\n", sender_queue_clock())
+        pending_queue.put(item)
+        got = pending_queue.get()
+        pending_queue.task_done(got)
+        self.assertEqual(pending_queue._unfinished_tasks, 0, "first finish -> counter at zero")
+        with self.assertLogs("datadog.dogstatsd", level="ERROR"):
+            pending_queue.task_done(got)
+        self.assertEqual(pending_queue._unfinished_tasks, 0, "second finish did NOT drive the counter negative")
+
+    def test_sender_queue_many_threads_get_and_requeue_never_logs_error(self):
+        # 100 threads, split into getters and requeuers. Each getter runs
+        # get() and hands the item to a requeuer via a thread-safe handoff;
+        # each requeuer takes that item and calls requeue_front() on it. So
+        # the thread that get() the item is NOT the thread that requeues it --
+        # the item crosses thread boundaries. The identity guard is
+        # thread-agnostic by design, so this must stay clean: no ERROR log,
+        # no counter drift, no crash. This is the future-proofing proof: a
+        # legitimate cross-thread get/requeue workload stays clean.
+        try:
+            import queue as queue_mod
+        except ImportError:  # Python 2
+            import Queue as queue_mod
+
+        pending_queue = SenderQueue(
+            maxsize=0,  # unbounded: requeue never drops for capacity
+            expiry_seconds=100.0,
+            on_drop_queue_full=lambda item: self.fail("unexpected queue-full drop"),
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+        )
+
+        n_items = 200
+        n_getters = 50
+        n_requeuers = 50
+        iterations = 100
+
+        for i in range(n_items):
+            pending_queue.put(PendingPayload("item-{}\n".format(i), sender_queue_clock()))
+        self.assertEqual(pending_queue._unfinished_tasks, n_items)
+
+        handoff = queue_mod.Queue()
+        SENTINEL = object()
+
+        # Capture any ERROR logged to the dogstatsd logger from any thread.
+        captured = []
+
+        class _CaptureHandler(logging.Handler):
+            def emit(self, record):
+                captured.append(record)
+
+        dogstatsd_logger = logging.getLogger("datadog.dogstatsd")
+        handler = _CaptureHandler(level=logging.ERROR)
+        dogstatsd_logger.addHandler(handler)
+        prev_level = dogstatsd_logger.level
+        dogstatsd_logger.setLevel(min(prev_level, logging.ERROR))
+        try:
+            def getter():
+                for _ in range(iterations):
+                    item = pending_queue.get()
+                    handoff.put(item)
+
+            def requeuer():
+                while True:
+                    item = handoff.get()
+                    if item is SENTINEL:
+                        return
+                    pending_queue.requeue_front(item)
+
+            getters = [threading.Thread(target=getter) for _ in range(n_getters)]
+            requeuers = [threading.Thread(target=requeuer) for _ in range(n_requeuers)]
+
+            # Start requeuers first so they're draining the handoff before
+            # getters begin filling it; otherwise the handoff could grow
+            # unbounded and the SenderQueue could drain to empty (getters
+            # would then block in get() until requeuers put items back).
+            for t in requeuers:
+                t.start()
+            for t in getters:
+                t.start()
+
+            for t in getters:
+                t.join()
+            # All getters done: every real item is either in the handoff or
+            # already requeued. Sentinels go behind them, so no real item is
+            # stranded.
+            for _ in range(n_requeuers):
+                handoff.put(SENTINEL)
+            for t in requeuers:
+                t.join()
+        finally:
+            dogstatsd_logger.removeHandler(handler)
+            dogstatsd_logger.setLevel(prev_level)
+
+        # No ERROR log ever fired: the in-flight guard never tripped even
+        # though every item crossed from the getter thread to a different
+        # requeuer thread.
+        self.assertEqual(
+            captured, [],
+            "no error should be logged when get() and requeue_front() run on "
+            "different threads; got: {!r}".format([r.getMessage() for r in captured]),
+        )
+
+        # Every get() was matched by a requeue_front() (no task_done, no
+        # drops on the unbounded queue), so the queue is fully populated and
+        # the task counter is unchanged -- no drift.
+        self.assertEqual(pending_queue.qsize(), n_items, "all items back in the queue")
+        self.assertEqual(
+            pending_queue._unfinished_tasks, n_items,
+            "_unfinished_tasks never drifted under cross-thread get/requeue contention",
+        )
 
     def test_replay_safety_is_carried_by_the_queued_entry_type(self):
         # Replay-safety is not a stored flag: an entry subject to expiry is a

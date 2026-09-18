@@ -2209,7 +2209,7 @@ class DogStatsd(object):
         while True:
             item = pending_queue.get()
             if item is Stop:
-                pending_queue.task_done()
+                pending_queue.task_done(item)
                 return
 
             # payload_text() also narrows the type: 'if item is Stop' above is
@@ -2232,7 +2232,7 @@ class DogStatsd(object):
             # Sent, or a definitive failure that _xmit_packet already
             # accounted for as a dropped packet -- either way, this
             # payload's story is over.
-            pending_queue.task_done()
+            pending_queue.task_done(item)  # type: ignore[arg-type]
             backoff = UDS_CONNECT_RETRY_INITIAL_BACKOFF
 
     def wait_for_pending(self):
