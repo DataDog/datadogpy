@@ -9,7 +9,7 @@ Tests for dogstatsd.py
 """
 # Standard libraries
 from collections import deque
-from contextlib import closing
+from contextlib import closing, contextmanager
 import logging
 import struct
 from threading import Thread
@@ -175,6 +175,28 @@ class TestDogStatsd(unittest.TestCase):
         Unmock the proc filesystem.
         """
         self._procfs_mock.stop()
+
+    @contextmanager
+    def _capture_error_logs(self):
+        # assertLogs() is Python 3.4+ only, but this suite still runs on
+        # Python 2.7 / pypy2.7. Capture ERROR records on the dogstatsd logger
+        # with a plain handler instead, so the guard tests work everywhere.
+        captured = []
+
+        class _CaptureHandler(logging.Handler):
+            def emit(self, record):
+                captured.append(record)
+
+        dogstatsd_logger = logging.getLogger("datadog.dogstatsd")
+        handler = _CaptureHandler(level=logging.ERROR)
+        dogstatsd_logger.addHandler(handler)
+        prev_level = dogstatsd_logger.level
+        dogstatsd_logger.setLevel(min(prev_level, logging.ERROR))
+        try:
+            yield captured
+        finally:
+            dogstatsd_logger.removeHandler(handler)
+            dogstatsd_logger.setLevel(prev_level)
 
     def assert_equal_telemetry(self, expected_payload, actual_payload, telemetry=None, **kwargs):
         if telemetry is None:
@@ -3234,8 +3256,9 @@ async def print_foo():
         )
 
         never_got = PendingPayload("never-get\n", sender_queue_clock())
-        with self.assertLogs("datadog.dogstatsd", level="ERROR"):
+        with self._capture_error_logs() as captured:
             pending_queue.requeue_front(never_got)
+        self.assertTrue(captured, "the not-in-flight requeue should have logged an error")
         self.assertEqual(pending_queue.qsize(), 0, "never-got item was not added to the deque")
         self.assertEqual(pending_queue._unfinished_tasks, 0, "counter untouched")
 
@@ -3247,8 +3270,9 @@ async def print_foo():
         self.assertIs(got, finished)
         pending_queue.task_done(got)
         self.assertEqual(pending_queue._unfinished_tasks, 0, "finished -> counter back to zero")
-        with self.assertLogs("datadog.dogstatsd", level="ERROR"):
+        with self._capture_error_logs() as captured:
             pending_queue.requeue_front(got)
+        self.assertTrue(captured, "the already-finished requeue should have logged an error")
         self.assertEqual(pending_queue._unfinished_tasks, 0, "counter did not drift on the ignored requeue")
         self.assertEqual(pending_queue.qsize(), 0, "already-finished item was not re-added")
 
@@ -3270,8 +3294,9 @@ async def print_foo():
         self.assertIs(got, item)
         pending_queue.requeue_front(got)  # first requeue: fine, back in the deque
         self.assertEqual(pending_queue.qsize(), 1)
-        with self.assertLogs("datadog.dogstatsd", level="ERROR"):
+        with self._capture_error_logs() as captured:
             pending_queue.requeue_front(got)  # second: no longer in flight
+        self.assertTrue(captured, "the double requeue should have logged an error")
         self.assertEqual(pending_queue.qsize(), 1, "item was NOT added to the deque a second time")
         self.assertEqual(pending_queue._unfinished_tasks, 1, "counter unchanged")
 
@@ -3292,8 +3317,9 @@ async def print_foo():
         got = pending_queue.get()
         pending_queue.task_done(got)
         self.assertEqual(pending_queue._unfinished_tasks, 0, "first finish -> counter at zero")
-        with self.assertLogs("datadog.dogstatsd", level="ERROR"):
+        with self._capture_error_logs() as captured:
             pending_queue.task_done(got)
+        self.assertTrue(captured, "the double finish should have logged an error")
         self.assertEqual(pending_queue._unfinished_tasks, 0, "second finish did NOT drive the counter negative")
 
     def test_sender_queue_many_threads_get_and_requeue_never_logs_error(self):
@@ -3329,19 +3355,7 @@ async def print_foo():
         handoff = queue_mod.Queue()
         SENTINEL = object()
 
-        # Capture any ERROR logged to the dogstatsd logger from any thread.
-        captured = []
-
-        class _CaptureHandler(logging.Handler):
-            def emit(self, record):
-                captured.append(record)
-
-        dogstatsd_logger = logging.getLogger("datadog.dogstatsd")
-        handler = _CaptureHandler(level=logging.ERROR)
-        dogstatsd_logger.addHandler(handler)
-        prev_level = dogstatsd_logger.level
-        dogstatsd_logger.setLevel(min(prev_level, logging.ERROR))
-        try:
+        with self._capture_error_logs() as captured:
             def getter():
                 for _ in range(iterations):
                     item = pending_queue.get()
@@ -3375,9 +3389,6 @@ async def print_foo():
                 handoff.put(SENTINEL)
             for t in requeuers:
                 t.join()
-        finally:
-            dogstatsd_logger.removeHandler(handler)
-            dogstatsd_logger.setLevel(prev_level)
 
         # No ERROR log ever fired: the in-flight guard never tripped even
         # though every item crossed from the getter thread to a different
