@@ -9,7 +9,8 @@ Tests for dogstatsd.py
 """
 # Standard libraries
 from collections import deque
-from contextlib import closing
+from contextlib import closing, contextmanager
+import logging
 import struct
 from threading import Thread
 import errno
@@ -30,7 +31,9 @@ import pytest
 # Datadog libraries
 from datadog import initialize, statsd
 from datadog import __version__ as version
-from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_CONNECT_RETRY_INITIAL_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
+from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, PENDING_PAYLOAD_EXPIRY_SECONDS, PendingPayload, SenderQueue, Stop, UDP_OPTIMAL_PAYLOAD_LENGTH, UDS_CONNECT_RETRY_INITIAL_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
+from datadog.dogstatsd.sender_queue import is_replay_safe, payload_text
+from datadog.util.compat import monotonic as sender_queue_clock
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
 from tests.util.contextmanagers import preserve_environment_variable, EnvVars
@@ -123,20 +126,26 @@ class OverflownSocket(BrokenSocket):
         super(OverflownSocket, self).__init__(errno.EAGAIN)
 
 
-def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped_writer=0, packets_sent=1, packets_dropped_writer=0, transport="udp", tags="", bytes_dropped_queue=0, packets_dropped_queue=0):
+def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped_writer=0, packets_sent=1, packets_dropped_writer=0, transport="udp", tags="", bytes_dropped_queue=0, packets_dropped_queue=0, bytes_dropped_expired=0, packets_dropped_expired=0):
     tags = "," + tags if tags else ""
+
+    # Expired drops have no dedicated wire metric: they're folded into the
+    # *_dropped_queue lines (and totals) reported to the Agent. See
+    # DogStatsd._flush_telemetry().
+    reported_bytes_dropped_queue = bytes_dropped_queue + bytes_dropped_expired
+    reported_packets_dropped_queue = packets_dropped_queue + packets_dropped_expired
 
     return "\n".join([
         "datadog.dogstatsd.client.metrics:{}|c|#client:py,client_version:{},client_transport:{}{}".format(metrics, version, transport, tags),
         "datadog.dogstatsd.client.events:{}|c|#client:py,client_version:{},client_transport:{}{}".format(events, version, transport, tags),
         "datadog.dogstatsd.client.service_checks:{}|c|#client:py,client_version:{},client_transport:{}{}".format(service_checks, version, transport, tags),
         "datadog.dogstatsd.client.bytes_sent:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_sent, version, transport, tags),
-        "datadog.dogstatsd.client.bytes_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_dropped_queue + bytes_dropped_writer, version, transport, tags),
-        "datadog.dogstatsd.client.bytes_dropped_queue:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_dropped_queue, version, transport, tags),
+        "datadog.dogstatsd.client.bytes_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(reported_bytes_dropped_queue + bytes_dropped_writer, version, transport, tags),
+        "datadog.dogstatsd.client.bytes_dropped_queue:{}|c|#client:py,client_version:{},client_transport:{}{}".format(reported_bytes_dropped_queue, version, transport, tags),
         "datadog.dogstatsd.client.bytes_dropped_writer:{}|c|#client:py,client_version:{},client_transport:{}{}".format(bytes_dropped_writer, version, transport, tags),
         "datadog.dogstatsd.client.packets_sent:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_sent, version, transport, tags),
-        "datadog.dogstatsd.client.packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped_queue + packets_dropped_writer, version, transport, tags),
-        "datadog.dogstatsd.client.packets_dropped_queue:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped_queue, version, transport, tags),
+        "datadog.dogstatsd.client.packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(reported_packets_dropped_queue + packets_dropped_writer, version, transport, tags),
+        "datadog.dogstatsd.client.packets_dropped_queue:{}|c|#client:py,client_version:{},client_transport:{}{}".format(reported_packets_dropped_queue, version, transport, tags),
         "datadog.dogstatsd.client.packets_dropped_writer:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped_writer, version, transport, tags),
     ]) + "\n"
 
@@ -166,6 +175,28 @@ class TestDogStatsd(unittest.TestCase):
         Unmock the proc filesystem.
         """
         self._procfs_mock.stop()
+
+    @contextmanager
+    def _capture_error_logs(self):
+        # assertLogs() is Python 3.4+ only, but this suite still runs on
+        # Python 2.7 / pypy2.7. Capture ERROR records on the dogstatsd logger
+        # with a plain handler instead, so the guard tests work everywhere.
+        captured = []
+
+        class _CaptureHandler(logging.Handler):
+            def emit(self, record):
+                captured.append(record)
+
+        dogstatsd_logger = logging.getLogger("datadog.dogstatsd")
+        handler = _CaptureHandler(level=logging.ERROR)
+        dogstatsd_logger.addHandler(handler)
+        prev_level = dogstatsd_logger.level
+        dogstatsd_logger.setLevel(min(prev_level, logging.ERROR))
+        try:
+            yield captured
+        finally:
+            dogstatsd_logger.removeHandler(handler)
+            dogstatsd_logger.setLevel(prev_level)
 
     def assert_equal_telemetry(self, expected_payload, actual_payload, telemetry=None, **kwargs):
         if telemetry is None:
@@ -1742,6 +1773,91 @@ async def print_foo():
         self.statsd.close_buffer()
         self.assertEqual(mock_warn.call_count, 2)
 
+    def test_mixed_batch_splits_by_replay_safety(self):
+        # A queued packet expires as a single unit, so every line in it has to
+        # share one expiry policy. Batching timestamped lines together with
+        # plain ones would make the whole packet non-replay-safe and strip the
+        # timestamped lines of the staleness exemption they're supposed to
+        # have, dropping them with the batch after ~10s of backlog. The buffer
+        # must split by policy instead.
+        sent = []
+        self.statsd._send_to_server = lambda packet, replay_safe=False: sent.append((packet, replay_safe))
+
+        self.statsd.open_buffer()
+        self.statsd.gauge_with_timestamp("ts.one", 1, timestamp=1700000000)
+        self.statsd.gauge("plain.one", 2)
+        self.statsd.gauge_with_timestamp("ts.two", 3, timestamp=1700000001)
+        self.statsd.gauge("plain.two", 4)
+        self.statsd.close_buffer()
+
+        # One packet per expiry policy, not one per metric: interleaving must
+        # not defeat batching.
+        self.assertEqual(len(sent), 2, "expected exactly one packet per expiry policy, got: {!r}".format(sent))
+
+        by_policy = dict((replay_safe, packet) for packet, replay_safe in sent)
+        self.assertEqual(sorted(by_policy.keys()), [False, True])
+
+        # Assert on structure rather than exact packet text: constant/origin
+        # tags vary by environment, but which lines land in which packet, and
+        # in what order, does not.
+        def names(packet):
+            return [line.split(":")[0] for line in packet.split("\n")]
+
+        self.assertEqual(names(by_policy[True]), ["ts.one", "ts.two"])
+        self.assertEqual(names(by_policy[False]), ["plain.one", "plain.two"])
+
+        # The invariant that actually matters: no packet mixes the two, and no
+        # timestamped line ever rides in an expiring packet.
+        for packet, replay_safe in sent:
+            lines = packet.split("\n")
+            timestamped = [line for line in lines if "|T" in line]
+            if replay_safe:
+                self.assertEqual(timestamped, lines, "replay-safe packet must be entirely timestamped lines")
+            else:
+                self.assertEqual(timestamped, [], "timestamped line leaked into an expiring packet")
+
+    def test_mixed_batch_respects_max_payload_size_per_buffer(self):
+        # Each buffer has to stay under _max_payload_size on its own, and one
+        # buffer overflowing must not drag the other one out with it.
+        sent = []
+        self.statsd._send_to_server = lambda packet, replay_safe=False: sent.append((packet, replay_safe))
+
+        # Measure a real serialised line and size the cap from it. Hard-coding
+        # a byte count would make the test depend on how long constant/origin
+        # tags happen to make each line in this environment: too small and a
+        # single line breaches the cap, too large and nothing ever overflows.
+        self.statsd.open_buffer()
+        self.statsd.gauge("plain.filler.0", 0)
+        line_size = self.statsd._buffer_size
+        self.statsd.close_buffer()
+        del sent[:]
+
+        # Room for two lines, so every third one forces a flush.
+        self.statsd._max_payload_size = line_size * 2 + 1
+
+        self.statsd.open_buffer()
+        # One small replay-safe line that should still be buffered while the
+        # plain buffer churns through several flushes.
+        self.statsd.gauge_with_timestamp("ts.keep", 1, timestamp=1700000000)
+        for i in range(12):
+            self.statsd.gauge("plain.filler.{}".format(i), i)
+        flushes_before_close = len(sent)
+        self.statsd.close_buffer()
+
+        self.assertGreater(flushes_before_close, 0, "the plain buffer should have overflowed at least once")
+        self.assertTrue(
+            all(not replay_safe for _, replay_safe in sent[:flushes_before_close]),
+            "overflow of the plain buffer must not flush the replay-safe buffer",
+        )
+        for packet, _ in sent:
+            self.assertLessEqual(len(packet) + 1, self.statsd._max_payload_size)
+
+        # The replay-safe line survived to the final flush, intact and alone.
+        final_packet, final_replay_safe = sent[-1]
+        self.assertTrue(final_replay_safe)
+        self.assertEqual([line.split(":")[0] for line in final_packet.split("\n")], ["ts.keep"])
+        self.assertIn("|T1700000000", final_packet)
+
     def test_batching_sequential(self):
         self.statsd.open_buffer()
         self.statsd.gauge('discarded.data', 123)
@@ -1953,6 +2069,51 @@ async def print_foo():
         self.assertEqual(0, self.statsd.packets_dropped_writer)
         self.assertEqual(0, self.statsd.bytes_dropped_queue)
         self.assertEqual(0, self.statsd.packets_dropped_queue)
+
+    def test_telemetry_folds_expired_drops_into_dropped_queue(self):
+        # There's no dedicated wire metric for expired drops: they're
+        # reported to the Agent as part of *_dropped_queue (and the combined
+        # *_dropped total), alongside capacity-based queue drops, since both
+        # never reach a socket write attempt. The distinction is still
+        # available in-process via bytes_dropped_expired/packets_dropped_expired.
+        # Avoid any real container-id auto-detected from the host/sandbox
+        # cgroup leaking into the expected payload below -- this test is
+        # about the telemetry counters, not the container-id field.
+        self.statsd._container_id = None
+
+        self.statsd.bytes_dropped_queue = 8
+        self.statsd.packets_dropped_queue = 9
+        self.statsd.bytes_dropped_expired = 10
+        self.statsd.packets_dropped_expired = 11
+        self.statsd.bytes_dropped_writer = 5
+        self.statsd.packets_dropped_writer = 7
+
+        self.statsd.open_buffer()
+        self.statsd.gauge('page.views', 123)
+        self.statsd.close_buffer()
+
+        payload = 'page.views:123|g\n'
+        telemetry = telemetry_metrics(
+            metrics=1,
+            bytes_sent=len(payload),
+            packets_sent=1,
+            bytes_dropped_queue=8,
+            packets_dropped_queue=9,
+            bytes_dropped_expired=10,
+            packets_dropped_expired=11,
+            bytes_dropped_writer=5,
+            packets_dropped_writer=7,
+        )
+
+        self.assert_equal_telemetry(payload, self.recv(2), telemetry=telemetry)
+
+        # The in-process counters stay separate even after the flush resets
+        # them -- confirming the fold happens only in the wire output, not
+        # by merging the underlying attributes.
+        self.assertEqual(0, self.statsd.bytes_dropped_queue)
+        self.assertEqual(0, self.statsd.packets_dropped_queue)
+        self.assertEqual(0, self.statsd.bytes_dropped_expired)
+        self.assertEqual(0, self.statsd.packets_dropped_expired)
 
     def test_telemetry_flush_interval(self):
         dogstatsd = DogStatsd(disable_buffering=False)
@@ -2619,28 +2780,712 @@ async def print_foo():
 
     def test_sender_queue_no_timeout(self):
         statsd = DogStatsd(disable_background_sender=False, sender_queue_timeout=None)
+        statsd.stop()
 
-    def test_bytes_dropped_queue_counts_actual_bytes(self):
-        # Use a queue of size 1 and a non-blocking timeout so packets are dropped
-        # when the queue is full, then verify bytes_dropped_queue reflects the real
-        # byte length of the dropped packet (including the appended newline).
+    def test_sender_queue_timeout_blocks_the_calling_thread_through_the_client(self):
+        # End-to-end: sender_queue_timeout configured on the real client
+        # actually makes statsd.increment() (the calling/application thread)
+        # block waiting for room, not just an internal SenderQueue detail.
         statsd = DogStatsd(
             disable_background_sender=False,
             sender_queue_size=1,
-            sender_queue_timeout=0,
+            sender_queue_timeout=5.0,
         )
+        # No socket assigned: the sender thread can never drain anything by
+        # actually sending, so the only way room opens up is via get()
+        # pulling an item off (which happens immediately, since nothing can
+        # succeed in sending it -- it gets hard-dropped as a writer failure
+        # and the sender loop moves on to the next get()).
         statsd.socket = FakeSocket()
 
-        # Build a packet whose serialised form we know, then compute its length.
-        metric_name = "test.metric"
+        statsd.increment("first")
 
-        # Send two packets: the first fills the queue, the second is dropped.
-        statsd._send_to_server(metric_name)
-        statsd._send_to_server(metric_name)
+        t0 = time.time()
+        statsd.increment("second")
+        elapsed = time.time() - t0
 
-        expected_bytes = len((metric_name + '\n').encode("utf-8"))
-        self.assertEqual(statsd.bytes_dropped_queue, expected_bytes)
+        self.assertLess(elapsed, 5.0, "should not have waited out the full 5s timeout")
+        statsd.wait_for_pending()
+        statsd.stop()
+
+    def test_bytes_dropped_queue_counts_actual_bytes(self):
+        # No sender thread: a live one could drain the first payload before the
+        # third is queued, so nothing would be evicted and the counters below
+        # would describe a schedule that never happened. Size 2 rather than 1
+        # so the eviction order is observable -- with a single slot the evicted
+        # entry is both the oldest and the newest.
+        statsd = DogStatsd(disable_background_sender=True)
+        statsd._queue = SenderQueue(
+            2,
+            PENDING_PAYLOAD_EXPIRY_SECONDS,
+            statsd._account_dropped_queue_full,
+            statsd._account_dropped_expired,
+        )
+
+        first, second, third = "test.metric.first", "test.metric.second", "test.metric.third"
+        statsd._send_to_server(first)
+        statsd._send_to_server(second)
+        statsd._send_to_server(third)  # evicts the oldest (first) to make room
+
+        # bytes_dropped_queue is the real byte length, including the newline
+        # _send_to_server() appends.
+        self.assertEqual(statsd.bytes_dropped_queue, len((first + "\n").encode("utf-8")))
         self.assertEqual(statsd.packets_dropped_queue, 1)
+        self.assertEqual(statsd.bytes_dropped_expired, 0)
+        self.assertEqual(statsd.packets_dropped_expired, 0)
+
+        # Dropping the oldest leaves the two newest queued, in order.
+        survivors = [statsd._queue.get().payload, statsd._queue.get().payload]
+        self.assertEqual(survivors, [second + "\n", third + "\n"])
+
+        statsd.stop()
+
+    def test_sender_queue_put_timeout_default_evicts_immediately(self):
+        # Default put_timeout (0, whether omitted or explicit): no waiting
+        # at all, same as before this feature existed. Deliberately omits
+        # put_timeout here to prove the *default* -- not just 0 -- means
+        # "don't wait", since None means something very different (wait
+        # forever) and must not be the implicit default for anyone who
+        # constructs a SenderQueue without thinking about put_timeout at all.
+        dropped_queue_full = []
+        pending_queue = SenderQueue(
+            maxsize=1,
+            expiry_seconds=100.0,
+            on_drop_queue_full=dropped_queue_full.append,
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+        )
+
+        pending_queue.put(PendingPayload("first\n", sender_queue_clock()))
+
+        t0 = time.time()
+        pending_queue.put(PendingPayload("second\n", sender_queue_clock()))
+        elapsed = time.time() - t0
+
+        self.assertLess(elapsed, 0.05, "put() should not have waited at all")
+        self.assertEqual([p.payload for p in dropped_queue_full], ["first\n"])
+        self.assertEqual(pending_queue.get().payload, "second\n")
+
+    def test_sender_queue_put_timeout_zero_evicts_immediately(self):
+        # Same as the default, but with put_timeout=0 passed explicitly.
+        dropped_queue_full = []
+        pending_queue = SenderQueue(
+            maxsize=1,
+            expiry_seconds=100.0,
+            on_drop_queue_full=dropped_queue_full.append,
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+            put_timeout=0,
+        )
+
+        pending_queue.put(PendingPayload("first\n", sender_queue_clock()))
+
+        t0 = time.time()
+        pending_queue.put(PendingPayload("second\n", sender_queue_clock()))
+        elapsed = time.time() - t0
+
+        self.assertLess(elapsed, 0.05, "put() should not have waited at all")
+        self.assertEqual([p.payload for p in dropped_queue_full], ["first\n"])
+        self.assertEqual(pending_queue.get().payload, "second\n")
+
+    def test_sender_queue_put_timeout_none_waits_forever_and_never_evicts(self):
+        # put_timeout=None is an explicit opt-in to unbounded blocking: put()
+        # must keep waiting indefinitely -- not fall back to eviction after
+        # some internal default -- until room actually opens up.
+        dropped_queue_full = []
+        pending_queue = SenderQueue(
+            maxsize=1,
+            expiry_seconds=100.0,
+            on_drop_queue_full=lambda item: dropped_queue_full.append(item),
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+            put_timeout=None,
+        )
+        pending_queue.put(PendingPayload("first\n", sender_queue_clock()))
+
+        result = {}
+
+        def blocked_put():
+            t0 = time.time()
+            pending_queue.put(PendingPayload("second\n", sender_queue_clock()))
+            result["elapsed"] = time.time() - t0
+
+        t = threading.Thread(target=blocked_put)
+        t.start()
+        try:
+            # Nothing is draining the queue: with a real timeout this would
+            # have already fired and evicted "first" well before 1s. With
+            # None it must still be waiting.
+            time.sleep(1.0)
+            self.assertTrue(t.is_alive(), "put(timeout=None) must keep waiting, never fall back to eviction on its own")
+            self.assertEqual(dropped_queue_full, [])
+
+            # Now free up room: the blocked put() should wake up and
+            # succeed without ever having dropped anything.
+            first = pending_queue.get()
+            self.assertEqual(first.payload, "first\n")
+            pending_queue.task_done(first)
+        finally:
+            t.join(timeout=5.0)
+
+        self.assertFalse(t.is_alive())
+        self.assertEqual(dropped_queue_full, [], "put_timeout=None must never fall back to eviction")
+        self.assertEqual(pending_queue.get().payload, "second\n")
+
+    def test_sender_queue_put_timeout_wakes_up_when_room_opens(self):
+        # A slot freed by get() (well within put_timeout) should wake a
+        # blocked put() immediately rather than making it wait out the full
+        # timeout, and nothing should be dropped.
+        dropped_queue_full = []
+        pending_queue = SenderQueue(
+            maxsize=1,
+            expiry_seconds=100.0,
+            on_drop_queue_full=dropped_queue_full.append,
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+            put_timeout=5.0,
+        )
+        pending_queue.put(PendingPayload("first\n", sender_queue_clock()))
+
+        result = {}
+
+        def blocked_put():
+            t0 = time.time()
+            pending_queue.put(PendingPayload("second\n", sender_queue_clock()))
+            result["elapsed"] = time.time() - t0
+
+        t = threading.Thread(target=blocked_put)
+        t.start()
+        time.sleep(0.2)
+        self.assertTrue(t.is_alive(), "put() should still be waiting for room")
+
+        # Drain the one slot: the blocked put() should wake up promptly.
+        first = pending_queue.get()
+        self.assertEqual(first.payload, "first\n")
+        pending_queue.task_done(first)
+
+        t.join(timeout=5.0)
+        self.assertFalse(t.is_alive())
+        self.assertLess(result["elapsed"], 5.0, "should have woken up well before the 5s timeout")
+        self.assertEqual(dropped_queue_full, [], "nothing should have been dropped: room opened up in time")
+        self.assertEqual(pending_queue.get().payload, "second\n")
+
+    def test_sender_queue_put_timeout_falls_back_to_eviction(self):
+        # If room never opens up within put_timeout, put() falls back to
+        # the same drop-oldest eviction as the immediate (no-wait) case.
+        dropped_queue_full = []
+        pending_queue = SenderQueue(
+            maxsize=1,
+            expiry_seconds=100.0,
+            on_drop_queue_full=dropped_queue_full.append,
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+            put_timeout=0.2,
+        )
+        pending_queue.put(PendingPayload("first\n", sender_queue_clock()))
+
+        t0 = time.time()
+        pending_queue.put(PendingPayload("second\n", sender_queue_clock()))
+        elapsed = time.time() - t0
+
+        self.assertGreaterEqual(elapsed, 0.2)
+        self.assertEqual([p.payload for p in dropped_queue_full], ["first\n"])
+        self.assertEqual(pending_queue.get().payload, "second\n")
+
+    def test_sender_queue_bulk_expired_reclaim_wakes_blocked_producers(self):
+        # When the eviction path's cleanup loop reclaims *more* than the one
+        # slot its caller needs, the surplus is real free capacity. Producers
+        # already parked in put()'s wait-for-room loop have to be told about
+        # it, otherwise they sleep out their full put_timeout while the queue
+        # sits half empty.
+        put_timeout = 1.0
+        maxsize = 4
+        dropped_expired = []
+        pending_queue = SenderQueue(
+            maxsize=maxsize,
+            expiry_seconds=100.0,
+            on_drop_queue_full=lambda item: self.fail("entries are stale: expect expiry drops, not full drops"),
+            on_drop_expired=dropped_expired.append,
+            put_timeout=put_timeout,
+        )
+        # Fill to capacity with entries that are already stale, so the
+        # cleanup loop has something to reclaim beyond the mandatory one.
+        stale_clock = sender_queue_clock() - 1000.0
+        for i in range(maxsize):
+            pending_queue.put(PendingPayload("stale-{}\n".format(i), stale_clock))
+
+        result = {}
+
+        def evictor():
+            # Queue is full and nothing drains it, so this waits out
+            # put_timeout and then falls back to eviction, whose cleanup loop
+            # reclaims all remaining stale entries in one go.
+            pending_queue.put(PendingPayload("evictor\n", sender_queue_clock()))
+
+        def late_waiter():
+            t0 = time.time()
+            pending_queue.put(PendingPayload("late\n", sender_queue_clock()))
+            result["elapsed"] = time.time() - t0
+
+        t_evictor = threading.Thread(target=evictor)
+        t_evictor.start()
+        # Start the second producer halfway through the first one's timeout so
+        # its own deadline is strictly later: it must be woken by the bulk
+        # reclaim, not by its own timeout firing.
+        time.sleep(put_timeout / 2.0)
+        t_late = threading.Thread(target=late_waiter)
+        t_late.start()
+
+        t_evictor.join(timeout=5.0)
+        t_late.join(timeout=5.0)
+        self.assertFalse(t_evictor.is_alive())
+        self.assertFalse(t_late.is_alive())
+
+        # All four stale entries went out through the cleanup path.
+        self.assertEqual(
+            [p.payload for p in dropped_expired],
+            ["stale-0\n", "stale-1\n", "stale-2\n", "stale-3\n"],
+        )
+        # Both live payloads made it, and the queue is well under maxsize.
+        self.assertEqual(pending_queue.qsize(), 2)
+
+        # The heart of it: the late producer had roughly put_timeout/2 left on
+        # its own clock when capacity opened up. Waking on the reclaim means
+        # ~put_timeout/2 elapsed; sleeping through it means the full
+        # put_timeout. Assert it beat its own deadline by a clear margin.
+        self.assertLess(
+            result["elapsed"],
+            put_timeout * 0.9,
+            "blocked producer slept through its put_timeout despite the bulk reclaim freeing capacity",
+        )
+
+    def test_sender_queue_requeue_front_never_blocks_on_put_timeout(self):
+        # requeue_front() runs on the background sender thread; it must
+        # never wait on put_timeout, or one stuck retry would stall every
+        # other queued payload behind it.
+        dropped_queue_full = []
+        pending_queue = SenderQueue(
+            maxsize=1,
+            expiry_seconds=100.0,
+            on_drop_queue_full=dropped_queue_full.append,
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+            put_timeout=5.0,
+        )
+        in_flight = PendingPayload("in-flight\n", sender_queue_clock())
+        pending_queue.put(in_flight)
+        got = pending_queue.get()
+        pending_queue.put(PendingPayload("new\n", sender_queue_clock()))  # fills the one slot again
+
+        t0 = time.time()
+        pending_queue.requeue_front(got)
+        elapsed = time.time() - t0
+
+        self.assertLess(elapsed, 0.05, "requeue_front() must not block on put_timeout")
+        self.assertEqual([p.payload for p in dropped_queue_full], ["in-flight\n"])
+        self.assertEqual(pending_queue.get().payload, "new\n")
+
+    def test_sender_queue_drops_oldest_and_stale_entries_on_overflow(self):
+        dropped_queue_full = []
+        dropped_expired = []
+
+        pending_queue = SenderQueue(
+            maxsize=2,
+            expiry_seconds=20.0,
+            on_drop_queue_full=dropped_queue_full.append,
+            on_drop_expired=dropped_expired.append,
+        )
+
+        now = sender_queue_clock()
+        fresh = PendingPayload("fresh\n", now)
+        stale = PendingPayload("stale\n", now - 100)
+        newest = PendingPayload("newest\n", now)
+
+        # Fill the queue: [fresh, stale] (stale is already expired, but that
+        # doesn't matter until something tries to make room or pull it off).
+        pending_queue.put(fresh)
+        pending_queue.put(stale)
+        self.assertEqual(pending_queue.qsize(), 2)
+
+        # Queue is full: the oldest entry (fresh) is evicted to make room, and
+        # since the next entry at the front (stale) is also expired, it gets
+        # opportunistically cleared out too.
+        pending_queue.put(newest)
+
+        self.assertEqual([p.payload for p in dropped_queue_full], ["fresh\n"])
+        self.assertEqual([p.payload for p in dropped_expired], ["stale\n"])
+        self.assertEqual(pending_queue.qsize(), 1)
+        self.assertEqual(pending_queue.get().payload, "newest\n")
+
+    def test_sender_queue_overflow_attributes_stale_oldest_entry_to_expiry(self):
+        dropped_queue_full = []
+        dropped_expired = []
+
+        pending_queue = SenderQueue(
+            maxsize=1,
+            expiry_seconds=20.0,
+            on_drop_queue_full=dropped_queue_full.append,
+            on_drop_expired=dropped_expired.append,
+        )
+
+        stale = PendingPayload("stale\n", sender_queue_clock() - 100)
+        pending_queue.put(stale)
+
+        # The oldest (and only) entry being evicted is itself already
+        # expired: that's a staleness drop, not a queue-full drop.
+        pending_queue.put(PendingPayload("newest\n", sender_queue_clock()))
+
+        self.assertEqual(dropped_queue_full, [])
+        self.assertEqual([p.payload for p in dropped_expired], ["stale\n"])
+
+    def test_sender_queue_get_drops_expired_entries(self):
+        dropped_expired = []
+
+        pending_queue = SenderQueue(
+            maxsize=0,
+            expiry_seconds=20.0,
+            on_drop_queue_full=lambda item: self.fail("unexpected queue-full drop"),
+            on_drop_expired=dropped_expired.append,
+        )
+
+        now = sender_queue_clock()
+        pending_queue.put(PendingPayload("stale-1\n", now - 100))
+        pending_queue.put(PendingPayload("stale-2\n", now - 100))
+        pending_queue.put(PendingPayload("fresh\n", now))
+
+        # get() lazily drains every stale entry at the front before handing
+        # back the next payload actually worth sending.
+        item = pending_queue.get()
+        self.assertEqual(item.payload, "fresh\n")
+        self.assertEqual([p.payload for p in dropped_expired], ["stale-1\n", "stale-2\n"])
+
+    def test_sender_queue_replay_safe_payload_never_expires(self):
+        pending_queue = SenderQueue(
+            maxsize=0,
+            expiry_seconds=20.0,
+            on_drop_queue_full=lambda item: self.fail("unexpected queue-full drop"),
+            on_drop_expired=lambda item: self.fail("replay-safe payload should not expire"),
+        )
+
+        # A replay-safe entry is the bare string, so there is no enqueued_at to
+        # age against at all -- it can never be dropped for staleness however
+        # long it sits there.
+        old_but_replay_safe = "timestamped\n"
+        pending_queue.put(old_but_replay_safe)
+
+        self.assertTrue(is_replay_safe(old_but_replay_safe))
+        self.assertIs(pending_queue.get(), old_but_replay_safe)
+
+    def test_sender_queue_requeue_front_when_room_available(self):
+        pending_queue = SenderQueue(
+            maxsize=2,
+            expiry_seconds=20.0,
+            on_drop_queue_full=lambda item: self.fail("unexpected queue-full drop"),
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+        )
+
+        in_flight = PendingPayload("in-flight\n", sender_queue_clock())
+        pending_queue.put(in_flight)
+
+        # Simulate the sender thread picking it up and failing to send it.
+        got = pending_queue.get()
+        self.assertIs(got, in_flight)
+        pending_queue.requeue_front(got)
+
+        # There was room for it: it's retried first, ahead of anything newer.
+        pending_queue.put(PendingPayload("new\n", sender_queue_clock()))
+        self.assertEqual(pending_queue.get().payload, "in-flight\n")
+        self.assertEqual(pending_queue.get().payload, "new\n")
+
+    def test_sender_queue_requeue_front_drops_when_queue_is_full(self):
+        dropped_queue_full = []
+
+        pending_queue = SenderQueue(
+            maxsize=1,
+            expiry_seconds=20.0,
+            on_drop_queue_full=dropped_queue_full.append,
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+        )
+
+        in_flight = PendingPayload("in-flight\n", sender_queue_clock())
+        pending_queue.put(in_flight)
+
+        # Simulate the sender thread picking it up, failing to send it, and a
+        # fresh payload filling the now-empty slot in the meantime.
+        got = pending_queue.get()
+        self.assertIs(got, in_flight)
+        pending_queue.put(PendingPayload("new\n", sender_queue_clock()))
+
+        # The queue is already at maxsize: the requeue is dropped rather than
+        # growing the queue past its limit or evicting the newer entry.
+        pending_queue.requeue_front(got)
+
+        self.assertEqual([p.payload for p in dropped_queue_full], ["in-flight\n"])
+        self.assertEqual(pending_queue.qsize(), 1)
+        self.assertEqual(pending_queue.get().payload, "new\n")
+
+    def test_sender_queue_requeue_front_drops_when_expired(self):
+        dropped_expired = []
+
+        pending_queue = SenderQueue(
+            maxsize=0,
+            expiry_seconds=0.01,
+            on_drop_queue_full=lambda item: self.fail("unexpected queue-full drop"),
+            on_drop_expired=dropped_expired.append,
+        )
+
+        # Simulate the sender thread picking up a payload and failing to
+        # send it, with enough time passing in between that it's now stale.
+        # Unbounded queue (so it's never "full") isolates the expiry check.
+        in_flight = PendingPayload("stale\n", sender_queue_clock())
+        pending_queue.put(in_flight)
+        got = pending_queue.get()
+        time.sleep(0.02)
+
+        pending_queue.requeue_front(got)
+
+        self.assertEqual([p.payload for p in dropped_expired], ["stale\n"])
+        self.assertEqual(pending_queue.qsize(), 0)
+
+    def test_sender_queue_requeue_front_ignores_item_not_in_flight(self):
+        # requeue_front() must be called on the exact item get() returned, and
+        # only while it's still in flight. Requeuing something that was never
+        # get() (or was already finished) would otherwise corrupt
+        # _unfinished_tasks. The guard logs the misuse and ignores the call
+        # (no deque change, no counter change) so the sender thread stays
+        # alive rather than crashing on a bookkeeping bug.
+        pending_queue = SenderQueue(
+            maxsize=0,
+            expiry_seconds=20.0,
+            on_drop_queue_full=lambda item: self.fail("unexpected queue-full drop"),
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+        )
+
+        never_got = PendingPayload("never-get\n", sender_queue_clock())
+        with self._capture_error_logs() as captured:
+            pending_queue.requeue_front(never_got)
+        self.assertTrue(captured, "the not-in-flight requeue should have logged an error")
+        self.assertEqual(pending_queue.qsize(), 0, "never-got item was not added to the deque")
+        self.assertEqual(pending_queue._unfinished_tasks, 0, "counter untouched")
+
+        # And requeuing an item that was already finished (get then task_done)
+        # is equally ignored: it's no longer in flight, the counter stays put.
+        finished = PendingPayload("finished\n", sender_queue_clock())
+        pending_queue.put(finished)
+        got = pending_queue.get()
+        self.assertIs(got, finished)
+        pending_queue.task_done(got)
+        self.assertEqual(pending_queue._unfinished_tasks, 0, "finished -> counter back to zero")
+        with self._capture_error_logs() as captured:
+            pending_queue.requeue_front(got)
+        self.assertTrue(captured, "the already-finished requeue should have logged an error")
+        self.assertEqual(pending_queue._unfinished_tasks, 0, "counter did not drift on the ignored requeue")
+        self.assertEqual(pending_queue.qsize(), 0, "already-finished item was not re-added")
+
+    def test_sender_queue_requeue_front_ignores_double_requeue(self):
+        # A second requeue_front() of the same item (e.g. two threads both
+        # handed the same in-flight reference) would put it in the deque twice
+        # while only one task was ever counted. The in-flight guard logs the
+        # second call and ignores it, so the deque and counter stay consistent.
+        pending_queue = SenderQueue(
+            maxsize=0,
+            expiry_seconds=20.0,
+            on_drop_queue_full=lambda item: self.fail("unexpected queue-full drop"),
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+        )
+
+        item = PendingPayload("once\n", sender_queue_clock())
+        pending_queue.put(item)
+        got = pending_queue.get()
+        self.assertIs(got, item)
+        pending_queue.requeue_front(got)  # first requeue: fine, back in the deque
+        self.assertEqual(pending_queue.qsize(), 1)
+        with self._capture_error_logs() as captured:
+            pending_queue.requeue_front(got)  # second: no longer in flight
+        self.assertTrue(captured, "the double requeue should have logged an error")
+        self.assertEqual(pending_queue.qsize(), 1, "item was NOT added to the deque a second time")
+        self.assertEqual(pending_queue._unfinished_tasks, 1, "counter unchanged")
+
+    def test_sender_queue_task_done_ignores_double_finish(self):
+        # A second task_done() on the same item (double finish) would drive
+        # _unfinished_tasks negative. The in-flight guard logs the second call
+        # and skips the decrement, so the counter stays at zero instead of
+        # going to -1 -- and the sender thread stays alive.
+        pending_queue = SenderQueue(
+            maxsize=0,
+            expiry_seconds=20.0,
+            on_drop_queue_full=lambda item: self.fail("unexpected queue-full drop"),
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+        )
+
+        item = PendingPayload("once\n", sender_queue_clock())
+        pending_queue.put(item)
+        got = pending_queue.get()
+        pending_queue.task_done(got)
+        self.assertEqual(pending_queue._unfinished_tasks, 0, "first finish -> counter at zero")
+        with self._capture_error_logs() as captured:
+            pending_queue.task_done(got)
+        self.assertTrue(captured, "the double finish should have logged an error")
+        self.assertEqual(pending_queue._unfinished_tasks, 0, "second finish did NOT drive the counter negative")
+
+    def test_sender_queue_many_threads_get_and_requeue_never_logs_error(self):
+        # 100 threads, split into getters and requeuers. Each getter runs
+        # get() and hands the item to a requeuer via a thread-safe handoff;
+        # each requeuer takes that item and calls requeue_front() on it. So
+        # the thread that get() the item is NOT the thread that requeues it --
+        # the item crosses thread boundaries. The identity guard is
+        # thread-agnostic by design, so this must stay clean: no ERROR log,
+        # no counter drift, no crash. This is the future-proofing proof: a
+        # legitimate cross-thread get/requeue workload stays clean.
+        try:
+            import queue as queue_mod
+        except ImportError:  # Python 2
+            import Queue as queue_mod
+
+        pending_queue = SenderQueue(
+            maxsize=0,  # unbounded: requeue never drops for capacity
+            expiry_seconds=100.0,
+            on_drop_queue_full=lambda item: self.fail("unexpected queue-full drop"),
+            on_drop_expired=lambda item: self.fail("unexpected expiry drop"),
+        )
+
+        n_items = 200
+        n_getters = 50
+        n_requeuers = 50
+        iterations = 100
+
+        for i in range(n_items):
+            pending_queue.put(PendingPayload("item-{}\n".format(i), sender_queue_clock()))
+        self.assertEqual(pending_queue._unfinished_tasks, n_items)
+
+        handoff = queue_mod.Queue()
+        SENTINEL = object()
+
+        with self._capture_error_logs() as captured:
+            def getter():
+                for _ in range(iterations):
+                    item = pending_queue.get()
+                    handoff.put(item)
+
+            def requeuer():
+                while True:
+                    item = handoff.get()
+                    if item is SENTINEL:
+                        return
+                    pending_queue.requeue_front(item)
+
+            getters = [threading.Thread(target=getter) for _ in range(n_getters)]
+            requeuers = [threading.Thread(target=requeuer) for _ in range(n_requeuers)]
+
+            # Start requeuers first so they're draining the handoff before
+            # getters begin filling it; otherwise the handoff could grow
+            # unbounded and the SenderQueue could drain to empty (getters
+            # would then block in get() until requeuers put items back).
+            for t in requeuers:
+                t.start()
+            for t in getters:
+                t.start()
+
+            for t in getters:
+                t.join()
+            # All getters done: every real item is either in the handoff or
+            # already requeued. Sentinels go behind them, so no real item is
+            # stranded.
+            for _ in range(n_requeuers):
+                handoff.put(SENTINEL)
+            for t in requeuers:
+                t.join()
+
+        # No ERROR log ever fired: the in-flight guard never tripped even
+        # though every item crossed from the getter thread to a different
+        # requeuer thread.
+        self.assertEqual(
+            captured, [],
+            "no error should be logged when get() and requeue_front() run on "
+            "different threads; got: {!r}".format([r.getMessage() for r in captured]),
+        )
+
+        # Every get() was matched by a requeue_front() (no task_done, no
+        # drops on the unbounded queue), so the queue is fully populated and
+        # the task counter is unchanged -- no drift.
+        self.assertEqual(pending_queue.qsize(), n_items, "all items back in the queue")
+        self.assertEqual(
+            pending_queue._unfinished_tasks, n_items,
+            "_unfinished_tasks never drifted under cross-thread get/requeue contention",
+        )
+
+    def test_replay_safety_is_carried_by_the_queued_entry_type(self):
+        # Replay-safety is not a stored flag: an entry subject to expiry is a
+        # PendingPayload (carrying the enqueued_at it will be judged against),
+        # and a replay-safe one is the bare packet string. That keeps the
+        # wrapper -- and the GC traversal it implies -- off replay-safe entries
+        # entirely.
+        statsd = DogStatsd(disable_background_sender=False)
+        statsd.socket = FakeSocket()
+
+        captured = []
+        original_put = statsd._queue.put
+
+        def capture_put(item):
+            if item is not Stop:
+                captured.append(item)
+            return original_put(item)
+
+        statsd._queue.put = capture_put
+
+        statsd.increment("no.timestamp")
+        statsd.gauge_with_timestamp("with.timestamp", 1, int(time.time()))
+        statsd.wait_for_pending()
+
+        self.assertEqual(len(captured), 2)
+
+        expiring, replay_safe = captured
+        self.assertIsInstance(expiring, PendingPayload)
+        self.assertFalse(is_replay_safe(expiring))
+        self.assertIsInstance(
+            expiring.enqueued_at, float,
+            "an expiring payload needs a real timestamp to be judged against",
+        )
+
+        # Deliberately not asserting a concrete string type here: on Python 2
+        # the serialized packet is unicode, not str. What matters is that the
+        # entry is the bare payload rather than a wrapper, which is exactly
+        # what is_replay_safe()/payload_text() key off.
+        self.assertNotIsInstance(replay_safe, PendingPayload)
+        self.assertTrue(is_replay_safe(replay_safe))
+        self.assertIs(payload_text(replay_safe), replay_safe)
+
+        # Either form still yields its packet text the same way.
+        self.assertTrue(payload_text(expiring).startswith("no.timestamp"))
+        self.assertTrue(payload_text(replay_safe).startswith("with.timestamp"))
+
+        statsd.stop()
+
+    def test_connection_failure_requeues_and_resends_once_reconnected(self):
+        # A UDS client whose socket is broken, with a small connect budget so
+        # the internal reconnect-and-retry loop inside _xmit_packet gives up
+        # quickly and hands off to the sender queue's own retry-by-requeuing.
+        working_socket = FakeSocket()
+        attempts = {"count": 0}
+
+        def flaky_get_uds_socket(cls, socket_path, timeout, connect_timeout):
+            attempts["count"] += 1
+            if attempts["count"] < 4:
+                raise socket.error(errno.ECONNREFUSED, "still refused")
+            return working_socket
+
+        with mock.patch.object(DogStatsd, "_get_uds_socket", classmethod(flaky_get_uds_socket)):
+            statsd = DogStatsd(
+                socket_path="/tmp/dogstatsd-test-requeue.sock",
+                disable_telemetry=True,
+                disable_background_sender=False,
+            )
+            statsd.socket_connect_timeout = 0.05
+
+            statsd.gauge("eventually.sent", 1)
+            statsd.wait_for_pending()
+
+        # The payload survived every failed reconnect attempt and was sent
+        # once a working socket was finally available -- it was never
+        # dropped as a writer failure or expired out of the queue.
+        self.assertGreaterEqual(attempts["count"], 4)
+        self.assertEqual(statsd.packets_dropped_writer, 0)
+        self.assertEqual(statsd.packets_dropped_expired, 0)
+        self.assertTrue(working_socket.payloads[0].decode("utf-8").startswith("eventually.sent:1|g"))
 
         statsd.stop()
 
