@@ -818,16 +818,24 @@ class DogStatsd(object):
         return host, port, socket_path
 
     # Note: Invocations of this method should be thread-safe
-    def _start_flush_thread(self):
-        # type: () -> None
+    def _start_flush_thread(self, quiet=False):
+        # type: (bool) -> None
+        # quiet=True is for callers reachable from os.register_at_fork(after_in_child=...)
+        # (see post_fork_child/post_fork_parent below): logging.Logger.debug() is not
+        # async-signal-safe -- it can block acquiring a StreamHandler's own lock, which
+        # is left permanently locked in the child if some other thread held it at the
+        # instant of fork (no thread survives fork to release it). Every branch below
+        # logs something, so quiet has to be threaded through all of them, not just one.
         if self._disable_aggregation and self.disable_buffering:
-            log.debug("Statsd periodic buffer and aggregation flush is disabled")
+            if not quiet:
+                log.debug("Statsd periodic buffer and aggregation flush is disabled")
             return
 
         if self._flush_interval <= MIN_FLUSH_INTERVAL:
-            log.debug(
-                "the set flush interval is less then the minimum"
-            )
+            if not quiet:
+                log.debug(
+                    "the set flush interval is less then the minimum"
+                )
             return
 
         if self._forking:
@@ -851,10 +859,11 @@ class DogStatsd(object):
         )
         self._flush_thread.daemon = True
         self._flush_thread.start()
-        log.debug(
-            "Statsd flush thread registered with period of %s",
-            self._flush_interval,
-        )
+        if not quiet:
+            log.debug(
+                "Statsd flush thread registered with period of %s",
+                self._flush_interval,
+            )
 
     # Note: Invocations of this method should be thread-safe
     def _stop_flush_thread(self):
@@ -2054,8 +2063,8 @@ class DogStatsd(object):
                 log.debug("Couldn't get container ID: %s", str(e))
                 self._container_id = None
 
-    def _start_sender_thread(self):
-        # type: () -> None
+    def _start_sender_thread(self, quiet=False):
+        # type: (bool) -> None
         if not self._sender_enabled or self._forking:
             return
 
@@ -2064,7 +2073,8 @@ class DogStatsd(object):
 
         self._queue = queue.Queue(self._sender_queue_size)
 
-        log.debug("Starting background sender thread")
+        if not quiet:
+            log.debug("Starting background sender thread")
         self._sender_thread = threading.Thread(
             name="{}_sender_thread".format(self.__class__.__name__),
             target=self._sender_main_loop,
@@ -2140,8 +2150,8 @@ class DogStatsd(object):
     def post_fork_parent(self):
         # type: () -> None
         """Restore the client state after a fork in the parent process."""
-        self._start_flush_thread()
-        self._start_sender_thread()
+        self._start_flush_thread(quiet=True)
+        self._start_sender_thread(quiet=True)
         self._config_lock.release()
 
     def post_fork_child(self):
@@ -2164,8 +2174,8 @@ class DogStatsd(object):
         self.close_socket()
 
         with self._config_lock:
-            self._start_flush_thread()
-            self._start_sender_thread()
+            self._start_flush_thread(quiet=True)
+            self._start_sender_thread(quiet=True)
 
     def stop(self):
         # type: () -> None
