@@ -3,6 +3,7 @@ import itertools
 import socket
 import threading
 
+import mock
 import pytest
 
 from datadog.dogstatsd.base import DogStatsd, SUPPORTS_FORKING
@@ -42,6 +43,40 @@ def test_register_at_fork(disable_background_sender, disable_buffering):
     os.waitpid(pid, 0)
 
     assert len(tracker) == 2
+
+
+@pytest.mark.parametrize(
+    "disable_background_sender, disable_buffering",
+    list(itertools.product([True, False], [True, False])),
+)
+def test_post_fork_does_not_log(disable_background_sender, disable_buffering):
+    """
+    post_fork_child/post_fork_parent run from an os.register_at_fork(after_in_child=...)
+    callback, where logging.Logger.debug() is not safe: it can block acquiring a
+    StreamHandler's own lock, left permanently locked in the child if some other thread
+    held it at the instant of fork (no thread survives fork to release it there). Neither
+    should log anything, regardless of config, so there's nothing here for that lock to
+    block on.
+    """
+    if not SUPPORTS_FORKING:
+        pytest.skip("os.register_at_fork is required for this test")
+
+    statsd = DogStatsd(
+        telemetry_min_flush_interval=0,
+        disable_background_sender=disable_background_sender,
+        disable_buffering=disable_buffering,
+    )
+    try:
+        with mock.patch("datadog.dogstatsd.base.log") as log:
+            statsd.pre_fork()
+            statsd.post_fork_parent()
+            log.debug.assert_not_called()
+
+            statsd.pre_fork()
+            statsd.post_fork_child()
+            log.debug.assert_not_called()
+    finally:
+        statsd.stop()
 
 
 def sender_a(statsd, running):
