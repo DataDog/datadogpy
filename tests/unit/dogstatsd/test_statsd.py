@@ -2772,6 +2772,28 @@ async def print_foo():
         statsd = DogStatsd(disable_background_sender=False)
         self.assertIsNotNone(statsd._queue)
 
+    def test_sender_queue_expiry_seconds_defaults_to_constant(self):
+        statsd = DogStatsd(disable_background_sender=False)
+        self.assertEqual(statsd._sender_queue_expiry_seconds, PENDING_PAYLOAD_EXPIRY_SECONDS)
+        self.assertEqual(statsd._queue._expiry_seconds, PENDING_PAYLOAD_EXPIRY_SECONDS)
+        statsd.stop()
+
+    def test_sender_queue_expiry_seconds_is_configurable(self):
+        statsd = DogStatsd(
+            disable_background_sender=False,
+            sender_queue_expiry_seconds=0.5,
+        )
+        self.assertEqual(statsd._sender_queue_expiry_seconds, 0.5)
+        self.assertEqual(statsd._queue._expiry_seconds, 0.5)
+        statsd.stop()
+
+    def test_enable_background_sender_accepts_expiry_seconds(self):
+        statsd = DogStatsd(disable_background_sender=True)
+        statsd.enable_background_sender(sender_queue_expiry_seconds=1.5)
+        self.assertEqual(statsd._sender_queue_expiry_seconds, 1.5)
+        self.assertEqual(statsd._queue._expiry_seconds, 1.5)
+        statsd.stop()
+
     def test_sender_calls_task_done(self):
         statsd = DogStatsd(disable_background_sender=False)
         statsd.socket = OverflownSocket()

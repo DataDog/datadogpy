@@ -49,7 +49,6 @@ from datadog.dogstatsd.sender_queue import (
     SenderQueue,
     PendingPayload,
     Stop,
-    PENDING_PAYLOAD_EXPIRY_SECONDS,
     payload_text,
 )
 
@@ -189,6 +188,14 @@ DEFAULT_SOCKET_CONNECT_TIMEOUT = 0
 UDS_CONNECT_RETRY_INITIAL_BACKOFF = 0.025
 UDS_CONNECT_RETRY_MAX_BACKOFF = 1.0
 UDS_TRANSIENT_CONNECT_ERRORS = set([errno.ENOENT, errno.ECONNREFUSED])
+
+# How long (in seconds) a non-replay-safe payload may sit in the background
+# sender queue before it's considered stale and dropped instead of sent.
+# Payloads that carry their own explicit timestamp (replay-safe) are exempt:
+# delivering those late doesn't change what they mean, so they're kept
+# around until they can actually be sent. This is the default for
+# sender_queue_expiry_seconds; it can be overridden per client.
+PENDING_PAYLOAD_EXPIRY_SECONDS = 10.0
 # Errors seen while sending on an already-connected socket that indicate the
 # peer went away (e.g. the agent crashed/restarted). These are worth a single
 # reconnect-and-resend attempt instead of dropping the packet outright.
@@ -310,6 +317,7 @@ class DogStatsd(object):
         disable_background_sender=True,         # type: bool
         sender_queue_size=0,                    # type: int
         sender_queue_timeout=0,                 # type: Optional[float]
+        sender_queue_expiry_seconds=PENDING_PAYLOAD_EXPIRY_SECONDS,  # type: float
         track_instance=True,                    # type: bool
         socket_connect_timeout=DEFAULT_SOCKET_CONNECT_TIMEOUT,  # type: Optional[float]
     ):  # type: (...) -> None
@@ -506,6 +514,13 @@ class DogStatsd(object):
         Default: 0 (no wait)
         :type sender_queue_timeout: float
 
+        :param sender_queue_expiry_seconds: How long, in seconds, a non-replay-safe payload
+        may sit in the sender queue before it's considered stale and dropped instead of sent.
+        Payloads that carry their own explicit timestamp (replay-safe) are exempt: delivering
+        those late doesn't change what they mean, so they're kept until they can be sent.
+        Default: PENDING_PAYLOAD_EXPIRY_SECONDS (10.0).
+        :type sender_queue_expiry_seconds: float
+
         :param track_instance: Keep track of this instance and automatically handle cleanup when os.fork() is called,
         if supported.
         Default: True.
@@ -641,7 +656,9 @@ class DogStatsd(object):
         self._sender_enabled = False
 
         if not disable_background_sender:
-            self.enable_background_sender(sender_queue_size, sender_queue_timeout)
+            self.enable_background_sender(
+                sender_queue_size, sender_queue_timeout, sender_queue_expiry_seconds
+            )
 
         if TRACK_INSTANCES and track_instance:
             _instances.add(self)
@@ -705,8 +722,13 @@ class DogStatsd(object):
                 log.info("Unexpected telemetry socket provided with no support for getsockopt")
         self._telemetry_socket_kind = None
 
-    def enable_background_sender(self, sender_queue_size=0, sender_queue_timeout=0):
-        # type: (int, Optional[float]) -> None
+    def enable_background_sender(
+        self,
+        sender_queue_size=0,
+        sender_queue_timeout=0,
+        sender_queue_expiry_seconds=PENDING_PAYLOAD_EXPIRY_SECONDS,
+    ):
+        # type: (int, Optional[float], float) -> None
         """
         Use a background thread to communicate with the dogstatsd server.
         When enabled, a background thread will be used to send metric payloads to the Agent.
@@ -726,12 +748,18 @@ class DogStatsd(object):
             If set to None, wait forever. If set to zero drop the packet immediately if the queue is full.
             Default: 0 (no wait).
         :type sender_queue_timeout: float, optional
+        :param sender_queue_expiry_seconds: How long, in seconds, a non-replay-safe payload may sit in the
+            sender queue before it's considered stale and dropped instead of sent. Replay-safe payloads
+            (those carrying their own explicit timestamp) are exempt and are kept until they can be sent.
+            Default: PENDING_PAYLOAD_EXPIRY_SECONDS (10.0).
+        :type sender_queue_expiry_seconds: float, optional
         """
 
         with self._config_lock:
             self._sender_enabled = True
             self._sender_queue_size = sender_queue_size
             self._sender_queue_timeout = sender_queue_timeout
+            self._sender_queue_expiry_seconds = sender_queue_expiry_seconds
 
             self._start_sender_thread()
 
@@ -1645,7 +1673,7 @@ class DogStatsd(object):
 
     def _account_dropped_expired(self, item):
         # type: (QueuedItem) -> None
-        """A payload sat in the sender queue longer than PENDING_PAYLOAD_EXPIRY_SECONDS."""
+        """A payload sat in the sender queue longer than the configured expiry (sender_queue_expiry_seconds)."""
         self.packets_dropped_expired += 1
         self.bytes_dropped_expired += len(payload_text(item).encode(self.encoding))
 
@@ -2175,7 +2203,7 @@ class DogStatsd(object):
 
         self._queue = SenderQueue(
             self._sender_queue_size,
-            PENDING_PAYLOAD_EXPIRY_SECONDS,
+            self._sender_queue_expiry_seconds,
             self._account_dropped_queue_full,
             self._account_dropped_expired,
             put_timeout=self._sender_queue_timeout,

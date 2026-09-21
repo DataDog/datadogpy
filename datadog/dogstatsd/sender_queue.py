@@ -21,13 +21,6 @@ if sys.version_info[:2] >= (3, 5):
     QueuedItem = Union[str, "PendingPayload"]  # noqa: F401
     QueuedItemOrStop = Union[str, "PendingPayload", object]  # noqa: F401
 
-# How long (in seconds) a non-replay-safe payload may sit in the background
-# sender queue before it's considered stale and dropped instead of sent.
-# Payloads that carry their own explicit timestamp (replay-safe) are exempt:
-# delivering those late doesn't change what they mean, so they're kept
-# around until they can actually be sent.
-PENDING_PAYLOAD_EXPIRY_SECONDS = 10.0
-
 
 class PendingPayload(object):
     """A packet queued for the background sender that can go stale.
