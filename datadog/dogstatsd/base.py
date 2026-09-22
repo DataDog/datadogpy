@@ -191,6 +191,21 @@ MIN_SEND_BUFFER_SIZE = 32 * 1024
 # regardless of socket_connect_retry.
 SENDER_RETRY_INITIAL_BACKOFF = 0.025
 SENDER_RETRY_MAX_BACKOFF = 60.0
+# How long an *unbounded* shutdown (pre_fork(), or stop()/wait_for_pending()
+# called with timeout=None) still waits for a payload stuck in the retry
+# loop above to resolve, before giving up on it. Without some bound here, a
+# payload that can never succeed (the Agent permanently unreachable, plus a
+# replay-safe payload, which never expires) would starve the Stop sentinel
+# and hang the shutdown forever. Reuses SENDER_RETRY_MAX_BACKOFF's magnitude:
+# that's already the longest gap between two retry attempts in steady state,
+# so an unbounded shutdown should be at least that patient before giving up.
+SENDER_UNBOUNDED_STOP_GRACE_SECONDS = SENDER_RETRY_MAX_BACKOFF
+# How often the sender retries a connection once a shutdown has been
+# requested but its deadline (the caller's own timeout, or the grace period
+# above) hasn't passed yet. Deliberately much shorter than the normal
+# backoff cap, so a still-recovering Agent gets drained before the shutdown
+# gives up, without hammering a connection that keeps failing.
+SENDER_STOP_RETRY_INTERVAL = 0.5
 
 # How long (in seconds) a non-replay-safe payload may sit in the background
 # sender queue before it's considered stale and dropped instead of sent.
@@ -492,9 +507,13 @@ class DogStatsd(object):
         If True, a connection failure while sending a queued payload to a UNIX socket is retried
         indefinitely, backing off up to once a minute between attempts, instead of dropping the payload
         immediately. Ordinary payloads stuck retrying are eventually dropped as stale by the sender
-        queue's own expiry stop() and pre_fork() interrupt the retrying rather than waiting for it.
-        Direct/synchronous sends (the default mode) always fail fast on a connection error and are
-        unaffected by this setting.
+        queue's own expiry; replay-safe payloads never expire, so only a shutdown (stop(),
+        disable_background_sender(), pre_fork()) can end their retrying -- and it waits up to its own
+        timeout (or a bounded grace period, SENDER_UNBOUNDED_STOP_GRACE_SECONDS, for an unbounded call
+        such as pre_fork()) before giving up on one, at which point it is counted as a writer drop and
+        the shutdown call reports failure rather than success. wait_for_pending() never forces this: it
+        only waits for the queue's own retries and expiry to run their course. Direct/synchronous sends
+        (the default mode) always fail fast on a connection error and are unaffected by this setting.
         Default: False (fail fast, matching the previous socket_connect_timeout=0 default).
         :type socket_connect_retry: bool
 
@@ -664,6 +683,16 @@ class DogStatsd(object):
         # Set to ask a running sender thread to stop. Also what makes its
         # retry backoff interruptible -- see _sender_main_loop.
         self._sender_stopping = threading.Event()
+        # The monotonic deadline by which a requested shutdown must give up
+        # on a payload stuck in the retry loop, set by _stop_sender_thread()
+        # and read by _sender_main_loop. None means no shutdown has been
+        # requested (or a fresh sender hasn't seen one yet).
+        self._sender_stop_deadline = None  # type: Optional[float]
+        # Set by _sender_main_loop when it gives up on a payload because the
+        # deadline above passed while still retrying a connection failure --
+        # i.e. the queue did NOT fully drain even though the thread exited.
+        # _stop_sender_thread() reports this as failure rather than success.
+        self._sender_abandoned_payload = False
         self._sender_enabled = False
 
         if not disable_background_sender:
@@ -781,10 +810,20 @@ class DogStatsd(object):
         This call will block until all previously queued payloads are sent.
 
         :param timeout: Maximum number of seconds to wait for the sender thread
-            to drain the queue and exit. None (the default) waits indefinitely.
+            to drain the queue and exit. None (the default) waits indefinitely
+            for a sender that is genuinely busy (e.g. blocked inside a slow
+            send()), but not for a payload stuck retrying a connection
+            failure with socket_connect_retry enabled -- that case is bounded
+            by SENDER_UNBOUNDED_STOP_GRACE_SECONDS regardless of this
+            parameter, so an Agent that never comes back cannot hang this
+            call forever.
         :type timeout: float, optional
-        :return: True if the sender thread finished, False if timeout elapsed
-            while it was still running.
+        :return: True if the sender thread finished AND the queue actually
+            drained. False if timeout (or the grace period above) elapsed
+            first -- either because the sender thread is still running, or
+            because it gave up on a payload still retrying a connection
+            failure and dropped it (counted in packets_dropped_writer)
+            instead of delivering it.
         """
         with self._config_lock:
             self._sender_enabled = False
@@ -1668,6 +1707,12 @@ class DogStatsd(object):
         self.packets_dropped_expired += 1
         self.bytes_dropped_expired += len(payload_text(item).encode(self.encoding))
 
+    def _account_dropped_writer(self, item):
+        # type: (QueuedItem) -> None
+        """A payload could not be written and is not being retried further."""
+        self.packets_dropped_writer += 1
+        self.bytes_dropped_writer += len(payload_text(item).encode(self.encoding))
+
     def _flush_telemetry(self):
         # type: () -> str
         tags = self._client_tags[:]
@@ -2126,6 +2171,8 @@ class DogStatsd(object):
         # A previous _stop_sender_thread() leaves this set; clear it before the
         # new sender starts so it doesn't immediately think it's shutting down.
         self._sender_stopping.clear()
+        self._sender_stop_deadline = None
+        self._sender_abandoned_payload = False
 
         self._queue = SenderQueue(
             self._sender_queue_size,
@@ -2146,11 +2193,21 @@ class DogStatsd(object):
 
     def _stop_sender_thread(self, timeout=None):
         # type: (Optional[float]) -> bool
-        # Ask the sender to stop before anything else: this is what breaks it
-        # out of a retry backoff (which can be as long as
-        # SENDER_RETRY_MAX_BACKOFF) instead of having to wait that out, and
-        # what lets it give up on a payload that would otherwise starve the
-        # Stop sentinel forever (see _sender_main_loop).
+        # Ask the sender to stop, with a deadline it must honor BEFORE
+        # abandoning a payload stuck in its retry-by-requeuing loop (see
+        # _sender_main_loop): a bounded caller's own timeout IS that
+        # deadline, so the sender keeps retrying for close to as long as the
+        # caller asked instead of giving up the instant a shutdown is
+        # requested. An unbounded caller (timeout=None, e.g. pre_fork()) gets
+        # a bounded grace period instead, so it can't hang forever on a
+        # payload that can genuinely never succeed.
+        grace = SENDER_UNBOUNDED_STOP_GRACE_SECONDS if timeout is None else timeout
+        self._sender_stop_deadline = monotonic() + grace
+        # Setting this second (after the deadline above is already visible to
+        # any thread this wakes) is what breaks the sender out of a retry
+        # backoff (which can be as long as SENDER_RETRY_MAX_BACKOFF) instead
+        # of having to wait that out -- see _sender_main_loop, which
+        # re-checks the deadline as soon as this wakes it.
         self._sender_stopping.set()
 
         # Lock ensures that nothing gets added to the queue after we disable it.
@@ -2177,13 +2234,19 @@ class DogStatsd(object):
             # exits (see _sender_main_loop).
             return False
 
+        # The thread exited, but that alone doesn't mean it drained: it may
+        # have hit the deadline above with a payload still stuck retrying and
+        # given up on it instead (see _sender_main_loop). That payload was
+        # never delivered, so report failure rather than claiming success.
+        abandoned = self._sender_abandoned_payload
+
         # _sender_main_loop clears this state on its way out when the thread
         # has drained the queue, so this may already be a no-op; it also covers
         # a thread that exited without draining (e.g. never actually started).
         with self._buffer_lock:
             self._queue = None
         self._sender_thread = None
-        return True
+        return not abandoned
 
     def _release_sender_state(self, pending_queue):
         # type: (SenderQueue) -> None
@@ -2219,22 +2282,47 @@ class DogStatsd(object):
             )
 
             if sent is None:
-                # Connection trouble: keep the payload for the next attempt
+                # Connection trouble. A shutdown may already have been
+                # requested (see _stop_sender_thread) with a deadline this
+                # payload must be given a real chance against before it's
+                # given up on -- check that now, before requeuing, while the
+                # queue still considers this item in flight and can finish it
+                # outright instead.
+                deadline = self._sender_stop_deadline
+                if deadline is not None and monotonic() >= deadline:
+                    # The deadline has passed: give up on this payload for
+                    # good rather than requeuing it for a retry that will
+                    # never be awaited. Account for it as a writer drop --
+                    # it was never delivered -- instead of letting it vanish
+                    # with no telemetry at all.
+                    self._account_dropped_writer(item)  # type: ignore[arg-type]
+                    pending_queue.task_done(item)  # type: ignore[arg-type]
+                    self._sender_abandoned_payload = True
+                    self._release_sender_state(pending_queue)
+                    return
+
+                # Still worth retrying: keep the payload for the next attempt
                 # instead of losing it. The queue's own expiry check (on a
                 # future get()) is what eventually gives up on a payload
                 # that's been stuck for too long, unless it's replay-safe.
                 pending_queue.requeue_front(item)  # type: ignore[arg-type]
 
-                # Interruptible backoff.
-                self._sender_stopping.wait(backoff)
-                if self._sender_stopping.is_set():
-                    # Checked rather than using wait()'s return value, which
-                    # is only meaningful on Python 2.7+ -- and this module
-                    # still supports 2.7, where several other wait() APIs
-                    # return None.
-                    self._release_sender_state(pending_queue)
-                    return
-                backoff = min(backoff * 2, SENDER_RETRY_MAX_BACKOFF)
+                if deadline is None:
+                    # No shutdown requested (yet): normal interruptible
+                    # backoff. wait() returns early -- before backoff fully
+                    # elapses -- the instant a shutdown IS requested, so the
+                    # very next iteration's deadline check above fires
+                    # promptly instead of waiting out a long backoff.
+                    self._sender_stopping.wait(backoff)
+                    backoff = min(backoff * 2, SENDER_RETRY_MAX_BACKOFF)
+                else:
+                    # A shutdown was requested and its deadline hasn't
+                    # passed yet: keep retrying -- a still-recovering Agent
+                    # should still get drained -- but pace attempts instead
+                    # of hammering a connection that keeps failing, and
+                    # never sleep past the deadline.
+                    remaining = deadline - monotonic()
+                    time.sleep(min(SENDER_STOP_RETRY_INTERVAL, max(remaining, 0)))
                 continue
 
             # Sent, or a definitive failure that _xmit_packet already
@@ -2272,6 +2360,11 @@ class DogStatsd(object):
         """Prepare client for a process fork.
 
         Flush any pending payloads and stop all background threads.
+
+        A payload stuck retrying a connection failure (socket_connect_retry)
+        is given up on -- and counted as a writer drop -- after a bounded
+        grace period (SENDER_UNBOUNDED_STOP_GRACE_SECONDS) rather than
+        blocking the fork indefinitely; that payload is not delivered.
 
         The client should not be used from this point until
         state is restored by calling post_fork_parent() or
@@ -2328,17 +2421,25 @@ class DogStatsd(object):
 
         :param timeout: Maximum number of seconds to wait for the background
             sender to drain its queue and exit. None (the default) waits
-            indefinitely, however long that takes.
+            indefinitely for a sender that is genuinely busy (e.g. blocked
+            inside a slow send()). It does NOT wait indefinitely for a
+            payload stuck retrying a connection failure with
+            socket_connect_retry enabled: that case is bounded by
+            SENDER_UNBOUNDED_STOP_GRACE_SECONDS regardless of this parameter,
+            so an Agent that never comes back cannot hang stop() forever.
         :type timeout: float, optional
         :return: True if the background sender drained and stopped, and the
-            final flush and socket close ran. False if timeout elapsed first,
-            in which case the sender thread is still running and neither the
-            final flush nor the socket close ran (see below). Do not call
-            stop() again while that sender is still running: it queues a
-            second internal shutdown signal that is never drained, which can
-            make wait_for_pending() block forever on the abandoned queue. Use
-            wait_for_pending() to wait for the sender instead, then call
-            stop() again once it has actually stopped.
+            final flush and socket close ran. False if timeout (or the grace
+            period above) elapsed first, in which case neither the final
+            flush nor the socket close ran (see below) -- either because the
+            sender thread is still running, or because it gave up on a
+            payload still retrying a connection failure and dropped it
+            (counted in packets_dropped_writer) instead of delivering it. Do
+            not call stop() again while that sender is still running: it
+            queues a second internal shutdown signal that is never drained,
+            which can make wait_for_pending() block forever on the abandoned
+            queue. Use wait_for_pending() to wait for the sender instead,
+            then call stop() again once it has actually stopped.
         """
 
         stopped = self.disable_background_sender(timeout)
@@ -2346,21 +2447,33 @@ class DogStatsd(object):
         self._disable_aggregation = True
 
         if not stopped:
-            # We gave up waiting, so the sender thread is still running and
-            # still owns the socket -- it can be parked inside a send() with
-            # _socket_lock held. Flushing or closing here would block on that
-            # same lock for as long as the sender stays wedged, which would
-            # make timeout meaningless: the caller asked for a bounded stop().
-            # Pushing more data through that socket could not succeed anyway,
-            # and closing it from under a thread mid-write is not safe. Leave
-            # it open; the OS reclaims the fd when the process exits, and the
-            # sender thread is a daemon so it never holds up interpreter
-            # shutdown.
-            log.warning(
-                "stop() timed out after %ss with the background sender still running; "
-                "skipping the final flush and socket close",
-                timeout,
-            )
+            if self._sender_abandoned_payload:
+                # The sender thread did exit, but only by giving up on a
+                # payload still retrying a connection failure once its
+                # deadline passed (see _sender_main_loop) -- that payload was
+                # dropped, not delivered, so this is not a clean stop either.
+                log.warning(
+                    "stop() gave up on a payload stuck retrying a connection failure after "
+                    "%ss; it was dropped instead of delivered (see packets_dropped_writer). "
+                    "Skipping the final flush and socket close",
+                    timeout,
+                )
+            else:
+                # We gave up waiting, so the sender thread is still running and
+                # still owns the socket -- it can be parked inside a send() with
+                # _socket_lock held. Flushing or closing here would block on that
+                # same lock for as long as the sender stays wedged, which would
+                # make timeout meaningless: the caller asked for a bounded stop().
+                # Pushing more data through that socket could not succeed anyway,
+                # and closing it from under a thread mid-write is not safe. Leave
+                # it open; the OS reclaims the fd when the process exits, and the
+                # sender thread is a daemon so it never holds up interpreter
+                # shutdown.
+                log.warning(
+                    "stop() timed out after %ss with the background sender still running; "
+                    "skipping the final flush and socket close",
+                    timeout,
+                )
             return False
 
         self.flush_aggregated_metrics()

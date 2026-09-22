@@ -3800,6 +3800,44 @@ async def print_foo():
 
         statsd.stop()
 
+    def test_stop_timeout_retries_until_the_deadline_before_abandoning_a_payload(self):
+        # The actual regression this guards against: stop(timeout) must keep
+        # retrying a connection failure for close to the requested timeout --
+        # not abandon on the very first backoff check -- so a payload that
+        # would have succeeded on a later attempt is not silently lost.
+        working_socket = FakeSocket()
+        attempts = {"count": 0}
+
+        def flaky_get_uds_socket(cls, socket_path, timeout):
+            attempts["count"] += 1
+            if attempts["count"] < 4:
+                raise socket.error(errno.ECONNREFUSED, "still refused")
+            return working_socket
+
+        with mock.patch.object(DogStatsd, "_get_uds_socket", classmethod(flaky_get_uds_socket)), \
+                patch("datadog.dogstatsd.base.SENDER_RETRY_INITIAL_BACKOFF", 0.05):
+            statsd = DogStatsd(
+                socket_path="/tmp/dogstatsd-test-stop-retries.sock",
+                disable_telemetry=True,
+                disable_background_sender=False,
+                socket_connect_retry=True,
+            )
+
+            statsd.gauge("eventually.sent", 1)
+            time.sleep(0.05)  # let the first attempt fail and start retrying
+
+            # A generous bounded timeout: comfortably enough for a few fast
+            # (patched-down) backoff doublings to reach the 4th, working
+            # attempt, but nowhere near SENDER_UNBOUNDED_STOP_GRACE_SECONDS.
+            # Before the fix, stop() abandoned on the very first backoff
+            # check regardless of this value, so this would have failed:
+            # returning near-instantly with the payload never sent.
+            self.assertIs(self._call_bounded(statsd.stop, (3.0,), limit=5.0), True)
+
+        self.assertGreaterEqual(attempts["count"], 4)
+        self.assertEqual(statsd.packets_dropped_writer, 0, "the payload must not have been abandoned")
+        self.assertTrue(working_socket.payloads[0].decode("utf-8").startswith("eventually.sent:1|g"))
+
     def test_queue_mode_drops_immediately_by_default(self):
         # socket_connect_retry defaults to False for the background sender
         # too: without it, a connection failure on a queued payload is
@@ -3851,16 +3889,19 @@ async def print_foo():
         # requeue_front() puts a failed payload back ahead of the Stop
         # sentinel, and replay-safe payloads are exempt from the queue's
         # expiry, so such a payload never resolves while the Agent is down.
-        # Without an interruptible shutdown signal the sender never reaches
-        # Stop at all and stop() hangs forever.
+        # Without a bounded grace period the sender never reaches Stop at all
+        # and stop() hangs forever. A small patched grace makes the test fast
+        # and deterministic instead of depending on the real 60s default.
         statsd = self._unreachable_retrying_client()
         statsd.gauge_with_timestamp("replay.safe", 1, timestamp=int(time.time()))
         time.sleep(0.1)  # let the sender pick it up and start retrying
 
-        t0 = time.time()
-        self.assertIs(self._call_bounded(statsd.stop, ()), True)
-        self.assertLess(time.time() - t0, 5.0, "stop() did not interrupt the retry loop")
+        with patch("datadog.dogstatsd.base.SENDER_UNBOUNDED_STOP_GRACE_SECONDS", 0.3):
+            t0 = time.time()
+            self.assertIs(self._call_bounded(statsd.stop, ()), False, "the payload was never delivered")
+            self.assertLess(time.time() - t0, 5.0, "stop() did not bound the retry loop")
         self.assertIsNone(statsd._queue)
+        self.assertEqual(statsd.packets_dropped_writer, 1, "the abandoned payload must be accounted for")
 
     def test_pre_fork_is_bounded_with_a_stuck_replay_safe_payload(self):
         # Same starvation, reached through pre_fork() -- which matters more:
@@ -3877,22 +3918,25 @@ async def print_foo():
         # instance is deliberately abandoned rather than restored. It is
         # constructed with track_instance=False precisely so nothing else can
         # ever try to take that lock again.
-        t0 = time.time()
-        self._call_bounded(statsd.pre_fork, ())
-        self.assertLess(time.time() - t0, 5.0, "pre_fork() would have blocked os.fork()")
+        with patch("datadog.dogstatsd.base.SENDER_UNBOUNDED_STOP_GRACE_SECONDS", 0.3):
+            t0 = time.time()
+            self._call_bounded(statsd.pre_fork, ())
+            self.assertLess(time.time() - t0, 5.0, "pre_fork() would have blocked os.fork()")
         self.assertIsNone(statsd._sender_thread, "pre_fork() should have stopped the sender")
+        self.assertEqual(statsd.packets_dropped_writer, 1, "the abandoned payload must be accounted for")
 
     def test_stop_interrupts_a_long_retry_backoff_instead_of_waiting_it_out(self):
         # The backoff cap is a full minute. A plain time.sleep() would make
         # stop() wait out however much of it is left; the shutdown signal must
-        # cut it short.
+        # cut it short well before its own (also patched down) grace period.
         statsd = self._unreachable_retrying_client()
-        with patch("datadog.dogstatsd.base.SENDER_RETRY_INITIAL_BACKOFF", 30.0):
+        with patch("datadog.dogstatsd.base.SENDER_RETRY_INITIAL_BACKOFF", 30.0), \
+                patch("datadog.dogstatsd.base.SENDER_UNBOUNDED_STOP_GRACE_SECONDS", 0.3):
             statsd.gauge("ordinary", 1)
             time.sleep(0.3)  # fail once, then settle into the 30s backoff
 
             t0 = time.time()
-            self.assertIs(self._call_bounded(statsd.stop, ()), True)
+            self.assertIs(self._call_bounded(statsd.stop, ()), False, "the payload was never delivered")
             self.assertLess(time.time() - t0, 5.0, "stop() waited out the backoff sleep")
 
     def test_sender_can_restart_after_a_stop_cleared_the_stopping_signal(self):
@@ -3901,7 +3945,8 @@ async def print_foo():
         statsd = self._unreachable_retrying_client()
         statsd.gauge("ordinary", 1)
         time.sleep(0.1)
-        self.assertIs(self._call_bounded(statsd.stop, ()), True)
+        with patch("datadog.dogstatsd.base.SENDER_UNBOUNDED_STOP_GRACE_SECONDS", 0.3):
+            self.assertIs(self._call_bounded(statsd.stop, ()), False, "the payload was never delivered")
 
         statsd.enable_background_sender()
         try:
@@ -3919,7 +3964,11 @@ async def print_foo():
             self.assertTrue(fresh.is_alive(), "fresh sender exited on a stale stopping signal")
             self.assertIs(statsd._sender_thread, fresh)
         finally:
-            statsd.stop(5.0)
+            # Bounded cleanup: the fresh sender is genuinely retrying against
+            # a socket path that will never exist, so a bounded stop() now
+            # legitimately waits close to its own timeout before giving up
+            # (see the fix above) -- keep it short so this cleanup stays fast.
+            statsd.stop(1.0)
 
     def test_set_socket_timeout(self):
         statsd = DogStatsd(disable_background_sender=False)
