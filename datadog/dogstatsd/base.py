@@ -679,15 +679,6 @@ class DogStatsd(object):
             log.debug("Statsd buffering and aggregation is disabled")
 
         self._queue = None  # type: Optional[SenderQueue]
-        # The queue object owned by the current sender thread, for as long as
-        # that thread might still be draining it -- kept separate from
-        # self._queue, which is what _send_to_server() checks and which is
-        # closed to new producers the instant a shutdown is requested (see
-        # _stop_sender_thread). This lets wait_for_pending() keep reaching
-        # the real, still-draining queue during that window, and stops
-        # _start_sender_thread() from minting a second sender while the first
-        # one is still finishing up.
-        self._active_queue = None  # type: Optional[SenderQueue]
         self._sender_thread = None  # type: Optional[threading.Thread]
         # Set to ask a running sender thread to stop. Also what makes its
         # retry backoff interruptible -- see _sender_main_loop.
@@ -1764,12 +1755,21 @@ class DogStatsd(object):
 
     def _send_to_server(self, packet, replay_safe=False):
         # type: (str, bool) -> None
-        # Skip the lock if the queue is None. There is no race with enable_background_sender.
-        if self._queue is not None:
-            # Prevent a race with disable_background_sender.
+        # Skip the lock if the queue is None or a shutdown has already been
+        # requested -- the lock-protected recheck below is what actually has
+        # to be correct; this is purely an optimization to avoid the lock
+        # once there is clearly nothing to enqueue onto.
+        if self._queue is not None and not self._sender_stopping.is_set():
+            # Prevent a race with disable_background_sender: _sender_stopping
+            # is set BEFORE _stop_sender_thread() appends Stop, under this
+            # same lock, so rechecking it here (not just self._queue) means a
+            # racing put() either lands strictly before Stop (still open) or
+            # is rejected outright and falls through to a direct send below
+            # -- never behind Stop, where it would be silently lost once the
+            # sender reaches Stop and exits.
             with self._buffer_lock:
                 packet_with_newline = packet + '\n'
-                if self._queue is not None:
+                if self._queue is not None and not self._sender_stopping.is_set():
                     if replay_safe:
                         # Never expires, so it needs no enqueued_at and no
                         # wrapper at all: queue the bare string and let the
@@ -2174,11 +2174,7 @@ class DogStatsd(object):
         if not self._sender_enabled or self._forking:
             return
 
-        # _active_queue (not self._queue) is the source of truth for whether
-        # a sender is already running: self._queue can already be None while
-        # a previous sender is still draining (see _stop_sender_thread), and
-        # starting a second one in that window would leak the first thread.
-        if self._active_queue is not None:
+        if self._queue is not None:
             return
 
         # A previous _stop_sender_thread() leaves this set; clear it before the
@@ -2194,7 +2190,6 @@ class DogStatsd(object):
             self._account_dropped_expired,
             put_timeout=self._sender_queue_timeout,
         )
-        self._active_queue = self._queue
 
         log.debug("Starting background sender thread")
         self._sender_thread = threading.Thread(
@@ -2217,48 +2212,41 @@ class DogStatsd(object):
         # payload that can genuinely never succeed.
         grace = SENDER_UNBOUNDED_STOP_GRACE_SECONDS if timeout is None else timeout
         self._sender_stop_deadline = monotonic() + grace
-        # Setting this second (after the deadline above is already visible to
-        # any thread this wakes) is what breaks the sender out of a retry
-        # backoff (which can be as long as SENDER_RETRY_MAX_BACKOFF) instead
-        # of having to wait that out -- see _sender_main_loop, which
+        # Setting this is also what makes _send_to_server() reject any
+        # FURTHER producer call outright (see there) instead of letting it
+        # land behind the Stop sentinel appended below and be lost once the
+        # sender reaches Stop and exits, and what breaks the sender out of a
+        # retry backoff (which can be as long as SENDER_RETRY_MAX_BACKOFF)
+        # instead of having to wait that out -- see _sender_main_loop, which
         # re-checks the deadline as soon as this wakes it.
         self._sender_stopping.set()
 
-        # Close the queue to new producers and enqueue Stop as ONE atomic
-        # step: _send_to_server() takes this same lock and re-checks
-        # self._queue before it puts, so a producer racing this either lands
-        # its payload on the still-open queue strictly before Stop is
-        # appended (delivered normally), or sees self._queue already None
-        # and falls back to a direct send -- never behind Stop, where it
-        # would be silently lost once the sender reaches Stop and exits.
-        # self._active_queue deliberately keeps pointing at the real object
-        # (see its declaration in __init__): wait_for_pending() and
-        # _start_sender_thread() still need to reach/recognise it while it
-        # drains.
+        # Lock ensures that nothing gets added to the queue after the check
+        # above -- see _send_to_server(), which takes this same lock and
+        # re-checks _sender_stopping before it puts.
         with self._buffer_lock:
-            queue = self._queue
-            self._queue = None
-            if queue is not None:
+            if self._queue is not None:
                 # put() lets the Stop sentinel past the size limit, so this
                 # never blocks even when the queue is full.
-                queue.put(Stop)
+                self._queue.put(Stop)
 
         thread = self._sender_thread
         if thread is None:
             # Nothing left to stop: no thread ever runs, so clear any residual
-            # state.
+            # queue.
             with self._buffer_lock:
-                self._active_queue = None
+                self._queue = None
             return True
 
         thread.join(timeout)
         if thread.is_alive():
-            # Timed out. self._queue is already closed to producers (above).
-            # Leave _active_queue in place: it is what stops
-            # _start_sender_thread() from minting a second sender, and it
-            # keeps wait_for_pending() targeting the real, still-draining
-            # queue. The sender thread clears this state itself when it
-            # eventually exits (see _release_sender_state).
+            # Timed out. Leave _queue in place: it is what stops
+            # _start_sender_thread() from minting a second sender, and it keeps
+            # wait_for_pending() targeting the real queue -- _send_to_server()
+            # itself already rejects new puts via the _sender_stopping check
+            # above, so nothing new lands on it in the meantime. The sender
+            # thread clears this state itself when it eventually exits (see
+            # _sender_main_loop).
             return False
 
         # The thread exited, but that alone doesn't mean it drained: it may
@@ -2267,12 +2255,11 @@ class DogStatsd(object):
         # never delivered, so report failure rather than claiming success.
         abandoned = self._sender_abandoned_payload
 
-        # _release_sender_state clears this on the sender's way out when it
-        # has finished with the queue, so this may already be a no-op; it
-        # also covers a thread that exited without draining (e.g. never
-        # actually started).
+        # _sender_main_loop clears this state on its way out when the thread
+        # has drained the queue, so this may already be a no-op; it also covers
+        # a thread that exited without draining (e.g. never actually started).
         with self._buffer_lock:
-            self._active_queue = None
+            self._queue = None
         self._sender_thread = None
         return not abandoned
 
@@ -2288,13 +2275,7 @@ class DogStatsd(object):
         """
         with self._buffer_lock:
             if self._queue is pending_queue:
-                # Already None in the common case: _stop_sender_thread()
-                # closes it to producers up front. Still guarded the same
-                # way in case this thread is exiting on its own (queue
-                # emptied normally, no shutdown ever requested).
                 self._queue = None
-            if self._active_queue is pending_queue:
-                self._active_queue = None
         if self._sender_thread is threading.current_thread():
             self._sender_thread = None
 
@@ -2379,19 +2360,10 @@ class DogStatsd(object):
 
         self.flush_buffered_metrics()
 
-        # Prefer _active_queue over self._queue: the latter is closed to
-        # producers the instant a shutdown is requested (see
-        # _stop_sender_thread), but the sender may still be actively draining
-        # real, already-queued payloads at that point -- _active_queue keeps
-        # pointing at that real queue until the sender thread has actually
-        # finished with it. Falling back to self._queue covers a queue
-        # assigned directly rather than through _start_sender_thread() (e.g.
-        # in tests), where _active_queue was never set at all; reading it
-        # here for join() only, never to enqueue, doesn't reopen the
-        # producer race the split exists to close. We don't need a lock,
-        # just copy the value so it doesn't change between the check and
-        # join later.
-        queue = self._active_queue or self._queue
+        # Avoid race with disable_background_sender. We don't need a
+        # lock, just copy the value so it doesn't change between the
+        # check and join later.
+        queue = self._queue
 
         if queue is None:
             return True
