@@ -197,7 +197,7 @@ SENDER_RETRY_MAX_BACKOFF = 60.0
 SENDER_UNBOUNDED_STOP_GRACE_SECONDS = SENDER_RETRY_MAX_BACKOFF
 # How often the sender retries a connection once a shutdown has been
 # requested but its deadline (the caller's own timeout, or the grace period
-# above) hasn't passed yet. 
+# above) hasn't passed yet.
 SENDER_STOP_RETRY_INTERVAL = 0.5
 # Default for sender_queue_expiry_seconds; it can be overridden per client.
 PENDING_PAYLOAD_EXPIRY_SECONDS = 10.0
@@ -2199,7 +2199,7 @@ class DogStatsd(object):
         # payload that can genuinely never succeed.
         grace = SENDER_UNBOUNDED_STOP_GRACE_SECONDS if timeout is None else timeout
         self._sender_stop_deadline = monotonic() + grace
-        # Setting makes _send_to_server() reject any FURTHER producer call outright. 
+        # Setting makes _send_to_server() reject any FURTHER producer call outright.
         self._sender_stopping.set()
 
         # Set temporary var to protect from concurrent access to self._queue.
