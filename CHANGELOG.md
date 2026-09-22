@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## v0.54.0 / 2026-09-22
 
+* [Changed] Retry sending a DogStatsD packet over UDS if the connection drops (e.g. the Agent restarts), reconnecting and resubmitting with backoff bounded by `socket_connect_timeout`, instead of dropping it after a single attempt. See [#979](https://github.com/DataDog/datadogpy/pull/979).
 * [Changed] DogStatsD background sender queue now evicts the oldest queued payloads when full, and drops payloads without an explicit timestamp after they have been queued for more than 10 seconds. See [#986](https://github.com/DataDog/datadogpy/pull/986).
 * [Changed] Replace DogStatsD's `socket_connect_timeout` option with a boolean `socket_connect_retry`: when enabled, a UDS connection failure from the background sender is retried indefinitely with backoff instead of dropping the payload immediately. Also add an optional `timeout` parameter to `stop()` and `wait_for_pending()` to bound how long they wait for the queue to drain. See [#987](https://github.com/DataDog/datadogpy/pull/987).
 
