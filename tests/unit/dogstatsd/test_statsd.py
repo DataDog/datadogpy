@@ -2825,6 +2825,80 @@ async def print_foo():
             release.set()
             wedged.join(timeout=5.0)
 
+    def test_metric_call_racing_stop_does_not_land_behind_the_stop_sentinel(self):
+        # The actual regression this guards against: a metric call racing
+        # disable_background_sender() must never land in the queue BEHIND
+        # the Stop sentinel -- where it would be silently lost once the
+        # sender reaches Stop and exits without ever seeing it -- because
+        # self._queue is closed to new producers atomically with appending
+        # Stop (see _stop_sender_thread), not sometime after the drain.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        release = threading.Event()
+        entered_first_send = threading.Event()
+        sent = []
+
+        def blocking_xmit(packet, queue_mode=False):
+            sent.append(packet)
+            entered_first_send.set()
+            release.wait(10.0)
+            return True
+
+        statsd._xmit_packet_with_telemetry = blocking_xmit
+        statsd._send_to_server("first:1|c")
+        self.assertTrue(entered_first_send.wait(5.0), "sender never picked up the first payload")
+
+        stop_result = {}
+        second_result = {}
+
+        def call_stop():
+            stop_result["value"] = statsd.stop(5.0)
+
+        def call_second():
+            # Deliberately started only once the queue is confirmed already
+            # closed below -- this IS the race under test.
+            statsd._send_to_server("second:1|c")
+            second_result["done"] = True
+
+        stopper = threading.Thread(target=call_stop)
+        stopper.start()
+        second_thread = None
+        try:
+            # _stop_sender_thread's atomic close-and-append-Stop only needs
+            # _buffer_lock -- which the sender isn't holding while blocked in
+            # the wedged send above -- so it doesn't wait for the drain.
+            # Poll briefly rather than a fixed sleep, to stay fast without
+            # being flaky on a slower machine.
+            closed = False
+            deadline = time.time() + 2.0
+            while time.time() < deadline:
+                if statsd._queue is None:
+                    closed = True
+                    break
+                time.sleep(0.01)
+            self.assertTrue(closed, "self._queue must close to producers promptly, without waiting for the drain")
+            self.assertIsNotNone(statsd._active_queue, "the real, still-draining queue must remain reachable")
+            self.assertTrue(stopper.is_alive(), "stop() must still be waiting on the wedged sender")
+
+            second_thread = threading.Thread(target=call_second)
+            second_thread.start()
+            # Still wedged behind the first send (same mocked entry point,
+            # same release Event) -- confirms this really took the direct-
+            # send fallback rather than silently returning after a queue put.
+            second_thread.join(0.3)
+            self.assertTrue(second_thread.is_alive(), "expected the direct send to be wedged behind the first one too")
+        finally:
+            release.set()
+            stopper.join(timeout=10.0)
+            if second_thread is not None:
+                second_thread.join(timeout=10.0)
+
+        self.assertIs(stop_result.get("value"), True, "stop() should have completed cleanly")
+        self.assertTrue(second_result.get("done"))
+        self.assertEqual(
+            sent, ["first:1|c\n", "second:1|c\n"],
+            "the racing payload must have been delivered (via a direct send), not lost behind Stop",
+        )
+
     def test_stop_timeout_is_bounded_while_the_sender_holds_the_socket_lock(self):
         # The wedge that matters in practice: the sender is parked inside a
         # blocking send() and therefore owns _socket_lock. stop()'s own
@@ -2912,7 +2986,11 @@ async def print_foo():
         try:
             self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
             self.assertTrue(wedged.is_alive())
-            self.assertIsNotNone(statsd._queue, "queue must be retained so state stays coherent")
+            # self._queue itself is already closed to producers at this point
+            # (see _stop_sender_thread) -- self._active_queue is what must be
+            # retained so _start_sender_thread() knows a sender is still
+            # running and state stays coherent.
+            self.assertIsNotNone(statsd._active_queue, "active queue must be retained so state stays coherent")
 
             statsd.enable_background_sender()
             # This identity check IS the proof there's no orphan: if a second
@@ -3007,7 +3085,10 @@ async def print_foo():
 
         try:
             self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
-            self.assertIsNotNone(statsd._queue)
+            # self._queue is already closed to producers at this point (see
+            # _stop_sender_thread); self._active_queue is what still tracks
+            # the sender as active while it finishes up.
+            self.assertIsNotNone(statsd._active_queue)
             self.assertIs(statsd._sender_thread, wedged)
 
             # Caller moved on and never called stop() again; the wedged send
@@ -3018,6 +3099,7 @@ async def print_foo():
 
             # The exit must have healed the client state so a re-enable works.
             self.assertIsNone(statsd._queue)
+            self.assertIsNone(statsd._active_queue)
             self.assertIsNone(statsd._sender_thread)
             statsd.enable_background_sender()
             self.assertIsNot(
