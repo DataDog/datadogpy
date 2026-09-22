@@ -193,26 +193,13 @@ SENDER_RETRY_INITIAL_BACKOFF = 0.025
 SENDER_RETRY_MAX_BACKOFF = 60.0
 # How long an *unbounded* shutdown (pre_fork(), or stop()/wait_for_pending()
 # called with timeout=None) still waits for a payload stuck in the retry
-# loop above to resolve, before giving up on it. Without some bound here, a
-# payload that can never succeed (the Agent permanently unreachable, plus a
-# replay-safe payload, which never expires) would starve the Stop sentinel
-# and hang the shutdown forever. Reuses SENDER_RETRY_MAX_BACKOFF's magnitude:
-# that's already the longest gap between two retry attempts in steady state,
-# so an unbounded shutdown should be at least that patient before giving up.
+# loop above to resolve, before giving up on it.
 SENDER_UNBOUNDED_STOP_GRACE_SECONDS = SENDER_RETRY_MAX_BACKOFF
 # How often the sender retries a connection once a shutdown has been
 # requested but its deadline (the caller's own timeout, or the grace period
-# above) hasn't passed yet. Deliberately much shorter than the normal
-# backoff cap, so a still-recovering Agent gets drained before the shutdown
-# gives up, without hammering a connection that keeps failing.
+# above) hasn't passed yet. 
 SENDER_STOP_RETRY_INTERVAL = 0.5
-
-# How long (in seconds) a non-replay-safe payload may sit in the background
-# sender queue before it's considered stale and dropped instead of sent.
-# Payloads that carry their own explicit timestamp (replay-safe) are exempt:
-# delivering those late doesn't change what they mean, so they're kept
-# around until they can actually be sent. This is the default for
-# sender_queue_expiry_seconds; it can be overridden per client.
+# Default for sender_queue_expiry_seconds; it can be overridden per client.
 PENDING_PAYLOAD_EXPIRY_SECONDS = 10.0
 # Errors seen while sending on an already-connected socket that indicate the
 # peer went away (e.g. the agent crashed/restarted). These are worth a single
@@ -2212,23 +2199,10 @@ class DogStatsd(object):
         # payload that can genuinely never succeed.
         grace = SENDER_UNBOUNDED_STOP_GRACE_SECONDS if timeout is None else timeout
         self._sender_stop_deadline = monotonic() + grace
-        # Setting this is also what makes _send_to_server() reject any
-        # FURTHER producer call outright (see there) instead of letting it
-        # land behind the Stop sentinel appended below and be lost once the
-        # sender reaches Stop and exits, and what breaks the sender out of a
-        # retry backoff (which can be as long as SENDER_RETRY_MAX_BACKOFF)
-        # instead of having to wait that out -- see _sender_main_loop, which
-        # re-checks the deadline as soon as this wakes it.
+        # Setting makes _send_to_server() reject any FURTHER producer call outright. 
         self._sender_stopping.set()
 
-        # A producer already inside put(), waiting for room in a full queue,
-        # would otherwise hold _buffer_lock for as long as that wait lasts --
-        # up to sender_queue_timeout, or forever if it's None -- and block
-        # the lock acquisition just below, making the timeout parameter to
-        # this very method meaningless. SenderQueue.close() needs only the
-        # queue's own internal lock (never _buffer_lock) to wake any such
-        # wait immediately, so it always runs promptly here regardless of
-        # what a stuck producer is doing.
+        # Set temporary var to protect from concurrent access to self._queue.
         queue_to_close = self._queue
         if queue_to_close is not None:
             queue_to_close.close()
@@ -2252,13 +2226,7 @@ class DogStatsd(object):
 
         thread.join(timeout)
         if thread.is_alive():
-            # Timed out. Leave _queue in place: it is what stops
-            # _start_sender_thread() from minting a second sender, and it keeps
-            # wait_for_pending() targeting the real queue -- _send_to_server()
-            # itself already rejects new puts via the _sender_stopping check
-            # above, so nothing new lands on it in the meantime. The sender
-            # thread clears this state itself when it eventually exits (see
-            # _sender_main_loop).
+            # Timed out. Leave _queue in place.
             return False
 
         # The thread exited, but that alone doesn't mean it drained: it may
