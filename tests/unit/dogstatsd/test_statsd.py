@@ -2902,6 +2902,61 @@ async def print_foo():
             "the racing payload must have been delivered (via a direct send), not lost behind Stop",
         )
 
+    def test_stop_timeout_is_bounded_when_a_producer_is_wedged_waiting_for_room(self):
+        # The actual regression this guards against: a producer thread
+        # blocked inside SenderQueue.put(), waiting for room in a full
+        # queue, holds _buffer_lock for as long as that wait lasts -- up to
+        # sender_queue_timeout, or forever if it's None. Without
+        # SenderQueue.close() waking it immediately, _stop_sender_thread()
+        # can't even acquire that lock to append Stop, so stop(timeout)
+        # ignores its own timeout entirely (bounded only by whatever else
+        # eventually frees the stuck producer -- nothing, in the worst case).
+        statsd = DogStatsd(
+            disable_background_sender=False,
+            disable_telemetry=True,
+            sender_queue_size=1,
+            sender_queue_timeout=None,  # wait forever for room if not interrupted
+        )
+        release = threading.Event()
+        entered_send = threading.Event()
+
+        def blocking_xmit(packet, queue_mode=False):
+            entered_send.set()
+            release.wait(30.0)
+            return True
+
+        statsd._xmit_packet_with_telemetry = blocking_xmit
+        statsd._send_to_server("first:1|c")
+        self.assertTrue(entered_send.wait(5.0), "sender never picked up first")
+        # get() already popped "first" off the queue while the sender is
+        # wedged inside the mocked send -- refill it to maxsize=1 so the
+        # NEXT put() has nowhere to go.
+        statsd._send_to_server("second:1|c")
+        self.assertEqual(statsd._queue.qsize(), 1)
+
+        producer_started = threading.Event()
+
+        def producer():
+            producer_started.set()
+            statsd._send_to_server("third:1|c")
+
+        producer_thread = threading.Thread(target=producer)
+        producer_thread.start()
+        self.assertTrue(producer_started.wait(5.0))
+        # Give the producer a moment to actually reach put()'s internal wait
+        # (queue full, sender_queue_timeout=None) before racing stop().
+        time.sleep(0.2)
+
+        try:
+            t0 = time.time()
+            self.assertIs(self._call_bounded(statsd.stop, (1.0,), limit=3.0), False)
+            elapsed = time.time() - t0
+            self.assertLess(elapsed, 3.0, "stop(1) must not hang behind a producer wedged in put()")
+            self.assertGreaterEqual(elapsed, 1.0, "stop(1) should still take roughly its own timeout, not return early")
+        finally:
+            release.set()
+            producer_thread.join(timeout=5.0)
+
     def test_stop_timeout_is_bounded_while_the_sender_holds_the_socket_lock(self):
         # The wedge that matters in practice: the sender is parked inside a
         # blocking send() and therefore owns _socket_lock. stop()'s own

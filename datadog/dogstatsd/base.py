@@ -2221,6 +2221,18 @@ class DogStatsd(object):
         # re-checks the deadline as soon as this wakes it.
         self._sender_stopping.set()
 
+        # A producer already inside put(), waiting for room in a full queue,
+        # would otherwise hold _buffer_lock for as long as that wait lasts --
+        # up to sender_queue_timeout, or forever if it's None -- and block
+        # the lock acquisition just below, making the timeout parameter to
+        # this very method meaningless. SenderQueue.close() needs only the
+        # queue's own internal lock (never _buffer_lock) to wake any such
+        # wait immediately, so it always runs promptly here regardless of
+        # what a stuck producer is doing.
+        queue_to_close = self._queue
+        if queue_to_close is not None:
+            queue_to_close.close()
+
         # Lock ensures that nothing gets added to the queue after the check
         # above -- see _send_to_server(), which takes this same lock and
         # re-checks _sender_stopping before it puts.

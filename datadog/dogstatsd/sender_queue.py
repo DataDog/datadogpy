@@ -115,6 +115,12 @@ class SenderQueue(object):
         # all tasks have been dropped or sent.
         self._unfinished_tasks = 0
 
+        # Set by close(): tells a put() that is (or will be) waiting for room
+        # to stop waiting immediately instead of riding out put_timeout, or
+        # forever if put_timeout is None. See close()'s docstring for why
+        # this exists.
+        self._closing = False
+
         # The items currently handed out by get() and not yet finished via
         # requeue_front() or task_done(), keyed by id(item). SenderQueue is
         # single-consumer by design (one background sender thread), so this
@@ -178,18 +184,23 @@ class SenderQueue(object):
         number, or not at all if it's 0 (the default) -- then falls back to
         evicting the oldest entry (see _make_room_locked()) if the queue is
         still full once the wait is over. Either way, put() never rejects
-        the payload outright.
+        the payload outright. A close() call (from any thread) cuts any of
+        that waiting short immediately, regardless of put_timeout.
         """
         with self._not_empty:
             if item is not Stop and self._maxsize > 0 and len(self._deque) >= self._maxsize:
-                if self._put_timeout is None:
+                if self._closing:
+                    pass  # Already closing: don't wait at all, straight to eviction below.
+                elif self._put_timeout is None:
                     # Wait forever: an explicit opt-in to unbounded
-                    # backpressure on the calling thread.
-                    while len(self._deque) >= self._maxsize:
+                    # backpressure on the calling thread. close() is what
+                    # keeps this from actually being forever once a shutdown
+                    # is underway.
+                    while len(self._deque) >= self._maxsize and not self._closing:
                         self._not_full.wait()
                 elif self._put_timeout > 0:
                     deadline = monotonic() + self._put_timeout
-                    while len(self._deque) >= self._maxsize:
+                    while len(self._deque) >= self._maxsize and not self._closing:
                         remaining = deadline - monotonic()
                         if remaining <= 0:
                             break
@@ -203,6 +214,36 @@ class SenderQueue(object):
             self._deque.append(item)
             self._unfinished_tasks += 1
             self._not_empty.notify()
+
+    def close(self):
+        # type: () -> None
+        """Wake any put() currently waiting for room, immediately.
+
+        A put() blocked waiting for space in a full queue holds no lock this
+        method needs -- Condition.wait() releases the underlying lock while
+        waiting -- so this always runs promptly, even while some other
+        thread is stuck inside that wait (that stuck thread is exactly what
+        this is for). Without it, a put() with put_timeout=None waits
+        forever for room that will never open up once nothing is draining
+        the queue, and even a bounded put_timeout can outlast whatever
+        timeout a caller trying to shut things down asked for -- see
+        DogStatsd._stop_sender_thread(), which calls this before it needs
+        the *caller's* lock (_buffer_lock) that a stuck put() would
+        otherwise be holding for the entire wait.
+
+        Sticky: once closed, no future put() on this queue ever waits for
+        room again, regardless of put_timeout -- it goes straight to
+        eviction, like put_timeout=0. There is no matching "reopen": a fresh
+        shutdown starts with a fresh SenderQueue instead.
+
+        This does not stop put()/get() from working, and does not reject or
+        drop anything by itself -- it only ends a wait early. Refusing new
+        payloads outright is the caller's job (see DogStatsd._send_to_server(),
+        which checks _sender_stopping before ever calling put()).
+        """
+        with self._not_full:
+            self._closing = True
+            self._not_full.notify_all()
 
     def requeue_front(self, item):
         # type: (QueuedItem) -> None
