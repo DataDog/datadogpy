@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+* [Changed] DogStatsD background sender queue now evicts the oldest queued payloads when full, and drops payloads without an explicit timestamp after they have been queued for more than 10 seconds. See [#986](https://github.com/DataDog/datadogpy/pull/986).
+
 ## v0.53.0 / 2026-07-24
 
 * [Fixed] Add DD_DOGSTATSD_URL support for Unix and UDP URLs. See [#968](https://github.com/DataDog/datadogpy/pull/968).

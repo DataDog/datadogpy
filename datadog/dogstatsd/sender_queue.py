@@ -1,48 +1,72 @@
 import collections
+import logging
 import sys
 import threading
 
 from datadog.util.compat import monotonic
 
+log = logging.getLogger("datadog.dogstatsd")
+
 if sys.version_info[:2] >= (3, 5):
-    from typing import Callable, Optional, Union  # noqa: F401
+    from typing import Callable, Dict, Optional, Union  # noqa: F401
 
 
 # Sentinel telling the background sender thread to shut down.
 Stop = object()
 
-# How long (in seconds) a non-replay-safe payload may sit in the background
-# sender queue before it's considered stale and dropped instead of sent.
-# Payloads that carry their own explicit timestamp (replay_safe) are exempt:
-# delivering those late doesn't change what they mean, so they're kept
-# around until they can actually be sent.
-PENDING_PAYLOAD_EXPIRY_SECONDS = 10.0
+# What the queue can hold. A payload is either a bare string (replay-safe, no
+# expiry state needed) or a PendingPayload (subject to expiry); Stop is the
+# only other thing that ever goes in, and is matched by identity.
+if sys.version_info[:2] >= (3, 5):
+    QueuedItem = Union[str, "PendingPayload"]  # noqa: F401
+    QueuedItemOrStop = Union[str, "PendingPayload", object]  # noqa: F401
 
 
 class PendingPayload(object):
-    """A single packet queued for the background sender.
+    """A packet queued for the background sender that can go stale.
+
+    Only payloads subject to expiry are wrapped in this. A replay-safe
+    payload -- one carrying its own explicit timestamp, so that delivering it
+    late doesn't change what it means -- is queued as the bare packet string
+    instead, because it needs none of the state here. The queue therefore
+    reads replay-safety off the entry's *type* rather than a stored flag (see
+    SenderQueue._expired() and is_replay_safe()), which keeps ~56 bytes per
+    replay-safe entry out of the queue and keeps those entries out of the
+    cyclic GC's traversal set entirely, since str holds no references.
 
     :ivar payload: The already-serialized packet text (including its
         trailing newline), ready to be written to the socket.
     :ivar enqueued_at: A monotonic timestamp recorded when the payload
         became eligible for sending (i.e. when it was put on the queue).
         Used to decide whether it has been sitting in the queue for too
-        long to still be worth sending. None when replay_safe is True: it's
-        never read in that case (see SenderQueue._expired()'s short-circuit),
-        so skipping the allocation costs nothing.
-    :ivar replay_safe: True when delayed delivery preserves the payload's
-        meaning because it carries its own explicit timestamp. Such
-        payloads are never dropped for being stale, and never need
-        enqueued_at.
+        long to still be worth sending.
     """
 
-    __slots__ = ("payload", "enqueued_at", "replay_safe")
+    __slots__ = ("payload", "enqueued_at")
 
-    def __init__(self, payload, enqueued_at, replay_safe):
-        # type: (str, Optional[float], bool) -> None
+    def __init__(self, payload, enqueued_at):
+        # type: (str, float) -> None
         self.payload = payload
         self.enqueued_at = enqueued_at
-        self.replay_safe = replay_safe
+
+
+def is_replay_safe(item):
+    # type: (Union[str, PendingPayload]) -> bool
+    """True when this queue entry is exempt from expiry.
+
+    Replay-safe entries are queued as bare strings; everything subject to
+    expiry is wrapped in PendingPayload. Centralised here so the type test
+    isn't repeated at every site that cares.
+    """
+    return not isinstance(item, PendingPayload)
+
+
+def payload_text(item):
+    # type: (Union[str, PendingPayload]) -> str
+    """The serialized packet text of a queue entry, whichever form it took."""
+    if isinstance(item, PendingPayload):
+        return item.payload
+    return item
 
 
 class SenderQueue(object):
@@ -74,7 +98,7 @@ class SenderQueue(object):
     """
 
     def __init__(self, maxsize, expiry_seconds, on_drop_queue_full, on_drop_expired, put_timeout=0):
-        # type: (int, float, Callable[[PendingPayload], None], Callable[[PendingPayload], None], Optional[float]) -> None  # noqa: E501
+        # type: (int, float, Callable[[QueuedItem], None], Callable[[QueuedItem], None], Optional[float]) -> None  # noqa: E501
         self._maxsize = maxsize
         self._expiry_seconds = expiry_seconds
         self._on_drop_queue_full = on_drop_queue_full
@@ -91,15 +115,26 @@ class SenderQueue(object):
         # all tasks have been dropped or sent.
         self._unfinished_tasks = 0
 
+        # The items currently handed out by get() and not yet finished via
+        # requeue_front() or task_done(), keyed by id(item). SenderQueue is
+        # single-consumer by design (one background sender thread), so this
+        # normally holds at most one entry at a time. Tracking it lets
+        # requeue_front()/task_done() verify their precondition -- that the
+        # item they're handed really is the one get() currently has out of
+        # the queue -- so the misuse that would otherwise silently corrupt
+        # _unfinished_tasks (a double finish, a double requeue, or a requeue
+        # of an already-finished item) fails loudly instead of drifting the
+        # counter. The item itself is held in the value to keep it alive
+        # (and its id stable) for as long as the entry exists.
+        self._in_flight = {}  # type: Dict[int, QueuedItemOrStop]
+
     def _expired(self, item, now):
-        # type: (PendingPayload, float) -> bool
-        if item.replay_safe:
+        # type: (QueuedItem, float) -> bool
+        if not isinstance(item, PendingPayload):
+            # A bare string is a replay-safe payload: it carries its own
+            # timestamp, so it never goes stale (see PendingPayload).
             return False
-        # enqueued_at is only ever None for replay_safe items (see
-        # PendingPayload), which are already excluded above -- it's a plain
-        # float here. mypy can't correlate that invariant across the two
-        # attributes, hence the ignore.
-        return (now - item.enqueued_at) > self._expiry_seconds  # type: ignore[operator]
+        return (now - item.enqueued_at) > self._expiry_seconds
 
     def _make_room_locked(self):
         # type: () -> None
@@ -135,7 +170,7 @@ class SenderQueue(object):
             self._not_full.notify(reclaimed)
 
     def put(self, item):
-        # type: (Union[PendingPayload, object]) -> None
+        # type: (QueuedItemOrStop) -> None
         """Queue a payload (or the Stop sentinel).
 
         If the queue is full: waits for room according to put_timeout --
@@ -170,7 +205,7 @@ class SenderQueue(object):
             self._not_empty.notify()
 
     def requeue_front(self, item):
-        # type: (PendingPayload) -> None
+        # type: (QueuedItem) -> None
         """Put an in-flight payload back at the front after a failed send attempt.
 
         The payload was already accounted for by the put() that originally
@@ -183,6 +218,19 @@ class SenderQueue(object):
         Either way, a drop here finishes the task that put() started.
         """
         with self._not_empty:
+            # The item handed back must be exactly the one get() currently has
+            # out of the queue. SenderQueue is single-consumer; a double
+            # requeue or a requeue of an already-finished item would otherwise
+            # corrupt _unfinished_tasks. If the item isn't in flight, log and
+            # bail out without touching the deque or the counter -- it's
+            # already been accounted for elsewhere, so this is a no-op rather
+            # than a crash. (Releasing it from in flight here is correct in
+            # every branch below: it's either requeued back onto the deque --
+            # where a future get() will pick it up again -- or dropped for
+            # good.)
+            if not self._release_in_flight_locked(item, "requeue_front"):
+                return
+
             if self._expired(item, monotonic()):
                 self._on_drop_expired(item)
                 self._finish_task_locked()
@@ -197,7 +245,7 @@ class SenderQueue(object):
             self._not_empty.notify()
 
     def get(self):
-        # type: () -> Union[PendingPayload, object]
+        # type: () -> QueuedItemOrStop
         """Block for the next payload, silently dropping expired entries along the way."""
         while True:
             with self._not_empty:
@@ -207,30 +255,93 @@ class SenderQueue(object):
                 # A slot just opened up: wake one thread blocked in put()'s
                 # wait-for-room loop, if any (harmless no-op otherwise).
                 self._not_full.notify()
+                # Record this item as in flight, owned by the current thread,
+                # until requeue_front() or task_done() releases it (see
+                # _in_flight in __init__).
+                self._take_in_flight_locked(item)
 
             if item is Stop:
                 return item
 
-            if self._expired(item, monotonic()):
+            # Guard the monotonic() call on the type test rather than letting
+            # _expired() do it: the argument is evaluated BEFORE the call, so
+            # `self._expired(item, monotonic())` read the clock on every get()
+            # including for bare strings, which are replay-safe and can never
+            # expire, so the value was computed and immediately discarded.
+            if isinstance(item, PendingPayload) and self._expired(item, monotonic()):
                 self._on_drop_expired(item)
-                self.task_done()
+                self.task_done(item)
                 continue
 
             return item
+
+    def _take_in_flight_locked(self, item):
+        # type: (QueuedItemOrStop) -> None
+        # Caller already holds self._lock (shared by _not_empty / _all_tasks_done).
+        # Records `item` as the one currently handed out by get(). A duplicate
+        # here means a previous get() was never finished (or the same object
+        # was queued twice); we log it and overwrite so the new handout is the
+        # one tracked, rather than crashing the sender thread.
+        key = id(item)
+        if key in self._in_flight:
+            log.error(
+                "dogstatsd sender queue: get() handed out an item already tracked as "
+                "in flight; a previous get() was never finished with task_done() / "
+                "requeue_front(), or the same object was queued more than once. "
+                "Counter bookkeeping may drift."
+            )
+        self._in_flight[key] = item
+
+    def _release_in_flight_locked(self, item, action):
+        # type: (QueuedItemOrStop, str) -> bool
+        # Caller already holds self._lock (shared by _not_empty / _all_tasks_done).
+        # Verifies `item` is currently in flight, then drops it from the
+        # in-flight map. `action` names the caller ("requeue_front"/
+        # "task_done") for the log message. Returns False (after logging) when
+        # the item is not in flight, so the caller can skip the counter/deque
+        # mutation that would otherwise drift _unfinished_tasks -- without
+        # crashing the sender thread.
+        key = id(item)
+        if key not in self._in_flight:
+            log.error(
+                "dogstatsd sender queue: %s() was called on an item that is not "
+                "currently in flight (it was never returned by get(), or was "
+                "already finished). Ignoring it to keep the task counter consistent.",
+                action,
+            )
+            return False
+        del self._in_flight[key]
+        return True
 
     def _finish_task_locked(self):
         # type: () -> None
         # Caller already holds self._lock (shared by _not_empty / _all_tasks_done).
         unfinished = self._unfinished_tasks - 1
         if unfinished < 0:
-            raise ValueError("task_done() called too many times")
+            # More finishes than puts: a real bookkeeping bug. Log it and
+            # clamp at zero rather than raising, so the sender thread stays
+            # alive. Notify in case a join() is waiting, so it doesn't hang.
+            log.error(
+                "dogstatsd sender queue: task accounting went negative "
+                "(_unfinished_tasks below zero); clamping. This indicates a "
+                "double finish or a finish without a matching put()."
+            )
+            unfinished = 0
         self._unfinished_tasks = unfinished
         if unfinished == 0:
             self._all_tasks_done.notify_all()
 
-    def task_done(self):
-        # type: () -> None
+    def task_done(self, item):
+        # type: (QueuedItemOrStop) -> None
         with self._all_tasks_done:
+            # The item being finished must be the one get() currently has out
+            # of the queue. This is the counterpart to get()'s
+            # _take_in_flight_locked(); a second task_done() (double finish)
+            # would otherwise let _unfinished_tasks drift. If it's not in
+            # flight, log and bail out without decrementing -- the task was
+            # already finished elsewhere -- rather than crashing the sender.
+            if not self._release_in_flight_locked(item, "task_done"):
+                return
             self._finish_task_locked()
 
     def join(self, timeout=None):

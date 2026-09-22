@@ -27,7 +27,7 @@ if sys.version_info[:2] >= (3, 5):
 # pylint: disable=unused-import
 if sys.version_info[:2] >= (3, 5):
     from typing import (  # noqa: F401
-        Any, Callable, Dict, Iterable, List, Optional, Text, Tuple, Type, Union, overload,
+        Any, Callable, Iterable, List, Optional, Text, Tuple, Type, Union, overload,
     )
 
 try:
@@ -49,8 +49,11 @@ from datadog.dogstatsd.sender_queue import (
     SenderQueue,
     PendingPayload,
     Stop,
-    PENDING_PAYLOAD_EXPIRY_SECONDS,
+    payload_text,
 )
+
+if sys.version_info[:2] >= (3, 5):
+    from datadog.dogstatsd.sender_queue import QueuedItem  # noqa: F401
 from datadog.util.compat import monotonic, text, urlparse
 from datadog.util.format import normalize_tags, validate_cardinality
 from datadog.version import __version__
@@ -188,6 +191,14 @@ MIN_SEND_BUFFER_SIZE = 32 * 1024
 # regardless of socket_connect_retry.
 SENDER_RETRY_INITIAL_BACKOFF = 0.025
 SENDER_RETRY_MAX_BACKOFF = 60.0
+
+# How long (in seconds) a non-replay-safe payload may sit in the background
+# sender queue before it's considered stale and dropped instead of sent.
+# Payloads that carry their own explicit timestamp (replay-safe) are exempt:
+# delivering those late doesn't change what they mean, so they're kept
+# around until they can actually be sent. This is the default for
+# sender_queue_expiry_seconds; it can be overridden per client.
+PENDING_PAYLOAD_EXPIRY_SECONDS = 10.0
 # Errors seen while sending on an already-connected socket that indicate the
 # peer went away (e.g. the agent crashed/restarted). These are worth a single
 # reconnect-and-resend attempt instead of dropping the packet outright.
@@ -309,6 +320,7 @@ class DogStatsd(object):
         disable_background_sender=True,         # type: bool
         sender_queue_size=0,                    # type: int
         sender_queue_timeout=0,                 # type: Optional[float]
+        sender_queue_expiry_seconds=PENDING_PAYLOAD_EXPIRY_SECONDS,  # type: float
         track_instance=True,                    # type: bool
         socket_connect_retry=False,              # type: bool
     ):  # type: (...) -> None
@@ -510,6 +522,13 @@ class DogStatsd(object):
         Default: 0 (no wait)
         :type sender_queue_timeout: float
 
+        :param sender_queue_expiry_seconds: How long, in seconds, a non-replay-safe payload
+        may sit in the sender queue before it's considered stale and dropped instead of sent.
+        Payloads that carry their own explicit timestamp (replay-safe) are exempt: delivering
+        those late doesn't change what they mean, so they're kept until they can be sent.
+        Default: PENDING_PAYLOAD_EXPIRY_SECONDS (10.0).
+        :type sender_queue_expiry_seconds: float
+
         :param track_instance: Keep track of this instance and automatically handle cleanup when os.fork() is called,
         if supported.
         Default: True.
@@ -648,7 +667,9 @@ class DogStatsd(object):
         self._sender_enabled = False
 
         if not disable_background_sender:
-            self.enable_background_sender(sender_queue_size, sender_queue_timeout)
+            self.enable_background_sender(
+                sender_queue_size, sender_queue_timeout, sender_queue_expiry_seconds
+            )
 
         if TRACK_INSTANCES and track_instance:
             _instances.add(self)
@@ -712,8 +733,13 @@ class DogStatsd(object):
                 log.info("Unexpected telemetry socket provided with no support for getsockopt")
         self._telemetry_socket_kind = None
 
-    def enable_background_sender(self, sender_queue_size=0, sender_queue_timeout=0):
-        # type: (int, Optional[float]) -> None
+    def enable_background_sender(
+        self,
+        sender_queue_size=0,
+        sender_queue_timeout=0,
+        sender_queue_expiry_seconds=PENDING_PAYLOAD_EXPIRY_SECONDS,
+    ):
+        # type: (int, Optional[float], float) -> None
         """
         Use a background thread to communicate with the dogstatsd server.
         When enabled, a background thread will be used to send metric payloads to the Agent.
@@ -733,12 +759,18 @@ class DogStatsd(object):
             If set to None, wait forever. If set to zero drop the packet immediately if the queue is full.
             Default: 0 (no wait).
         :type sender_queue_timeout: float, optional
+        :param sender_queue_expiry_seconds: How long, in seconds, a non-replay-safe payload may sit in the
+            sender queue before it's considered stale and dropped instead of sent. Replay-safe payloads
+            (those carrying their own explicit timestamp) are exempt and are kept until they can be sent.
+            Default: PENDING_PAYLOAD_EXPIRY_SECONDS (10.0).
+        :type sender_queue_expiry_seconds: float, optional
         """
 
         with self._config_lock:
             self._sender_enabled = True
             self._sender_queue_size = sender_queue_size
             self._sender_queue_timeout = sender_queue_timeout
+            self._sender_queue_expiry_seconds = sender_queue_expiry_seconds
 
             self._start_sender_thread()
 
@@ -1151,14 +1183,16 @@ class DogStatsd(object):
     def _reset_buffer(self):
         # type: () -> None
         with self._buffer_lock:
-            # Buffered lines are kept in two separate batches, keyed by
-            # whether they're replay-safe. Replay safe metrics are posted with
-            # the timestamp.
-            self._buffers = {False: [], True: []}  # type: Dict[bool, List[Text]]
+            # Buffered lines are kept in two separate batches, one per expiry
+            # policy: replay-safe metrics carry their own timestamp, the rest
+            # are stamped on receipt.
+            self._buffer = []  # type: List[Text]           # non-replay-safe
+            self._buffer_rs = []  # type: List[Text]        # replay-safe
             # Running packet size per buffer, each including the newline that
             # will join its lines, so both stay under _max_payload_size
             # independently.
-            self._buffer_sizes = {False: 0, True: 0}  # type: Dict[bool, int]
+            self._buffer_size = 0  # type: int
+            self._buffer_rs_size = 0  # type: int
 
     def flush(self):
         # type: () -> None
@@ -1173,11 +1207,18 @@ class DogStatsd(object):
         other one keeps accumulating, which is the whole point of splitting
         them.
         """
-        lines = self._buffers[replay_safe]
-        if not lines:
-            return
-        self._buffers[replay_safe] = []
-        self._buffer_sizes[replay_safe] = 0
+        if replay_safe:
+            lines = self._buffer_rs
+            if not lines:
+                return
+            self._buffer_rs = []
+            self._buffer_rs_size = 0
+        else:
+            lines = self._buffer
+            if not lines:
+                return
+            self._buffer = []
+            self._buffer_size = 0
         self._send_to_server("\n".join(lines), replay_safe)
 
     def flush_buffered_metrics(self):
@@ -1616,16 +1657,16 @@ class DogStatsd(object):
         return self.bytes_dropped_queue + self.bytes_dropped_writer + self.bytes_dropped_expired
 
     def _account_dropped_queue_full(self, item):
-        # type: (PendingPayload) -> None
+        # type: (QueuedItem) -> None
         """A payload was evicted from the sender queue to make room for a new one."""
         self.packets_dropped_queue += 1
-        self.bytes_dropped_queue += len(item.payload.encode(self.encoding))
+        self.bytes_dropped_queue += len(payload_text(item).encode(self.encoding))
 
     def _account_dropped_expired(self, item):
-        # type: (PendingPayload) -> None
-        """A payload sat in the sender queue longer than PENDING_PAYLOAD_EXPIRY_SECONDS."""
+        # type: (QueuedItem) -> None
+        """A payload sat in the sender queue longer than the configured expiry (sender_queue_expiry_seconds)."""
         self.packets_dropped_expired += 1
-        self.bytes_dropped_expired += len(item.payload.encode(self.encoding))
+        self.bytes_dropped_expired += len(payload_text(item).encode(self.encoding))
 
     def _flush_telemetry(self):
         # type: () -> str
@@ -1675,11 +1716,15 @@ class DogStatsd(object):
             with self._buffer_lock:
                 packet_with_newline = packet + '\n'
                 if self._queue is not None:
-                    # replay_safe payloads never have their enqueued_at read
-                    # (see SenderQueue._expired()'s short-circuit), so skip
-                    # both the clock read and the float allocation for them.
-                    enqueued_at = None if replay_safe else monotonic()
-                    self._queue.put(PendingPayload(packet_with_newline, enqueued_at, replay_safe))
+                    if replay_safe:
+                        # Never expires, so it needs no enqueued_at and no
+                        # wrapper at all: queue the bare string and let the
+                        # queue infer replay-safety from the type. Saves the
+                        # PendingPayload object (~56 bytes) per entry and
+                        # keeps these out of the cyclic GC's traversal set.
+                        self._queue.put(packet_with_newline)
+                    else:
+                        self._queue.put(PendingPayload(packet_with_newline, monotonic()))
                     return
 
         self._xmit_packet_with_telemetry(packet + '\n')
@@ -1829,22 +1874,41 @@ class DogStatsd(object):
 
     def _send_to_buffer(self, packet, replay_safe=False):
         # type: (str, bool) -> None
+        """Append one serialized line to the batch matching its expiry policy.
+
+        Deliberately written out per branch rather than indexing a dict by
+        replay_safe, and with the size check inlined rather than delegated to
+        _should_flush(): both cost real CPU at once-per-metric frequency. See
+        _reset_buffer() for the measurements. The bool() coercion the dict form
+        needed is gone too -- the branch treats any truthy value correctly.
+        """
         with self._buffer_lock:
-            replay_safe = bool(replay_safe)
+            # Length including the newline that will join this line to the
+            # next, so the running total anticipates the final packet size.
+            length = len(packet) + 1
 
-            if self._should_flush(len(packet), replay_safe):
-                self._flush_one_buffer(replay_safe)
-
-            self._buffers[replay_safe].append(packet)
-            # Update the current buffer length, including line break to anticipate
-            # the final packet size
-            self._buffer_sizes[replay_safe] += len(packet) + 1
+            if replay_safe:
+                if self._buffer_rs_size + length > self._max_payload_size:
+                    self._flush_one_buffer(True)
+                self._buffer_rs.append(packet)
+                self._buffer_rs_size += length
+            else:
+                if self._buffer_size + length > self._max_payload_size:
+                    self._flush_one_buffer(False)
+                self._buffer.append(packet)
+                self._buffer_size += length
 
     def _should_flush(self, length_to_be_added, replay_safe=False):
         # type: (int, bool) -> bool
-        if self._buffer_sizes[bool(replay_safe)] + length_to_be_added + 1 > self._max_payload_size:
-            return True
-        return False
+        """Whether adding a line of this length would overflow its batch.
+
+        NOT used by _send_to_buffer(), which inlines the same comparison to
+        keep a function call off the per-metric path. Retained because it is
+        part of the pre-existing surface and is convenient in tests; keep the
+        two in step if either changes.
+        """
+        current = self._buffer_rs_size if replay_safe else self._buffer_size
+        return current + length_to_be_added + 1 > self._max_payload_size
 
     @staticmethod
     def _escape_event_content(string):
@@ -2065,7 +2129,7 @@ class DogStatsd(object):
 
         self._queue = SenderQueue(
             self._sender_queue_size,
-            PENDING_PAYLOAD_EXPIRY_SECONDS,
+            self._sender_queue_expiry_seconds,
             self._account_dropped_queue_full,
             self._account_dropped_expired,
             put_timeout=self._sender_queue_timeout,
@@ -2143,15 +2207,15 @@ class DogStatsd(object):
         while True:
             item = pending_queue.get()
             if item is Stop:
-                pending_queue.task_done()
+                pending_queue.task_done(item)
                 self._release_sender_state(pending_queue)
                 return
 
-            # next line has type ignore because the type checker cannot
-            # know that 'if item is Stop' is the only case where item is
-            # of object type.
+            # payload_text() also narrows the type: 'if item is Stop' above is
+            # the only case where item is the bare object sentinel, which the
+            # type checker can't know on its own.
             sent = self._xmit_packet_with_telemetry(
-                item.payload, queue_mode=True  # type: ignore[attr-defined]
+                payload_text(item), queue_mode=True  # type: ignore[arg-type]
             )
 
             if sent is None:
@@ -2161,7 +2225,7 @@ class DogStatsd(object):
                 # that's been stuck for too long, unless it's replay-safe.
                 pending_queue.requeue_front(item)  # type: ignore[arg-type]
 
-                # Interruptible backoff. 
+                # Interruptible backoff.
                 self._sender_stopping.wait(backoff)
                 if self._sender_stopping.is_set():
                     # Checked rather than using wait()'s return value, which
@@ -2176,7 +2240,7 @@ class DogStatsd(object):
             # Sent, or a definitive failure that _xmit_packet already
             # accounted for as a dropped packet -- either way, this
             # payload's story is over.
-            pending_queue.task_done()
+            pending_queue.task_done(item)  # type: ignore[arg-type]
             backoff = SENDER_RETRY_INITIAL_BACKOFF
 
     def wait_for_pending(self, timeout=None):
