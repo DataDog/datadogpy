@@ -103,7 +103,8 @@ def test_fork_hooks(disable_background_sender, disable_buffering):
     assert statsd._flush_thread is None
     assert statsd._sender_thread is None
     assert statsd._queue is None or statsd._queue.empty()
-    assert len(statsd._buffer) == 0
+    # Buffered lines are split by expiry policy, so check every batch.
+    assert not statsd._buffer and not statsd._buffer_rs
 
     statsd.post_fork_parent()
 
