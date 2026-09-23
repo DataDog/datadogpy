@@ -97,6 +97,40 @@ class TestAggregator(unittest.TestCase):
             self.assertEqual(metric.tags, expected["tags"])
             self.assertEqual(metric.rate, expected["rate"])
             self.assertEqual(metric.value, expected["value"])
-            
+
+    def test_aggregator_set_preserves_per_call_cardinality(self):
+        # Two set() calls with the same name + tags but different per-call
+        # cardinalities within one aggregation window must not be collapsed
+        # into a single cardinality on flush. Regression test for
+        # https://github.com/DataDog/datadogpy/pull/980 review feedback.
+        tags = ["tag1", "tag2"]
+
+        self.aggregator.set("setTest", "value1", tags, 1, cardinality="low")
+        self.aggregator.set("setTest", "value2", tags, 1, cardinality="high")
+
+        # Distinct cardinalities must not share a SetMetric context.
+        self.assertEqual(len(self.aggregator.metrics_map[MetricType.SET]), 2)
+
+        metrics = self.aggregator.flush_aggregated_metrics()
+        set_metrics = [m for m in metrics if m.metric_type == MetricType.SET]
+
+        emitted = {(m.value, m.cardinality) for m in set_metrics}
+        self.assertEqual(emitted, {("value1", "low"), ("value2", "high")})
+
+    def test_aggregator_set_same_value_distinct_cardinality(self):
+        # The same value submitted under two cardinalities must be emitted once
+        # per cardinality rather than collapsed to the first.
+        tags = ["tag1", "tag2"]
+
+        self.aggregator.set("setTest", "value1", tags, 1, cardinality="low")
+        self.aggregator.set("setTest", "value1", tags, 1, cardinality="high")
+
+        metrics = self.aggregator.flush_aggregated_metrics()
+        cardinalities = sorted(
+            m.cardinality for m in metrics if m.metric_type == MetricType.SET
+        )
+        self.assertEqual(cardinalities, ["high", "low"])
+
+
 if __name__ == '__main__':
     unittest.main()
