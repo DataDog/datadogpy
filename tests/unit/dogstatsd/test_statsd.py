@@ -944,6 +944,18 @@ class TestDogStatsd(unittest.TestCase):
         dogstatsd.flush()
         self.assertEqual('gauge:8|g\n', dogstatsd.socket.recv())
 
+    def test_unencodable_packet_is_dropped_without_raising(self):
+        # An unpaired surrogate cannot be encoded, and the writer drops the
+        # packet. Counting its bytes must not raise where the send did not.
+        self.statsd.socket = BrokenSocket()
+        self.statsd._telemetry = True
+
+        with mock.patch("datadog.dogstatsd.base.log"):
+            self.statsd.gauge("lone\ud800surrogate", 1)
+            self.statsd.flush()
+
+        self.assertGreaterEqual(self.statsd.packets_dropped_writer, 1)
+
     def test_socket_error(self):
         self.statsd.socket = BrokenSocket()
         with mock.patch("datadog.dogstatsd.base.log") as mock_log:

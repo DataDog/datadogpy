@@ -1770,6 +1770,19 @@ class DogStatsd(object):
 
         self._xmit_packet_with_telemetry(packet + '\n')
 
+    def _wire_len(self, packet):
+        # type: (str) -> int
+        """Byte length of `packet` as it goes on the wire.
+
+        The writer already drops a packet it cannot encode without raising, so
+        counting its bytes falls back to the character count rather than
+        propagating the UnicodeEncodeError out of the send path.
+        """
+        try:
+            return len(packet.encode(self.encoding))
+        except UnicodeError:
+            return len(packet)
+
     def _xmit_packet_with_telemetry(self, packet, queue_mode=False):
         # type: (str, bool) -> Optional[bool]
         """Send one packet, optionally piggy-backing a telemetry flush.
@@ -1787,11 +1800,11 @@ class DogStatsd(object):
             if self._xmit_packet(telemetry, True):
                 self._reset_telemetry()
                 self.packets_sent += 1
-                self.bytes_sent += len(telemetry.encode(self.encoding))
+                self.bytes_sent += self._wire_len(telemetry)
             else:
                 # Telemetry packet has been dropped, keep telemetry data for the next flush
                 self._last_flush_time = time.time()
-                self.bytes_dropped_writer += len(telemetry.encode(self.encoding))
+                self.bytes_dropped_writer += self._wire_len(telemetry)
                 self.packets_dropped_writer += 1
 
         return sent
@@ -1832,7 +1845,7 @@ class DogStatsd(object):
             return None
 
         if not is_telemetry and self._telemetry:
-            self.bytes_dropped_writer += len(packet.encode(self.encoding))
+            self.bytes_dropped_writer += self._wire_len(packet)
             self.packets_dropped_writer += 1
         return False
 
