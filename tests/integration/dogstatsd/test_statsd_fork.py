@@ -79,6 +79,32 @@ def test_post_fork_does_not_log(disable_background_sender, disable_buffering):
         statsd.stop()
 
 
+def test_post_fork_child_does_not_log_on_socket_close_error():
+    """
+    close_socket() (called from post_fork_child(), see test_post_fork_does_not_log's
+    docstring for why logging there is unsafe) logs at error level if the socket's own
+    close() raises OSError. That has to be suppressed too, not just the debug calls in
+    _start_flush_thread/_start_sender_thread.
+    """
+    if not SUPPORTS_FORKING:
+        pytest.skip("os.register_at_fork is required for this test")
+
+    statsd = DogStatsd(telemetry_min_flush_interval=0)
+    try:
+        broken_socket = mock.Mock()
+        broken_socket.close.side_effect = OSError("boom")
+        statsd._socket = broken_socket
+        statsd._telemetry_socket = broken_socket
+
+        with mock.patch("datadog.dogstatsd.base.log") as log:
+            statsd.pre_fork()
+            statsd.post_fork_child()
+            log.error.assert_not_called()
+            log.debug.assert_not_called()
+    finally:
+        statsd.stop()
+
+
 def sender_a(statsd, running):
     while running[0]:
         statsd.gauge("spam", 1)
