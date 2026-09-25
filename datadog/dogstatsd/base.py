@@ -1480,24 +1480,28 @@ class DogStatsd(object):
         else:
             self.aggregator.set(metric, value, tags, sample_rate, cardinality=cardinality)
 
-    def close_socket(self):
-        # type: () -> None
+    def close_socket(self, quiet=False):
+        # type: (bool) -> None
         """
         Closes connected socket if connected.
         """
+        # quiet=True is for callers reachable from os.register_at_fork(after_in_child=...)
+        # (see post_fork_child below) -- same reasoning as _start_flush_thread/_start_sender_thread.
         with self._socket_lock:
             if self.socket:
                 try:
                     self.socket.close()
                 except OSError as e:
-                    log.error("Unexpected error: %s", str(e))
+                    if not quiet:
+                        log.error("Unexpected error: %s", str(e))
                 self.socket = None
 
             if self.telemetry_socket:
                 try:
                     self.telemetry_socket.close()
                 except OSError as e:
-                    log.error("Unexpected error: %s", str(e))
+                    if not quiet:
+                        log.error("Unexpected error: %s", str(e))
                 self.telemetry_socket = None
 
     def _serialize_metric(
@@ -2171,7 +2175,7 @@ class DogStatsd(object):
         # Execute the socket_path setter to reconcile transport and
         # payload size properties in respect to socket_path value.
         self.socket_path = self.socket_path
-        self.close_socket()
+        self.close_socket(quiet=True)
 
         with self._config_lock:
             self._start_flush_thread(quiet=True)
