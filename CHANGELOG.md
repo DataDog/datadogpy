@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+## v0.55.0 / 2026-09-30
+
+* [Fixed] Suppress unsafe logging from DogStatsD `post_fork_child`/`post_fork_parent` hooks to avoid possible deadlocks after `fork()`. If you subclass `DogStatsd` and override `_start_flush_thread`, `_start_sender_thread`, or `close_socket`, update your overrides to accept the new `quiet=False` keyword argument, or accept `**kwargs`, because the fork hooks now pass `quiet=True` to those methods. See [#989](https://github.com/DataDog/datadogpy/pull/989).
+
 ## v0.54.0 / 2026-09-22
 
 * [Changed] DogStatsD background sender queue now evicts the oldest queued payloads when full, and drops payloads without an explicit timestamp after they have been queued for more than 10 seconds. See [#986](https://github.com/DataDog/datadogpy/pull/986).
