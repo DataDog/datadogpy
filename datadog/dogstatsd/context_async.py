@@ -23,10 +23,8 @@ if sys.version_info[:2] >= (3, 5):
 # https://github.com/python/mypy/issues/6897
 ASYNC_SOURCE = r'''
 from functools import wraps
-try:
-    from time import monotonic
-except ImportError:
-    from time import time as monotonic
+
+from datadog.util.compat import monotonic
 
 
 def _get_wrapped_co(self, func):

@@ -17,22 +17,18 @@ import struct
 import sys
 import threading
 import time
-from threading import Lock, RLock
+from threading import RLock
 import weakref
 
 if sys.version_info[:2] >= (3, 5):
     from typing import TYPE_CHECKING  # noqa: F401
 
-try:
-    import queue
-except ImportError:
-    # pypy has the same module, but capitalized.
-    import Queue as queue  # type: ignore[no-redef]
-
 
 # pylint: disable=unused-import
 if sys.version_info[:2] >= (3, 5):
-    from typing import Any, Optional, List, Text, Type, Union, Iterable, Callable, overload  # noqa: F401
+    from typing import (  # noqa: F401
+        Any, Callable, Iterable, List, Optional, Text, Tuple, Type, Union, overload,
+    )
 
 try:
     from typing import SupportsIndex
@@ -49,7 +45,16 @@ from datadog.dogstatsd.context import (
 )
 from datadog.dogstatsd.route import get_default_route
 from datadog.dogstatsd.container import Cgroup
-from datadog.util.compat import text
+from datadog.dogstatsd.sender_queue import (
+    SenderQueue,
+    PendingPayload,
+    Stop,
+    payload_text,
+)
+
+if sys.version_info[:2] >= (3, 5):
+    from datadog.dogstatsd.sender_queue import QueuedItem  # noqa: F401
+from datadog.util.compat import monotonic, text, urlparse
 from datadog.util.format import normalize_tags, validate_cardinality
 from datadog.version import __version__
 
@@ -179,6 +184,33 @@ UDS_OPTIMAL_PAYLOAD_LENGTH = 8192
 
 # Socket options
 MIN_SEND_BUFFER_SIZE = 32 * 1024
+# Backoff for the background sender's own retry-by-requeuing loop (see
+# _sender_main_loop). Covers every retryable failure it sees, connect and
+# mid-send alike -- not just connects, hence the transport-neutral name. Not
+# used for direct/synchronous sends, which never retry a connection failure
+# regardless of socket_connect_retry.
+SENDER_RETRY_INITIAL_BACKOFF = 0.025
+SENDER_RETRY_MAX_BACKOFF = 60.0
+# How long an *unbounded* shutdown (pre_fork(), or stop()/wait_for_pending()
+# called with timeout=None) still waits for a payload stuck in the retry
+# loop above to resolve, before giving up on it.
+SENDER_UNBOUNDED_STOP_GRACE_SECONDS = SENDER_RETRY_MAX_BACKOFF
+# How often the sender retries a connection once a shutdown has been
+# requested but its deadline (the caller's own timeout, or the grace period
+# above) hasn't passed yet.
+SENDER_STOP_RETRY_INTERVAL = 0.5
+# Default for sender_queue_expiry_seconds; it can be overridden per client.
+PENDING_PAYLOAD_EXPIRY_SECONDS = 10.0
+# Errors seen while sending on an already-connected socket that indicate the
+# peer went away (e.g. the agent crashed/restarted). These are worth a single
+# reconnect-and-resend attempt instead of dropping the packet outright.
+UDS_TRANSIENT_SEND_ERRORS = set([
+    errno.ECONNREFUSED,
+    errno.ECONNRESET,
+    errno.ENOTCONN,
+    errno.EPIPE,
+    errno.ENOENT,
+])
 
 # Mapping of each "DD_" prefixed environment variable to a specific tag name
 DD_ENV_TAGS_MAPPING = {
@@ -209,8 +241,6 @@ TELEMETRY_FORMATTING_STR = "\n".join(
         "datadog.dogstatsd.client.packets_dropped_writer:%s|c|#%s",
     ]
 ) + "\n"
-
-Stop = object()
 
 SUPPORTS_FORKING = hasattr(os, "register_at_fork") and not os.environ.get("DD_DOGSTATSD_DISABLE_FORK_SUPPORT", None)
 TRACK_INSTANCES = not os.environ.get("DD_DOGSTATSD_DISABLE_INSTANCE_TRACKING", None)
@@ -265,8 +295,8 @@ class DogStatsd(object):
 
     def __init__(
         self,
-        host=DEFAULT_HOST,                      # type: Text
-        port=DEFAULT_PORT,                      # type: int
+        host=None,                              # type: Optional[Text]
+        port=None,                              # type: Optional[int]
         max_buffer_size=None,                   # type: Optional[int]
         flush_interval=DEFAULT_BUFFERING_FLUSH_INTERVAL,  # type: float
         disable_aggregation=True,               # type: bool
@@ -292,19 +322,29 @@ class DogStatsd(object):
         disable_background_sender=True,         # type: bool
         sender_queue_size=0,                    # type: int
         sender_queue_timeout=0,                 # type: Optional[float]
+        sender_queue_expiry_seconds=PENDING_PAYLOAD_EXPIRY_SECONDS,  # type: float
         track_instance=True,                    # type: bool
+        socket_connect_retry=False,              # type: bool
     ):  # type: (...) -> None
         """
         Initialize a DogStatsd object.
 
         >>> statsd = DogStatsd()
 
+        :envvar DD_DOGSTATSD_URL: the connection information for the DogStatsd server.
+        If set, and no connection was provided explicitly, it takes precedence over
+        DD_AGENT_HOST / DD_DOGSTATSD_PORT.
+        Example for a UDP url: `DD_DOGSTATSD_URL=udp://localhost:8125`
+        Example for a UDS url: `DD_DOGSTATSD_URL=unix:///var/run/datadog/dsd.socket`
+        Windows named pipes are currently unsupported.
+        :type DD_DOGSTATSD_URL: string
+
         :envvar DD_AGENT_HOST: the host of the DogStatsd server.
-        If set, it overrides default value.
+        If set, it overrides default value. DD_DOGSTATSD_URL takes precedence over this value.
         :type DD_AGENT_HOST: string
 
         :envvar DD_DOGSTATSD_PORT: the port of the DogStatsd server.
-        If set, it overrides default value.
+        If set, it overrides default value. DD_DOGSTATSD_URL takes precedence over this value.
         :type DD_DOGSTATSD_PORT: integer
 
         :envvar DATADOG_TAGS: Tags to attach to every metric reported by dogstatsd client.
@@ -450,6 +490,20 @@ class DogStatsd(object):
         This option does not affect hostname resolution when using UDP.
         :type socket_timeout: float
 
+        :param socket_connect_retry: Only affects the background sender (disable_background_sender=False).
+        If True, a connection failure while sending a queued payload to a UNIX socket is retried
+        indefinitely, backing off up to once a minute between attempts, instead of dropping the payload
+        immediately. Ordinary payloads stuck retrying are eventually dropped as stale by the sender
+        queue's own expiry; replay-safe payloads never expire, so only a shutdown (stop(),
+        disable_background_sender(), pre_fork()) can end their retrying -- and it waits up to its own
+        timeout (or a bounded grace period, SENDER_UNBOUNDED_STOP_GRACE_SECONDS, for an unbounded call
+        such as pre_fork()) before giving up on one, at which point it is counted as a writer drop and
+        the shutdown call reports failure rather than success. wait_for_pending() never forces this: it
+        only waits for the queue's own retries and expiry to run their course. Direct/synchronous sends
+        (the default mode) always fail fast on a connection error and are unaffected by this setting.
+        Default: False (fail fast, matching the previous socket_connect_timeout=0 default).
+        :type socket_connect_retry: bool
+
         :param telemetry_socket_timeout: Set timeout for the telemetry socket operations. Optional.
         Effective only if either telemetry_host or telemetry_socket_path are set.
         If sets to zero, never wait if operation can not be completed immediately. If set to None, wait forever.
@@ -462,8 +516,8 @@ class DogStatsd(object):
         Default: True.
         :type disable_background_sender: boolean
 
-        :param sender_queue_size: Set the maximum number of packets to queue for the sender. Optional
-        How may packets to queue before blocking or dropping the packet if the packet queue is already full.
+        :param sender_queue_size: Set the maximum number of packets to queue for the sender. Optional.
+        How many packets to queue before blocking or dropping the packet if the packet queue is already full.
         Default: 0 (unlimited).
         :type sender_queue_size: integer
 
@@ -474,33 +528,37 @@ class DogStatsd(object):
         Default: 0 (no wait)
         :type sender_queue_timeout: float
 
+        :param sender_queue_expiry_seconds: How long, in seconds, a non-replay-safe payload
+        may sit in the sender queue before it's considered stale and dropped instead of sent.
+        Payloads that carry their own explicit timestamp (replay-safe) are exempt: delivering
+        those late doesn't change what they mean, so they're kept until they can be sent.
+        Default: PENDING_PAYLOAD_EXPIRY_SECONDS (10.0).
+        :type sender_queue_expiry_seconds: float
+
         :param track_instance: Keep track of this instance and automatically handle cleanup when os.fork() is called,
         if supported.
         Default: True.
         :type track_instance: boolean
         """
 
-        self._socket_lock = Lock()
+        # RLock: _xmit_packet_attempt holds this across get_socket()/close_socket()
+        # calls, which also take it themselves.
+        self._socket_lock = RLock()
 
         # Check for deprecated option
         if max_buffer_size is not None:
             log.warning("The parameter max_buffer_size is now deprecated and is not used anymore")
-        # Check host and port env vars
-        agent_host = os.environ.get("DD_AGENT_HOST")
-        if agent_host and host == DEFAULT_HOST:
-            host = agent_host
+        # Resolve host/port/socket from env vars when not set explicitly. An
+        # explicit constructor argument always wins over any environment variable.
+        host, port, socket_path = self._parse_env_connection_overrides(host, port, socket_path)
 
-        dogstatsd_port = os.environ.get("DD_DOGSTATSD_PORT")
-        if dogstatsd_port and port == DEFAULT_PORT:
-            try:
-                port = int(dogstatsd_port)
-            except ValueError:
-                log.warning(
-                    "Port number provided in DD_DOGSTATSD_PORT env var is not an integer: \
-                %s, using %s as port number",
-                    dogstatsd_port,
-                    port,
-                )
+        # Apply the hard-coded defaults last, once env resolution is done. When a
+        # socket transport is selected these are ignored (host/port become None
+        # below), but resolving them keeps `port` a concrete int for telemetry.
+        if host is None:
+            host = DEFAULT_HOST
+        if port is None:
+            port = DEFAULT_PORT
 
         # Assuming environment variables always override
         telemetry_host = os.environ.get("DD_TELEMETRY_HOST", telemetry_host)
@@ -515,6 +573,7 @@ class DogStatsd(object):
         # Connection
         self._max_buffer_len = max_buffer_len
         self.socket_timeout = socket_timeout
+        self.socket_connect_retry = socket_connect_retry
         if socket_path is not None:
             self.socket_path = socket_path  # type: Optional[text]
             self.host = None
@@ -582,8 +641,6 @@ class DogStatsd(object):
         self._telemetry = not disable_telemetry
         self._last_flush_time = time.time()
 
-        self._current_buffer_total_size = 0
-        self._buffer = []  # type: List[Text]
         self._buffer_lock = RLock()
 
         self._reset_buffer()
@@ -608,12 +665,27 @@ class DogStatsd(object):
         else:
             log.debug("Statsd buffering and aggregation is disabled")
 
-        self._queue = None  # type: Optional[queue.Queue[Union[str, object]]]
+        self._queue = None  # type: Optional[SenderQueue]
         self._sender_thread = None  # type: Optional[threading.Thread]
+        # Set to ask a running sender thread to stop. Also what makes its
+        # retry backoff interruptible -- see _sender_main_loop.
+        self._sender_stopping = threading.Event()
+        # The monotonic deadline by which a requested shutdown must give up
+        # on a payload stuck in the retry loop, set by _stop_sender_thread()
+        # and read by _sender_main_loop. None means no shutdown has been
+        # requested (or a fresh sender hasn't seen one yet).
+        self._sender_stop_deadline = None  # type: Optional[float]
+        # Set by _sender_main_loop when it gives up on a payload because the
+        # deadline above passed while still retrying a connection failure --
+        # i.e. the queue did NOT fully drain even though the thread exited.
+        # _stop_sender_thread() reports this as failure rather than success.
+        self._sender_abandoned_payload = False
         self._sender_enabled = False
 
         if not disable_background_sender:
-            self.enable_background_sender(sender_queue_size, sender_queue_timeout)
+            self.enable_background_sender(
+                sender_queue_size, sender_queue_timeout, sender_queue_expiry_seconds
+            )
 
         if TRACK_INSTANCES and track_instance:
             _instances.add(self)
@@ -677,8 +749,13 @@ class DogStatsd(object):
                 log.info("Unexpected telemetry socket provided with no support for getsockopt")
         self._telemetry_socket_kind = None
 
-    def enable_background_sender(self, sender_queue_size=0, sender_queue_timeout=0):
-        # type: (int, Optional[float]) -> None
+    def enable_background_sender(
+        self,
+        sender_queue_size=0,
+        sender_queue_timeout=0,
+        sender_queue_expiry_seconds=PENDING_PAYLOAD_EXPIRY_SECONDS,
+    ):
+        # type: (int, Optional[float], float) -> None
         """
         Use a background thread to communicate with the dogstatsd server.
         When enabled, a background thread will be used to send metric payloads to the Agent.
@@ -698,29 +775,46 @@ class DogStatsd(object):
             If set to None, wait forever. If set to zero drop the packet immediately if the queue is full.
             Default: 0 (no wait).
         :type sender_queue_timeout: float, optional
+        :param sender_queue_expiry_seconds: How long, in seconds, a non-replay-safe payload may sit in the
+            sender queue before it's considered stale and dropped instead of sent. Replay-safe payloads
+            (those carrying their own explicit timestamp) are exempt and are kept until they can be sent.
+            Default: PENDING_PAYLOAD_EXPIRY_SECONDS (10.0).
+        :type sender_queue_expiry_seconds: float, optional
         """
 
         with self._config_lock:
             self._sender_enabled = True
             self._sender_queue_size = sender_queue_size
-            if sender_queue_timeout is None:
-                self._queue_blocking = True
-                self._queue_timeout = None
-            else:
-                self._queue_blocking = sender_queue_timeout > 0
-                self._queue_timeout = max(0, sender_queue_timeout)
+            self._sender_queue_timeout = sender_queue_timeout
+            self._sender_queue_expiry_seconds = sender_queue_expiry_seconds
 
             self._start_sender_thread()
 
-    def disable_background_sender(self):
-        # type: () -> None
+    def disable_background_sender(self, timeout=None):
+        # type: (Optional[float]) -> bool
         """Disable background sender mode.
 
         This call will block until all previously queued payloads are sent.
+
+        :param timeout: Maximum number of seconds to wait for the sender thread
+            to drain the queue and exit. None (the default) waits indefinitely
+            for a sender that is genuinely busy (e.g. blocked inside a slow
+            send()), but not for a payload stuck retrying a connection
+            failure with socket_connect_retry enabled -- that case is bounded
+            by SENDER_UNBOUNDED_STOP_GRACE_SECONDS regardless of this
+            parameter, so an Agent that never comes back cannot hang this
+            call forever.
+        :type timeout: float, optional
+        :return: True if the sender thread finished AND the queue actually
+            drained. False if timeout (or the grace period above) elapsed
+            first -- either because the sender thread is still running, or
+            because it gave up on a payload still retrying a connection
+            failure and dropped it (counted in packets_dropped_writer)
+            instead of delivering it.
         """
         with self._config_lock:
             self._sender_enabled = False
-            self._stop_sender_thread()
+            return self._stop_sender_thread(timeout)
 
     def disable_telemetry(self):
         # type: () -> None
@@ -730,17 +824,86 @@ class DogStatsd(object):
         # type: () -> None
         self._telemetry = True
 
+    @staticmethod
+    def _parse_env_connection_overrides(host, port, socket_path):
+        # type: (Optional[Text], Optional[int], Optional[Text]) -> Tuple[Optional[Text], Optional[int], Optional[Text]]
+        """
+        Resolve the connection host/port/socket_path from environment variables,
+        without overriding values already provided explicitly to the constructor.
+
+        DD_DOGSTATSD_URL takes precedence over DD_AGENT_HOST / DD_DOGSTATSD_PORT and
+        is only honored when no connection information was passed explicitly. It
+        supports 'udp://host:port' and 'unix:///path/to/socket' URLs.
+        """
+        dogstatsd_url = os.environ.get("DD_DOGSTATSD_URL")
+        if host is None and port is None and socket_path is None and dogstatsd_url is not None:
+            parsed = urlparse(dogstatsd_url)
+            if parsed.scheme in ("unix", "unixstream", "unixgram"):
+                # The scheme is stripped later by _get_uds_socket (which also uses it
+                # to pick the SOCK_STREAM/SOCK_DGRAM kind), so the full URL is stored
+                # as the socket path.
+                log.debug("DD_DOGSTATSD_URL %r resolved to a unix socket path.", dogstatsd_url)
+                return None, None, dogstatsd_url
+            elif parsed.scheme == "udp":
+                try:
+                    url_port = parsed.port
+                    # Python 2's urlparse does not bounds-check the port.
+                    if url_port is None or url_port < 0 or url_port > 65535:
+                        log.warning(
+                            "DD_DOGSTATSD_URL %r had no or invalid port number, reverting to default %s",
+                            dogstatsd_url, DEFAULT_PORT,
+                        )
+                        url_port = DEFAULT_PORT
+                except ValueError as e:
+                    log.warning(
+                        "DD_DOGSTATSD_URL %r contained an invalid port number, falling back to %d: %s",
+                        dogstatsd_url, DEFAULT_PORT, e,
+                    )
+                    url_port = DEFAULT_PORT
+                return parsed.hostname, url_port, socket_path
+            else:
+                log.warning(
+                    "DD_DOGSTATSD_URL %r had unsupported scheme %r, must be one of "
+                    "'udp://', 'unix://', 'unixstream://', 'unixgram://'",
+                    dogstatsd_url, parsed.scheme,
+                )
+
+        # Fall back to the legacy per-field env vars (only when the arg is unset).
+        agent_host = os.environ.get("DD_AGENT_HOST")
+        if agent_host and host is None:
+            host = agent_host
+
+        dogstatsd_port = os.environ.get("DD_DOGSTATSD_PORT")
+        if dogstatsd_port and port is None:
+            try:
+                port = int(dogstatsd_port)
+            except ValueError:
+                log.warning(
+                    "DD_DOGSTATSD_PORT value %r is not an integer, falling back to default",
+                    dogstatsd_port,
+                )
+
+        return host, port, socket_path
+
     # Note: Invocations of this method should be thread-safe
-    def _start_flush_thread(self):
-        # type: () -> None
+    def _start_flush_thread(self, quiet=False):
+        # type: (bool) -> None
+        # quiet=True is for callers reachable from os.register_at_fork(after_in_child=...)
+        # (see post_fork_child/post_fork_parent below): logging.Logger.debug() is not
+        # async-signal-safe -- it can block acquiring a StreamHandler's own lock, which
+        # is left permanently locked in the child if some other thread held it at the
+        # instant of fork (no thread survives fork to release it). Every branch below
+        # logs something, so quiet has to be threaded through all of them, not just one.
         if self._disable_aggregation and self.disable_buffering:
-            log.debug("Statsd periodic buffer and aggregation flush is disabled")
+            if not quiet:
+                log.debug("Statsd periodic buffer and aggregation flush is disabled")
             return
 
         if self._flush_interval <= MIN_FLUSH_INTERVAL:
-            log.debug(
-                "the set flush interval is less then the minimum"
-            )
+            if not quiet:
+                log.debug(
+                    "the set flush interval is less then the minimum"
+                )
             return
 
         if self._forking:
@@ -764,10 +927,11 @@ class DogStatsd(object):
         )
         self._flush_thread.daemon = True
         self._flush_thread.start()
-        log.debug(
-            "Statsd flush thread registered with period of %s",
-            self._flush_interval,
-        )
+        if not quiet:
+            log.debug(
+                "Statsd flush thread registered with period of %s",
+                self._flush_interval,
+            )
 
     # Note: Invocations of this method should be thread-safe
     def _stop_flush_thread(self):
@@ -790,6 +954,15 @@ class DogStatsd(object):
     def _dedicated_telemetry_destination(self):
         # type: () -> bool
         return bool(self.telemetry_socket_path or self.telemetry_host)
+
+    def _uses_dedicated_telemetry(self, is_telemetry):
+        # type: (bool) -> bool
+        """True when this packet goes to a separate telemetry destination.
+
+        Decides which socket/socket_path pair applies to a packet, so the
+        send path and its transport check can't disagree about it.
+        """
+        return is_telemetry and self._dedicated_telemetry_destination()
 
     # Context manager helper
     def __enter__(self):
@@ -899,7 +1072,10 @@ class DogStatsd(object):
 
             if not self.socket:
                 if self.socket_path is not None:
-                    self.socket = self._get_uds_socket(self.socket_path, self.socket_timeout)
+                    self.socket = self._get_uds_socket(
+                        self.socket_path,
+                        self.socket_timeout,
+                    )
                 else:
                     self.socket = self._get_udp_socket(
                         self.host,
@@ -936,6 +1112,8 @@ class DogStatsd(object):
     @classmethod
     def _get_uds_socket(cls, socket_path, timeout):
         # type: (Text, Optional[float]) -> _Socket
+        """Make one connect attempt per candidate socket kind.
+        """
         valid_socket_kinds = [socket.SOCK_DGRAM, socket.SOCK_STREAM]
         if socket_path.startswith(UNIX_ADDRESS_DATAGRAM_SCHEME):
             valid_socket_kinds = [socket.SOCK_DGRAM]
@@ -946,11 +1124,11 @@ class DogStatsd(object):
         elif socket_path.startswith(UNIX_ADDRESS_SCHEME):
             socket_path = socket_path[len(UNIX_ADDRESS_SCHEME):]
 
-        last_error = ValueError("Invalid socket path")  # type: Exception
-        for socket_kind in valid_socket_kinds:
+        for index, socket_kind in enumerate(valid_socket_kinds):
+            is_last_kind = index == len(valid_socket_kinds) - 1
             # py2 stores socket kinds differently than py3, determine the name independently from version
             sk_name = {socket.SOCK_STREAM: "stream", socket.SOCK_DGRAM: "datagram"}[socket_kind]
-
+            sock = None
             try:
                 sock = socket.socket(socket.AF_UNIX, socket_kind)
                 sock.settimeout(timeout)
@@ -962,11 +1140,14 @@ class DogStatsd(object):
                 if sock is not None:
                     sock.close()
                 log.debug("Failed to connect to %s with kind %s: %s", socket_path, sk_name, e)
-                if getattr(e, "errno", None) == errno.EPROTOTYPE:
-                    last_error = e
+                if getattr(e, "errno", None) == errno.EPROTOTYPE and not is_last_kind:
+                    # Wrong socket kind for this address -- try the other one.
                     continue
-                raise e
-        raise last_error
+                raise
+        # Unreachable: valid_socket_kinds is never empty, and every path above
+        # either returns or raises. Present only so this always has a return
+        # type of _Socket.
+        raise socket.error("no usable socket kind for {}".format(socket_path))
 
     @classmethod
     def _get_udp_socket(cls, host, port, timeout):
@@ -1037,23 +1218,60 @@ class DogStatsd(object):
     def _reset_buffer(self):
         # type: () -> None
         with self._buffer_lock:
-            self._current_buffer_total_size = 0
-            self._buffer = []
+            # Buffered lines are kept in two separate batches, one per expiry
+            # policy: replay-safe metrics carry their own timestamp, the rest
+            # are stamped on receipt.
+            self._buffer = []  # type: List[Text]           # non-replay-safe
+            self._buffer_rs = []  # type: List[Text]        # replay-safe
+            # Running packet size per buffer, each including the newline that
+            # will join its lines, so both stay under _max_payload_size
+            # independently.
+            self._buffer_size = 0  # type: int
+            self._buffer_rs_size = 0  # type: int
 
     def flush(self):
         # type: () -> None
         self.flush_buffered_metrics()
 
+    def _flush_one_buffer(self, replay_safe):
+        # type: (bool) -> None
+        """Flush just the batch holding lines with the given expiry policy.
+
+        Caller must hold self._buffer_lock (an RLock, so a re-entrant flush
+        from _send_to_buffer() is fine). Only the named batch is touched: the
+        other one keeps accumulating, which is the whole point of splitting
+        them.
+        """
+        if replay_safe:
+            lines = self._buffer_rs
+            if not lines:
+                return
+            self._buffer_rs = []
+            self._buffer_rs_size = 0
+        else:
+            lines = self._buffer
+            if not lines:
+                return
+            self._buffer = []
+            self._buffer_size = 0
+        self._send_to_server("\n".join(lines), replay_safe)
+
     def flush_buffered_metrics(self):
         # type: () -> None
         """
         Flush the metrics buffer by sending the data to the server.
+
+        Emits up to two packets, one per expiry policy. Lines keep their
+        relative order within each packet, but ordering *between* the two is
+        not preserved: replay-safe payloads carry their own explicit
+        timestamp, and non-replay-safe ones are timestamped on receipt, so
+        neither one's meaning depends on where the other lands.
         """
         with self._buffer_lock:
-            # Only send packets if there are packets to send
-            if self._buffer:
-                self._send_to_server("\n".join(self._buffer))
-                self._reset_buffer()
+            # Non-replay-safe first: it's the only batch subject to staleness
+            # expiry, so give it the earliest queue position.
+            self._flush_one_buffer(False)
+            self._flush_one_buffer(True)
 
     def flush_aggregated_metrics(self):
         # type: () -> None
@@ -1341,24 +1559,28 @@ class DogStatsd(object):
         else:
             self.aggregator.set(metric, value, tags, sample_rate, cardinality=cardinality)
 
-    def close_socket(self):
-        # type: () -> None
+    def close_socket(self, quiet=False):
+        # type: (bool) -> None
         """
         Closes connected socket if connected.
         """
+        # quiet=True is for callers reachable from os.register_at_fork(after_in_child=...)
+        # (see post_fork_child below) -- same reasoning as _start_flush_thread/_start_sender_thread.
         with self._socket_lock:
             if self.socket:
                 try:
                     self.socket.close()
                 except OSError as e:
-                    log.error("Unexpected error: %s", str(e))
+                    if not quiet:
+                        log.error("Unexpected error: %s", str(e))
                 self.socket = None
 
             if self.telemetry_socket:
                 try:
                     self.telemetry_socket.close()
                 except OSError as e:
-                    log.error("Unexpected error: %s", str(e))
+                    if not quiet:
+                        log.error("Unexpected error: %s", str(e))
                 self.telemetry_socket = None
 
     def _serialize_metric(
@@ -1439,8 +1661,13 @@ class DogStatsd(object):
             metric, metric_type, value, tags, sample_rate, timestamp, cardinality
         )
 
+        # A metric carrying its own explicit timestamp is replay-safe: sending
+        # it late (e.g. after sitting in the background sender queue) doesn't
+        # change what it means.
+        replay_safe = timestamp > 0
+
         # Send it
-        self._send(payload)
+        self._send(payload, replay_safe)
 
     def _reset_telemetry(self):
         # type: () -> None
@@ -1450,21 +1677,41 @@ class DogStatsd(object):
         self.bytes_sent = 0
         self.bytes_dropped_queue = 0
         self.bytes_dropped_writer = 0
+        self.bytes_dropped_expired = 0
         self.packets_sent = 0
         self.packets_dropped_queue = 0
         self.packets_dropped_writer = 0
+        self.packets_dropped_expired = 0
         self._last_flush_time = time.time()
 
     # Aliases for backwards compatibility.
     @property
     def packets_dropped(self):
         # type: () -> int
-        return self.packets_dropped_queue + self.packets_dropped_writer
+        return self.packets_dropped_queue + self.packets_dropped_writer + self.packets_dropped_expired
 
     @property
     def bytes_dropped(self):
         # type: () -> int
-        return self.bytes_dropped_queue + self.bytes_dropped_writer
+        return self.bytes_dropped_queue + self.bytes_dropped_writer + self.bytes_dropped_expired
+
+    def _account_dropped_queue_full(self, item):
+        # type: (QueuedItem) -> None
+        """A payload was evicted from the sender queue to make room for a new one."""
+        self.packets_dropped_queue += 1
+        self.bytes_dropped_queue += len(payload_text(item).encode(self.encoding))
+
+    def _account_dropped_expired(self, item):
+        # type: (QueuedItem) -> None
+        """A payload sat in the sender queue longer than the configured expiry (sender_queue_expiry_seconds)."""
+        self.packets_dropped_expired += 1
+        self.bytes_dropped_expired += len(payload_text(item).encode(self.encoding))
+
+    def _account_dropped_writer(self, item):
+        # type: (QueuedItem) -> None
+        """A payload could not be written and is not being retried further."""
+        self.packets_dropped_writer += 1
+        self.bytes_dropped_writer += len(payload_text(item).encode(self.encoding))
 
     def _flush_telemetry(self):
         # type: () -> str
@@ -1472,6 +1719,9 @@ class DogStatsd(object):
         tags.append("client_transport:{}".format(self._transport))
         tags.extend(self.constant_tags)
         telemetry_tags = ",".join(tags)
+
+        bytes_dropped_queue = self.bytes_dropped_queue + self.bytes_dropped_expired
+        packets_dropped_queue = self.packets_dropped_queue + self.packets_dropped_expired
 
         return TELEMETRY_FORMATTING_STR % (
             self.metrics_count,
@@ -1482,17 +1732,17 @@ class DogStatsd(object):
             telemetry_tags,
             self.bytes_sent,
             telemetry_tags,
-            self.bytes_dropped_queue + self.bytes_dropped_writer,
+            bytes_dropped_queue + self.bytes_dropped_writer,
             telemetry_tags,
-            self.bytes_dropped_queue,
+            bytes_dropped_queue,
             telemetry_tags,
             self.bytes_dropped_writer,
             telemetry_tags,
             self.packets_sent,
             telemetry_tags,
-            self.packets_dropped_queue + self.packets_dropped_writer,
+            packets_dropped_queue + self.packets_dropped_writer,
             telemetry_tags,
-            self.packets_dropped_queue,
+            packets_dropped_queue,
             telemetry_tags,
             self.packets_dropped_writer,
             telemetry_tags,
@@ -1503,26 +1753,47 @@ class DogStatsd(object):
         return self._telemetry and \
             self._last_flush_time + self._telemetry_flush_interval < time.time()
 
-    def _send_to_server(self, packet):
-        # type: (str) -> None
-        # Skip the lock if the queue is None. There is no race with enable_background_sender.
-        if self._queue is not None:
-            # Prevent a race with disable_background_sender.
+    def _send_to_server(self, packet, replay_safe=False):
+        # type: (str, bool) -> None
+        # Skip the lock if the queue is None or a shutdown has already been
+        # requested -- the lock-protected recheck below is what actually has
+        # to be correct; this is purely an optimization to avoid the lock
+        # once there is clearly nothing to enqueue onto.
+        if self._queue is not None and not self._sender_stopping.is_set():
+            # Prevent a race with disable_background_sender: _sender_stopping
+            # is set BEFORE _stop_sender_thread() appends Stop, under this
+            # same lock, so rechecking it here (not just self._queue) means a
+            # racing put() either lands strictly before Stop (still open) or
+            # is rejected outright and falls through to a direct send below
+            # -- never behind Stop, where it would be silently lost once the
+            # sender reaches Stop and exits.
             with self._buffer_lock:
                 packet_with_newline = packet + '\n'
-                if self._queue is not None:
-                    try:
-                        self._queue.put(packet_with_newline, self._queue_blocking, self._queue_timeout)
-                    except queue.Full:
-                        self.packets_dropped_queue += 1
-                        self.bytes_dropped_queue += len(packet_with_newline.encode(self.encoding))
+                if self._queue is not None and not self._sender_stopping.is_set():
+                    if replay_safe:
+                        # Never expires, so it needs no enqueued_at and no
+                        # wrapper at all: queue the bare string and let the
+                        # queue infer replay-safety from the type. Saves the
+                        # PendingPayload object (~56 bytes) per entry and
+                        # keeps these out of the cyclic GC's traversal set.
+                        self._queue.put(packet_with_newline)
+                    else:
+                        self._queue.put(PendingPayload(packet_with_newline, monotonic()))
                     return
 
         self._xmit_packet_with_telemetry(packet + '\n')
 
-    def _xmit_packet_with_telemetry(self, packet):
-        # type: (str) -> None
-        self._xmit_packet(packet, False)
+    def _xmit_packet_with_telemetry(self, packet, queue_mode=False):
+        # type: (str, bool) -> Optional[bool]
+        """Send one packet, optionally piggy-backing a telemetry flush.
+
+        :param queue_mode: True when called from the background sender
+            thread on behalf of a queued PendingPayload. In that mode, a
+            connection failure is reported back as None (rather than being
+            accounted for and dropped) so the caller can requeue the payload
+            and retry once reconnected, instead of losing it.
+        """
+        sent = self._xmit_packet(packet, False, queue_mode=queue_mode)
 
         if self._is_telemetry_flush_time():
             telemetry = self._flush_telemetry()
@@ -1536,87 +1807,162 @@ class DogStatsd(object):
                 self.bytes_dropped_writer += len(telemetry)
                 self.packets_dropped_writer += 1
 
-    def _xmit_packet(self, packet, is_telemetry):
-        # type: (str, bool) -> bool
-        socket_kind = None
-        try:
-            if is_telemetry and self._dedicated_telemetry_destination():
-                mysocket = self.telemetry_socket or self.get_socket(telemetry=True)
-                socket_kind = self._telemetry_socket_kind
-            else:
-                # If set, use socket directly
-                mysocket = self.socket or self.get_socket()
-                socket_kind = self._socket_kind
+        return sent
 
-            encoded_packet = packet.encode(self.encoding)
-            if socket_kind == socket.SOCK_STREAM:
-                with self._socket_lock:
+    def _xmit_packet(self, packet, is_telemetry, queue_mode=False):
+        # type: (str, bool, bool) -> Optional[bool]
+        """Attempt to send a packet, once.
+
+        Returns True if sent. Otherwise returns False for a definitive,
+        non-retryable failure (already accounted for as a dropped packet),
+        or -- only when queue_mode is True, the transport is UDS, and
+        socket_connect_retry is enabled -- None for a connection failure that
+        the sender queue should retry by requeuing the payload (with its own
+        backoff, capped at SENDER_RETRY_MAX_BACKOFF) rather than have
+        accounted for here as a drop.
+        """
+
+        if self._uses_dedicated_telemetry(is_telemetry):
+            uses_uds = self.telemetry_socket_path is not None
+        else:
+            uses_uds = self.socket_path is not None
+
+        # Direct/synchronous sends (queue_mode=False) always fail fast on a
+        # connection error: there is no queue expiry to protect a calling
+        # thread from retrying indefinitely, so socket_connect_retry does not
+        # apply to them. Reconnect-and-retry also stays UDS-only, matching
+        # UDP's different (connectionless) failure semantics.
+        retry_eligible = queue_mode and uses_uds and self.socket_connect_retry
+
+        sent = self._xmit_packet_attempt(packet, is_telemetry, retry_eligible)
+        if sent:
+            return True
+
+        if sent is None:
+            # Connection trouble, and the caller is the background sender
+            # queue: let it requeue the payload and retry once reconnected,
+            # instead of dropping it here.
+            return None
+
+        if not is_telemetry and self._telemetry:
+            self.bytes_dropped_writer += len(packet)
+            self.packets_dropped_writer += 1
+        return False
+
+    def _xmit_packet_attempt(self, packet, is_telemetry, retry_eligible):
+        # type: (str, bool, bool) -> Optional[bool]
+        """
+        Attempt to send a single packet.
+
+        Returns True if the packet was sent, False if it should be dropped
+        without retrying, or None if the failure is transient (the peer went
+        away, which includes a failed reconnect), `retry_eligible` is set,
+        and it's worth a reconnect-and-retry by the caller.
+        """
+        socket_kind = None
+        with self._socket_lock:
+            try:
+                if self._uses_dedicated_telemetry(is_telemetry):
+                    mysocket = self.get_socket(telemetry=True)
+                    socket_kind = self._telemetry_socket_kind
+                else:
+                    mysocket = self.get_socket()
+                    socket_kind = self._socket_kind
+
+                encoded_packet = packet.encode(self.encoding)
+                if socket_kind == socket.SOCK_STREAM:
                     mysocket.sendall(struct.pack('<I', len(encoded_packet)))
                     mysocket.sendall(encoded_packet)
-            else:
-                mysocket.send(encoded_packet)
+                else:
+                    mysocket.send(encoded_packet)
 
-            if not is_telemetry and self._telemetry:
-                self.packets_sent += 1
-                self.bytes_sent += len(packet)
+                if not is_telemetry and self._telemetry:
+                    self.packets_sent += 1
+                    self.bytes_sent += len(packet)
 
-            return True
-        except socket.timeout:
-            # dogstatsd is overflowing, drop the packets (mimics the UDP behaviour)
-            pass
-        except (socket.herror, socket.gaierror) as socket_err:
-            log.warning(
-                "Error submitting packet: %s, dropping the packet and closing the socket",
-                socket_err,
-            )
-            self.close_socket()
-        except socket.error as socket_err:
-            if socket_err.errno == errno.EAGAIN:
-                log.debug("Socket send would block: %s, dropping the packet", socket_err)
-            elif socket_err.errno == errno.ENOBUFS:
-                log.debug("Socket buffer full: %s, dropping the packet", socket_err)
-            elif socket_err.errno == errno.EMSGSIZE:
-                log.debug(
-                    "Packet size too big (size: %d): %s, dropping the packet",
-                    len(packet.encode(self.encoding)),
-                    socket_err)
-            else:
+                return True
+            except socket.timeout:
+                # dogstatsd is overflowing, drop the packets (mimics the UDP behaviour)
+                pass
+            except (socket.herror, socket.gaierror) as socket_err:
                 log.warning(
                     "Error submitting packet: %s, dropping the packet and closing the socket",
                     socket_err,
                 )
                 self.close_socket()
-        except Exception as exc:
-            log.error("Unexpected error: %s", str(exc))
+                return False
+            except socket.error as socket_err:
+                if socket_err.errno == errno.EAGAIN:
+                    log.debug("Socket send would block: %s, dropping the packet", socket_err)
+                elif socket_err.errno == errno.ENOBUFS:
+                    log.debug("Socket buffer full: %s, dropping the packet", socket_err)
+                elif socket_err.errno == errno.EMSGSIZE:
+                    log.debug(
+                        "Packet size too big (size: %d): %s, dropping the packet",
+                        len(packet.encode(self.encoding)),
+                        socket_err)
+                elif retry_eligible and socket_err.errno in UDS_TRANSIENT_SEND_ERRORS:
+                    log.debug(
+                        "Connection error submitting packet: %s, reconnecting and retrying", socket_err
+                    )
+                    self.close_socket()
+                    return None
+                else:
+                    log.warning(
+                        "Error submitting packet: %s, dropping the packet and closing the socket",
+                        socket_err,
+                    )
+                    self.close_socket()
+                pass
+            except Exception as exc:
+                log.error("Unexpected error: %s", str(exc))
+                return False
 
-        if not is_telemetry and self._telemetry:
-            self.bytes_dropped_writer += len(packet)
-            self.packets_dropped_writer += 1
+            # if in stream mode we need to shut down the socket; we can't recover from a
+            # partial send
+            if socket_kind == socket.SOCK_STREAM:
+                log.debug("Confirming socket closure after error streaming")
+                self.close_socket()
 
-        # if in stream mode we need to shut down the socket; we can't recover from a
-        # partial send
-        if socket_kind == socket.SOCK_STREAM:
-            log.debug("Confirming socket closure after error streaming")
-            self.close_socket()
+            return False
 
-        return False
+    def _send_to_buffer(self, packet, replay_safe=False):
+        # type: (str, bool) -> None
+        """Append one serialized line to the batch matching its expiry policy.
 
-    def _send_to_buffer(self, packet):
-        # type: (str) -> None
+        Deliberately written out per branch rather than indexing a dict by
+        replay_safe, and with the size check inlined rather than delegated to
+        _should_flush(): both cost real CPU at once-per-metric frequency. See
+        _reset_buffer() for the measurements. The bool() coercion the dict form
+        needed is gone too -- the branch treats any truthy value correctly.
+        """
         with self._buffer_lock:
-            if self._should_flush(len(packet)):
-                self.flush_buffered_metrics()
+            # Length including the newline that will join this line to the
+            # next, so the running total anticipates the final packet size.
+            length = len(packet) + 1
 
-            self._buffer.append(packet)
-            # Update the current buffer length, including line break to anticipate
-            # the final packet size
-            self._current_buffer_total_size += len(packet) + 1
+            if replay_safe:
+                if self._buffer_rs_size + length > self._max_payload_size:
+                    self._flush_one_buffer(True)
+                self._buffer_rs.append(packet)
+                self._buffer_rs_size += length
+            else:
+                if self._buffer_size + length > self._max_payload_size:
+                    self._flush_one_buffer(False)
+                self._buffer.append(packet)
+                self._buffer_size += length
 
-    def _should_flush(self, length_to_be_added):
-        # type: (int) -> bool
-        if self._current_buffer_total_size + length_to_be_added + 1 > self._max_payload_size:
-            return True
-        return False
+    def _should_flush(self, length_to_be_added, replay_safe=False):
+        # type: (int, bool) -> bool
+        """Whether adding a line of this length would overflow its batch.
+
+        NOT used by _send_to_buffer(), which inlines the same comparison to
+        keep a function call off the per-metric path. Retained because it is
+        part of the pre-existing surface and is convenient in tests; keep the
+        two in step if either changes.
+        """
+        current = self._buffer_rs_size if replay_safe else self._buffer_size
+        return current + length_to_be_added + 1 > self._max_payload_size
 
     @staticmethod
     def _escape_event_content(string):
@@ -1703,7 +2049,9 @@ class DogStatsd(object):
         if self._telemetry:
             self.events_count += 1
 
-        self._send(string)
+        # An event carrying its own explicit date_happened is replay-safe:
+        # sending it late doesn't change what it means.
+        self._send(string, replay_safe=bool(date_happened))
 
     def service_check(
         self,
@@ -1749,7 +2097,9 @@ class DogStatsd(object):
         if self._telemetry:
             self.service_checks_count += 1
 
-        self._send(string)
+        # A service check carrying its own explicit timestamp is replay-safe:
+        # sending it late doesn't change what it means.
+        self._send(string, replay_safe=bool(timestamp))
 
     @staticmethod
     def _normalize_and_join_tags(tags):
@@ -1819,17 +2169,30 @@ class DogStatsd(object):
                 log.debug("Couldn't get container ID: %s", str(e))
                 self._container_id = None
 
-    def _start_sender_thread(self):
-        # type: () -> None
+    def _start_sender_thread(self, quiet=False):
+        # type: (bool) -> None
         if not self._sender_enabled or self._forking:
             return
 
         if self._queue is not None:
             return
 
-        self._queue = queue.Queue(self._sender_queue_size)
+        # A previous _stop_sender_thread() leaves this set; clear it before the
+        # new sender starts so it doesn't immediately think it's shutting down.
+        self._sender_stopping.clear()
+        self._sender_stop_deadline = None
+        self._sender_abandoned_payload = False
 
-        log.debug("Starting background sender thread")
+        self._queue = SenderQueue(
+            self._sender_queue_size,
+            self._sender_queue_expiry_seconds,
+            self._account_dropped_queue_full,
+            self._account_dropped_expired,
+            put_timeout=self._sender_queue_timeout,
+        )
+
+        if not quiet:
+            log.debug("Starting background sender thread")
         self._sender_thread = threading.Thread(
             name="{}_sender_thread".format(self.__class__.__name__),
             target=self._sender_main_loop,
@@ -1838,37 +2201,155 @@ class DogStatsd(object):
         self._sender_thread.daemon = True
         self._sender_thread.start()
 
-    def _stop_sender_thread(self):
-        # type: () -> None
-        # Lock ensures that nothing gets added to the queue after we disable it.
+    def _stop_sender_thread(self, timeout=None):
+        # type: (Optional[float]) -> bool
+        # Ask the sender to stop, with a deadline it must honor BEFORE
+        # abandoning a payload stuck in its retry-by-requeuing loop (see
+        # _sender_main_loop): a bounded caller's own timeout IS that
+        # deadline, so the sender keeps retrying for close to as long as the
+        # caller asked instead of giving up the instant a shutdown is
+        # requested. An unbounded caller (timeout=None, e.g. pre_fork()) gets
+        # a bounded grace period instead, so it can't hang forever on a
+        # payload that can genuinely never succeed.
+        grace = SENDER_UNBOUNDED_STOP_GRACE_SECONDS if timeout is None else timeout
+        self._sender_stop_deadline = monotonic() + grace
+        # Setting makes _send_to_server() reject any FURTHER producer call outright.
+        self._sender_stopping.set()
+
+        # Set temporary var to protect from concurrent access to self._queue.
+        queue_to_close = self._queue
+        if queue_to_close is not None:
+            queue_to_close.close()
+
+        # Lock ensures that nothing gets added to the queue after the check
+        # above -- see _send_to_server(), which takes this same lock and
+        # re-checks _sender_stopping before it puts.
         with self._buffer_lock:
-            if not self._queue:
-                return
-            self._queue.put(Stop)
+            if self._queue is not None:
+                # put() lets the Stop sentinel past the size limit, so this
+                # never blocks even when the queue is full.
+                self._queue.put(Stop)
+
+        thread = self._sender_thread
+        if thread is None:
+            # Nothing left to stop: no thread ever runs, so clear any residual
+            # queue.
+            with self._buffer_lock:
+                self._queue = None
+            return True
+
+        thread.join(timeout)
+        if thread.is_alive():
+            # Timed out. Leave _queue in place.
+            return False
+
+        # The thread exited, but that alone doesn't mean it drained: it may
+        # have hit the deadline above with a payload still stuck retrying and
+        # given up on it instead (see _sender_main_loop). That payload was
+        # never delivered, so report failure rather than claiming success.
+        abandoned = self._sender_abandoned_payload
+
+        # _sender_main_loop clears this state on its way out when the thread
+        # has drained the queue, so this may already be a no-op; it also covers
+        # a thread that exited without draining (e.g. never actually started).
+        with self._buffer_lock:
             self._queue = None
-
-        if self._sender_thread is not None:
-            self._sender_thread.join()
         self._sender_thread = None
+        return not abandoned
 
-    def _sender_main_loop(self, queue):
-        # type: (queue.Queue[Union[str, object]]) -> None
+    def _release_sender_state(self, pending_queue):
+        # type: (SenderQueue) -> None
+        """Drop the client's pointers to this sender's queue and thread.
+
+        Called by the sender thread on its way out so the client self-heals
+        and a later enable_background_sender() can start fresh -- even when
+        this exit wasn't awaited, e.g. a stop(timeout) that timed out and the
+        caller moved on. The guards check this thread still owns the fields: a
+        newer sender may have already taken over.
+        """
+        with self._buffer_lock:
+            if self._queue is pending_queue:
+                self._queue = None
+        if self._sender_thread is threading.current_thread():
+            self._sender_thread = None
+
+    def _sender_main_loop(self, pending_queue):
+        # type: (SenderQueue) -> None
+        backoff = SENDER_RETRY_INITIAL_BACKOFF
         while True:
-            item = queue.get()
+            item = pending_queue.get()
             if item is Stop:
-                queue.task_done()
+                pending_queue.task_done(item)
+                self._release_sender_state(pending_queue)
                 return
 
-            # next line has type ignore because the type checker cannot
-            # know that 'if item is Stop' is the only case where item is
-            # of object type.
-            self._xmit_packet_with_telemetry(item)  # type: ignore[arg-type]  # noqa: F821
-            queue.task_done()
+            # payload_text() also narrows the type: 'if item is Stop' above is
+            # the only case where item is the bare object sentinel, which the
+            # type checker can't know on its own.
+            sent = self._xmit_packet_with_telemetry(
+                payload_text(item), queue_mode=True  # type: ignore[arg-type]
+            )
 
-    def wait_for_pending(self):
-        # type: () -> None
+            if sent is None:
+                # Connection trouble. A shutdown may already have been
+                # requested (see _stop_sender_thread) with a deadline this
+                # payload must be given a real chance against before it's
+                # given up on -- check that now, before requeuing, while the
+                # queue still considers this item in flight and can finish it
+                # outright instead.
+                deadline = self._sender_stop_deadline
+                if deadline is not None and monotonic() >= deadline:
+                    # The deadline has passed: give up on this payload for
+                    # good rather than requeuing it for a retry that will
+                    # never be awaited. Account for it as a writer drop --
+                    # it was never delivered -- instead of letting it vanish
+                    # with no telemetry at all.
+                    self._account_dropped_writer(item)  # type: ignore[arg-type]
+                    pending_queue.task_done(item)  # type: ignore[arg-type]
+                    self._sender_abandoned_payload = True
+                    self._release_sender_state(pending_queue)
+                    return
+
+                # Still worth retrying: keep the payload for the next attempt
+                # instead of losing it. The queue's own expiry check (on a
+                # future get()) is what eventually gives up on a payload
+                # that's been stuck for too long, unless it's replay-safe.
+                pending_queue.requeue_front(item)  # type: ignore[arg-type]
+
+                if deadline is None:
+                    # No shutdown requested (yet): normal interruptible
+                    # backoff. wait() returns early -- before backoff fully
+                    # elapses -- the instant a shutdown IS requested, so the
+                    # very next iteration's deadline check above fires
+                    # promptly instead of waiting out a long backoff.
+                    self._sender_stopping.wait(backoff)
+                    backoff = min(backoff * 2, SENDER_RETRY_MAX_BACKOFF)
+                else:
+                    # A shutdown was requested and its deadline hasn't
+                    # passed yet: keep retrying -- a still-recovering Agent
+                    # should still get drained -- but pace attempts instead
+                    # of hammering a connection that keeps failing, and
+                    # never sleep past the deadline.
+                    remaining = deadline - monotonic()
+                    time.sleep(min(SENDER_STOP_RETRY_INTERVAL, max(remaining, 0)))
+                continue
+
+            # Sent, or a definitive failure that _xmit_packet already
+            # accounted for as a dropped packet -- either way, this
+            # payload's story is over.
+            pending_queue.task_done(item)  # type: ignore[arg-type]
+            backoff = SENDER_RETRY_INITIAL_BACKOFF
+
+    def wait_for_pending(self, timeout=None):
+        # type: (Optional[float]) -> bool
         """
         Flush the buffer and wait for all queued payloads to be written to the server.
+
+        :param timeout: Maximum number of seconds to wait for the queue to
+            drain. None (the default) waits indefinitely.
+        :type timeout: float, optional
+        :return: True if every queued payload has been sent, dropped or
+            expired, False if timeout elapsed with payloads still outstanding.
         """
 
         self.flush_buffered_metrics()
@@ -1878,14 +2359,21 @@ class DogStatsd(object):
         # check and join later.
         queue = self._queue
 
-        if queue is not None:
-            queue.join()
+        if queue is None:
+            return True
+
+        return queue.join(timeout)
 
     def pre_fork(self):
         # type: () -> None
         """Prepare client for a process fork.
 
         Flush any pending payloads and stop all background threads.
+
+        A payload stuck retrying a connection failure (socket_connect_retry)
+        is given up on -- and counted as a writer drop -- after a bounded
+        grace period (SENDER_UNBOUNDED_STOP_GRACE_SECONDS) rather than
+        blocking the fork indefinitely; that payload is not delivered.
 
         The client should not be used from this point until
         state is restored by calling post_fork_parent() or
@@ -1905,8 +2393,8 @@ class DogStatsd(object):
     def post_fork_parent(self):
         # type: () -> None
         """Restore the client state after a fork in the parent process."""
-        self._start_flush_thread()
-        self._start_sender_thread()
+        self._start_flush_thread(quiet=True)
+        self._start_sender_thread(quiet=True)
         self._config_lock.release()
 
     def post_fork_child(self):
@@ -1917,7 +2405,7 @@ class DogStatsd(object):
         # Discard the locks that could have been locked at the time
         # when we forked. This may cause inconsistent internal state,
         # which we will fix in the next steps.
-        self._socket_lock = Lock()
+        self._socket_lock = RLock()
         self._buffer_lock = RLock()
 
         # Reset the buffer so we don't send metrics from the parent
@@ -1926,27 +2414,81 @@ class DogStatsd(object):
         # Execute the socket_path setter to reconcile transport and
         # payload size properties in respect to socket_path value.
         self.socket_path = self.socket_path
-        self.close_socket()
+        self.close_socket(quiet=True)
 
         with self._config_lock:
-            self._start_flush_thread()
-            self._start_sender_thread()
+            self._start_flush_thread(quiet=True)
+            self._start_sender_thread(quiet=True)
 
-    def stop(self):
-        # type: () -> None
+    def stop(self, timeout=None):
+        # type: (Optional[float]) -> bool
         """Stop the client.
 
         Disable buffering, aggregation, background sender and flush any pending payloads to the server.
 
         Client remains usable after this method, but sending metrics may block if socket_timeout is enabled.
+
+        :param timeout: Maximum number of seconds to wait for the background
+            sender to drain its queue and exit. None (the default) waits
+            indefinitely for a sender that is genuinely busy (e.g. blocked
+            inside a slow send()). It does NOT wait indefinitely for a
+            payload stuck retrying a connection failure with
+            socket_connect_retry enabled: that case is bounded by
+            SENDER_UNBOUNDED_STOP_GRACE_SECONDS regardless of this parameter,
+            so an Agent that never comes back cannot hang stop() forever.
+        :type timeout: float, optional
+        :return: True if the background sender drained and stopped, and the
+            final flush and socket close ran. False if timeout (or the grace
+            period above) elapsed first, in which case neither the final
+            flush nor the socket close ran (see below) -- either because the
+            sender thread is still running, or because it gave up on a
+            payload still retrying a connection failure and dropped it
+            (counted in packets_dropped_writer) instead of delivering it. Do
+            not call stop() again while that sender is still running: it
+            queues a second internal shutdown signal that is never drained,
+            which can make wait_for_pending() block forever on the abandoned
+            queue. Use wait_for_pending() to wait for the sender instead,
+            then call stop() again once it has actually stopped.
         """
 
-        self.disable_background_sender()
+        stopped = self.disable_background_sender(timeout)
         self._disable_buffering = True
         self._disable_aggregation = True
+
+        if not stopped:
+            if self._sender_abandoned_payload:
+                # The sender thread did exit, but only by giving up on a
+                # payload still retrying a connection failure once its
+                # deadline passed (see _sender_main_loop) -- that payload was
+                # dropped, not delivered, so this is not a clean stop either.
+                log.warning(
+                    "stop() gave up on a payload stuck retrying a connection failure after "
+                    "%ss; it was dropped instead of delivered (see packets_dropped_writer). "
+                    "Skipping the final flush and socket close",
+                    timeout,
+                )
+            else:
+                # We gave up waiting, so the sender thread is still running and
+                # still owns the socket -- it can be parked inside a send() with
+                # _socket_lock held. Flushing or closing here would block on that
+                # same lock for as long as the sender stays wedged, which would
+                # make timeout meaningless: the caller asked for a bounded stop().
+                # Pushing more data through that socket could not succeed anyway,
+                # and closing it from under a thread mid-write is not safe. Leave
+                # it open; the OS reclaims the fd when the process exits, and the
+                # sender thread is a daemon so it never holds up interpreter
+                # shutdown.
+                log.warning(
+                    "stop() timed out after %ss with the background sender still running; "
+                    "skipping the final flush and socket close",
+                    timeout,
+                )
+            return False
+
         self.flush_aggregated_metrics()
         self.flush_buffered_metrics()
         self.close_socket()
+        return True
 
 
 statsd = DogStatsd()
