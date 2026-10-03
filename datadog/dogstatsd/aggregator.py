@@ -28,7 +28,7 @@ class Aggregator(object):
             MetricType.COUNT: {},
             MetricType.GAUGE: {},
             MetricType.SET: {},
-        }  # type: Dict[str, Dict[str, MetricAggregator]]
+        }  # type: Dict[str, Dict[Any, MetricAggregator]]
         self.max_sample_metric_map = {
             MetricType.HISTOGRAM: MaxSampleMetricContexts(HistogramMetric),
             MetricType.DISTRIBUTION: MaxSampleMetricContexts(DistributionMetric),
@@ -67,7 +67,7 @@ class Aggregator(object):
         return metrics
 
     def get_context(self, name, tags, cardinality=None):
-        # type: (str, Optional[List[str]], Optional[str]) -> str
+        # type: (str, Optional[List[str]], Optional[str]) -> Any
         tags_str = u",".join(tags) if tags is not None else ""
         context = u"{}:{}".format(name, tags_str)
         # Metrics submitted with the same name and tags but different
@@ -75,9 +75,9 @@ class Aggregator(object):
         # all be re-emitted with the cardinality of whichever call created the
         # context first. Keep the key unchanged when no cardinality is set so
         # existing (cardinality-less) contexts are preserved.
-        if cardinality is not None:
-            context = u"{}:{}".format(context, cardinality)
-        return context
+        if cardinality is None:
+            return context
+        return context, cardinality
 
     def count(self, name, value, tags, rate, timestamp=0, cardinality=None):
         # type: (str, Any, Optional[List[str]], Optional[float], int, Optional[str]) -> None
