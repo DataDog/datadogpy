@@ -63,6 +63,8 @@ class SetMetric(MetricAggregator):
     def get_data(self):
         # type: () -> List[MetricAggregator]
         return [
-            MetricAggregator(self.name, self.tags, self.rate, MetricType.SET, value)
+            MetricAggregator(
+                self.name, self.tags, self.rate, MetricType.SET, value, cardinality=self.cardinality
+            )
             for value in self.data
         ]
