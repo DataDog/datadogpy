@@ -131,6 +131,22 @@ class TestAggregator(unittest.TestCase):
         )
         self.assertEqual(cardinalities, ["high", "low"])
 
+    def test_aggregator_cardinality_context_does_not_collide_with_tags(self):
+        self.aggregator.set("m", "A", ["source:low"], 1)
+        self.aggregator.set("m", "B", ["source"], 1, cardinality="low")
+
+        self.assertEqual(len(self.aggregator.metrics_map[MetricType.SET]), 2)
+
+        metrics = self.aggregator.flush_aggregated_metrics()
+        emitted = {(m.value, tuple(m.tags), m.cardinality) for m in metrics}
+        self.assertEqual(
+            emitted,
+            {
+                ("A", ("source:low",), None),
+                ("B", ("source",), "low"),
+            },
+        )
+
 
 if __name__ == '__main__':
     unittest.main()
