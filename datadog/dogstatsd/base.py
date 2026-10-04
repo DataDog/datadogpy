@@ -1652,10 +1652,7 @@ class DogStatsd(object):
         if not allows_timestamp or timestamp < 0:
             timestamp = 0
 
-        if cardinality is None:
-            cardinality = self.cardinality
-
-        validate_cardinality(cardinality)
+        cardinality = validate_cardinality(cardinality) or validate_cardinality(self.cardinality)
 
         payload = self._serialize_metric(
             metric, metric_type, value, tags, sample_rate, timestamp, cardinality
@@ -2015,10 +2012,7 @@ class DogStatsd(object):
             message,
         )
 
-        if cardinality is None:
-            cardinality = self.cardinality
-
-        validate_cardinality(cardinality)
+        cardinality = validate_cardinality(cardinality) or validate_cardinality(self.cardinality)
 
         if date_happened:
             string = "%s|d:%d" % (string, date_happened)
@@ -2076,10 +2070,7 @@ class DogStatsd(object):
         # Append all client level tags to every status check
         tags = self._add_constant_tags(tags)
 
-        if cardinality is None:
-            cardinality = self.cardinality
-
-        validate_cardinality(cardinality)
+        cardinality = validate_cardinality(cardinality) or validate_cardinality(self.cardinality)
 
         if timestamp:
             string = u"{0}|d:{1}".format(string, timestamp)
