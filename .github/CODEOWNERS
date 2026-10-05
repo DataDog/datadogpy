@@ -16,10 +16,10 @@
 /tests/integration/dogshell/     @DataDog/web-frameworks
 
 # Dogstatd
-/datadog/dogstatsd/              @DataDog/web-frameworks @DataDog/agent-metric-pipelines
+/datadog/dogstatsd/              @DataDog/agent-metric-pipelines
 /datadog/util/                   @DataDog/web-frameworks @DataDog/agent-metric-pipelines
-/tests/integration/dogstatsd/    @DataDog/web-frameworks @DataDog/agent-metric-pipelines
-/tests/unit/dogstatsd/           @DataDog/web-frameworks @DataDog/agent-metric-pipelines
+/tests/integration/dogstatsd/    @DataDog/agent-metric-pipelines
+/tests/unit/dogstatsd/           @DataDog/agent-metric-pipelines
 /tests/unit/util/                @DataDog/web-frameworks @DataDog/agent-metric-pipelines
 /tests/util/                     @DataDog/web-frameworks @DataDog/agent-metric-pipelines
 /tests/performance/test_statsd_* @DataDog/web-frameworks @DataDog/agent-metric-pipelines
