@@ -8,6 +8,7 @@ from tests.unit.dogstatsd.test_statsd import FakeSocket
 @pytest.mark.parametrize("method,args", [
     ("gauge", ("metric", 1)),
     ("count", ("metric", 1)),
+    ("set", ("metric", 1)),
     ("histogram", ("metric", 1)),
     ("distribution", ("metric", 1)),
     ("timing", ("metric", 1)),
@@ -42,5 +43,24 @@ def test_cardinality_fallback_packets(aggregate, method, args, default, override
         else:
             assert "|card:{}".format(expected) in packet
         assert "bogus" not in packet
+    finally:
+        client.stop()
+
+
+def test_invalid_cardinality_uses_default_aggregation_context():
+    client = DogStatsd(
+        disable_aggregation=False,
+        disable_telemetry=True,
+        origin_detection_enabled=False,
+        flush_interval=10000,
+        cardinality="low",
+    )
+    client.socket = FakeSocket()
+    try:
+        client.count("metric", 1, cardinality="bogus")
+        client.count("metric", 2, cardinality="low")
+        client.flush_aggregated_metrics()
+        assert client.socket.recv(no_wait=True) == "metric:3|c|card:low\n"
+        assert client.socket.recv(no_wait=True) is None
     finally:
         client.stop()

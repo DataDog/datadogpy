@@ -28,7 +28,7 @@ class Aggregator(object):
             MetricType.COUNT: {},
             MetricType.GAUGE: {},
             MetricType.SET: {},
-        }  # type: Dict[str, Dict[str, MetricAggregator]]
+        }  # type: Dict[str, Dict[Any, MetricAggregator]]
         self.max_sample_metric_map = {
             MetricType.HISTOGRAM: MaxSampleMetricContexts(HistogramMetric),
             MetricType.DISTRIBUTION: MaxSampleMetricContexts(DistributionMetric),
@@ -66,10 +66,18 @@ class Aggregator(object):
                 metrics.extend(metricList)
         return metrics
 
-    def get_context(self, name, tags):
-        # type: (str, Optional[List[str]]) -> str
+    def get_context(self, name, tags, cardinality=None):
+        # type: (str, Optional[List[str]], Optional[str]) -> Any
         tags_str = u",".join(tags) if tags is not None else ""
-        return u"{}:{}".format(name, tags_str)
+        context = u"{}:{}".format(name, tags_str)
+        # Metrics submitted with the same name and tags but different
+        # cardinalities must not be aggregated together, otherwise they would
+        # all be re-emitted with the cardinality of whichever call created the
+        # context first. Keep the key unchanged when no cardinality is set so
+        # existing (cardinality-less) contexts are preserved.
+        if cardinality is None:
+            return context
+        return context, cardinality
 
     def count(self, name, value, tags, rate, timestamp=0, cardinality=None):
         # type: (str, Any, Optional[List[str]], Optional[float], int, Optional[str]) -> None
@@ -93,12 +101,12 @@ class Aggregator(object):
         self, metric_type, metric_class, name, value, tags, rate, timestamp=0, cardinality=None
     ):
         # type: (str, Any, str, Any, Optional[List[str]], Optional[float], int, Optional[str]) -> None
-        context = self.get_context(name, tags)
+        cardinality = validate_cardinality(cardinality) or validate_cardinality(self.cardinality)
+        context = self.get_context(name, tags, cardinality)
         with self._locks[metric_type]:
             if context in self.metrics_map[metric_type]:
                 self.metrics_map[metric_type][context].aggregate(value)
             else:
-                cardinality = validate_cardinality(cardinality) or validate_cardinality(self.cardinality)
                 self.metrics_map[metric_type][context] = metric_class(
                     name, value, tags, rate, timestamp, cardinality
                 )
