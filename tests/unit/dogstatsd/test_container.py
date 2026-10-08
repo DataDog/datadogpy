@@ -106,6 +106,14 @@ def get_mock_open(read_data=None):
             """,
             "ci-34dc0b5e626f2c5c4c5170e34b10e765-1234567890",
         ),
+        # K8s systemd cgroup v1 with .slice/.scope hierarchy
+        # Container ID is embedded as "docker-{id}.scope" at the leaf
+        (
+            """
+1:name=systemd:/kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod2d3da189_6407_48e3_9ab6_78188d75e609.slice/docker-3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860.scope
+            """,
+            "ci-3726184226f5d3147c25fdeab5b60097e378e8a720503a5e19ecfdf29f869860",
+        ),
         # Linux non-containerized file
         (
             """
@@ -143,7 +151,9 @@ def test_container_id_inode():
         with mock.patch("os.stat", mock.MagicMock(return_value=mock.Mock(st_ino=1234))):
             reader = Cgroup()
         assert reader.container_id == "in-1234"
-        mock_open.assert_called_once_with("/proc/self/cgroup", mode="r")
+        # open is called twice: once in _read_cgroup_path (returns None) and once in _get_cgroup_from_inode.
+        assert mock_open.call_count == 2
+        mock_open.assert_called_with("/proc/self/cgroup", mode="r")
 
     cgroupv1_priority = """
 12:cpu,cpuacct:/
@@ -180,4 +190,142 @@ def test_container_id_inode():
             "/sys/fs/cgroup/memory/",
             "/sys/fs/cgroup/"
         ]
-        mock_open.assert_called_once_with("/proc/self/cgroup", mode="r")
+        # open is called twice: once in _read_cgroup_path (returns None) and once in _get_cgroup_from_inode.
+        assert mock_open.call_count == 2
+        mock_open.assert_called_with("/proc/self/cgroup", mode="r")
+
+
+def test_container_id_inode_absolute_node_path():
+    """
+    Test that inode lookup constructs the correct filesystem path when the cgroup
+    node path is an absolute non-root path (e.g. "/system.slice/docker-xyz.scope").
+
+    os.path.join silently discards all preceding components when it encounters an
+    absolute path segment.  Without lstrip("/") the joined path would lose the
+    cgroup mount prefix, e.g.:
+
+        os.path.join("/sys/fs/cgroup", "", "/system.slice/foo") == "/system.slice/foo"
+
+    With lstrip("/") the correct path is produced:
+
+        os.path.join("/sys/fs/cgroup", "", "system.slice/foo") == "/sys/fs/cgroup/system.slice/foo"
+
+    The scope name intentionally does NOT contain a 64-char hex container ID so
+    that _read_cgroup_path() returns None and we exercise the inode fallback.
+    """
+    # cgroup v2 unified hierarchy: path is an absolute non-root scope with no parseable container ID
+    cgroup_contents = "0::/system.slice/docker-deadbeef.scope\n"
+    expected_inode_path = "/sys/fs/cgroup/system.slice/docker-deadbeef.scope"
+
+    paths_checked = []
+
+    def inode_stat_mock(path):
+        paths_checked.append(path)
+        if path == expected_inode_path:
+            return mock.Mock(st_ino=42)
+        return mock.Mock(st_ino=0)
+
+    with mock.patch("datadog.dogstatsd.container.open", mock.mock_open(read_data=cgroup_contents)):
+        with mock.patch("os.stat", mock.MagicMock(side_effect=inode_stat_mock)):
+            reader = Cgroup()
+
+    assert reader.container_id == "in-42"
+    assert expected_inode_path in paths_checked, (
+        "Expected the inode to be looked up under the cgroup mount; "
+        "got paths: {}".format(paths_checked)
+    )
+
+
+def test_container_id_cgroup_path_takes_priority_over_inode():
+    """
+    When the cgroup path contains a parseable container ID, it should be returned
+    even when the process is *not* in the host cgroup namespace.  The inode
+    fallback is only used when the path yields nothing.
+    """
+    container_id = "3e74d3fd9db4c9dd921ae05c2502fb984d0cde1b36e581b13f79c639da4518a1"
+    cgroup_contents = "5:memory:/kubepods/besteffort/pod123/{}\n0::/\n".format(container_id)
+
+    stat_calls = []
+
+    def stat_mock(path):
+        stat_calls.append(path)
+        # Simulate a private (non-host) cgroup namespace inode
+        if path == Cgroup.CGROUP_NS_PATH:
+            return mock.Mock(st_ino=9999)
+        return mock.Mock(st_ino=42)
+
+    with mock.patch("datadog.dogstatsd.container.open", mock.mock_open(read_data=cgroup_contents)):
+        with mock.patch("os.path.exists", return_value=True):
+            with mock.patch("os.stat", mock.MagicMock(side_effect=stat_mock)):
+                reader = Cgroup()
+
+    assert reader.container_id == "ci-{}".format(container_id)
+    # Inode lookup paths should not have been consulted
+    inode_paths = [p for p in stat_calls if p != Cgroup.CGROUP_NS_PATH]
+    assert inode_paths == [], "Unexpected inode lookup calls: {}".format(inode_paths)
+
+
+# ---------------------------------------------------------------------------
+# _is_host_cgroup_namespace
+# ---------------------------------------------------------------------------
+
+
+def test_is_host_cgroup_namespace_returns_false_when_file_missing():
+    """When /proc/self/ns/cgroup does not exist the method returns False."""
+    reader = Cgroup.__new__(Cgroup)
+    with mock.patch("os.path.exists", return_value=False):
+        assert reader._is_host_cgroup_namespace() is False
+
+
+def test_is_host_cgroup_namespace_returns_true_when_inode_matches():
+    reader = Cgroup.__new__(Cgroup)
+    with mock.patch("os.path.exists", return_value=True):
+        with mock.patch("os.stat", return_value=mock.Mock(st_ino=Cgroup.HOST_CGROUP_NAMESPACE_INODE)):
+            assert reader._is_host_cgroup_namespace() is True
+
+
+def test_is_host_cgroup_namespace_returns_false_when_inode_differs():
+    reader = Cgroup.__new__(Cgroup)
+    with mock.patch("os.path.exists", return_value=True):
+        with mock.patch("os.stat", return_value=mock.Mock(st_ino=9999)):
+            assert reader._is_host_cgroup_namespace() is False
+
+
+def test_is_host_cgroup_namespace_returns_false_on_exception():
+    """Any OS error during namespace check should not propagate."""
+    reader = Cgroup.__new__(Cgroup)
+    with mock.patch("os.path.exists", side_effect=PermissionError("denied")):
+        assert reader._is_host_cgroup_namespace() is False
+
+
+# ---------------------------------------------------------------------------
+# _get_cgroup_from_inode: cgroup v1 inode=0 falls through to v2 controller
+# ---------------------------------------------------------------------------
+
+
+def test_container_id_inode_v1_falls_through_to_v2_when_v1_inode_is_zero():
+    """
+    When the cgroup v1 memory controller inode is 0 (invalid), _get_cgroup_from_inode
+    must fall through to the cgroup v2 (CGROUPV2_BASE_CONTROLLER="") entry.
+    """
+    # cgroup file with both a v1 memory controller and a cgroup v2 unified entry
+    cgroup_contents = "7:memory:/\n0::/\n"
+
+    paths_checked = []
+
+    def inode_stat_mock(path):
+        paths_checked.append(path)
+        if path == "/sys/fs/cgroup/memory/":
+            # Inode 0 is invalid — should be skipped
+            return mock.Mock(st_ino=0)
+        if path == "/sys/fs/cgroup/":
+            return mock.Mock(st_ino=5678)
+        return mock.Mock(st_ino=0)
+
+    with mock.patch("datadog.dogstatsd.container.open", mock.mock_open(read_data=cgroup_contents)):
+        with mock.patch("os.stat", mock.MagicMock(side_effect=inode_stat_mock)):
+            reader = Cgroup()
+
+    assert reader.container_id == "in-5678"
+    assert "/sys/fs/cgroup/memory/" in paths_checked, "v1 memory path should have been checked"
+    assert "/sys/fs/cgroup/" in paths_checked, "v2 root path should have been checked as fallback"
