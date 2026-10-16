@@ -4177,8 +4177,9 @@ async def print_foo():
 
     def test_stop_interrupts_a_long_retry_backoff_instead_of_waiting_it_out(self):
         # The backoff cap is a full minute. A plain time.sleep() would make
-        # stop() wait out however much of it is left; the shutdown signal must
-        # cut it short well before its own (also patched down) grace period.
+        # stop() wait out however much of it is left; the DRAINING transition
+        # notification must cut it short well before its own (also patched
+        # down) grace period.
         statsd = self._unreachable_retrying_client()
         with patch("datadog.dogstatsd.base.SENDER_RETRY_INITIAL_BACKOFF", 30.0), \
                 patch("datadog.dogstatsd.base.SENDER_UNBOUNDED_STOP_GRACE_SECONDS", 0.3):
@@ -4189,9 +4190,9 @@ async def print_foo():
             self.assertIs(self._call_bounded(statsd.stop, ()), False, "the payload was never delivered")
             self.assertLess(time.time() - t0, 5.0, "stop() waited out the backoff sleep")
 
-    def test_sender_can_restart_after_a_stop_cleared_the_stopping_signal(self):
-        # The shutdown signal is sticky, so it has to be cleared when a new
-        # sender starts or the replacement would exit immediately.
+    def test_sender_can_restart_after_a_stop_resets_the_lifecycle_state(self):
+        # DRAINING/ABORTED from a prior sender must not leak into a fresh
+        # sender start, or the replacement would exit immediately.
         statsd = self._unreachable_retrying_client()
         statsd.gauge("ordinary", 1)
         time.sleep(0.1)
@@ -4204,14 +4205,14 @@ async def print_foo():
             fresh = statsd._sender_thread
             self.assertIsNotNone(fresh)
 
-            # The stale signal only bites once the sender reaches its retry
+            # The stale state only bites once the sender reaches its retry
             # branch, so it has to actually fail a send here: an idle sender
-            # just blocks in get() and would mask the bug. With the signal
-            # left set, this first failure looks like a shutdown request and
-            # the fresh sender exits silently on it.
+            # just blocks in get() and would mask the bug. If the new sender
+            # inherited DRAINING/ABORTED, this first failure would look like
+            # shutdown handling and the fresh sender would exit silently.
             statsd.gauge("ordinary", 1)
             time.sleep(0.3)
-            self.assertTrue(fresh.is_alive(), "fresh sender exited on a stale stopping signal")
+            self.assertTrue(fresh.is_alive(), "fresh sender exited on stale lifecycle state")
             self.assertIs(statsd._sender_thread, fresh)
         finally:
             # Bounded cleanup: the fresh sender is genuinely retrying against
