@@ -256,6 +256,23 @@ class SenderState(object):
     ABORTED = "aborted"
 
 
+class _ActiveSender(object):
+    """The active background sender's paired resources.
+
+    Keep the queue and thread behind one pointer so lifecycle transitions do
+    not publish a stable state where one half of the sender exists without the
+    other. A stale sender thread can only clear the active sender if both the
+    queue and thread still match this active sender.
+    """
+
+    __slots__ = ("queue", "thread")
+
+    def __init__(self, queue, thread):
+        # type: (SenderQueue, threading.Thread) -> None
+        self.queue = queue
+        self.thread = thread
+
+
 def pre_fork():
     # type: () -> None
     """Prepare all client instances for a process fork.
@@ -673,8 +690,11 @@ class DogStatsd(object):
         else:
             log.debug("Statsd buffering and aggregation is disabled")
 
-        self._queue = None  # type: Optional[SenderQueue]
-        self._sender_thread = None  # type: Optional[threading.Thread]
+        # Paired queue/thread for the active background sender, or None when
+        # there is no active sender. Expose read-only _queue/_sender_thread
+        # compatibility properties below, but mutate the pair only via this
+        # active-sender handle so they cannot be published half-updated.
+        self._active_sender = None  # type: Optional[_ActiveSender]
         # Background sender lifecycle state.
         self._sender_state = SenderState.STOPPED
         # Condition guarding sender state transitions and retry backoff waits.
@@ -691,6 +711,22 @@ class DogStatsd(object):
 
         if TRACK_INSTANCES and track_instance:
             _instances.add(self)
+
+    @property
+    def _queue(self):
+        # type: () -> Optional[SenderQueue]
+        active_sender = self._active_sender
+        if active_sender is None:
+            return None
+        return active_sender.queue
+
+    @property
+    def _sender_thread(self):
+        # type: () -> Optional[threading.Thread]
+        active_sender = self._active_sender
+        if active_sender is None:
+            return None
+        return active_sender.thread
 
     @property
     def socket_path(self):
@@ -1760,26 +1796,27 @@ class DogStatsd(object):
         # Skip the lock if the queue is clearly unavailable for admission --
         # the lock-protected recheck below is what actually has to be
         # correct; this is purely an optimization.
-        if self._queue is not None and self._sender_state in (SenderState.RUNNING, SenderState.RETRYING):
+        if self._active_sender is not None and self._sender_state in (SenderState.RUNNING, SenderState.RETRYING):
             # Prevent a race with disable_background_sender(): transitioning to
             # DRAINING and appending Stop both happen under this same lock, so
-            # rechecking state here (not just self._queue) means a racing
-            # put() either lands strictly before Stop (still open) or is
+            # rechecking state here (not just self._active_sender) means a
+            # racing put() either lands strictly before Stop (still open) or is
             # rejected outright and falls through to a direct send below --
             # never behind Stop, where it would be silently lost once the
             # sender reaches Stop and exits.
             with self._buffer_lock:
                 packet_with_newline = packet + '\n'
-                if self._queue is not None and self._sender_state in (SenderState.RUNNING, SenderState.RETRYING):
+                active_sender = self._active_sender
+                if active_sender is not None and self._sender_state in (SenderState.RUNNING, SenderState.RETRYING):
                     if replay_safe:
                         # Never expires, so it needs no enqueued_at and no
                         # wrapper at all: queue the bare string and let the
                         # queue infer replay-safety from the type. Saves the
                         # PendingPayload object (~56 bytes) per entry and
                         # keeps these out of the cyclic GC's traversal set.
-                        self._queue.put(packet_with_newline)
+                        active_sender.queue.put(packet_with_newline)
                     else:
-                        self._queue.put(PendingPayload(packet_with_newline, monotonic()))
+                        active_sender.queue.put(PendingPayload(packet_with_newline, monotonic()))
                     return
 
         self._xmit_packet_with_telemetry(packet + '\n')
@@ -2182,11 +2219,8 @@ class DogStatsd(object):
             return
 
         with self._sender_condition:
-            if self._queue is not None:
+            if self._active_sender is not None:
                 return
-
-            self._sender_stop_deadline = None
-            self._set_sender_state_locked(SenderState.RUNNING)
 
             queue = SenderQueue(
                 self._sender_queue_size,
@@ -2195,15 +2229,16 @@ class DogStatsd(object):
                 self._account_dropped_expired,
                 put_timeout=self._sender_queue_timeout,
             )
-            self._queue = queue
-
             sender_thread = threading.Thread(
                 name="{}_sender_thread".format(self.__class__.__name__),
                 target=self._sender_main_loop,
                 args=(queue,)
             )
             sender_thread.daemon = True
-            self._sender_thread = sender_thread
+
+            self._sender_stop_deadline = None
+            self._active_sender = _ActiveSender(queue, sender_thread)
+            self._set_sender_state_locked(SenderState.RUNNING)
 
         if not quiet:
             log.debug("Starting background sender thread")
@@ -2214,9 +2249,9 @@ class DogStatsd(object):
         # A put() can be blocked inside SenderQueue waiting for room while it
         # still holds _buffer_lock. close() wakes it before we need that lock
         # for the DRAINING transition and Stop insertion.
-        queue_to_close = self._queue
-        if queue_to_close is not None:
-            queue_to_close.close()
+        active_sender_to_close = self._active_sender
+        if active_sender_to_close is not None:
+            active_sender_to_close.queue.close()
 
         # Anchor the deadline to the moment the caller asked to stop, not to
         # whenever this thread wins _buffer_lock: the caller's timeout is a
@@ -2233,16 +2268,16 @@ class DogStatsd(object):
             if self._sender_state in (SenderState.RUNNING, SenderState.RETRYING):
                 self._sender_stop_deadline = stop_deadline
                 self._set_sender_state_locked(SenderState.DRAINING)
-                if self._queue is not None:
+                active_sender = self._active_sender
+                if active_sender is not None:
                     # put() lets Stop bypass capacity, so this never blocks.
-                    self._queue.put(Stop)
+                    active_sender.queue.put(Stop)
 
-            thread = self._sender_thread
+            active_sender = self._active_sender
+            thread = None if active_sender is None else active_sender.thread
             state = self._sender_state
 
             if thread is None:
-                if self._queue is not None:
-                    self._queue = None
                 return state != SenderState.ABORTED
 
         thread.join(timeout)
@@ -2257,15 +2292,13 @@ class DogStatsd(object):
         # type: (SenderQueue, str) -> None
         """Drop this sender's queue/thread pointers and publish its end state."""
         with self._sender_condition:
-            owns_sender = False
-            if self._queue is pending_queue:
-                self._queue = None
-                owns_sender = True
-            if self._sender_thread is threading.current_thread():
-                self._sender_thread = None
-                owns_sender = True
-
-            if owns_sender:
+            active_sender = self._active_sender
+            if (
+                active_sender is not None
+                and active_sender.queue is pending_queue
+                and active_sender.thread is threading.current_thread()
+            ):
+                self._active_sender = None
                 self._sender_stop_deadline = None
                 self._set_sender_state_locked(final_state)
 
