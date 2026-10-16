@@ -675,13 +675,10 @@ class DogStatsd(object):
 
         self._queue = None  # type: Optional[SenderQueue]
         self._sender_thread = None  # type: Optional[threading.Thread]
-        # Background sender lifecycle state. Guarded by _buffer_lock, so a
-        # transition stays coordinated with queue admission and Stop-sentinel
-        # insertion -- see _send_to_server() and _stop_sender_thread().
+        # Background sender lifecycle state.
         self._sender_state = SenderState.STOPPED
-        # Set to ask a running sender thread to stop. Also what makes its
-        # retry backoff interruptible -- see _sender_main_loop.
-        self._sender_stopping = threading.Event()
+        # Condition guarding sender state transitions and retry backoff waits.
+        self._sender_condition = threading.Condition(self._buffer_lock)
         # The monotonic deadline by which a draining sender must give up on
         # pending payloads. Meaningful only while state is DRAINING.
         self._sender_stop_deadline = None  # type: Optional[float]
@@ -2175,22 +2172,19 @@ class DogStatsd(object):
 
     def _set_sender_state_locked(self, state):
         # type: (str) -> None
-        """Publish a new sender lifecycle state. Caller must hold _buffer_lock."""
-        self._sender_state = state
+        if self._sender_state != state:
+            self._sender_state = state
+            self._sender_condition.notify_all()
 
     def _start_sender_thread(self, quiet=False):
         # type: (bool) -> None
         if not self._sender_enabled or self._forking:
             return
 
-        with self._buffer_lock:
+        with self._sender_condition:
             if self._queue is not None:
                 return
 
-            # Sticky: a previous _stop_sender_thread() leaves this set, so
-            # clear it before the new sender starts or its first retry backoff
-            # would return immediately.
-            self._sender_stopping.clear()
             self._sender_stop_deadline = None
             self._set_sender_state_locked(SenderState.RUNNING)
 
@@ -2233,15 +2227,12 @@ class DogStatsd(object):
         grace = SENDER_UNBOUNDED_STOP_GRACE_SECONDS if timeout is None else timeout
         stop_deadline = monotonic() + grace
 
-        with self._buffer_lock:
+        with self._sender_condition:
             # Request draining once, preserving the same deadline and Stop
             # sentinel across repeated stop() calls.
             if self._sender_state in (SenderState.RUNNING, SenderState.RETRYING):
                 self._sender_stop_deadline = stop_deadline
                 self._set_sender_state_locked(SenderState.DRAINING)
-                # Cut short a retry backoff so the sender notices DRAINING
-                # promptly instead of sleeping it out.
-                self._sender_stopping.set()
                 if self._queue is not None:
                     # put() lets Stop bypass capacity, so this never blocks.
                     self._queue.put(Stop)
@@ -2259,13 +2250,13 @@ class DogStatsd(object):
             # Timed out: sender keeps draining in the background.
             return False
 
-        with self._buffer_lock:
+        with self._sender_condition:
             return self._sender_state == SenderState.STOPPED
 
     def _finalize_sender_exit(self, pending_queue, final_state):
         # type: (SenderQueue, str) -> None
         """Drop this sender's queue/thread pointers and publish its end state."""
-        with self._buffer_lock:
+        with self._sender_condition:
             owns_sender = False
             if self._queue is pending_queue:
                 self._queue = None
@@ -2302,8 +2293,7 @@ class DogStatsd(object):
 
                 abandon = False
                 delay = 0.0
-                interruptible = True
-                with self._buffer_lock:
+                with self._sender_condition:
                     state = self._sender_state
                     if state == SenderState.RUNNING:
                         self._set_sender_state_locked(SenderState.RETRYING)
@@ -2321,15 +2311,15 @@ class DogStatsd(object):
                             delay = SENDER_STOP_RETRY_INTERVAL if remaining is None else min(
                                 SENDER_STOP_RETRY_INTERVAL, remaining
                             )
-                            # The stopping Event is already set and sticky, so
-                            # waiting on it here would not block at all: pace
-                            # the attempts with a plain sleep instead.
-                            interruptible = False
                     else:
                         # STOPPED/ABORTED with a live sender should be rare;
                         # don't spin.
                         delay = SENDER_STOP_RETRY_INTERVAL
-                        interruptible = False
+
+                    if not abandon and delay > 0:
+                        # Check state and wait under the same lock so a
+                        # DRAINING notification cannot be missed.
+                        self._sender_condition.wait(delay)
 
                 if abandon:
                     # Deadline reached while draining: account and finish every
@@ -2339,15 +2329,6 @@ class DogStatsd(object):
                     self._finalize_sender_exit(pending_queue, SenderState.ABORTED)
                     return
 
-                if delay > 0:
-                    if interruptible:
-                        # Returns early the instant a shutdown is requested, so
-                        # the next iteration sees DRAINING promptly rather than
-                        # sleeping out a long backoff.
-                        self._sender_stopping.wait(delay)
-                    else:
-                        time.sleep(delay)
-
                 continue
 
             # Sent, or a definitive failure that _xmit_packet already
@@ -2355,7 +2336,7 @@ class DogStatsd(object):
             # complete.
             pending_queue.task_done(item)  # type: ignore[arg-type]
             backoff = SENDER_RETRY_INITIAL_BACKOFF
-            with self._buffer_lock:
+            with self._sender_condition:
                 if self._sender_state == SenderState.RETRYING:
                     self._set_sender_state_locked(SenderState.RUNNING)
 
@@ -2426,6 +2407,7 @@ class DogStatsd(object):
         # which we will fix in the next steps.
         self._socket_lock = RLock()
         self._buffer_lock = RLock()
+        self._sender_condition = threading.Condition(self._buffer_lock)
 
         # Reset the buffer so we don't send metrics from the parent
         # process. Also makes sure buffer properties are consistent.
@@ -2470,7 +2452,7 @@ class DogStatsd(object):
         self._disable_aggregation = True
 
         if not stopped:
-            with self._buffer_lock:
+            with self._sender_condition:
                 sender_state = self._sender_state
             if sender_state == SenderState.ABORTED:
                 # The sender thread exited by abandoning the remaining queue at
