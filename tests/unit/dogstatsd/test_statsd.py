@@ -2819,27 +2819,34 @@ async def print_foo():
         self.assertLess(elapsed, 5.0, "join() should return on drain, not wait out the whole timeout")
 
     def test_wait_for_pending_timeout(self):
-        # A queue with no sender thread draining it: wait_for_pending() must
-        # give up and report False rather than blocking forever. Done without a
-        # thread on purpose -- the default transport is UDP, where a send
-        # succeeds even with nothing listening, so "assign no socket" would not
-        # reliably keep a payload pending.
-        statsd = DogStatsd(disable_background_sender=True, disable_telemetry=True)
-        statsd._queue = SenderQueue(
-            0,
-            PENDING_PAYLOAD_EXPIRY_SECONDS,
-            lambda item: None,
-            lambda item: None,
-        )
-        statsd._sender_state = SenderState.RUNNING
+        # Keep a real sender owner active but wedged with an in-flight payload:
+        # wait_for_pending() must give up and report False rather than blocking
+        # forever. The owner keeps queue/thread publication atomic; this avoids
+        # the old test-only "queue with no sender thread" state.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        entered = threading.Event()
+        release = threading.Event()
+
+        def blocking_xmit(packet, queue_mode=False):
+            entered.set()
+            release.wait(5.0)
+            return True
+
+        statsd._xmit_packet_with_telemetry = blocking_xmit
         statsd._send_to_server("test.metric:1|c")
+        self.assertTrue(entered.wait(5.0), "sender never picked up the payload")
 
-        t0 = time.time()
-        self.assertIs(self._call_bounded(statsd.wait_for_pending, (0.2,)), False)
-        self.assertGreaterEqual(time.time() - t0, 0.2)
+        try:
+            t0 = time.time()
+            self.assertIs(self._call_bounded(statsd.wait_for_pending, (0.2,)), False)
+            self.assertGreaterEqual(time.time() - t0, 0.2)
 
-        # timeout=0 is a non-blocking poll.
-        self.assertIs(self._call_bounded(statsd.wait_for_pending, (0,)), False)
+            # timeout=0 is a non-blocking poll.
+            self.assertIs(self._call_bounded(statsd.wait_for_pending, (0,)), False)
+        finally:
+            release.set()
+            self.assertIs(statsd.wait_for_pending(5.0), True)
+            statsd.stop()
 
     def test_wait_for_pending_returns_true_with_no_queue(self):
         # Nothing queued (background sender disabled) is trivially "drained".
@@ -3346,37 +3353,35 @@ async def print_foo():
         statsd.stop()
 
     def test_bytes_dropped_queue_counts_actual_bytes(self):
-        # No sender thread: a live one could drain the first payload before the
-        # third is queued, so nothing would be evicted and the counters below
-        # would describe a schedule that never happened. Size 2 rather than 1
-        # so the eviction order is observable -- with a single slot the evicted
-        # entry is both the oldest and the newest.
+        # Exercise SenderQueue directly so the scenario is deterministic: a
+        # live sender could drain the first payload before the third is queued,
+        # so nothing would be evicted and the counters below would describe a
+        # schedule that never happened. Size 2 rather than 1 so the eviction
+        # order is observable -- with a single slot the evicted entry is both
+        # the oldest and the newest.
         statsd = DogStatsd(disable_background_sender=True)
-        statsd._queue = SenderQueue(
+        pending_queue = SenderQueue(
             2,
             PENDING_PAYLOAD_EXPIRY_SECONDS,
             statsd._account_dropped_queue_full,
             statsd._account_dropped_expired,
         )
-        statsd._sender_state = SenderState.RUNNING
 
         first, second, third = "test.metric.first", "test.metric.second", "test.metric.third"
-        statsd._send_to_server(first)
-        statsd._send_to_server(second)
-        statsd._send_to_server(third)  # evicts the oldest (first) to make room
+        pending_queue.put(PendingPayload(first + "\n", sender_queue_clock()))
+        pending_queue.put(PendingPayload(second + "\n", sender_queue_clock()))
+        pending_queue.put(PendingPayload(third + "\n", sender_queue_clock()))  # evicts oldest
 
         # bytes_dropped_queue is the real byte length, including the newline
-        # _send_to_server() appends.
+        # that queued packets carry.
         self.assertEqual(statsd.bytes_dropped_queue, len((first + "\n").encode("utf-8")))
         self.assertEqual(statsd.packets_dropped_queue, 1)
         self.assertEqual(statsd.bytes_dropped_expired, 0)
         self.assertEqual(statsd.packets_dropped_expired, 0)
 
         # Dropping the oldest leaves the two newest queued, in order.
-        survivors = [statsd._queue.get().payload, statsd._queue.get().payload]
+        survivors = [pending_queue.get().payload, pending_queue.get().payload]
         self.assertEqual(survivors, [second + "\n", third + "\n"])
-
-        statsd.stop()
 
     def test_sender_queue_put_timeout_default_evicts_immediately(self):
         # Default put_timeout (0, whether omitted or explicit): no waiting
