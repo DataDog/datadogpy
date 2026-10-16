@@ -239,7 +239,7 @@ class SenderQueue(object):
         This does not stop put()/get() from working, and does not reject or
         drop anything by itself -- it only ends a wait early. Refusing new
         payloads outright is the caller's job (see DogStatsd._send_to_server(),
-        which checks _sender_stopping before ever calling put()).
+        which checks the sender lifecycle state before ever calling put()).
         """
         with self._not_full:
             self._closing = True
@@ -384,6 +384,33 @@ class SenderQueue(object):
             if not self._release_in_flight_locked(item, "task_done"):
                 return
             self._finish_task_locked()
+
+    def abandon_all(self, on_drop):
+        # type: (Callable[[QueuedItem], None]) -> None
+        """Drop every outstanding entry and settle every outstanding task.
+
+        Used when the background sender gives up at shutdown deadline. This
+        makes join() waiters release promptly instead of waiting forever on a
+        queue no thread will drain.
+        """
+        with self._all_tasks_done:
+            while self._deque:
+                item = self._deque.popleft()
+                if item is not Stop:
+                    on_drop(item)  # type: ignore[arg-type]
+                self._finish_task_locked()
+
+            # Normally empty (single-consumer queue and caller owns the
+            # current item), but clear defensively in case of misuse.
+            if self._in_flight:
+                for key, item in list(self._in_flight.items()):
+                    if item is not Stop:
+                        on_drop(item)  # type: ignore[arg-type]
+                    del self._in_flight[key]
+                    self._finish_task_locked()
+
+            self._not_full.notify_all()
+            self._not_empty.notify_all()
 
     def join(self, timeout=None):
         # type: (Optional[float]) -> bool

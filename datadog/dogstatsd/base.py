@@ -248,6 +248,14 @@ TRACK_INSTANCES = not os.environ.get("DD_DOGSTATSD_DISABLE_INSTANCE_TRACKING", N
 _instances = weakref.WeakSet()  # type: weakref.WeakSet
 
 
+class SenderState(object):
+    STOPPED = "stopped"
+    RUNNING = "running"
+    RETRYING = "retrying"
+    DRAINING = "draining"
+    ABORTED = "aborted"
+
+
 def pre_fork():
     # type: () -> None
     """Prepare all client instances for a process fork.
@@ -667,19 +675,16 @@ class DogStatsd(object):
 
         self._queue = None  # type: Optional[SenderQueue]
         self._sender_thread = None  # type: Optional[threading.Thread]
+        # Background sender lifecycle state. Guarded by _buffer_lock, so a
+        # transition stays coordinated with queue admission and Stop-sentinel
+        # insertion -- see _send_to_server() and _stop_sender_thread().
+        self._sender_state = SenderState.STOPPED
         # Set to ask a running sender thread to stop. Also what makes its
         # retry backoff interruptible -- see _sender_main_loop.
         self._sender_stopping = threading.Event()
-        # The monotonic deadline by which a requested shutdown must give up
-        # on a payload stuck in the retry loop, set by _stop_sender_thread()
-        # and read by _sender_main_loop. None means no shutdown has been
-        # requested (or a fresh sender hasn't seen one yet).
+        # The monotonic deadline by which a draining sender must give up on
+        # pending payloads. Meaningful only while state is DRAINING.
         self._sender_stop_deadline = None  # type: Optional[float]
-        # Set by _sender_main_loop when it gives up on a payload because the
-        # deadline above passed while still retrying a connection failure --
-        # i.e. the queue did NOT fully drain even though the thread exited.
-        # _stop_sender_thread() reports this as failure rather than success.
-        self._sender_abandoned_payload = False
         self._sender_enabled = False
 
         if not disable_background_sender:
@@ -1755,21 +1760,20 @@ class DogStatsd(object):
 
     def _send_to_server(self, packet, replay_safe=False):
         # type: (str, bool) -> None
-        # Skip the lock if the queue is None or a shutdown has already been
-        # requested -- the lock-protected recheck below is what actually has
-        # to be correct; this is purely an optimization to avoid the lock
-        # once there is clearly nothing to enqueue onto.
-        if self._queue is not None and not self._sender_stopping.is_set():
-            # Prevent a race with disable_background_sender: _sender_stopping
-            # is set BEFORE _stop_sender_thread() appends Stop, under this
-            # same lock, so rechecking it here (not just self._queue) means a
-            # racing put() either lands strictly before Stop (still open) or
-            # is rejected outright and falls through to a direct send below
-            # -- never behind Stop, where it would be silently lost once the
+        # Skip the lock if the queue is clearly unavailable for admission --
+        # the lock-protected recheck below is what actually has to be
+        # correct; this is purely an optimization.
+        if self._queue is not None and self._sender_state in (SenderState.RUNNING, SenderState.RETRYING):
+            # Prevent a race with disable_background_sender(): transitioning to
+            # DRAINING and appending Stop both happen under this same lock, so
+            # rechecking state here (not just self._queue) means a racing
+            # put() either lands strictly before Stop (still open) or is
+            # rejected outright and falls through to a direct send below --
+            # never behind Stop, where it would be silently lost once the
             # sender reaches Stop and exits.
             with self._buffer_lock:
                 packet_with_newline = packet + '\n'
-                if self._queue is not None and not self._sender_stopping.is_set():
+                if self._queue is not None and self._sender_state in (SenderState.RUNNING, SenderState.RETRYING):
                     if replay_safe:
                         # Never expires, so it needs no enqueued_at and no
                         # wrapper at all: queue the bare string and let the
@@ -2169,109 +2173,110 @@ class DogStatsd(object):
                 log.debug("Couldn't get container ID: %s", str(e))
                 self._container_id = None
 
+    def _set_sender_state_locked(self, state):
+        # type: (str) -> None
+        """Publish a new sender lifecycle state. Caller must hold _buffer_lock."""
+        self._sender_state = state
+
     def _start_sender_thread(self, quiet=False):
         # type: (bool) -> None
         if not self._sender_enabled or self._forking:
             return
 
-        if self._queue is not None:
-            return
+        with self._buffer_lock:
+            if self._queue is not None:
+                return
 
-        # A previous _stop_sender_thread() leaves this set; clear it before the
-        # new sender starts so it doesn't immediately think it's shutting down.
-        self._sender_stopping.clear()
-        self._sender_stop_deadline = None
-        self._sender_abandoned_payload = False
+            # Sticky: a previous _stop_sender_thread() leaves this set, so
+            # clear it before the new sender starts or its first retry backoff
+            # would return immediately.
+            self._sender_stopping.clear()
+            self._sender_stop_deadline = None
+            self._set_sender_state_locked(SenderState.RUNNING)
 
-        self._queue = SenderQueue(
-            self._sender_queue_size,
-            self._sender_queue_expiry_seconds,
-            self._account_dropped_queue_full,
-            self._account_dropped_expired,
-            put_timeout=self._sender_queue_timeout,
-        )
+            queue = SenderQueue(
+                self._sender_queue_size,
+                self._sender_queue_expiry_seconds,
+                self._account_dropped_queue_full,
+                self._account_dropped_expired,
+                put_timeout=self._sender_queue_timeout,
+            )
+            self._queue = queue
+
+            sender_thread = threading.Thread(
+                name="{}_sender_thread".format(self.__class__.__name__),
+                target=self._sender_main_loop,
+                args=(queue,)
+            )
+            sender_thread.daemon = True
+            self._sender_thread = sender_thread
 
         if not quiet:
             log.debug("Starting background sender thread")
-        self._sender_thread = threading.Thread(
-            name="{}_sender_thread".format(self.__class__.__name__),
-            target=self._sender_main_loop,
-            args=(self._queue,)
-        )
-        self._sender_thread.daemon = True
-        self._sender_thread.start()
+        sender_thread.start()
 
     def _stop_sender_thread(self, timeout=None):
         # type: (Optional[float]) -> bool
-        # Ask the sender to stop, with a deadline it must honor BEFORE
-        # abandoning a payload stuck in its retry-by-requeuing loop (see
-        # _sender_main_loop): a bounded caller's own timeout IS that
-        # deadline, so the sender keeps retrying for close to as long as the
-        # caller asked instead of giving up the instant a shutdown is
-        # requested. An unbounded caller (timeout=None, e.g. pre_fork()) gets
-        # a bounded grace period instead, so it can't hang forever on a
-        # payload that can genuinely never succeed.
-        grace = SENDER_UNBOUNDED_STOP_GRACE_SECONDS if timeout is None else timeout
-        self._sender_stop_deadline = monotonic() + grace
-        # Setting makes _send_to_server() reject any FURTHER producer call outright.
-        self._sender_stopping.set()
-
-        # Set temporary var to protect from concurrent access to self._queue.
+        # A put() can be blocked inside SenderQueue waiting for room while it
+        # still holds _buffer_lock. close() wakes it before we need that lock
+        # for the DRAINING transition and Stop insertion.
         queue_to_close = self._queue
         if queue_to_close is not None:
             queue_to_close.close()
 
-        # Lock ensures that nothing gets added to the queue after the check
-        # above -- see _send_to_server(), which takes this same lock and
-        # re-checks _sender_stopping before it puts.
-        with self._buffer_lock:
-            if self._queue is not None:
-                # put() lets the Stop sentinel past the size limit, so this
-                # never blocks even when the queue is full.
-                self._queue.put(Stop)
+        # Anchor the deadline to the moment the caller asked to stop, not to
+        # whenever this thread wins _buffer_lock: the caller's timeout is a
+        # budget for the whole call, and the lock can be held by a producer
+        # blocked in put(). Computing it after acquiring would push the
+        # sender's give-up point past the join(timeout) below, so the sender
+        # would still be retrying when stop() has already stopped waiting.
+        grace = SENDER_UNBOUNDED_STOP_GRACE_SECONDS if timeout is None else timeout
+        stop_deadline = monotonic() + grace
 
-        thread = self._sender_thread
-        if thread is None:
-            # Nothing left to stop: no thread ever runs, so clear any residual
-            # queue.
-            with self._buffer_lock:
-                self._queue = None
-            return True
+        with self._buffer_lock:
+            # Request draining once, preserving the same deadline and Stop
+            # sentinel across repeated stop() calls.
+            if self._sender_state in (SenderState.RUNNING, SenderState.RETRYING):
+                self._sender_stop_deadline = stop_deadline
+                self._set_sender_state_locked(SenderState.DRAINING)
+                # Cut short a retry backoff so the sender notices DRAINING
+                # promptly instead of sleeping it out.
+                self._sender_stopping.set()
+                if self._queue is not None:
+                    # put() lets Stop bypass capacity, so this never blocks.
+                    self._queue.put(Stop)
+
+            thread = self._sender_thread
+            state = self._sender_state
+
+            if thread is None:
+                if self._queue is not None:
+                    self._queue = None
+                return state != SenderState.ABORTED
 
         thread.join(timeout)
         if thread.is_alive():
-            # Timed out. Leave _queue in place.
+            # Timed out: sender keeps draining in the background.
             return False
 
-        # The thread exited, but that alone doesn't mean it drained: it may
-        # have hit the deadline above with a payload still stuck retrying and
-        # given up on it instead (see _sender_main_loop). That payload was
-        # never delivered, so report failure rather than claiming success.
-        abandoned = self._sender_abandoned_payload
-
-        # _sender_main_loop clears this state on its way out when the thread
-        # has drained the queue, so this may already be a no-op; it also covers
-        # a thread that exited without draining (e.g. never actually started).
         with self._buffer_lock:
-            self._queue = None
-        self._sender_thread = None
-        return not abandoned
+            return self._sender_state == SenderState.STOPPED
 
-    def _release_sender_state(self, pending_queue):
-        # type: (SenderQueue) -> None
-        """Drop the client's pointers to this sender's queue and thread.
-
-        Called by the sender thread on its way out so the client self-heals
-        and a later enable_background_sender() can start fresh -- even when
-        this exit wasn't awaited, e.g. a stop(timeout) that timed out and the
-        caller moved on. The guards check this thread still owns the fields: a
-        newer sender may have already taken over.
-        """
+    def _finalize_sender_exit(self, pending_queue, final_state):
+        # type: (SenderQueue, str) -> None
+        """Drop this sender's queue/thread pointers and publish its end state."""
         with self._buffer_lock:
+            owns_sender = False
             if self._queue is pending_queue:
                 self._queue = None
-        if self._sender_thread is threading.current_thread():
-            self._sender_thread = None
+                owns_sender = True
+            if self._sender_thread is threading.current_thread():
+                self._sender_thread = None
+                owns_sender = True
+
+            if owns_sender:
+                self._sender_stop_deadline = None
+                self._set_sender_state_locked(final_state)
 
     def _sender_main_loop(self, pending_queue):
         # type: (SenderQueue) -> None
@@ -2280,7 +2285,7 @@ class DogStatsd(object):
             item = pending_queue.get()
             if item is Stop:
                 pending_queue.task_done(item)
-                self._release_sender_state(pending_queue)
+                self._finalize_sender_exit(pending_queue, SenderState.STOPPED)
                 return
 
             # payload_text() also narrows the type: 'if item is Stop' above is
@@ -2291,54 +2296,68 @@ class DogStatsd(object):
             )
 
             if sent is None:
-                # Connection trouble. A shutdown may already have been
-                # requested (see _stop_sender_thread) with a deadline this
-                # payload must be given a real chance against before it's
-                # given up on -- check that now, before requeuing, while the
-                # queue still considers this item in flight and can finish it
-                # outright instead.
-                deadline = self._sender_stop_deadline
-                if deadline is not None and monotonic() >= deadline:
-                    # The deadline has passed: give up on this payload for
-                    # good rather than requeuing it for a retry that will
-                    # never be awaited. Account for it as a writer drop --
-                    # it was never delivered -- instead of letting it vanish
-                    # with no telemetry at all.
-                    self._account_dropped_writer(item)  # type: ignore[arg-type]
-                    pending_queue.task_done(item)  # type: ignore[arg-type]
-                    self._sender_abandoned_payload = True
-                    self._release_sender_state(pending_queue)
-                    return
-
-                # Still worth retrying: keep the payload for the next attempt
-                # instead of losing it. The queue's own expiry check (on a
-                # future get()) is what eventually gives up on a payload
-                # that's been stuck for too long, unless it's replay-safe.
+                # Keep the payload for the next attempt. The queue's own
+                # expiry policy is what eventually gives up on stale payloads.
                 pending_queue.requeue_front(item)  # type: ignore[arg-type]
 
-                if deadline is None:
-                    # No shutdown requested (yet): normal interruptible
-                    # backoff. wait() returns early -- before backoff fully
-                    # elapses -- the instant a shutdown IS requested, so the
-                    # very next iteration's deadline check above fires
-                    # promptly instead of waiting out a long backoff.
-                    self._sender_stopping.wait(backoff)
-                    backoff = min(backoff * 2, SENDER_RETRY_MAX_BACKOFF)
-                else:
-                    # A shutdown was requested and its deadline hasn't
-                    # passed yet: keep retrying -- a still-recovering Agent
-                    # should still get drained -- but pace attempts instead
-                    # of hammering a connection that keeps failing, and
-                    # never sleep past the deadline.
-                    remaining = deadline - monotonic()
-                    time.sleep(min(SENDER_STOP_RETRY_INTERVAL, max(remaining, 0)))
+                abandon = False
+                delay = 0.0
+                interruptible = True
+                with self._buffer_lock:
+                    state = self._sender_state
+                    if state == SenderState.RUNNING:
+                        self._set_sender_state_locked(SenderState.RETRYING)
+                        delay = backoff
+                        backoff = min(backoff * 2, SENDER_RETRY_MAX_BACKOFF)
+                    elif state == SenderState.RETRYING:
+                        delay = backoff
+                        backoff = min(backoff * 2, SENDER_RETRY_MAX_BACKOFF)
+                    elif state == SenderState.DRAINING:
+                        deadline = self._sender_stop_deadline
+                        if deadline is not None and monotonic() >= deadline:
+                            abandon = True
+                        else:
+                            remaining = None if deadline is None else max(deadline - monotonic(), 0)
+                            delay = SENDER_STOP_RETRY_INTERVAL if remaining is None else min(
+                                SENDER_STOP_RETRY_INTERVAL, remaining
+                            )
+                            # The stopping Event is already set and sticky, so
+                            # waiting on it here would not block at all: pace
+                            # the attempts with a plain sleep instead.
+                            interruptible = False
+                    else:
+                        # STOPPED/ABORTED with a live sender should be rare;
+                        # don't spin.
+                        delay = SENDER_STOP_RETRY_INTERVAL
+                        interruptible = False
+
+                if abandon:
+                    # Deadline reached while draining: account and finish every
+                    # outstanding task before exiting so queue joiners cannot
+                    # remain blocked.
+                    pending_queue.abandon_all(self._account_dropped_writer)
+                    self._finalize_sender_exit(pending_queue, SenderState.ABORTED)
+                    return
+
+                if delay > 0:
+                    if interruptible:
+                        # Returns early the instant a shutdown is requested, so
+                        # the next iteration sees DRAINING promptly rather than
+                        # sleeping out a long backoff.
+                        self._sender_stopping.wait(delay)
+                    else:
+                        time.sleep(delay)
+
                 continue
 
             # Sent, or a definitive failure that _xmit_packet already
-            # accounted for as a dropped packet -- either way, this
-            # payload's story is over.
+            # accounted for as a dropped packet -- either way, this payload is
+            # complete.
             pending_queue.task_done(item)  # type: ignore[arg-type]
             backoff = SENDER_RETRY_INITIAL_BACKOFF
+            with self._buffer_lock:
+                if self._sender_state == SenderState.RETRYING:
+                    self._set_sender_state_locked(SenderState.RUNNING)
 
     def wait_for_pending(self, timeout=None):
         # type: (Optional[float]) -> bool
@@ -2441,14 +2460,9 @@ class DogStatsd(object):
             final flush and socket close ran. False if timeout (or the grace
             period above) elapsed first, in which case neither the final
             flush nor the socket close ran (see below) -- either because the
-            sender thread is still running, or because it gave up on a
-            payload still retrying a connection failure and dropped it
-            (counted in packets_dropped_writer) instead of delivering it. Do
-            not call stop() again while that sender is still running: it
-            queues a second internal shutdown signal that is never drained,
-            which can make wait_for_pending() block forever on the abandoned
-            queue. Use wait_for_pending() to wait for the sender instead,
-            then call stop() again once it has actually stopped.
+            sender thread is still running, or because it reached its
+            shutdown deadline while retrying and had to abandon the remaining
+            queued payloads (counted in packets_dropped_writer).
         """
 
         stopped = self.disable_background_sender(timeout)
@@ -2456,16 +2470,16 @@ class DogStatsd(object):
         self._disable_aggregation = True
 
         if not stopped:
-            if self._sender_abandoned_payload:
-                # The sender thread did exit, but only by giving up on a
-                # payload still retrying a connection failure once its
-                # deadline passed (see _sender_main_loop) -- that payload was
-                # dropped, not delivered, so this is not a clean stop either.
+            with self._buffer_lock:
+                sender_state = self._sender_state
+            if sender_state == SenderState.ABORTED:
+                # The sender thread exited by abandoning the remaining queue at
+                # its shutdown deadline. Those payloads were accounted as writer
+                # drops, so this is still not a clean stop.
                 log.warning(
-                    "stop() gave up on a payload stuck retrying a connection failure after "
-                    "%ss; it was dropped instead of delivered (see packets_dropped_writer). "
-                    "Skipping the final flush and socket close",
-                    timeout,
+                    "stop() reached the sender shutdown deadline and dropped pending payload(s) "
+                    "instead of delivering them (see packets_dropped_writer). "
+                    "Skipping the final flush and socket close"
                 )
             else:
                 # We gave up waiting, so the sender thread is still running and
