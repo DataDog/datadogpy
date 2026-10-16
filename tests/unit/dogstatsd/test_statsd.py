@@ -31,7 +31,7 @@ import pytest
 # Datadog libraries
 from datadog import initialize, statsd
 from datadog import __version__ as version
-from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, PENDING_PAYLOAD_EXPIRY_SECONDS, PendingPayload, SenderQueue, Stop, UDP_OPTIMAL_PAYLOAD_LENGTH, SENDER_RETRY_MAX_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
+from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, PENDING_PAYLOAD_EXPIRY_SECONDS, PendingPayload, SenderQueue, SenderState, Stop, UDP_OPTIMAL_PAYLOAD_LENGTH, SENDER_RETRY_MAX_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
 from datadog.dogstatsd.sender_queue import is_replay_safe, payload_text
 from datadog.util.compat import monotonic as sender_queue_clock
 from datadog.dogstatsd.context import TimedContextManagerDecorator
@@ -2831,6 +2831,7 @@ async def print_foo():
             lambda item: None,
             lambda item: None,
         )
+        statsd._sender_state = SenderState.RUNNING
         statsd._send_to_server("test.metric:1|c")
 
         t0 = time.time()
@@ -2884,10 +2885,10 @@ async def print_foo():
         # disable_background_sender() must never land in the queue BEHIND
         # the Stop sentinel -- where it would be silently lost once the
         # sender reaches Stop and exits without ever seeing it. Rejecting
-        # new puts is gated on _sender_stopping (set before Stop is
-        # appended, both under the same lock _send_to_server() re-checks --
-        # see _stop_sender_thread), not on self._queue itself, which stays
-        # non-None until the sender actually finishes with it.
+        # new puts is gated on sender state (RUNNING/RETRYING only), with
+        # the DRAINING transition and Stop insertion coordinated under the
+        # same lock _send_to_server() re-checks -- not on self._queue itself,
+        # which stays non-None until the sender actually finishes with it.
         statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
         release = threading.Event()
         entered_first_send = threading.Event()
@@ -2919,20 +2920,20 @@ async def print_foo():
         stopper.start()
         second_thread = None
         try:
-            # _stop_sender_thread sets _sender_stopping (which is what
+            # _stop_sender_thread transitions to DRAINING (which is what
             # _send_to_server() rejects new puts on) well before the drain
-            # can possibly finish -- it only needs to set a flag and append
+            # can possibly finish -- it only needs to flip state and append
             # Stop, not wait for the wedged send. Poll briefly rather than a
             # fixed sleep, to stay fast without being flaky on a slower
             # machine.
             signalled = False
             deadline = time.time() + 2.0
             while time.time() < deadline:
-                if statsd._sender_stopping.is_set():
+                if statsd._sender_state == SenderState.DRAINING:
                     signalled = True
                     break
                 time.sleep(0.01)
-            self.assertTrue(signalled, "the shutdown signal must be set promptly, without waiting for the drain")
+            self.assertTrue(signalled, "the sender must enter DRAINING promptly, without waiting for the drain")
             self.assertIsNotNone(statsd._queue, "the real, still-draining queue must remain reachable")
             self.assertTrue(stopper.is_alive(), "stop() must still be waiting on the wedged sender")
 
@@ -2955,6 +2956,46 @@ async def print_foo():
             sent, ["first:1|c\n", "second:1|c\n"],
             "the racing payload must have been delivered (via a direct send), not lost behind Stop",
         )
+
+    def test_repeated_stop_while_draining_inserts_stop_once(self):
+        # A timed-out stop() leaves the sender in DRAINING. Repeating stop()
+        # while that same sender is still alive must wait on it, not queue a
+        # second Stop sentinel.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        release = threading.Event()
+        entered_send = threading.Event()
+
+        def blocking_xmit(packet, queue_mode=False):
+            entered_send.set()
+            release.wait(30.0)
+            return True
+
+        statsd._xmit_packet_with_telemetry = blocking_xmit
+        statsd._send_to_server("first:1|c")
+        self.assertTrue(entered_send.wait(5.0), "sender never picked up first payload")
+
+        stop_puts = {"count": 0}
+        original_put = statsd._queue.put
+
+        def capture_put(item):
+            if item is Stop:
+                stop_puts["count"] += 1
+            return original_put(item)
+
+        statsd._queue.put = capture_put
+
+        try:
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            self.assertEqual(stop_puts["count"], 1)
+
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            self.assertEqual(stop_puts["count"], 1, "repeated stop() must not enqueue an extra Stop")
+
+            release.set()
+            self.assertIs(self._call_bounded(statsd.wait_for_pending, (5.0,)), True)
+            self.assertIs(statsd.stop(5.0), True)
+        finally:
+            release.set()
 
     def test_stop_timeout_is_bounded_when_a_producer_is_wedged_waiting_for_room(self):
         # The actual regression this guards against: a producer thread
@@ -3317,6 +3358,7 @@ async def print_foo():
             statsd._account_dropped_queue_full,
             statsd._account_dropped_expired,
         )
+        statsd._sender_state = SenderState.RUNNING
 
         first, second, third = "test.metric.first", "test.metric.second", "test.metric.third"
         statsd._send_to_server(first)
@@ -4088,6 +4130,28 @@ async def print_foo():
             self.assertLess(time.time() - t0, 5.0, "stop() did not bound the retry loop")
         self.assertIsNone(statsd._queue)
         self.assertEqual(statsd.packets_dropped_writer, 1, "the abandoned payload must be accounted for")
+
+    def test_second_stop_stays_false_after_background_abort(self):
+        # If an initial stop(timeout) returns False because it timed out while
+        # the sender was still draining, and that sender later exits by
+        # abandoning pending payloads, a second stop() should still report
+        # failure (ABORTED), not "success".
+        statsd = self._unreachable_retrying_client()
+        statsd.gauge_with_timestamp("replay.safe", 1, timestamp=int(time.time()))
+        time.sleep(0.1)
+
+        with patch("datadog.dogstatsd.base.SENDER_UNBOUNDED_STOP_GRACE_SECONDS", 0.3), \
+                patch("datadog.dogstatsd.base.SENDER_STOP_RETRY_INTERVAL", 0.05):
+            self.assertIs(self._call_bounded(statsd.stop, (0.05,), limit=5.0), False)
+
+            deadline = time.time() + 5.0
+            while statsd._sender_thread is not None and time.time() < deadline:
+                time.sleep(0.02)
+
+            self.assertIsNone(statsd._sender_thread, "sender should eventually exit after abort")
+            self.assertIs(statsd._sender_state, SenderState.ABORTED)
+            self.assertIs(statsd.stop(1.0), False)
+            self.assertGreaterEqual(statsd.packets_dropped_writer, 1)
 
     def test_pre_fork_is_bounded_with_a_stuck_replay_safe_payload(self):
         # Same starvation, reached through pre_fork() -- which matters more:
