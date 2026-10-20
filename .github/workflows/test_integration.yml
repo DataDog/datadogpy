@@ -2,6 +2,7 @@ name: Run Integration Tests
 
 permissions:
   contents: read
+  id-token: write # Needed to federate tokens with dd-sts
 
 on: # yamllint disable-line rule:truthy
   pull_request:
@@ -25,6 +26,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - name: Get Datadog credentials
+        id: dd-sts
+        uses: DataDog/dd-sts-action@2e8187910199bd93129520183c093e19aa585c75 # v1.0.0
+        with:
+          policy: datadogpy-integration-tests
+
       - name: Set up Python 3.9
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
@@ -39,13 +46,13 @@ jobs:
       - name: Run integration tests
         run: tox -e integration -- --vcr-record=all
         env:
-          DD_TEST_CLIENT_API_KEY: "${{ secrets.DD_TEST_CLIENT_API_KEY }}"
-          DD_TEST_CLIENT_APP_KEY: "${{ secrets.DD_TEST_CLIENT_APP_KEY }}"
-          DD_TEST_CLIENT_USER: "${{ secrets.DD_TEST_CLIENT_USER }}"
+          DD_TEST_CLIENT_API_KEY: ${{ steps.dd-sts.outputs.api_key }}
+          DD_TEST_CLIENT_APP_KEY: ${{ steps.dd-sts.outputs.app_key }}
+          DD_TEST_CLIENT_USER: ${{ vars.DD_TEST_CLIENT_USER }}
 
       - name: Run admin integration tests
         run: tox -e integration-admin -- --vcr-record=all
         env:
-          DD_TEST_CLIENT_API_KEY: ${{ secrets.DD_TEST_CLIENT_API_KEY }}
-          DD_TEST_CLIENT_APP_KEY: ${{ secrets.DD_TEST_CLIENT_APP_KEY }}
-          DD_TEST_CLIENT_USER: ${{ secrets.DD_TEST_CLIENT_USER }}
+          DD_TEST_CLIENT_API_KEY: ${{ steps.dd-sts.outputs.api_key }}
+          DD_TEST_CLIENT_APP_KEY: ${{ steps.dd-sts.outputs.app_key }}
+          DD_TEST_CLIENT_USER: ${{ vars.DD_TEST_CLIENT_USER }}
