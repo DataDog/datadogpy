@@ -1793,31 +1793,23 @@ class DogStatsd(object):
 
     def _send_to_server(self, packet, replay_safe=False):
         # type: (str, bool) -> None
-        # Skip the lock if the queue is clearly unavailable for admission --
-        # the lock-protected recheck below is what actually has to be
-        # correct; this is purely an optimization.
-        if self._active_sender is not None and self._sender_state in (SenderState.RUNNING, SenderState.RETRYING):
-            # Prevent a race with disable_background_sender(): transitioning to
-            # DRAINING and appending Stop both happen under this same lock, so
-            # rechecking state here (not just self._active_sender) means a
-            # racing put() either lands strictly before Stop (still open) or is
-            # rejected outright and falls through to a direct send below --
-            # never behind Stop, where it would be silently lost once the
-            # sender reaches Stop and exits.
-            with self._buffer_lock:
-                packet_with_newline = packet + '\n'
-                active_sender = self._active_sender
-                if active_sender is not None and self._sender_state in (SenderState.RUNNING, SenderState.RETRYING):
-                    if replay_safe:
-                        # Never expires, so it needs no enqueued_at and no
-                        # wrapper at all: queue the bare string and let the
-                        # queue infer replay-safety from the type. Saves the
-                        # PendingPayload object (~56 bytes) per entry and
-                        # keeps these out of the cyclic GC's traversal set.
-                        active_sender.queue.put(packet_with_newline)
-                    else:
-                        active_sender.queue.put(PendingPayload(packet_with_newline, monotonic()))
-                    return
+        active_sender = self._active_sender
+        if active_sender is not None:
+            packet_with_newline = packet + '\n'
+            if replay_safe:
+                # Never expires, so it needs no enqueued_at and no wrapper
+                # at all: queue the bare string and let the queue infer
+                # replay-safety from the type. Saves the PendingPayload
+                # object (~56 bytes) per entry and keeps these out of the
+                # cyclic GC's traversal set.
+                item = packet_with_newline  # type: Union[str, PendingPayload]
+            else:
+                item = PendingPayload(packet_with_newline, monotonic())
+            if active_sender.queue.put(item):
+                return
+            # Rejected: Stop is already queued, so the sender is on its way
+            # out. Fall through to a direct send, same as having no active
+            # sender at all.
 
         self._xmit_packet_with_telemetry(packet + '\n')
 

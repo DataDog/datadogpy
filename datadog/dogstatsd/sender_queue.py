@@ -121,6 +121,10 @@ class SenderQueue(object):
         # this exists.
         self._closing = False
 
+        # Set by put(Stop): once Stop has been queued, nothing else is ever
+        # admitted again.
+        self._sealed = False
+
         # The items currently handed out by get() and not yet finished via
         # requeue_front() or task_done(), keyed by id(item). SenderQueue is
         # single-consumer by design (one background sender thread), so this
@@ -176,44 +180,59 @@ class SenderQueue(object):
             self._not_full.notify(reclaimed)
 
     def put(self, item):
-        # type: (QueuedItemOrStop) -> None
+        # type: (QueuedItemOrStop) -> bool
         """Queue a payload (or the Stop sentinel).
 
         If the queue is full: waits for room according to put_timeout --
         forever if it's None, up to put_timeout seconds if it's a positive
         number, or not at all if it's 0 (the default) -- then falls back to
         evicting the oldest entry (see _make_room_locked()) if the queue is
-        still full once the wait is over. Either way, put() never rejects
-        the payload outright. A close() call (from any thread) cuts any of
-        that waiting short immediately, regardless of put_timeout.
+        still full once the wait is over. A close() call (from any thread)
+        cuts any of that waiting short immediately, regardless of
+        put_timeout.
+
+        Returns True if the item was admitted. Returns False only when Stop
+        has already been queued: once that happens nothing else may ever be
+        admitted.
         """
         with self._not_empty:
-            if item is not Stop and self._maxsize > 0 and len(self._deque) >= self._maxsize:
-                if self._closing:
-                    pass  # Already closing: don't wait at all, straight to eviction below.
-                elif self._put_timeout is None:
-                    # Wait forever: an explicit opt-in to unbounded
-                    # backpressure on the calling thread. close() is what
-                    # keeps this from actually being forever once a shutdown
-                    # is underway.
-                    while len(self._deque) >= self._maxsize and not self._closing:
-                        self._not_full.wait()
-                elif self._put_timeout > 0:
-                    deadline = monotonic() + self._put_timeout
-                    while len(self._deque) >= self._maxsize and not self._closing:
-                        remaining = deadline - monotonic()
-                        if remaining <= 0:
-                            break
-                        self._not_full.wait(remaining)
-                # else: put_timeout is 0 (or negative) -- no wait at all,
-                # straight to eviction below.
+            if item is Stop:
+                self._sealed = True
+            else:
+                if self._sealed:
+                    return False
 
-                if len(self._deque) >= self._maxsize:
-                    self._make_room_locked()
+                if self._maxsize > 0 and len(self._deque) >= self._maxsize:
+                    if self._closing:
+                        pass  # Already closing: don't wait at all, straight to eviction below.
+                    elif self._put_timeout is None:
+                        # Wait forever: an explicit opt-in to unbounded
+                        # backpressure on the calling thread. close() is
+                        # what keeps this from actually being forever once
+                        # a shutdown is underway.
+                        while len(self._deque) >= self._maxsize and not self._closing:
+                            self._not_full.wait()
+                    elif self._put_timeout > 0:
+                        deadline = monotonic() + self._put_timeout
+                        while len(self._deque) >= self._maxsize and not self._closing:
+                            remaining = deadline - monotonic()
+                            if remaining <= 0:
+                                break
+                            self._not_full.wait(remaining)
+                    # else: put_timeout is 0 (or negative) -- no wait at
+                    # all, straight to eviction below.
+
+                    # Re-check as waiting on _not_full above releases the lock.
+                    if self._sealed:
+                        return False
+
+                    if len(self._deque) >= self._maxsize:
+                        self._make_room_locked()
 
             self._deque.append(item)
             self._unfinished_tasks += 1
             self._not_empty.notify()
+            return True
 
     def close(self):
         # type: () -> None
@@ -225,11 +244,12 @@ class SenderQueue(object):
         thread is stuck inside that wait (that stuck thread is exactly what
         this is for). Without it, a put() with put_timeout=None waits
         forever for room that will never open up once nothing is draining
-        the queue, and even a bounded put_timeout can outlast whatever
-        timeout a caller trying to shut things down asked for -- see
-        DogStatsd._stop_sender_thread(), which calls this before it needs
-        the *caller's* lock (_buffer_lock) that a stuck put() would
-        otherwise be holding for the entire wait.
+        the queue: once the sender thread dequeues Stop and exits, nothing
+        will ever call get() again to free a slot, so a producer still
+        waiting at that point would otherwise hang forever (or for up to
+        its own put_timeout). DogStatsd._stop_sender_thread() calls this
+        before inserting Stop so no producer is left waiting on room that
+        can never come.
 
         Sticky: once closed, no future put() on this queue ever waits for
         room again, regardless of put_timeout -- it goes straight to
@@ -237,9 +257,9 @@ class SenderQueue(object):
         shutdown starts with a fresh SenderQueue instead.
 
         This does not stop put()/get() from working, and does not reject or
-        drop anything by itself -- it only ends a wait early. Refusing new
-        payloads outright is the caller's job (see DogStatsd._send_to_server(),
-        which checks the sender lifecycle state before ever calling put()).
+        drop anything by itself -- it only ends a wait early. Refusing a
+        payload outright once Stop has been queued is put()'s own job (see
+        its docstring and self._sealed).
         """
         with self._not_full:
             self._closing = True
