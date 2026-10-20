@@ -72,8 +72,9 @@ def payload_text(item):
 class SenderQueue(object):
     """Bounded hand-off queue between application threads and the background sender thread.
 
-    put() never rejects a payload outright. When the queue is already at its
-    maximum size, what happens depends on put_timeout:
+    Until the queue is sealed (by sending a Stop sentinel), put() never rejects a
+    payload outright. When the queue is already at its maximum size, what happens
+    depends on put_timeout:
       - 0 (the default): no waiting at all -- the oldest entry is dropped
         immediately to make room, along with any additional expired entries
         left at the front.

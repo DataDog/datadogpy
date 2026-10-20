@@ -2250,9 +2250,6 @@ class DogStatsd(object):
         grace = SENDER_UNBOUNDED_STOP_GRACE_SECONDS if timeout is None else timeout
         stop_deadline = monotonic() + grace
 
-        # A put() can be blocked inside SenderQueue waiting for room while it
-        # still holds _buffer_lock. close() wakes it before we need that lock
-        # for the DRAINING transition and Stop insertion.
         active_sender_to_close = self._active_sender
         if active_sender_to_close is not None:
             active_sender_to_close.queue.close()
