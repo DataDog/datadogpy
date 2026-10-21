@@ -101,9 +101,7 @@ class Aggregator(object):
         self, metric_type, metric_class, name, value, tags, rate, timestamp=0, cardinality=None
     ):
         # type: (str, Any, str, Any, Optional[List[str]], Optional[float], int, Optional[str]) -> None
-        if cardinality is None:
-            cardinality = self.cardinality
-        validate_cardinality(cardinality)
+        cardinality = validate_cardinality(cardinality) or validate_cardinality(self.cardinality)
         context = self.get_context(name, tags, cardinality)
         with self._locks[metric_type]:
             if context in self.metrics_map[metric_type]:
@@ -139,7 +137,5 @@ class Aggregator(object):
             rate = 1
         context_key = self.get_context(name, tags)
         metric_context = self.max_sample_metric_map[metric_type]
-        if cardinality is None:
-            cardinality = self.cardinality
-            validate_cardinality(cardinality)
+        cardinality = validate_cardinality(cardinality) or validate_cardinality(self.cardinality)
         return metric_context.sample(name, value, tags, rate, context_key, self.max_samples_per_context, cardinality)
