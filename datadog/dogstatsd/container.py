@@ -47,10 +47,13 @@ class Cgroup(object):
 
     def __init__(self):
         # type: () -> None
-        if self._is_host_cgroup_namespace():
-            self.container_id = self._read_cgroup_path()
-            return
-        self.container_id = self._get_cgroup_from_inode()
+        # Always attempt to parse the container ID from the cgroup path first.
+        # Only fall back to the inode approach when the path yields nothing and we
+        # are not in the host cgroup namespace (i.e. we are in a container running
+        # with a private cgroup namespace, typical of cgroup v2 setups).
+        self.container_id = self._read_cgroup_path()
+        if self.container_id is None and not self._is_host_cgroup_namespace():
+            self.container_id = self._get_cgroup_from_inode()
 
     def _is_host_cgroup_namespace(self):
         # type: () -> bool
@@ -90,30 +93,37 @@ class Cgroup(object):
     def _get_cgroup_from_inode(self):
         # type: () -> Optional[str]
         """Read the container ID from the cgroup inode."""
-        # Parse /proc/self/cgroup and get a map of controller to its associated cgroup node path.
-        cgroup_controllers_paths = {}
-        with open(self.CGROUP_PATH, mode="r") as fp:
-            for line in fp:
-                tokens = line.strip().split(":")
-                if len(tokens) != 3:
-                    continue
-                if tokens[1] == self.CGROUPV1_BASE_CONTROLLER or tokens[1] == self.CGROUPV2_BASE_CONTROLLER:
-                    cgroup_controllers_paths[tokens[1]] = tokens[2]
+        try:
+            # Parse /proc/self/cgroup and get a map of controller to its associated cgroup node path.
+            cgroup_controllers_paths = {}
+            with open(self.CGROUP_PATH, mode="r") as fp:
+                for line in fp:
+                    tokens = line.strip().split(":")
+                    if len(tokens) != 3:
+                        continue
+                    if tokens[1] == self.CGROUPV1_BASE_CONTROLLER or tokens[1] == self.CGROUPV2_BASE_CONTROLLER:
+                        cgroup_controllers_paths[tokens[1]] = tokens[2]
 
-        # Retrieve the cgroup inode from "/sys/fs/cgroup + controller + cgroupNodePath"
-        for controller in [
-            self.CGROUPV1_BASE_CONTROLLER,
-            self.CGROUPV2_BASE_CONTROLLER,
-        ]:
-            if controller in cgroup_controllers_paths:
-                inode_path = os.path.join(
-                    self.CGROUP_MOUNT_PATH,
-                    controller,
-                    cgroup_controllers_paths[controller] if cgroup_controllers_paths[controller] != "/" else "",
-                )
-                inode = os.stat(inode_path).st_ino
-                # 0 is not a valid inode. 1 is a bad block inode and 2 is the root of a filesystem.
-                if inode > 2:
-                    return "in-{0}".format(inode)
+            # Retrieve the cgroup inode from "/sys/fs/cgroup + controller + cgroupNodePath".
+            # Use lstrip("/") so that absolute node paths (e.g. "/docker/abc123") are treated
+            # as relative when joined with the mount base, preventing os.path.join from silently
+            # discarding the mount prefix.
+            for controller in [
+                self.CGROUPV1_BASE_CONTROLLER,
+                self.CGROUPV2_BASE_CONTROLLER,
+            ]:
+                if controller in cgroup_controllers_paths:
+                    node_path = cgroup_controllers_paths[controller]
+                    inode_path = os.path.join(
+                        self.CGROUP_MOUNT_PATH,
+                        controller,
+                        node_path.lstrip("/"),
+                    )
+                    inode = os.stat(inode_path).st_ino
+                    # 0 is not a valid inode. 1 is a bad block inode and 2 is the root of a filesystem.
+                    if inode > 2:
+                        return "in-{0}".format(inode)
+        except Exception:
+            pass
 
         return None
