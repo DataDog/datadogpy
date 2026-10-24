@@ -2069,7 +2069,7 @@ class DogStatsd(object):
         if cardinality:
             string = "%s|card:%s" % (string, cardinality)
 
-        if len(string) > 8 * 1024:
+        if len(string.encode(self.encoding)) > 8 * 1024:
             raise ValueError(
                 u'Event "{0}" payload is too big (>=8KB). Event discarded'.format(
                     title
