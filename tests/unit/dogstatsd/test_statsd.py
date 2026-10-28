@@ -3040,18 +3040,35 @@ async def print_foo():
         self.assertEqual("stop.buffered:1|g\n", fake_socket.recv(no_wait=True))
 
     def test_stop_reports_a_failed_flush_of_payloads_the_sender_handed_back(self):
-        # The background sender drains and exits, but a payload queued after
-        # the Stop sentinel is refused and falls through to the synchronous
-        # sender. If that send fails, stop() must still report it.
+        # Keep the sender alive after stop() seals its queue. A payload sent
+        # then must be rejected by the queue, fall back to the synchronous
+        # sender, and report that fallback failure.
         statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
-        statsd.socket = FakeSocket()
+        release = threading.Event()
+        entered_send = threading.Event()
+        direct_packets = []
 
-        self.assertIs(statsd.stop(), True)
+        def xmit(packet, queue_mode=False):
+            if queue_mode:
+                entered_send.set()
+                release.wait(30.0)
+                return True
+            direct_packets.append(packet)
+            return False
 
-        # Sender gone: this is now a purely synchronous client.
-        statsd.socket = BrokenSocket()
-        statsd._send_to_buffer("orphan:1|c")
-        self.assertIs(statsd.stop(), False)
+        statsd._xmit_packet_with_telemetry = xmit
+        statsd._send_to_server("inflight:1|c")
+        self.assertTrue(entered_send.wait(5.0), "sender never picked up the in-flight payload")
+
+        try:
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            self.assertIsNotNone(statsd._queue, "sender should still be alive with a sealed queue")
+
+            self.assertIs(statsd._send_to_server("orphan:1|c"), False)
+            self.assertEqual(direct_packets, ["orphan:1|c\n"])
+        finally:
+            release.set()
+            self.assertIs(self._call_bounded(statsd.stop, (5.0,)), True)
 
     def test_stop_timeout_reports_failure_and_keeps_the_thread_joinable(self):
         # A wedged sender must not make stop() hang forever when a timeout is
