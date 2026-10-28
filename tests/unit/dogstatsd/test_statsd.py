@@ -2848,6 +2848,72 @@ async def print_foo():
             self.assertIs(statsd.wait_for_pending(5.0), True)
             statsd.stop()
 
+    def test_wait_for_pending_zero_attempts_to_flush_both_buffers(self):
+        # timeout=0 is a non-blocking drain poll, but it historically attempts
+        # the buffered flush first. Keep attempting both internal buffers so
+        # replay-safe payloads are not skipped just because the immediate
+        # deadline elapsed after the first flush call.
+        statsd = DogStatsd(
+            disable_background_sender=True,
+            disable_buffering=False,
+            disable_telemetry=True,
+            flush_interval=0,
+        )
+        fake_socket = FakeSocket()
+        statsd.socket = fake_socket
+
+        statsd.gauge("wait.zero", 1)
+        statsd.gauge_with_timestamp("wait.zero.replay_safe", 2, int(time.time()))
+
+        self.assertIs(statsd.wait_for_pending(0), True)
+        payload = fake_socket.recv(2, no_wait=True)
+        self.assertIn("wait.zero:1|g", payload)
+        self.assertIn("wait.zero.replay_safe:2|g", payload)
+
+    def test_wait_for_pending_timeout_includes_the_initial_flush(self):
+        # wait_for_pending(timeout) owns an end-to-end timeout, but the initial
+        # flush may be waiting for room in a full sender queue. That wait is
+        # bounded by sender_queue_timeout, so once the timeout is spent we must
+        # not start flushing the second internal buffer and wait again.
+        statsd = DogStatsd(
+            disable_background_sender=False,
+            disable_buffering=False,
+            disable_telemetry=True,
+            flush_interval=0,
+            sender_queue_size=1,
+            sender_queue_timeout=0.5,
+        )
+        entered = threading.Event()
+        release = threading.Event()
+
+        def blocking_xmit(packet, queue_mode=False):
+            entered.set()
+            release.wait(5.0)
+            return True
+
+        statsd._xmit_packet_with_telemetry = blocking_xmit
+        statsd._send_to_server("inflight:1|c")
+        self.assertTrue(entered.wait(5.0), "sender never picked up the payload")
+        statsd._send_to_server("queued:1|c")
+        self.assertEqual(statsd._queue.qsize(), 1, "queue should be full before wait_for_pending flushes")
+        statsd.gauge("buffered", 1)
+        statsd.gauge_with_timestamp("buffered.replay_safe", 1, int(time.time()))
+
+        try:
+            t0 = time.time()
+            self.assertIs(self._call_bounded(statsd.wait_for_pending, (0.1,)), False)
+            elapsed = time.time() - t0
+            self.assertGreaterEqual(elapsed, 0.1)
+            self.assertLess(
+                elapsed,
+                0.8,
+                "wait_for_pending should not wait on both buffered payloads after its timeout elapsed",
+            )
+        finally:
+            release.set()
+            self.assertIs(self._call_bounded(statsd.wait_for_pending, (5.0,)), True)
+            statsd.stop()
+
     def test_wait_for_pending_returns_true_with_no_queue(self):
         # Nothing queued (background sender disabled) is trivially "drained".
         statsd = DogStatsd(disable_background_sender=True, disable_telemetry=True)
