@@ -3290,26 +3290,41 @@ async def print_foo():
             sender_queue_size=1,
             sender_queue_timeout=None,  # wait forever for room: the deadlock shape
         )
-        attempts = []
-        attempts_lock = threading.Lock()
         allow_success = threading.Event()
+        requeued = threading.Event()
+        flusher_waiting_for_room = threading.Event()
+        release_sender_after_requeue = threading.Event()
 
         def retry_until_allowed(packet, queue_mode=False):
             # Connection trouble: the sender requeues at the front and backs
             # off, which is the branch that needs _sender_condition. Once the
             # test allows it, sends succeed and the queue can drain again.
-            with attempts_lock:
-                attempts.append(packet)
             return True if allow_success.is_set() else None
 
         statsd._xmit_packet_with_telemetry = retry_until_allowed
 
-        def attempt_count():
-            with attempts_lock:
-                return len(attempts)
+        original_requeue_front = statsd._queue.requeue_front
+        pause_requeue = {"armed": True}
 
-        # Short backoff so the sender cycles quickly and the requeued payload
-        # spends most of its time sitting in the (full) queue.
+        def requeue_front_and_pause(item):
+            original_requeue_front(item)
+            if pause_requeue["armed"]:
+                pause_requeue["armed"] = False
+                requeued.set()
+                release_sender_after_requeue.wait(5.0)
+
+        statsd._queue.requeue_front = requeue_front_and_pause
+
+        original_not_full_wait = statsd._queue._not_full.wait
+
+        def wait_for_room(timeout=None):
+            flusher_waiting_for_room.set()
+            return original_not_full_wait(timeout)
+
+        statsd._queue._not_full.wait = wait_for_room
+
+        # Short backoff so the sender reaches the condition quickly once the
+        # test releases it from the requeue hook.
         with patch("datadog.dogstatsd.base.SENDER_RETRY_INITIAL_BACKOFF", 0.02), \
                 patch("datadog.dogstatsd.base.SENDER_RETRY_MAX_BACKOFF", 0.05):
             flushed = {}
@@ -3320,36 +3335,33 @@ async def print_foo():
             flusher = threading.Thread(target=do_flush)
             flusher.daemon = True
             try:
-                statsd._send_to_server("head:1|c")  # fills the single queue slot
-                deadline = time.time() + 5.0
-                while time.time() < deadline and not (attempt_count() and statsd._queue.qsize() == 1):
-                    time.sleep(0.005)
-                self.assertGreaterEqual(attempt_count(), 1, "sender never attempted the payload")
+                statsd._send_to_server("head:1|c")
+                self.assertTrue(requeued.wait(5.0), "sender never requeued the failed payload")
                 self.assertEqual(statsd._queue.qsize(), 1, "the requeued payload should be filling the queue")
 
-                # Park the producer in put()'s wait-for-room while it holds
+                # Park the flusher in put()'s wait-for-room while it holds
                 # _buffer_lock.
                 statsd.gauge("buffered", 1)
                 flusher.start()
-                time.sleep(0.2)
-
-                # The regression: the sender must keep cycling while the
-                # producer sits there, instead of freezing on the same lock.
-                before = attempt_count()
-                time.sleep(0.2)
-                self.assertGreater(
-                    attempt_count(),
-                    before,
-                    "the sender stopped retrying: a blocked buffered flush wedged it",
+                self.assertTrue(
+                    flusher_waiting_for_room.wait(5.0),
+                    "flusher never reached SenderQueue._not_full.wait()",
                 )
+                buffer_lock_acquired = statsd._buffer_lock.acquire(False)
+                if buffer_lock_acquired:
+                    statsd._buffer_lock.release()
+                self.assertFalse(buffer_lock_acquired, "flusher should hold _buffer_lock while waiting for room")
 
-                # Let the sender drain, which frees the room the producer needs.
+                # With the old shared lock, releasing the sender here wedged it
+                # trying to acquire _sender_condition, so it never freed room.
                 allow_success.set()
+                release_sender_after_requeue.set()
                 flusher.join(timeout=5.0)
-                self.assertFalse(flusher.is_alive(), "flush() never returned once the queue could drain")
+                self.assertFalse(flusher.is_alive(), "flush() never returned once the sender retried")
                 self.assertIs(flushed.get("value"), True)
                 self.assertIs(statsd.wait_for_pending(5.0), True)
             finally:
+                release_sender_after_requeue.set()
                 allow_success.set()
                 statsd.stop(1.0)
                 flusher.join(timeout=5.0)
