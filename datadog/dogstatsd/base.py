@@ -1325,15 +1325,25 @@ class DogStatsd(object):
             non-empty buffers could be flushed. True otherwise. Both batches
             are always attempted when no deadline is supplied.
         """
+        sent, complete = self._flush_buffered_metrics(deadline)
+        return sent and complete
+
+    def _flush_buffered_metrics(self, deadline=None):
+        # type: (Optional[float]) -> Tuple[bool, bool]
+        """Flush both batches, returning (sent, complete).
+
+        sent tracks synchronous send failures. complete tracks whether lines
+        remain buffered because deadline elapsed.
+        """
         with self._buffer_lock:
             # Non-replay-safe first: it's the only batch subject to staleness
             # expiry, so give it the earliest queue position.
             sent = self._flush_one_buffer(False)
             if deadline is not None and monotonic() >= deadline and self._buffer_rs:
-                return False
+                return sent, False
             # Don't short-circuit: the replay-safe batch must be flushed even
             # if the first packet failed.
-            return self._flush_one_buffer(True) and sent
+            return self._flush_one_buffer(True) and sent, True
 
     def flush_aggregated_metrics(self):
         # type: () -> bool
@@ -2441,12 +2451,17 @@ class DogStatsd(object):
             timeout; keep them finite when a strict bound is required.
         :type timeout: float, optional
         :return: True if every queued payload has been sent, dropped or
-            expired, False if timeout elapsed with payloads still outstanding.
+            expired. False if timeout elapsed with queued or buffered payloads
+            still outstanding. A synchronous fallback drop counts as drained:
+            it has already been accounted in packets_dropped_writer.
         """
 
         deadline = None if timeout is None else monotonic() + timeout
         flush_deadline = None if timeout is None or timeout == 0 else deadline
-        if not self.flush_buffered_metrics(flush_deadline):
+        # A synchronous fallback drop is already accounted; only data still
+        # buffered should skip the drain wait below.
+        _, flushed_completely = self._flush_buffered_metrics(flush_deadline)
+        if not flushed_completely:
             return False
 
         # Avoid race with disable_background_sender. We don't need a
