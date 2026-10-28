@@ -2855,6 +2855,66 @@ async def print_foo():
         self.assertIs(statsd.wait_for_pending(), True)
         self.assertIs(statsd.wait_for_pending(0), True)
 
+    def test_stop_reports_a_failed_final_flush_of_buffered_metrics(self):
+        # The queue drains cleanly (there is no background sender here), but
+        # the buffered payload the synchronous sender takes over cannot be
+        # delivered. stop() must report that instead of claiming a clean
+        # shutdown: the payload is dropped, not retried.
+        statsd = DogStatsd(
+            disable_background_sender=True,
+            disable_buffering=False,
+            disable_telemetry=True,
+        )
+        statsd.socket = BrokenSocket()
+
+        statsd.gauge("stop.buffered", 1)
+        self.assertTrue(statsd._buffer, "metric should still be buffered before stop()")
+
+        self.assertIs(statsd.stop(), False)
+        # The failure is reported, but the stop still completed: buffer
+        # emptied and socket closed.
+        self.assertFalse(statsd._buffer)
+        self.assertIsNone(statsd.socket)
+
+    def test_stop_reports_a_failed_final_flush_of_aggregated_metrics(self):
+        # Same contract for the aggregated flush stop() runs first.
+        statsd = DogStatsd(disable_background_sender=True, disable_telemetry=True)
+        statsd.enable_aggregation()
+        statsd.socket = BrokenSocket()
+
+        statsd.increment("stop.aggregated")
+
+        self.assertIs(statsd.stop(), False)
+
+    def test_stop_returns_true_when_the_final_flush_succeeds(self):
+        # Control case for the two above: a working socket means a clean stop.
+        statsd = DogStatsd(
+            disable_background_sender=True,
+            disable_buffering=False,
+            disable_telemetry=True,
+        )
+        fake_socket = FakeSocket()
+        statsd.socket = fake_socket
+
+        statsd.gauge("stop.buffered", 1)
+
+        self.assertIs(statsd.stop(), True)
+        self.assertEqual("stop.buffered:1|g\n", fake_socket.recv(no_wait=True))
+
+    def test_stop_reports_a_failed_flush_of_payloads_the_sender_handed_back(self):
+        # The background sender drains and exits, but a payload queued after
+        # the Stop sentinel is refused and falls through to the synchronous
+        # sender. If that send fails, stop() must still report it.
+        statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+        statsd.socket = FakeSocket()
+
+        self.assertIs(statsd.stop(), True)
+
+        # Sender gone: this is now a purely synchronous client.
+        statsd.socket = BrokenSocket()
+        statsd._send_to_buffer("orphan:1|c")
+        self.assertIs(statsd.stop(), False)
+
     def test_stop_timeout_reports_failure_and_keeps_the_thread_joinable(self):
         # A wedged sender must not make stop() hang forever when a timeout is
         # given, and stop() must say it didn't finish.

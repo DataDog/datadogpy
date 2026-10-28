@@ -1268,34 +1268,44 @@ class DogStatsd(object):
             self._buffer_rs_size = 0  # type: int
 
     def flush(self):
-        # type: () -> None
-        self.flush_buffered_metrics()
+        # type: () -> bool
+        """Flush the metrics buffer.
+
+        :return: False if a payload was handed to the synchronous sender and
+            it failed to deliver it, True otherwise. See
+            flush_buffered_metrics().
+        """
+        return self.flush_buffered_metrics()
 
     def _flush_one_buffer(self, replay_safe):
-        # type: (bool) -> None
+        # type: (bool) -> bool
         """Flush just the batch holding lines with the given expiry policy.
 
         Caller must hold self._buffer_lock (an RLock, so a re-entrant flush
         from _send_to_buffer() is fine). Only the named batch is touched: the
         other one keeps accumulating, which is the whole point of splitting
         them.
+
+        Returns False only when the payload went out through the synchronous
+        sender and that send failed; an empty batch, or one handed off to the
+        background sender, counts as success.
         """
         if replay_safe:
             lines = self._buffer_rs
             if not lines:
-                return
+                return True
             self._buffer_rs = []
             self._buffer_rs_size = 0
         else:
             lines = self._buffer
             if not lines:
-                return
+                return True
             self._buffer = []
             self._buffer_size = 0
-        self._send_to_server("\n".join(lines), replay_safe)
+        return self._send_to_server("\n".join(lines), replay_safe)
 
     def flush_buffered_metrics(self):
-        # type: () -> None
+        # type: () -> bool
         """
         Flush the metrics buffer by sending the data to the server.
 
@@ -1304,25 +1314,40 @@ class DogStatsd(object):
         not preserved: replay-safe payloads carry their own explicit
         timestamp, and non-replay-safe ones are timestamped on receipt, so
         neither one's meaning depends on where the other lands.
+
+        :return: False if any packet was sent synchronously and the send
+            failed (the packet was dropped and accounted in
+            packets_dropped_writer), True otherwise. Both batches are always
+            attempted, regardless of the outcome of the first.
         """
         with self._buffer_lock:
             # Non-replay-safe first: it's the only batch subject to staleness
             # expiry, so give it the earliest queue position.
-            self._flush_one_buffer(False)
-            self._flush_one_buffer(True)
+            sent = self._flush_one_buffer(False)
+            # Don't short-circuit: the replay-safe batch must be flushed even
+            # if the first packet failed.
+            return self._flush_one_buffer(True) and sent
 
     def flush_aggregated_metrics(self):
-        # type: () -> None
+        # type: () -> bool
         """
         Flush the aggregated metrics
+
+        :return: False if any metric was sent synchronously and the send
+            failed, True otherwise. Every aggregated metric is always
+            reported, regardless of earlier failures.
         """
+        sent = True
+
         metrics = self.aggregator.flush_aggregated_metrics()
         for m in metrics:
-            self._report(m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp, cardinality=m.cardinality)
+            sent = self._report(
+                m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp, cardinality=m.cardinality
+            ) and sent
 
         sampled_metrics = self.aggregator.flush_aggregated_sampled_metrics()
         for m in sampled_metrics:
-            self._report(
+            sent = self._report(
                 m.name,
                 m.metric_type,
                 m.value,
@@ -1331,7 +1356,9 @@ class DogStatsd(object):
                 m.timestamp,
                 False,
                 cardinality=m.cardinality,
-            )
+            ) and sent
+
+        return sent
 
     def gauge(
         self,
@@ -1662,18 +1689,23 @@ class DogStatsd(object):
         return "".join(parts)
 
     def _report(self, metric, metric_type, value, tags, sample_rate, timestamp=0, sampling=True, cardinality=None):
-        # type: (Text, str, Any, Optional[List[str]], Optional[float], int, bool, Optional[str]) -> None
+        # type: (Text, str, Any, Optional[List[str]], Optional[float], int, bool, Optional[str]) -> bool
         """
         Create a metric packet and send it.
 
         More information about the packets' format:
         https://docs.datadoghq.com/developers/dogstatsd/datagram_shell/?tab=metrics#the-dogstatsd-protocol
+
+        Returns False only when the packet was handed to the synchronous
+        sender and that send failed. A metric that is buffered, aggregated,
+        enqueued for the background sender, sampled out, or dropped because
+        the client is disabled is not a failure and returns True.
         """
         if value is None:
-            return
+            return True
 
         if self._enabled is not True:
-            return
+            return True
 
         if self._telemetry:
             self.metrics_count += 1
@@ -1683,7 +1715,7 @@ class DogStatsd(object):
                 sample_rate = self.default_sample_rate
 
             if sample_rate != 1 and random() > sample_rate:
-                return
+                return True
         # timestamps (protocol v1.3) only allowed on gauges and counts
         allows_timestamp = metric_type == MetricType.GAUGE or metric_type == MetricType.COUNT
 
@@ -1705,7 +1737,7 @@ class DogStatsd(object):
         replay_safe = timestamp > 0
 
         # Send it
-        self._send(payload, replay_safe)
+        return self._send(payload, replay_safe)
 
     def _reset_telemetry(self):
         # type: () -> None
@@ -1792,7 +1824,16 @@ class DogStatsd(object):
             self._last_flush_time + self._telemetry_flush_interval < time.time()
 
     def _send_to_server(self, packet, replay_safe=False):
-        # type: (str, bool) -> None
+        # type: (str, bool) -> bool
+        """Hand one payload to the background sender, or send it right away.
+
+        Returns False only when the payload was sent synchronously (no
+        background sender, or the sender refused the payload because it is
+        shutting down) and that send failed -- the payload was dropped and
+        accounted in packets_dropped_writer. Queuing the payload for the
+        background sender returns True: its delivery is reported separately
+        through the sender's own telemetry.
+        """
         active_sender = self._active_sender
         if active_sender is not None:
             packet_with_newline = packet + '\n'
@@ -1806,12 +1847,13 @@ class DogStatsd(object):
             else:
                 item = PendingPayload(packet_with_newline, monotonic())
             if active_sender.queue.put(item):
-                return
+                return True
             # Rejected: Stop is already queued, so the sender is on its way
             # out. Fall through to a direct send, same as having no active
             # sender at all.
 
-        self._xmit_packet_with_telemetry(packet + '\n')
+        # queue_mode is False here, so the result is never None.
+        return bool(self._xmit_packet_with_telemetry(packet + '\n'))
 
     def _xmit_packet_with_telemetry(self, packet, queue_mode=False):
         # type: (str, bool) -> Optional[bool]
@@ -1957,8 +1999,12 @@ class DogStatsd(object):
             return False
 
     def _send_to_buffer(self, packet, replay_safe=False):
-        # type: (str, bool) -> None
+        # type: (str, bool) -> bool
         """Append one serialized line to the batch matching its expiry policy.
+
+        Returns False only when appending this line overflowed its batch and
+        the resulting flush was sent synchronously and failed; the new line is
+        buffered either way.
 
         Deliberately written out per branch rather than indexing a dict by
         replay_safe, and with the size check inlined rather than delegated to
@@ -1970,17 +2016,20 @@ class DogStatsd(object):
             # Length including the newline that will join this line to the
             # next, so the running total anticipates the final packet size.
             length = len(packet) + 1
+            sent = True
 
             if replay_safe:
                 if self._buffer_rs_size + length > self._max_payload_size:
-                    self._flush_one_buffer(True)
+                    sent = self._flush_one_buffer(True)
                 self._buffer_rs.append(packet)
                 self._buffer_rs_size += length
             else:
                 if self._buffer_size + length > self._max_payload_size:
-                    self._flush_one_buffer(False)
+                    sent = self._flush_one_buffer(False)
                 self._buffer.append(packet)
                 self._buffer_size += length
+
+            return sent
 
     def _should_flush(self, length_to_be_added, replay_safe=False):
         # type: (int, bool) -> bool
@@ -2451,9 +2500,22 @@ class DogStatsd(object):
         # type: (Optional[float]) -> bool
         """Stop the client.
 
-        Disable buffering, aggregation, background sender and flush any pending payloads to the server.
+        Disable buffering, aggregation, background sender and flush any pending
+        payloads to the server.
 
-        Client remains usable after this method, but sending metrics may block if socket_timeout is enabled.
+        Client remains usable after this method, but sending metrics may block
+        if socket_timeout is enabled.
+
+        stop() disables and drains the background sender before performing its
+        final buffered and aggregated flush. That final flush is synchronous:
+        it does not enqueue buffered payloads on the background sender, so it
+        does not use sender queue expiry/backpressure or socket_connect_retry
+        retries, and it is bounded by socket_timeout rather than by the timeout
+        below. If that synchronous send fails, stop() returns False and the
+        payload is dropped. Applications that require buffered payloads to
+        participate in background-sender retries should call flush() while the
+        sender is still enabled, or call wait_for_pending(timeout) before
+        stop().
 
         :param timeout: Maximum number of seconds to wait for the background
             sender to drain its queue and exit. None (the default) waits
@@ -2465,12 +2527,16 @@ class DogStatsd(object):
             so an Agent that never comes back cannot hang stop() forever.
         :type timeout: float, optional
         :return: True if the background sender drained and stopped, and the
-            final flush and socket close ran. False if timeout (or the grace
-            period above) elapsed first, in which case neither the final
-            flush nor the socket close ran (see below) -- either because the
-            sender thread is still running, or because it reached its
-            shutdown deadline while retrying and had to abandon the remaining
-            queued payloads (counted in packets_dropped_writer).
+            final flush delivered everything still pending. False if timeout
+            (or the grace period above) elapsed first, in which case neither
+            the final flush nor the socket close ran (see below) -- either
+            because the sender thread is still running, or because it reached
+            its shutdown deadline while retrying and had to abandon the
+            remaining queued payloads (counted in packets_dropped_writer).
+            Also False when the final flush itself failed: the queue drained
+            cleanly, but a payload the synchronous sender took over could not
+            be delivered and was dropped (also counted in
+            packets_dropped_writer). The socket is still closed in that case.
         """
 
         stopped = self.disable_background_sender(timeout)
@@ -2507,9 +2573,22 @@ class DogStatsd(object):
                 )
             return False
 
-        self.flush_aggregated_metrics()
-        self.flush_buffered_metrics()
+        # Buffering and aggregation are off and the background sender is
+        # gone, so these flushes go straight out through the synchronous
+        # sender. Run both before inspecting the outcome, then report a failed
+        # send to the caller: the payload is dropped, not retried, so a True
+        # here would claim a clean stop that didn't happen.
+        flushed_aggregated = self.flush_aggregated_metrics()
+        flushed_buffered = self.flush_buffered_metrics()
         self.close_socket()
+
+        if not (flushed_aggregated and flushed_buffered):
+            log.warning(
+                "stop() drained the background sender, but the final flush failed to send "
+                "pending payload(s), which were dropped (see packets_dropped_writer)"
+            )
+            return False
+
         return True
 
 
