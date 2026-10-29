@@ -698,7 +698,7 @@ class DogStatsd(object):
         # Background sender lifecycle state.
         self._sender_state = SenderState.STOPPED
         # Condition guarding sender state transitions and retry backoff waits.
-        self._sender_condition = threading.Condition(self._buffer_lock)
+        self._sender_condition = threading.Condition()
         # The monotonic deadline by which a draining sender must give up on
         # pending payloads. Meaningful only while state is DRAINING.
         self._sender_stop_deadline = None  # type: Optional[float]
@@ -2520,7 +2520,7 @@ class DogStatsd(object):
         # which we will fix in the next steps.
         self._socket_lock = RLock()
         self._buffer_lock = RLock()
-        self._sender_condition = threading.Condition(self._buffer_lock)
+        self._sender_condition = threading.Condition()
 
         # Reset the buffer so we don't send metrics from the parent
         # process. Also makes sure buffer properties are consistent.

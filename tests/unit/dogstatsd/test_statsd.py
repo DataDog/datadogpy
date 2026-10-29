@@ -3251,13 +3251,12 @@ async def print_foo():
 
     def test_stop_timeout_is_bounded_when_a_producer_is_wedged_waiting_for_room(self):
         # The actual regression this guards against: a producer thread
-        # blocked inside SenderQueue.put(), waiting for room in a full
-        # queue, holds _buffer_lock for as long as that wait lasts -- up to
+        # blocked inside SenderQueue.put(), waiting for room in a full queue,
+        # stays there for as long as that wait lasts -- up to
         # sender_queue_timeout, or forever if it's None. Without
-        # SenderQueue.close() waking it immediately, _stop_sender_thread()
-        # can't even acquire that lock to append Stop, so stop(timeout)
-        # ignores its own timeout entirely (bounded only by whatever else
-        # eventually frees the stuck producer -- nothing, in the worst case).
+        # SenderQueue.close() waking it immediately, stop(timeout) is bounded
+        # only by whatever else eventually frees the stuck producer --
+        # nothing, in the worst case.
         statsd = DogStatsd(
             disable_background_sender=False,
             disable_telemetry=True,
@@ -3303,6 +3302,99 @@ async def print_foo():
         finally:
             release.set()
             producer_thread.join(timeout=5.0)
+
+    def test_a_blocked_buffered_flush_does_not_wedge_a_retrying_sender(self):
+        # _sender_condition must not share _buffer_lock. The buffered flush
+        # path holds _buffer_lock across queue.put(), so a producer parked in
+        # put()'s wait-for-room used to freeze the sender's retry branch --
+        # which needs that condition between items -- and the sender is the
+        # only thing that can free the room the producer is waiting for.
+        # Unlike the direct _send_to_server() path (which no longer takes
+        # _buffer_lock at all), this one still holds it across the put.
+        statsd = DogStatsd(
+            disable_background_sender=False,
+            disable_buffering=False,  # buffered flush path holds _buffer_lock
+            disable_aggregation=True,
+            disable_telemetry=True,
+            flush_interval=0,  # no flush thread racing this
+            sender_queue_size=1,
+            sender_queue_timeout=None,  # wait forever for room: the deadlock shape
+        )
+        allow_success = threading.Event()
+        requeued = threading.Event()
+        flusher_waiting_for_room = threading.Event()
+        release_sender_after_requeue = threading.Event()
+
+        def retry_until_allowed(packet, queue_mode=False):
+            # Connection trouble: the sender requeues at the front and backs
+            # off, which is the branch that needs _sender_condition. Once the
+            # test allows it, sends succeed and the queue can drain again.
+            return True if allow_success.is_set() else None
+
+        statsd._xmit_packet_with_telemetry = retry_until_allowed
+
+        original_requeue_front = statsd._queue.requeue_front
+        pause_requeue = {"armed": True}
+
+        def requeue_front_and_pause(item):
+            original_requeue_front(item)
+            if pause_requeue["armed"]:
+                pause_requeue["armed"] = False
+                requeued.set()
+                release_sender_after_requeue.wait(5.0)
+
+        statsd._queue.requeue_front = requeue_front_and_pause
+
+        original_not_full_wait = statsd._queue._not_full.wait
+
+        def wait_for_room(timeout=None):
+            flusher_waiting_for_room.set()
+            return original_not_full_wait(timeout)
+
+        statsd._queue._not_full.wait = wait_for_room
+
+        # Short backoff so the sender reaches the condition quickly once the
+        # test releases it from the requeue hook.
+        with patch("datadog.dogstatsd.base.SENDER_RETRY_INITIAL_BACKOFF", 0.02), \
+                patch("datadog.dogstatsd.base.SENDER_RETRY_MAX_BACKOFF", 0.05):
+            flushed = {}
+
+            def do_flush():
+                flushed["value"] = statsd.flush()
+
+            flusher = threading.Thread(target=do_flush)
+            flusher.daemon = True
+            try:
+                statsd._send_to_server("head:1|c")
+                self.assertTrue(requeued.wait(5.0), "sender never requeued the failed payload")
+                self.assertEqual(statsd._queue.qsize(), 1, "the requeued payload should be filling the queue")
+
+                # Park the flusher in put()'s wait-for-room while it holds
+                # _buffer_lock.
+                statsd.gauge("buffered", 1)
+                flusher.start()
+                self.assertTrue(
+                    flusher_waiting_for_room.wait(5.0),
+                    "flusher never reached SenderQueue._not_full.wait()",
+                )
+                buffer_lock_acquired = statsd._buffer_lock.acquire(False)
+                if buffer_lock_acquired:
+                    statsd._buffer_lock.release()
+                self.assertFalse(buffer_lock_acquired, "flusher should hold _buffer_lock while waiting for room")
+
+                # With the old shared lock, releasing the sender here wedged it
+                # trying to acquire _sender_condition, so it never freed room.
+                allow_success.set()
+                release_sender_after_requeue.set()
+                flusher.join(timeout=5.0)
+                self.assertFalse(flusher.is_alive(), "flush() never returned once the sender retried")
+                self.assertIs(flushed.get("value"), True)
+                self.assertIs(statsd.wait_for_pending(5.0), True)
+            finally:
+                release_sender_after_requeue.set()
+                allow_success.set()
+                statsd.stop(1.0)
+                flusher.join(timeout=5.0)
 
     def test_stop_timeout_is_bounded_while_the_sender_holds_the_socket_lock(self):
         # The wedge that matters in practice: the sender is parked inside a
