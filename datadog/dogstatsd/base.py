@@ -2558,11 +2558,6 @@ class DogStatsd(object):
         sender is still enabled, or call wait_for_pending(timeout) before
         stop().
 
-        That clamp is per-thread, and is undone before the socket lock is
-        released: metrics sent from other threads while this flush runs keep
-        the configured socket_timeout, and are never skipped because this
-        call ran out of budget.
-
         :param timeout: Maximum number of seconds to wait for the background
             sender to drain its queue and exit. None (the default) waits
             indefinitely for a sender that is genuinely busy (e.g. blocked
