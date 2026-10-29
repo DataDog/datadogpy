@@ -1304,8 +1304,8 @@ class DogStatsd(object):
             self._buffer_size = 0
         return self._send_to_server("\n".join(lines), replay_safe)
 
-    def flush_buffered_metrics(self):
-        # type: () -> bool
+    def flush_buffered_metrics(self, deadline=None):
+        # type: (Optional[float]) -> bool
         """
         Flush the metrics buffer by sending the data to the server.
 
@@ -1315,18 +1315,35 @@ class DogStatsd(object):
         timestamp, and non-replay-safe ones are timestamped on receipt, so
         neither one's meaning depends on where the other lands.
 
+        :param deadline: Optional monotonic deadline. If the first internal
+            flush spends the whole budget waiting for room in the sender
+            queue, the replay-safe buffer is left pending and False is
+            returned instead of starting another queue put.
         :return: False if any packet was sent synchronously and the send
             failed (the packet was dropped and accounted in
-            packets_dropped_writer), True otherwise. Both batches are always
-            attempted, regardless of the outcome of the first.
+            packets_dropped_writer), or if deadline elapsed before all
+            non-empty buffers could be flushed. True otherwise. Both batches
+            are always attempted when no deadline is supplied.
+        """
+        sent, complete = self._flush_buffered_metrics(deadline)
+        return sent and complete
+
+    def _flush_buffered_metrics(self, deadline=None):
+        # type: (Optional[float]) -> Tuple[bool, bool]
+        """Flush both batches, returning (sent, complete).
+
+        sent tracks synchronous send failures. complete tracks whether lines
+        remain buffered because deadline elapsed.
         """
         with self._buffer_lock:
             # Non-replay-safe first: it's the only batch subject to staleness
             # expiry, so give it the earliest queue position.
             sent = self._flush_one_buffer(False)
+            if deadline is not None and monotonic() >= deadline and self._buffer_rs:
+                return sent, False
             # Don't short-circuit: the replay-safe batch must be flushed even
             # if the first packet failed.
-            return self._flush_one_buffer(True) and sent
+            return self._flush_one_buffer(True) and sent, True
 
     def flush_aggregated_metrics(self):
         # type: () -> bool
@@ -2420,14 +2437,32 @@ class DogStatsd(object):
         """
         Flush the buffer and wait for all queued payloads to be written to the server.
 
-        :param timeout: Maximum number of seconds to wait for the queue to
-            drain. None (the default) waits indefinitely.
+        :param timeout: Maximum number of seconds to spend flushing buffered
+            metrics into the sender queue and waiting for the queue to drain.
+            None (the default) waits indefinitely. With a positive timeout,
+            the deadline is checked between the two possible buffer flushes
+            (non-replay-safe and replay-safe), so no second queue put starts
+            after the timeout has elapsed. timeout=0 attempts the flush, then
+            performs a non-blocking drain poll. This timeout only bounds the
+            drain wait: a buffer flush waiting for room in a full queue follows
+            sender_queue_timeout, and one that falls back to a synchronous send
+            (no background sender, or its queue already sealed by a pending
+            shutdown) follows socket_timeout. Both can therefore overrun this
+            timeout; keep them finite when a strict bound is required.
         :type timeout: float, optional
         :return: True if every queued payload has been sent, dropped or
-            expired, False if timeout elapsed with payloads still outstanding.
+            expired. False if timeout elapsed with queued or buffered payloads
+            still outstanding. A synchronous fallback drop counts as drained:
+            it has already been accounted in packets_dropped_writer.
         """
 
-        self.flush_buffered_metrics()
+        deadline = None if timeout is None else monotonic() + timeout
+        flush_deadline = None if timeout is None or timeout == 0 else deadline
+        # A synchronous fallback drop is already accounted; only data still
+        # buffered should skip the drain wait below.
+        _, flushed_completely = self._flush_buffered_metrics(flush_deadline)
+        if not flushed_completely:
+            return False
 
         # Avoid race with disable_background_sender. We don't need a
         # lock, just copy the value so it doesn't change between the
@@ -2437,7 +2472,10 @@ class DogStatsd(object):
         if queue is None:
             return True
 
-        return queue.join(timeout)
+        if deadline is None:
+            return queue.join()
+
+        return queue.join(max(deadline - monotonic(), 0))
 
     def pre_fork(self):
         # type: () -> None
