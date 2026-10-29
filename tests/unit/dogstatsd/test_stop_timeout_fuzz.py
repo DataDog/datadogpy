@@ -29,8 +29,8 @@ synchronous/single-threaded model can't reach any of it:
   - stop() must stay bounded even with a large pile of producers
     genuinely parked inside SenderQueue.put()'s own wait-for-room, not
     just a couple of them racing by chance -- ruling out a two-lock
-    deadlock between _buffer_lock and SenderQueue's own lock (nested the
-    other way, for Stop insertion) at scale.
+    deadlock between the sender-state condition lock and SenderQueue's own
+    lock (nested the other way, for Stop insertion) at scale.
 
 Same opt-in policy as test_sender_queue_fuzz.py: skipped entirely (not
 failed) without hypothesis, and Python 3.6+ only. See tox.ini's
@@ -350,9 +350,14 @@ def test_abandoned_retry_payload_is_accounted_and_stop_reports_failure(stop_time
 
 
 # ---------------------------------------------------------------------------
-# 5. The sender thread's own bookkeeping (which needs _buffer_lock between
-#    items) must never be blocked by a producer that is itself parked
-#    inside SenderQueue.put()'s wait-for-room phase holding that same lock.
+# 5. The sender thread's own bookkeeping (which needs _sender_condition
+#    between items) must never be blocked by a producer that is itself parked
+#    inside SenderQueue.put()'s wait-for-room phase. No producer can hold that
+#    condition's lock -- it is deliberately not _buffer_lock, which the
+#    buffered flush path DOES hold across put() (see
+#    test_a_blocked_buffered_flush_does_not_wedge_a_retrying_sender in
+#    test_statsd.py for that shape, which this suite's direct-send producers
+#    cannot reach).
 #    Deliberately never calls stop(): that path has its own close()-based
 #    escape hatch (see test 1 above) that would mask this exact deadlock,
 #    which is about ordinary operation, not shutdown.
@@ -459,8 +464,8 @@ def test_sender_bookkeeping_never_deadlocks_a_producer_waiting_for_room(maxsize,
 #    self._lock), not just a couple of them racing by chance. This is the
 #    specific two-lock-deadlock shape to rule out for _send_to_server() no
 #    longer holding _buffer_lock across put(): _stop_sender_thread() still
-#    nests _buffer_lock -> SenderQueue.self._lock to insert Stop, so if that
-#    nested acquisition could ever be blocked by producers parked in
+#    nests _sender_condition -> SenderQueue.self._lock to insert Stop, so if
+#    that nested acquisition could ever be blocked by producers parked in
 #    self._lock's own Condition.wait(), stop() would hang here. It must not,
 #    because Condition.wait() releases self._lock for the whole wait -- a
 #    blocked producer holds no lock at all at that point.
