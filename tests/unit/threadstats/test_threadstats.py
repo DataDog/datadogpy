@@ -318,6 +318,22 @@ class TestUnitThreadStats(unittest.TestCase):
         assert_almost_equal(p95['points'][0][1], 95, 8)
         assert_almost_equal(p99['points'][0][1], 99, 8)
 
+    def test_histogram_percentiles_after_sample_size(self):
+        # More points than Histogram.sample_size, in increasing order: an
+        # unbiased reservoir keeps the percentiles close to the exact values.
+        random.seed(0)
+        dog = ThreadStats()
+        dog.start(roll_up_interval=10, flush_in_thread=False)
+        reporter = dog.reporter = MemoryReporter()
+        for i in range(10000):
+            dog.histogram('percentiles', i, 1000.0)
+        dog.flush(2000.0)
+
+        p75, p85, p95, p99, _, _, _, _ = self.sort_metrics(reporter.metrics)
+        assert p75['metric'] == 'percentiles.75percentile'
+        for point, expected in ((p75, 7500), (p85, 8500), (p95, 9500), (p99, 9900)):
+            assert abs(point['points'][0][1] - expected) <= 500, (point['metric'], point['points'][0][1])
+
     def test_gauge(self):
         # Create some fake metrics.
         dog = ThreadStats()
