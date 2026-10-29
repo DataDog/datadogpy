@@ -201,6 +201,9 @@ SENDER_UNBOUNDED_STOP_GRACE_SECONDS = SENDER_RETRY_MAX_BACKOFF
 SENDER_STOP_RETRY_INTERVAL = 0.5
 # Default for sender_queue_expiry_seconds; it can be overridden per client.
 PENDING_PAYLOAD_EXPIRY_SECONDS = 10.0
+# Tells _xmit_packet_attempt() that socket_timeout was left alone, so it has
+# nothing to restore. None can't say that: it's a valid timeout (wait forever).
+_NO_CLAMP = object()
 # Errors seen while sending on an already-connected socket that indicate the
 # peer went away (e.g. the agent crashed/restarted). These are worth a single
 # reconnect-and-resend attempt instead of dropping the packet outright.
@@ -612,6 +615,9 @@ class DogStatsd(object):
         self.telemetry_host = None  # type: Optional[Text]
         self.telemetry_port = None  # type: Optional[int]
         self.telemetry_socket_timeout = telemetry_socket_timeout
+        # stop() records its final-flush deadline here. Thread-local, so only
+        # the stopping thread's sends are clamped to the time it has left.
+        self._send_deadline = threading.local()
         if not telemetry_socket_path and telemetry_host:
             self.telemetry_socket_path = None
             self.telemetry_host = self.resolve_host(telemetry_host, use_default_route)
@@ -1135,6 +1141,29 @@ class DogStatsd(object):
             self.socket_timeout = timeout
             if self.socket:
                 self.socket.settimeout(timeout)
+
+    def _clamp_send_timeout(self):
+        # type: () -> Tuple[bool, Any]
+        """Shrink socket_timeout to this thread's remaining send budget.
+
+        Returns (within_budget, restore). within_budget is False when the
+        budget is gone, so the caller skips the send instead of blocking for
+        another socket_timeout. restore is the value the caller must hand to
+        set_socket_timeout() before releasing _socket_lock, or _NO_CLAMP when
+        nothing was changed. Caller must hold _socket_lock, so no other
+        sender can observe the clamped value.
+        """
+        deadline = getattr(self._send_deadline, "value", None)
+        if deadline is None:
+            return True, _NO_CLAMP
+
+        remaining = deadline - monotonic()
+        if remaining <= 0:
+            return False, _NO_CLAMP
+
+        configured = self.socket_timeout
+        self.set_socket_timeout(remaining if configured is None else min(configured, remaining))
+        return True, configured
 
     @classmethod
     def _ensure_min_send_buffer_size(cls, sock, min_size=MIN_SEND_BUFFER_SIZE):
@@ -1932,8 +1961,13 @@ class DogStatsd(object):
         and it's worth a reconnect-and-retry by the caller.
         """
         socket_kind = None
+        restore_timeout = _NO_CLAMP  # type: Any
         with self._socket_lock:
             try:
+                within_budget, restore_timeout = self._clamp_send_timeout()
+                if not within_budget:
+                    return False
+
                 if self._uses_dedicated_telemetry(is_telemetry):
                     mysocket = self.get_socket(telemetry=True)
                     socket_kind = self._telemetry_socket_kind
@@ -1989,6 +2023,10 @@ class DogStatsd(object):
             except Exception as exc:
                 log.error("Unexpected error: %s", str(exc))
                 return False
+            finally:
+                # Still holding _socket_lock, so the clamp never outlives it.
+                if restore_timeout is not _NO_CLAMP:
+                    self.set_socket_timeout(restore_timeout)
 
             # if in stream mode we need to shut down the socket; we can't recover from a
             # partial send
@@ -2483,6 +2521,8 @@ class DogStatsd(object):
         self._socket_lock = RLock()
         self._buffer_lock = RLock()
         self._sender_condition = threading.Condition(self._buffer_lock)
+        # Only the forking thread survives; drop any deadline it was carrying.
+        self._send_deadline = threading.local()
 
         # Reset the buffer so we don't send metrics from the parent
         # process. Also makes sure buffer properties are consistent.
@@ -2510,12 +2550,18 @@ class DogStatsd(object):
         final buffered and aggregated flush. That final flush is synchronous:
         it does not enqueue buffered payloads on the background sender, so it
         does not use sender queue expiry/backpressure or socket_connect_retry
-        retries, and it is bounded by socket_timeout rather than by the timeout
-        below. If that synchronous send fails, stop() returns False and the
-        payload is dropped. Applications that require buffered payloads to
+        retries, and each of its sends is bounded by socket_timeout or by
+        whatever is left of the timeout below, whichever is smaller. If that
+        synchronous send fails, stop() returns False and the payload is
+        dropped. Applications that require buffered payloads to
         participate in background-sender retries should call flush() while the
         sender is still enabled, or call wait_for_pending(timeout) before
         stop().
+
+        That clamp is per-thread, and is undone before the socket lock is
+        released: metrics sent from other threads while this flush runs keep
+        the configured socket_timeout, and are never skipped because this
+        call ran out of budget.
 
         :param timeout: Maximum number of seconds to wait for the background
             sender to drain its queue and exit. None (the default) waits
@@ -2539,6 +2585,7 @@ class DogStatsd(object):
             packets_dropped_writer). The socket is still closed in that case.
         """
 
+        deadline = None if timeout is None else monotonic() + timeout
         stopped = self.disable_background_sender(timeout)
         self._disable_buffering = True
         self._disable_aggregation = True
@@ -2578,8 +2625,12 @@ class DogStatsd(object):
         # sender. Run both before inspecting the outcome, then report a failed
         # send to the caller: the payload is dropped, not retried, so a True
         # here would claim a clean stop that didn't happen.
-        flushed_aggregated = self.flush_aggregated_metrics()
-        flushed_buffered = self.flush_buffered_metrics()
+        self._send_deadline.value = deadline
+        try:
+            flushed_aggregated = self.flush_aggregated_metrics()
+            flushed_buffered = self.flush_buffered_metrics()
+        finally:
+            self._send_deadline.value = None
         self.close_socket()
 
         if not (flushed_aggregated and flushed_buffered):

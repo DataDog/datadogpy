@@ -2901,6 +2901,122 @@ async def print_foo():
         self.assertIs(statsd.stop(), True)
         self.assertEqual("stop.buffered:1|g\n", fake_socket.recv(no_wait=True))
 
+    def test_stop_final_flush_bounds_each_send_by_the_remaining_timeout(self):
+        class ClockSocket(FakeSocket):
+            def __init__(self, clock, cost):
+                super(ClockSocket, self).__init__()
+                self.clock = clock
+                self.cost = cost
+                self.seen = []
+
+            def send(self, payload):
+                self.seen.append(self.timeout)
+                self.clock["now"] += self.cost
+                return super(ClockSocket, self).send(payload)
+
+        def stop_with(cost):
+            clock = {"now": 100.0}
+            statsd = DogStatsd(
+                disable_background_sender=True,
+                disable_buffering=False,
+                disable_telemetry=True,
+                socket_timeout=10.0,
+            )
+            sock = ClockSocket(clock, cost)
+            statsd.socket = sock
+            statsd.gauge("expiring", 1)
+            statsd.gauge_with_timestamp("replay.safe", 2, int(time.time()))
+
+            with patch("datadog.dogstatsd.base.monotonic", lambda: clock["now"]):
+                result = statsd.stop(1.0)
+            return result, sock.seen, statsd.socket_timeout
+
+        # Each packet is bounded by what is actually left of stop(1.0), not by
+        # a fresh socket_timeout, and the configured value is restored after.
+        self.assertEqual(stop_with(0.75), (True, [1.0, 0.25], 10.0))
+        # Budget spent by the first packet: the second is not attempted.
+        self.assertEqual(stop_with(1.25), (False, [1.0], 10.0))
+
+    def test_stop_final_flush_leaves_other_threads_sends_unclamped(self):
+        # The stop budget belongs to the stopping thread: a send from another
+        # thread between stop's packets keeps the configured socket_timeout,
+        # and is still attempted after stop's own budget is gone.
+        clock = {"now": 100.0}
+        other_result = []
+
+        class ClockSocket(FakeSocket):
+            def __init__(self):
+                super(ClockSocket, self).__init__()
+                self.seen = []
+
+            def send(self, payload):
+                self.seen.append(self.timeout)
+                if len(self.seen) == 1:
+                    clock["now"] += 1.5  # stop's whole budget, spent
+                return super(ClockSocket, self).send(payload)
+
+        statsd = DogStatsd(
+            disable_background_sender=True,
+            disable_buffering=False,
+            disable_telemetry=True,
+            socket_timeout=10.0,
+        )
+        sock = ClockSocket()
+        statsd.socket = sock
+        statsd.gauge("expiring", 1)
+        statsd.gauge_with_timestamp("replay.safe", 2, int(time.time()))
+
+        original_flush_one = statsd._flush_one_buffer
+
+        def flush_one(replay_safe):
+            result = original_flush_one(replay_safe)
+            if not replay_safe:
+                # Between stop's two packets: _socket_lock is free again.
+                other = threading.Thread(
+                    target=lambda: other_result.append(statsd._send_to_server("other:1|c"))
+                )
+                other.start()
+                other.join(5.0)
+                self.assertFalse(other.is_alive(), "the other thread's send never returned")
+            return result
+
+        statsd._flush_one_buffer = flush_one
+        with patch("datadog.dogstatsd.base.monotonic", lambda: clock["now"]):
+            self.assertIs(statsd.stop(1.0), False)
+
+        # stop's packet was clamped to its 1.0 budget; the other thread's send
+        # got the configured 10.0 and was delivered, not dropped.
+        self.assertEqual(sock.seen, [1.0, 10.0])
+        self.assertEqual(other_result, [True])
+        self.assertEqual(statsd.socket_timeout, 10.0)
+
+    def test_stop_does_not_clobber_a_socket_timeout_set_during_its_final_flush(self):
+        # stop() no longer snapshots socket_timeout around the flush, so a
+        # set_socket_timeout() racing it is not reverted afterwards.
+        statsd = DogStatsd(
+            disable_background_sender=True,
+            disable_buffering=False,
+            disable_telemetry=True,
+            socket_timeout=10.0,
+        )
+        statsd.socket = FakeSocket()
+        statsd.gauge("expiring", 1)
+        statsd.gauge_with_timestamp("replay.safe", 2, int(time.time()))
+
+        original_flush_one = statsd._flush_one_buffer
+
+        def flush_one(replay_safe):
+            result = original_flush_one(replay_safe)
+            if not replay_safe:
+                setter = threading.Thread(target=statsd.set_socket_timeout, args=(2.0,))
+                setter.start()
+                setter.join(5.0)
+            return result
+
+        statsd._flush_one_buffer = flush_one
+        self.assertIs(statsd.stop(5.0), True)
+        self.assertEqual(statsd.socket_timeout, 2.0)
+
     def test_stop_reports_a_failed_flush_of_payloads_the_sender_handed_back(self):
         # Keep the sender alive after stop() seals its queue. A payload sent
         # then must be rejected by the queue, fall back to the synchronous
