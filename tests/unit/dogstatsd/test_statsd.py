@@ -2848,12 +2848,180 @@ async def print_foo():
             self.assertIs(statsd.wait_for_pending(5.0), True)
             statsd.stop()
 
+    def test_wait_for_pending_zero_attempts_to_flush_both_buffers(self):
+        # timeout=0 is a non-blocking drain poll, but it historically attempts
+        # the buffered flush first. Keep attempting both internal buffers so
+        # replay-safe payloads are not skipped just because the immediate
+        # deadline elapsed after the first flush call.
+        statsd = DogStatsd(
+            disable_background_sender=True,
+            disable_buffering=False,
+            disable_telemetry=True,
+            flush_interval=0,
+        )
+        fake_socket = FakeSocket()
+        statsd.socket = fake_socket
+
+        statsd.gauge("wait.zero", 1)
+        statsd.gauge_with_timestamp("wait.zero.replay_safe", 2, int(time.time()))
+
+        self.assertIs(statsd.wait_for_pending(0), True)
+        payload = fake_socket.recv(2, no_wait=True)
+        self.assertIn("wait.zero:1|g", payload)
+        self.assertIn("wait.zero.replay_safe:2|g", payload)
+
+    def test_wait_for_pending_timeout_includes_the_initial_flush(self):
+        # wait_for_pending(timeout) owns an end-to-end timeout, but the initial
+        # flush may be waiting for room in a full sender queue. That wait is
+        # bounded by sender_queue_timeout, so once the timeout is spent we must
+        # not start flushing the second internal buffer and wait again.
+        statsd = DogStatsd(
+            disable_background_sender=False,
+            disable_buffering=False,
+            disable_telemetry=True,
+            flush_interval=0,
+            sender_queue_size=1,
+            sender_queue_timeout=0.5,
+        )
+        entered = threading.Event()
+        release = threading.Event()
+
+        def blocking_xmit(packet, queue_mode=False):
+            entered.set()
+            release.wait(5.0)
+            return True
+
+        statsd._xmit_packet_with_telemetry = blocking_xmit
+        statsd._send_to_server("inflight:1|c")
+        self.assertTrue(entered.wait(5.0), "sender never picked up the payload")
+        statsd._send_to_server("queued:1|c")
+        self.assertEqual(statsd._queue.qsize(), 1, "queue should be full before wait_for_pending flushes")
+        statsd.gauge("buffered", 1)
+        statsd.gauge_with_timestamp("buffered.replay_safe", 1, int(time.time()))
+
+        try:
+            t0 = time.time()
+            self.assertIs(self._call_bounded(statsd.wait_for_pending, (0.1,)), False)
+            elapsed = time.time() - t0
+            self.assertGreaterEqual(elapsed, 0.1)
+            self.assertLess(
+                elapsed,
+                0.8,
+                "wait_for_pending should not wait on both buffered payloads after its timeout elapsed",
+            )
+        finally:
+            release.set()
+            self.assertIs(self._call_bounded(statsd.wait_for_pending, (5.0,)), True)
+            statsd.stop()
+
+    def test_wait_for_pending_join_gets_only_remaining_timeout_after_flush(self):
+        def exercise(flush_finished_at, expected_join_timeout):
+            statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+            now = {"value": 100.0}
+            join_timeouts = []
+            original_flush = statsd._flush_buffered_metrics
+
+            def fake_flush(deadline=None):
+                self.assertEqual(deadline, 105.0)
+                now["value"] = flush_finished_at
+                return True, True
+
+            def fake_join(timeout=None):
+                join_timeouts.append(timeout)
+                return True
+
+            statsd._flush_buffered_metrics = fake_flush
+            statsd._queue.join = fake_join
+
+            try:
+                with patch("datadog.dogstatsd.base.monotonic", lambda: now["value"]):
+                    self.assertIs(statsd.wait_for_pending(5.0), True)
+                self.assertEqual(join_timeouts, [expected_join_timeout])
+            finally:
+                statsd._flush_buffered_metrics = original_flush
+                statsd.stop()
+
+        exercise(flush_finished_at=103.25, expected_join_timeout=1.75)
+        exercise(flush_finished_at=106.0, expected_join_timeout=0)
+
     def test_wait_for_pending_returns_true_with_no_queue(self):
         # Nothing queued (background sender disabled) is trivially "drained".
         statsd = DogStatsd(disable_background_sender=True, disable_telemetry=True)
         self.assertIsNone(statsd._queue)
         self.assertIs(statsd.wait_for_pending(), True)
         self.assertIs(statsd.wait_for_pending(0), True)
+
+    def test_wait_for_pending_treats_a_dropped_synchronous_send_as_drained(self):
+        # A synchronous drop is accounted and no longer pending, so it
+        # satisfies the "sent, dropped or expired" drain contract.
+        statsd = DogStatsd(
+            disable_background_sender=True,
+            disable_buffering=False,
+            disable_telemetry=True,
+            flush_interval=0,
+        )
+        statsd.socket = BrokenSocket()
+
+        statsd.gauge("dropped.sync", 1)
+        self.assertTrue(statsd._buffer, "metric should still be buffered")
+
+        self.assertIs(statsd.wait_for_pending(5.0), True)
+        self.assertFalse(statsd._buffer, "the buffer must have been flushed")
+        self.assertIs(statsd.wait_for_pending(), True)
+
+    def test_wait_for_pending_still_drains_after_a_sealed_queue_drop(self):
+        # Regression: after a timed-out stop() sealed the queue, a failed
+        # synchronous fallback made wait_for_pending() skip queue.join().
+        statsd = DogStatsd(
+            disable_background_sender=False,
+            disable_buffering=False,
+            disable_telemetry=True,
+            flush_interval=0,
+        )
+        entered_send = threading.Event()
+        release = threading.Event()
+        wedged = statsd._sender_thread
+
+        def xmit(packet, queue_mode=False):
+            if queue_mode:
+                entered_send.set()
+                release.wait(30.0)
+                return True
+            # Every direct/synchronous send fails.
+            return False
+
+        statsd._xmit_packet_with_telemetry = xmit
+        statsd._send_to_server("inflight:1|c")
+        self.assertTrue(entered_send.wait(5.0), "sender never picked up the payload")
+
+        pending_queue = statsd._queue
+        join_calls = []
+        original_join = pending_queue.join
+
+        def counting_join(timeout=None):
+            join_calls.append(timeout)
+            return original_join(timeout)
+
+        pending_queue.join = counting_join
+
+        try:
+            # Stop seals the queue while the sender is still wedged.
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            statsd.gauge("buffered.after.seal", 1)
+            self.assertTrue(statsd._buffer, "the metric should be buffered, not queued")
+
+            t0 = time.time()
+            self.assertIs(self._call_bounded(statsd.wait_for_pending, (0.3,), limit=5.0), False)
+            elapsed = time.time() - t0
+
+            self.assertEqual(len(join_calls), 1, "the drain wait was skipped entirely")
+            self.assertGreaterEqual(
+                elapsed, 0.3,
+                "wait_for_pending() returned before its own timeout: it never waited for the drain",
+            )
+        finally:
+            release.set()
+            wedged.join(timeout=5.0)
 
     def test_stop_reports_a_failed_final_flush_of_buffered_metrics(self):
         # The queue drains cleanly (there is no background sender here), but
