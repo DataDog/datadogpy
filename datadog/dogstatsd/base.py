@@ -519,7 +519,7 @@ class DogStatsd(object):
         If True, a connection failure while sending a queued payload to a UNIX socket is retried
         indefinitely, backing off up to once a minute between attempts, instead of dropping the payload
         immediately. Ordinary payloads stuck retrying are eventually dropped as stale by the sender
-        queue's own expiry; replay-safe payloads never expire, so only a shutdown (stop(),
+        queue's own expiry; timestamped payloads never expire, so only a shutdown (stop(),
         disable_background_sender(), pre_fork()) can end their retrying -- and it waits up to its own
         timeout (or a bounded grace period, SENDER_UNBOUNDED_STOP_GRACE_SECONDS, for an unbounded call
         such as pre_fork()) before giving up on one, at which point it is counted as a writer drop and
@@ -553,9 +553,9 @@ class DogStatsd(object):
         Default: 0 (no wait)
         :type sender_queue_timeout: float
 
-        :param sender_queue_expiry_seconds: How long, in seconds, a non-replay-safe payload
+        :param sender_queue_expiry_seconds: How long, in seconds, a non-timestamped payload
         may sit in the sender queue before it's considered stale and dropped instead of sent.
-        Payloads that carry their own explicit timestamp (replay-safe) are exempt: delivering
+        Payloads that carry their own explicit timestamp are exempt: delivering
         those late doesn't change what they mean, so they're kept until they can be sent.
         Default: PENDING_PAYLOAD_EXPIRY_SECONDS (10.0).
         :type sender_queue_expiry_seconds: float
@@ -813,8 +813,8 @@ class DogStatsd(object):
             If set to None, wait forever. If set to zero drop the packet immediately if the queue is full.
             Default: 0 (no wait).
         :type sender_queue_timeout: float, optional
-        :param sender_queue_expiry_seconds: How long, in seconds, a non-replay-safe payload may sit in the
-            sender queue before it's considered stale and dropped instead of sent. Replay-safe payloads
+        :param sender_queue_expiry_seconds: How long, in seconds, a non-timestamped payload may sit in the
+            sender queue before it's considered stale and dropped instead of sent. Timestamped payloads
             (those carrying their own explicit timestamp) are exempt and are kept until they can be sent.
             Default: PENDING_PAYLOAD_EXPIRY_SECONDS (10.0).
         :type sender_queue_expiry_seconds: float, optional
@@ -1257,15 +1257,15 @@ class DogStatsd(object):
         # type: () -> None
         with self._buffer_lock:
             # Buffered lines are kept in two separate batches, one per expiry
-            # policy: replay-safe metrics carry their own timestamp, the rest
+            # policy: timestamped metrics carry their own timestamp, the rest
             # are stamped on receipt.
-            self._buffer = []  # type: List[Text]           # non-replay-safe
-            self._buffer_rs = []  # type: List[Text]        # replay-safe
+            self._buffer = []  # type: List[Text]           # non-timestamped
+            self._buffer_ts = []  # type: List[Text]        # timestamped
             # Running packet size per buffer, each including the newline that
             # will join its lines, so both stay under _max_payload_size
             # independently.
             self._buffer_size = 0  # type: int
-            self._buffer_rs_size = 0  # type: int
+            self._buffer_ts_size = 0  # type: int
 
     def flush(self):
         # type: () -> bool
@@ -1277,7 +1277,7 @@ class DogStatsd(object):
         """
         return self.flush_buffered_metrics()
 
-    def _flush_one_buffer(self, replay_safe):
+    def _flush_one_buffer(self, timestamped):
         # type: (bool) -> bool
         """Flush just the batch holding lines with the given expiry policy.
 
@@ -1290,19 +1290,19 @@ class DogStatsd(object):
         sender and that send failed; an empty batch, or one handed off to the
         background sender, counts as success.
         """
-        if replay_safe:
-            lines = self._buffer_rs
+        if timestamped:
+            lines = self._buffer_ts
             if not lines:
                 return True
-            self._buffer_rs = []
-            self._buffer_rs_size = 0
+            self._buffer_ts = []
+            self._buffer_ts_size = 0
         else:
             lines = self._buffer
             if not lines:
                 return True
             self._buffer = []
             self._buffer_size = 0
-        return self._send_to_server("\n".join(lines), replay_safe)
+        return self._send_to_server("\n".join(lines), timestamped)
 
     def flush_buffered_metrics(self):
         # type: () -> bool
@@ -1311,9 +1311,9 @@ class DogStatsd(object):
 
         Emits up to two packets, one per expiry policy. Lines keep their
         relative order within each packet, but ordering *between* the two is
-        not preserved: replay-safe payloads carry their own explicit
-        timestamp, and non-replay-safe ones are timestamped on receipt, so
-        neither one's meaning depends on where the other lands.
+        not preserved: timestamped payloads carry their own send time, while
+        the rest are timestamped by the Agent on receipt, so neither one's
+        meaning depends on where the other lands.
 
         :return: False if any packet was sent synchronously and the send
             failed (the packet was dropped and accounted in
@@ -1332,12 +1332,12 @@ class DogStatsd(object):
         monotonic() timestamp, which is why it stays off the public method.
         """
         with self._buffer_lock:
-            # Non-replay-safe first: it's the only batch subject to staleness
+            # Non-timestamped first: it's the only batch subject to staleness
             # expiry, so give it the earliest queue position.
             sent = self._flush_one_buffer(False)
-            if deadline is not None and monotonic() >= deadline and self._buffer_rs:
+            if deadline is not None and monotonic() >= deadline and self._buffer_ts:
                 return sent, False
-            # Don't short-circuit: the replay-safe batch must be flushed even
+            # Don't short-circuit: the timestamped batch must be flushed even
             # if the first packet failed.
             return self._flush_one_buffer(True) and sent, True
 
@@ -1744,13 +1744,13 @@ class DogStatsd(object):
             metric, metric_type, value, tags, sample_rate, timestamp, cardinality
         )
 
-        # A metric carrying its own explicit timestamp is replay-safe: sending
-        # it late (e.g. after sitting in the background sender queue) doesn't
-        # change what it means.
-        replay_safe = timestamp > 0
+        # A metric carrying its own explicit timestamp can be sent late (e.g.
+        # after sitting in the background sender queue) without changing what
+        # it means, so it is exempt from the queue's expiry.
+        timestamped = timestamp > 0
 
         # Send it
-        return self._send(payload, replay_safe)
+        return self._send(payload, timestamped)
 
     def _reset_telemetry(self):
         # type: () -> None
@@ -1836,7 +1836,7 @@ class DogStatsd(object):
         return self._telemetry and \
             self._last_flush_time + self._telemetry_flush_interval < time.time()
 
-    def _send_to_server(self, packet, replay_safe=False):
+    def _send_to_server(self, packet, timestamped=False):
         # type: (str, bool) -> bool
         """Hand one payload to the background sender, or send it right away.
 
@@ -1850,10 +1850,10 @@ class DogStatsd(object):
         active_sender = self._active_sender
         if active_sender is not None:
             packet_with_newline = packet + '\n'
-            if replay_safe:
+            if timestamped:
                 # Never expires, so it needs no enqueued_at and no wrapper
                 # at all: queue the bare string and let the queue infer
-                # replay-safety from the type. Saves the PendingPayload
+                # timestamping from the type. Saves the PendingPayload
                 # object (~56 bytes) per entry and keeps these out of the
                 # cyclic GC's traversal set.
                 item = packet_with_newline  # type: Union[str, PendingPayload]
@@ -2011,7 +2011,7 @@ class DogStatsd(object):
 
             return False
 
-    def _send_to_buffer(self, packet, replay_safe=False):
+    def _send_to_buffer(self, packet, timestamped=False):
         # type: (str, bool) -> bool
         """Append one serialized line to the batch matching its expiry policy.
 
@@ -2020,7 +2020,7 @@ class DogStatsd(object):
         buffered either way.
 
         Deliberately written out per branch rather than indexing a dict by
-        replay_safe, and with the size check inlined rather than delegated to
+        timestamped, and with the size check inlined rather than delegated to
         _should_flush(): both cost real CPU at once-per-metric frequency. See
         _reset_buffer() for the measurements. The bool() coercion the dict form
         needed is gone too -- the branch treats any truthy value correctly.
@@ -2031,11 +2031,11 @@ class DogStatsd(object):
             length = len(packet) + 1
             sent = True
 
-            if replay_safe:
-                if self._buffer_rs_size + length > self._max_payload_size:
+            if timestamped:
+                if self._buffer_ts_size + length > self._max_payload_size:
                     sent = self._flush_one_buffer(True)
-                self._buffer_rs.append(packet)
-                self._buffer_rs_size += length
+                self._buffer_ts.append(packet)
+                self._buffer_ts_size += length
             else:
                 if self._buffer_size + length > self._max_payload_size:
                     sent = self._flush_one_buffer(False)
@@ -2044,7 +2044,7 @@ class DogStatsd(object):
 
             return sent
 
-    def _should_flush(self, length_to_be_added, replay_safe=False):
+    def _should_flush(self, length_to_be_added, timestamped=False):
         # type: (int, bool) -> bool
         """Whether adding a line of this length would overflow its batch.
 
@@ -2053,7 +2053,7 @@ class DogStatsd(object):
         part of the pre-existing surface and is convenient in tests; keep the
         two in step if either changes.
         """
-        current = self._buffer_rs_size if replay_safe else self._buffer_size
+        current = self._buffer_ts_size if timestamped else self._buffer_size
         return current + length_to_be_added + 1 > self._max_payload_size
 
     @staticmethod
@@ -2141,9 +2141,9 @@ class DogStatsd(object):
         if self._telemetry:
             self.events_count += 1
 
-        # An event carrying its own explicit date_happened is replay-safe:
-        # sending it late doesn't change what it means.
-        self._send(string, replay_safe=bool(date_happened))
+        # An event carrying its own explicit date_happened can be sent late
+        # without changing what it means.
+        self._send(string, timestamped=bool(date_happened))
 
     def service_check(
         self,
@@ -2189,9 +2189,9 @@ class DogStatsd(object):
         if self._telemetry:
             self.service_checks_count += 1
 
-        # A service check carrying its own explicit timestamp is replay-safe:
-        # sending it late doesn't change what it means.
-        self._send(string, replay_safe=bool(timestamp))
+        # A service check carrying its own explicit timestamp can be sent
+        # late without changing what it means.
+        self._send(string, timestamped=bool(timestamp))
 
     @staticmethod
     def _normalize_and_join_tags(tags):
@@ -2437,7 +2437,7 @@ class DogStatsd(object):
             metrics into the sender queue and waiting for the queue to drain.
             None (the default) waits indefinitely. With a positive timeout,
             the deadline is checked between the two possible buffer flushes
-            (non-replay-safe and replay-safe), so no second queue put starts
+            (non-timestamped and timestamped), so no second queue put starts
             after the timeout has elapsed. timeout=0 attempts the flush, then
             performs a non-blocking drain poll. This timeout only bounds the
             drain wait: a buffer flush waiting for room in a full queue follows
