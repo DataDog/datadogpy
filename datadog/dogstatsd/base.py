@@ -2433,18 +2433,17 @@ class DogStatsd(object):
         """
         Flush the buffer and wait for all queued payloads to be written to the server.
 
-        :param timeout: Maximum number of seconds to spend flushing buffered
-            metrics into the sender queue and waiting for the queue to drain.
-            None (the default) waits indefinitely. With a positive timeout,
-            the deadline is checked between the two possible buffer flushes
-            (non-timestamped and timestamped), so no second queue put starts
-            after the timeout has elapsed. timeout=0 attempts the flush, then
-            performs a non-blocking drain poll. This timeout only bounds the
-            drain wait: a buffer flush waiting for room in a full queue follows
-            sender_queue_timeout, and one that falls back to a synchronous send
-            (no background sender, or its queue already sealed by a pending
-            shutdown) follows socket_timeout. Both can therefore overrun this
-            timeout; keep them finite when a strict bound is required.
+        :param timeout: How long to wait for pending metrics to be flushed.
+            None (the default) waits indefinitely. A value of 0 flushes buffered
+            metrics, then polls the queue without waiting. It returns False if the
+            queue was not empty at that moment. For a positive value, time
+            spent flushing is deducted from the time available to wait for the queue.
+            If the timeout expires after flushing the non-timestamped metrics, the
+            timestamped metrics remain buffered.
+            This is not a strict time limit. A flush may take up to
+            sender_queue_timeout while waiting for space in the queue, or up to
+            socket_timeout when sending via the synchronous sender. Configure
+            those timeouts as well if the call must return in a fixed time.
         :type timeout: float, optional
         :return: True if every queued payload has been sent, dropped or
             expired. False if timeout elapsed with queued or buffered payloads
