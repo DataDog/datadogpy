@@ -1742,15 +1742,25 @@ async def print_foo():
         self.assertEqual(names(by_policy[True]), ["ts.one", "ts.two"])
         self.assertEqual(names(by_policy[False]), ["plain.one", "plain.two"])
 
-        # The invariant that actually matters: no packet mixes the two, and no
-        # timestamped line ever rides in an expiring packet.
-        for packet, timestamped in sent:
+        # The invariant that actually matters: the policy flag a packet was
+        # sent with has to match what it actually serialized. Branch on the
+        # flag, not on the filtered lines, so both directions are checked --
+        # no packet mixes the two, and no timestamped line ever rides in an
+        # expiring packet. (Only gauges are submitted above, so a timestamped
+        # line is exactly one carrying |T.)
+        for packet, policy_timestamped in sent:
             lines = packet.split("\n")
-            timestamped = [line for line in lines if "|T" in line]
-            if timestamped:
-                self.assertEqual(timestamped, lines, "timestamped packet must be entirely timestamped lines")
+            timestamped_lines = [line for line in lines if "|T" in line]
+            if policy_timestamped:
+                self.assertEqual(
+                    timestamped_lines, lines,
+                    "packet sent as timestamped must be entirely timestamped lines",
+                )
             else:
-                self.assertEqual(timestamped, [], "timestamped line leaked into an expiring packet")
+                self.assertEqual(
+                    timestamped_lines, [],
+                    "timestamped line leaked into an expiring packet",
+                )
 
     def test_mixed_batch_respects_max_payload_size_per_buffer(self):
         # Each buffer has to stay under _max_payload_size on its own, and one
