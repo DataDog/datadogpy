@@ -615,9 +615,6 @@ class DogStatsd(object):
         self.telemetry_host = None  # type: Optional[Text]
         self.telemetry_port = None  # type: Optional[int]
         self.telemetry_socket_timeout = telemetry_socket_timeout
-        # stop() records its final-flush deadline here. Thread-local, so only
-        # the stopping thread's sends are clamped to the time it has left.
-        self._send_deadline = threading.local()
         if not telemetry_socket_path and telemetry_host:
             self.telemetry_socket_path = None
             self.telemetry_host = self.resolve_host(telemetry_host, use_default_route)
@@ -1142,9 +1139,16 @@ class DogStatsd(object):
             if self.socket:
                 self.socket.settimeout(timeout)
 
-    def _clamp_send_timeout(self):
-        # type: () -> Tuple[bool, Any]
-        """Shrink socket_timeout to this thread's remaining send budget.
+    def _clamp_send_timeout(self, deadline):
+        # type: (Optional[float]) -> Tuple[bool, Any]
+        """Shrink socket_timeout to the caller's remaining send budget.
+
+        deadline is an absolute monotonic() timestamp, or None for "no
+        budget to enforce": ordinary sends (gauge(), increment(), the
+        background sender's own retries, ...) always pass None, so this
+        only ever clamps the specific call chain a caller explicitly handed
+        a deadline to -- never a concurrent, unrelated send on another
+        thread.
 
         Returns (within_budget, restore). within_budget is False when the
         budget is gone, so the caller skips the send instead of blocking for
@@ -1153,7 +1157,6 @@ class DogStatsd(object):
         nothing was changed. Caller must hold _socket_lock, so no other
         sender can observe the clamped value.
         """
-        deadline = getattr(self._send_deadline, "value", None)
         if deadline is None:
             return True, _NO_CLAMP
 
@@ -1306,8 +1309,8 @@ class DogStatsd(object):
         """
         return self.flush_buffered_metrics()
 
-    def _flush_one_buffer(self, timestamped):
-        # type: (bool) -> bool
+    def _flush_one_buffer(self, timestamped, deadline=None):
+        # type: (bool, Optional[float]) -> bool
         """Flush just the batch holding lines with the given expiry policy.
 
         Caller must hold self._buffer_lock (an RLock, so a re-entrant flush
@@ -1331,7 +1334,7 @@ class DogStatsd(object):
                 return True
             self._buffer = []
             self._buffer_size = 0
-        return self._send_to_server("\n".join(lines), timestamped)
+        return self._send_to_server("\n".join(lines), timestamped, deadline=deadline)
 
     def flush_buffered_metrics(self):
         # type: () -> bool
@@ -1363,12 +1366,12 @@ class DogStatsd(object):
         with self._buffer_lock:
             # Non-timestamped first: it's the only batch subject to staleness
             # expiry, so give it the earliest queue position.
-            sent = self._flush_one_buffer(False)
+            sent = self._flush_one_buffer(False, deadline=deadline)
             if deadline is not None and monotonic() >= deadline and self._buffer_ts:
                 return sent, False
             # Don't short-circuit: the timestamped batch must be flushed even
             # if the first packet failed.
-            return self._flush_one_buffer(True) and sent, True
+            return self._flush_one_buffer(True, deadline=deadline) and sent, True
 
     def flush_aggregated_metrics(self):
         # type: () -> bool
@@ -1379,12 +1382,24 @@ class DogStatsd(object):
             failed, True otherwise. Every aggregated metric is always
             reported, regardless of earlier failures.
         """
+        return self._flush_aggregated_metrics()
+
+    def _flush_aggregated_metrics(self, deadline=None):
+        # type: (Optional[float]) -> bool
+        """Flush the aggregated metrics, as flush_aggregated_metrics().
+
+        deadline is an absolute monotonic() timestamp bounding each send, or
+        None for no bound. It is an implementation detail of stop()'s final
+        flush, which is why it stays off the public method (mirrors
+        _flush_buffered_metrics()).
+        """
         sent = True
 
         metrics = self.aggregator.flush_aggregated_metrics()
         for m in metrics:
             sent = self._report(
-                m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp, cardinality=m.cardinality
+                m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp,
+                cardinality=m.cardinality, deadline=deadline,
             ) and sent
 
         sampled_metrics = self.aggregator.flush_aggregated_sampled_metrics()
@@ -1398,6 +1413,7 @@ class DogStatsd(object):
                 m.timestamp,
                 False,
                 cardinality=m.cardinality,
+                deadline=deadline,
             ) and sent
 
         return sent
@@ -1730,8 +1746,19 @@ class DogStatsd(object):
 
         return "".join(parts)
 
-    def _report(self, metric, metric_type, value, tags, sample_rate, timestamp=0, sampling=True, cardinality=None):
-        # type: (Text, str, Any, Optional[List[str]], Optional[float], int, bool, Optional[str]) -> bool
+    def _report(
+        self,
+        metric,  # type: Text
+        metric_type,  # type: str
+        value,  # type: Any
+        tags,  # type: Optional[List[str]]
+        sample_rate,  # type: Optional[float]
+        timestamp=0,  # type: int
+        sampling=True,  # type: bool
+        cardinality=None,  # type: Optional[str]
+        deadline=None,  # type: Optional[float]
+    ):
+        # type: (...) -> bool
         """
         Create a metric packet and send it.
 
@@ -1779,7 +1806,7 @@ class DogStatsd(object):
         timestamped = timestamp > 0
 
         # Send it
-        return self._send(payload, timestamped)
+        return self._send(payload, timestamped, deadline=deadline)
 
     def _reset_telemetry(self):
         # type: () -> None
@@ -1865,8 +1892,8 @@ class DogStatsd(object):
         return self._telemetry and \
             self._last_flush_time + self._telemetry_flush_interval < time.time()
 
-    def _send_to_server(self, packet, timestamped=False):
-        # type: (str, bool) -> bool
+    def _send_to_server(self, packet, timestamped=False, deadline=None):
+        # type: (str, bool, Optional[float]) -> bool
         """Hand one payload to the background sender, or send it right away.
 
         Returns False only when the payload was sent synchronously (no
@@ -1895,10 +1922,10 @@ class DogStatsd(object):
             # sender at all.
 
         # queue_mode is False here, so the result is never None.
-        return bool(self._xmit_packet_with_telemetry(packet + '\n'))
+        return bool(self._xmit_packet_with_telemetry(packet + '\n', deadline=deadline))
 
-    def _xmit_packet_with_telemetry(self, packet, queue_mode=False):
-        # type: (str, bool) -> Optional[bool]
+    def _xmit_packet_with_telemetry(self, packet, queue_mode=False, deadline=None):
+        # type: (str, bool, Optional[float]) -> Optional[bool]
         """Send one packet, optionally piggy-backing a telemetry flush.
 
         :param queue_mode: True when called from the background sender
@@ -1906,12 +1933,15 @@ class DogStatsd(object):
             connection failure is reported back as None (rather than being
             accounted for and dropped) so the caller can requeue the payload
             and retry once reconnected, instead of losing it.
+        :param deadline: Passed straight through to _xmit_packet_attempt();
+            see _clamp_send_timeout(). None (the default) for every caller
+            outside stop()'s final flush.
         """
-        sent = self._xmit_packet(packet, False, queue_mode=queue_mode)
+        sent = self._xmit_packet(packet, False, queue_mode=queue_mode, deadline=deadline)
 
         if self._is_telemetry_flush_time():
             telemetry = self._flush_telemetry()
-            if self._xmit_packet(telemetry, True):
+            if self._xmit_packet(telemetry, True, deadline=deadline):
                 self._reset_telemetry()
                 self.packets_sent += 1
                 self.bytes_sent += len(telemetry)
@@ -1923,8 +1953,8 @@ class DogStatsd(object):
 
         return sent
 
-    def _xmit_packet(self, packet, is_telemetry, queue_mode=False):
-        # type: (str, bool, bool) -> Optional[bool]
+    def _xmit_packet(self, packet, is_telemetry, queue_mode=False, deadline=None):
+        # type: (str, bool, bool, Optional[float]) -> Optional[bool]
         """Attempt to send a packet, once.
 
         Returns True if sent. Otherwise returns False for a definitive,
@@ -1948,7 +1978,7 @@ class DogStatsd(object):
         # UDP's different (connectionless) failure semantics.
         retry_eligible = queue_mode and uses_uds and self.socket_connect_retry
 
-        sent = self._xmit_packet_attempt(packet, is_telemetry, retry_eligible)
+        sent = self._xmit_packet_attempt(packet, is_telemetry, retry_eligible, deadline)
         if sent:
             return True
 
@@ -1963,8 +1993,8 @@ class DogStatsd(object):
             self.packets_dropped_writer += 1
         return False
 
-    def _xmit_packet_attempt(self, packet, is_telemetry, retry_eligible):
-        # type: (str, bool, bool) -> Optional[bool]
+    def _xmit_packet_attempt(self, packet, is_telemetry, retry_eligible, deadline=None):
+        # type: (str, bool, bool, Optional[float]) -> Optional[bool]
         """
         Attempt to send a single packet.
 
@@ -1977,7 +2007,7 @@ class DogStatsd(object):
         restore_timeout = _NO_CLAMP  # type: Any
         with self._socket_lock:
             try:
-                within_budget, restore_timeout = self._clamp_send_timeout()
+                within_budget, restore_timeout = self._clamp_send_timeout(deadline)
                 if not within_budget:
                     return False
 
@@ -2049,8 +2079,8 @@ class DogStatsd(object):
 
             return False
 
-    def _send_to_buffer(self, packet, timestamped=False):
-        # type: (str, bool) -> bool
+    def _send_to_buffer(self, packet, timestamped=False, deadline=None):
+        # type: (str, bool, Optional[float]) -> bool
         """Append one serialized line to the batch matching its expiry policy.
 
         Returns False only when appending this line overflowed its batch and
@@ -2071,12 +2101,12 @@ class DogStatsd(object):
 
             if timestamped:
                 if self._buffer_ts_size + length > self._max_payload_size:
-                    sent = self._flush_one_buffer(True)
+                    sent = self._flush_one_buffer(True, deadline=deadline)
                 self._buffer_ts.append(packet)
                 self._buffer_ts_size += length
             else:
                 if self._buffer_size + length > self._max_payload_size:
-                    sent = self._flush_one_buffer(False)
+                    sent = self._flush_one_buffer(False, deadline=deadline)
                 self._buffer.append(packet)
                 self._buffer_size += length
 
@@ -2554,8 +2584,6 @@ class DogStatsd(object):
         self._socket_lock = RLock()
         self._buffer_lock = RLock()
         self._sender_condition = threading.Condition()
-        # Only the forking thread survives; drop any deadline it was carrying.
-        self._send_deadline = threading.local()
 
         # Reset the buffer so we don't send metrics from the parent
         # process. Also makes sure buffer properties are consistent.
@@ -2652,13 +2680,17 @@ class DogStatsd(object):
         # gone, so these flushes go straight out through the synchronous
         # sender. Run both before inspecting the outcome, then report a failed
         # send to the caller: the payload is dropped, not retried, so a True
-        # here would claim a clean stop that didn't happen.
-        self._send_deadline.value = deadline
-        try:
-            flushed_aggregated = self.flush_aggregated_metrics()
-            flushed_buffered = self.flush_buffered_metrics()
-        finally:
-            self._send_deadline.value = None
+        # here would claim a clean stop that didn't happen. deadline is
+        # passed explicitly down to each send attempt (see
+        # _clamp_send_timeout()) rather than stashed anywhere shared, so it
+        # can never leak onto a concurrent, unrelated send on another thread.
+        flushed_aggregated = self._flush_aggregated_metrics(deadline)
+        sent_buffered, completed_buffered = self._flush_buffered_metrics(deadline)
+        # completed_buffered is False when the deadline was already gone
+        # before the second (timestamped) buffer was even attempted -- that
+        # buffer's lines are still sitting there, unsent, same as a failed
+        # send would leave them, so it must count the same way here.
+        flushed_buffered = sent_buffered and completed_buffered
         self.close_socket()
 
         if not (flushed_aggregated and flushed_buffered):

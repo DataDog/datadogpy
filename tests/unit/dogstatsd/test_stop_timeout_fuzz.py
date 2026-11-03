@@ -175,7 +175,7 @@ def test_stop_timeout_bounded_with_wedged_sender_and_racing_producers(
     )
     release = threading.Event()
 
-    def blocking_xmit(packet, queue_mode=False):
+    def blocking_xmit(packet, queue_mode=False, deadline=None):
         # Never fails -- release() lets it "succeed" so nothing here relies
         # on retry logic; this test's whole point is the wedge + race, not
         # the connect-failure path (that's covered by test 3 below).
@@ -246,7 +246,7 @@ def test_every_metric_is_delivered_or_accounted_under_concurrent_producers(num_p
     sent = []
     sent_lock = threading.Lock()
 
-    def fake_xmit(packet, queue_mode=False):
+    def fake_xmit(packet, queue_mode=False, deadline=None):
         with sent_lock:
             sent.append(packet)
         return True
@@ -385,7 +385,7 @@ def test_sender_bookkeeping_never_deadlocks_a_producer_waiting_for_room(maxsize,
     sent = []
     sent_lock = threading.Lock()
 
-    def fake_xmit(packet, queue_mode=False):
+    def fake_xmit(packet, queue_mode=False, deadline=None):
         with sent_lock:
             first = not sent
             sent.append(packet)
@@ -491,7 +491,7 @@ def test_stop_stays_bounded_with_many_producers_genuinely_blocked_on_queue_room(
     release_wedge = threading.Event()
     entered_wedge = threading.Event()
 
-    def fake_xmit(packet, queue_mode=False):
+    def fake_xmit(packet, queue_mode=False, deadline=None):
         if queue_mode and not entered_wedge.is_set():
             entered_wedge.set()
             release_wedge.wait(30.0)

@@ -1717,7 +1717,7 @@ async def print_foo():
         # have, dropping them with the batch after ~10s of backlog. The buffer
         # must split by policy instead.
         sent = []
-        self.statsd._send_to_server = lambda packet, timestamped=False: sent.append((packet, timestamped))
+        self.statsd._send_to_server = lambda packet, timestamped=False, deadline=None: sent.append((packet, timestamped))
 
         self.statsd.open_buffer()
         self.statsd.gauge_with_timestamp("ts.one", 1, timestamp=1700000000)
@@ -1766,7 +1766,7 @@ async def print_foo():
         # Each buffer has to stay under _max_payload_size on its own, and one
         # buffer overflowing must not drag the other one out with it.
         sent = []
-        self.statsd._send_to_server = lambda packet, timestamped=False: sent.append((packet, timestamped))
+        self.statsd._send_to_server = lambda packet, timestamped=False, deadline=None: sent.append((packet, timestamped))
 
         # Measure a real serialised line and size the cap from it. Hard-coding
         # a byte count would make the test depend on how long constant/origin
@@ -2837,7 +2837,7 @@ async def print_foo():
         entered = threading.Event()
         release = threading.Event()
 
-        def blocking_xmit(packet, queue_mode=False):
+        def blocking_xmit(packet, queue_mode=False, deadline=None):
             entered.set()
             release.wait(5.0)
             return True
@@ -2896,7 +2896,7 @@ async def print_foo():
         entered = threading.Event()
         release = threading.Event()
 
-        def blocking_xmit(packet, queue_mode=False):
+        def blocking_xmit(packet, queue_mode=False, deadline=None):
             entered.set()
             release.wait(5.0)
             return True
@@ -2999,7 +2999,7 @@ async def print_foo():
         release = threading.Event()
         wedged = statsd._sender_thread
 
-        def xmit(packet, queue_mode=False):
+        def xmit(packet, queue_mode=False, deadline=None):
             if queue_mode:
                 entered_send.set()
                 release.wait(30.0)
@@ -3153,8 +3153,8 @@ async def print_foo():
 
         original_flush_one = statsd._flush_one_buffer
 
-        def flush_one(replay_safe):
-            result = original_flush_one(replay_safe)
+        def flush_one(replay_safe, deadline=None):
+            result = original_flush_one(replay_safe, deadline=deadline)
             if not replay_safe:
                 # Between stop's two packets: _socket_lock is free again.
                 other = threading.Thread(
@@ -3190,8 +3190,8 @@ async def print_foo():
 
         original_flush_one = statsd._flush_one_buffer
 
-        def flush_one(replay_safe):
-            result = original_flush_one(replay_safe)
+        def flush_one(replay_safe, deadline=None):
+            result = original_flush_one(replay_safe, deadline=deadline)
             if not replay_safe:
                 setter = threading.Thread(target=statsd.set_socket_timeout, args=(2.0,))
                 setter.start()
@@ -3211,7 +3211,7 @@ async def print_foo():
         entered_send = threading.Event()
         direct_packets = []
 
-        def xmit(packet, queue_mode=False):
+        def xmit(packet, queue_mode=False, deadline=None):
             if queue_mode:
                 entered_send.set()
                 release.wait(30.0)
@@ -3241,7 +3241,7 @@ async def print_foo():
         wedged = statsd._sender_thread
 
         # Wedge the sender inside a send so it can't observe Stop.
-        def blocking_xmit(packet, queue_mode=False):
+        def blocking_xmit(packet, queue_mode=False, deadline=None):
             release.wait(10.0)
             return True
 
@@ -3279,7 +3279,7 @@ async def print_foo():
         entered_first_send = threading.Event()
         sent = []
 
-        def blocking_xmit(packet, queue_mode=False):
+        def blocking_xmit(packet, queue_mode=False, deadline=None):
             sent.append(packet)
             entered_first_send.set()
             release.wait(10.0)
@@ -3350,7 +3350,7 @@ async def print_foo():
         release = threading.Event()
         entered_send = threading.Event()
 
-        def blocking_xmit(packet, queue_mode=False):
+        def blocking_xmit(packet, queue_mode=False, deadline=None):
             entered_send.set()
             release.wait(30.0)
             return True
@@ -3399,7 +3399,7 @@ async def print_foo():
         release = threading.Event()
         entered_send = threading.Event()
 
-        def blocking_xmit(packet, queue_mode=False):
+        def blocking_xmit(packet, queue_mode=False, deadline=None):
             entered_send.set()
             release.wait(30.0)
             return True
@@ -3458,7 +3458,7 @@ async def print_foo():
         flusher_waiting_for_room = threading.Event()
         release_sender_after_requeue = threading.Event()
 
-        def retry_until_allowed(packet, queue_mode=False):
+        def retry_until_allowed(packet, queue_mode=False, deadline=None):
             # Connection trouble: the sender requeues at the front and backs
             # off, which is the branch that needs _sender_condition. Once the
             # test allows it, sends succeed and the queue can drain again.
@@ -3782,7 +3782,7 @@ async def print_foo():
         statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
         sent = []
 
-        def slow_xmit(packet, queue_mode=False):
+        def slow_xmit(packet, queue_mode=False, deadline=None):
             time.sleep(0.05)
             sent.append(packet)
             return True
