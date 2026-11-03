@@ -32,7 +32,7 @@ import pytest
 from datadog import initialize, statsd
 from datadog import __version__ as version
 from datadog.dogstatsd.base import DEFAULT_BUFFERING_FLUSH_INTERVAL, DEFAULT_HOST, DEFAULT_PORT, DogStatsd, MIN_SEND_BUFFER_SIZE, PENDING_PAYLOAD_EXPIRY_SECONDS, PendingPayload, SenderQueue, SenderState, Stop, UDP_OPTIMAL_PAYLOAD_LENGTH, SENDER_RETRY_MAX_BACKOFF, UDS_OPTIMAL_PAYLOAD_LENGTH
-from datadog.dogstatsd.sender_queue import is_replay_safe, payload_text
+from datadog.dogstatsd.sender_queue import is_timestamped, payload_text
 from datadog.util.compat import monotonic as sender_queue_clock
 from datadog.dogstatsd.context import TimedContextManagerDecorator
 from datadog.util.compat import is_higher_py35, is_p3k
@@ -1709,15 +1709,15 @@ async def print_foo():
         self.statsd.close_buffer()
         self.assertEqual(mock_warn.call_count, 2)
 
-    def test_mixed_batch_splits_by_replay_safety(self):
+    def test_mixed_batch_splits_by_timestamping(self):
         # A queued packet expires as a single unit, so every line in it has to
         # share one expiry policy. Batching timestamped lines together with
-        # plain ones would make the whole packet non-replay-safe and strip the
+        # plain ones would make the whole packet non-timestamped and strip the
         # timestamped lines of the staleness exemption they're supposed to
         # have, dropping them with the batch after ~10s of backlog. The buffer
         # must split by policy instead.
         sent = []
-        self.statsd._send_to_server = lambda packet, replay_safe=False: sent.append((packet, replay_safe))
+        self.statsd._send_to_server = lambda packet, timestamped=False: sent.append((packet, timestamped))
 
         self.statsd.open_buffer()
         self.statsd.gauge_with_timestamp("ts.one", 1, timestamp=1700000000)
@@ -1730,7 +1730,7 @@ async def print_foo():
         # not defeat batching.
         self.assertEqual(len(sent), 2, "expected exactly one packet per expiry policy, got: {!r}".format(sent))
 
-        by_policy = dict((replay_safe, packet) for packet, replay_safe in sent)
+        by_policy = dict((timestamped, packet) for packet, timestamped in sent)
         self.assertEqual(sorted(by_policy.keys()), [False, True])
 
         # Assert on structure rather than exact packet text: constant/origin
@@ -1742,21 +1742,31 @@ async def print_foo():
         self.assertEqual(names(by_policy[True]), ["ts.one", "ts.two"])
         self.assertEqual(names(by_policy[False]), ["plain.one", "plain.two"])
 
-        # The invariant that actually matters: no packet mixes the two, and no
-        # timestamped line ever rides in an expiring packet.
-        for packet, replay_safe in sent:
+        # The invariant that actually matters: the policy flag a packet was
+        # sent with has to match what it actually serialized. Branch on the
+        # flag, not on the filtered lines, so both directions are checked --
+        # no packet mixes the two, and no timestamped line ever rides in an
+        # expiring packet. (Only gauges are submitted above, so a timestamped
+        # line is exactly one carrying |T.)
+        for packet, policy_timestamped in sent:
             lines = packet.split("\n")
-            timestamped = [line for line in lines if "|T" in line]
-            if replay_safe:
-                self.assertEqual(timestamped, lines, "replay-safe packet must be entirely timestamped lines")
+            timestamped_lines = [line for line in lines if "|T" in line]
+            if policy_timestamped:
+                self.assertEqual(
+                    timestamped_lines, lines,
+                    "packet sent as timestamped must be entirely timestamped lines",
+                )
             else:
-                self.assertEqual(timestamped, [], "timestamped line leaked into an expiring packet")
+                self.assertEqual(
+                    timestamped_lines, [],
+                    "timestamped line leaked into an expiring packet",
+                )
 
     def test_mixed_batch_respects_max_payload_size_per_buffer(self):
         # Each buffer has to stay under _max_payload_size on its own, and one
         # buffer overflowing must not drag the other one out with it.
         sent = []
-        self.statsd._send_to_server = lambda packet, replay_safe=False: sent.append((packet, replay_safe))
+        self.statsd._send_to_server = lambda packet, timestamped=False: sent.append((packet, timestamped))
 
         # Measure a real serialised line and size the cap from it. Hard-coding
         # a byte count would make the test depend on how long constant/origin
@@ -1772,7 +1782,7 @@ async def print_foo():
         self.statsd._max_payload_size = line_size * 2 + 1
 
         self.statsd.open_buffer()
-        # One small replay-safe line that should still be buffered while the
+        # One small timestamped line that should still be buffered while the
         # plain buffer churns through several flushes.
         self.statsd.gauge_with_timestamp("ts.keep", 1, timestamp=1700000000)
         for i in range(12):
@@ -1782,15 +1792,15 @@ async def print_foo():
 
         self.assertGreater(flushes_before_close, 0, "the plain buffer should have overflowed at least once")
         self.assertTrue(
-            all(not replay_safe for _, replay_safe in sent[:flushes_before_close]),
-            "overflow of the plain buffer must not flush the replay-safe buffer",
+            all(not timestamped for _, timestamped in sent[:flushes_before_close]),
+            "overflow of the plain buffer must not flush the timestamped buffer",
         )
         for packet, _ in sent:
             self.assertLessEqual(len(packet) + 1, self.statsd._max_payload_size)
 
-        # The replay-safe line survived to the final flush, intact and alone.
-        final_packet, final_replay_safe = sent[-1]
-        self.assertTrue(final_replay_safe)
+        # The timestamped line survived to the final flush, intact and alone.
+        final_packet, final_timestamped = sent[-1]
+        self.assertTrue(final_timestamped)
         self.assertEqual([line.split(":")[0] for line in final_packet.split("\n")], ["ts.keep"])
         self.assertIn("|T1700000000", final_packet)
 
@@ -2848,12 +2858,187 @@ async def print_foo():
             self.assertIs(statsd.wait_for_pending(5.0), True)
             statsd.stop()
 
+    def test_wait_for_pending_zero_attempts_to_flush_both_buffers(self):
+        # timeout=0 is a non-blocking drain poll, but it historically attempts
+        # the buffered flush first. Keep attempting both internal buffers so
+        # timestamped payloads are not skipped just because the immediate
+        # deadline elapsed after the first flush call.
+        statsd = DogStatsd(
+            disable_background_sender=True,
+            disable_buffering=False,
+            disable_telemetry=True,
+            flush_interval=0,
+        )
+        fake_socket = FakeSocket()
+        statsd.socket = fake_socket
+
+        statsd.gauge("wait.zero", 1)
+        statsd.gauge_with_timestamp("wait.zero.timestamped", 2, int(time.time()))
+
+        self.assertIs(statsd.wait_for_pending(0), True)
+        payload = fake_socket.recv(2, no_wait=True)
+        self.assertIn("wait.zero:1|g", payload)
+        self.assertIn("wait.zero.timestamped:2|g", payload)
+
+    def test_wait_for_pending_timeout_includes_the_initial_flush(self):
+        # wait_for_pending(timeout) owns an end-to-end timeout, but the initial
+        # flush may be waiting for room in a full sender queue. That wait is
+        # bounded by sender_queue_timeout, so once the timeout is spent we must
+        # not start flushing the second internal buffer and wait again.
+        statsd = DogStatsd(
+            disable_background_sender=False,
+            disable_buffering=False,
+            disable_telemetry=True,
+            flush_interval=0,
+            sender_queue_size=1,
+            sender_queue_timeout=0.5,
+        )
+        entered = threading.Event()
+        release = threading.Event()
+
+        def blocking_xmit(packet, queue_mode=False):
+            entered.set()
+            release.wait(5.0)
+            return True
+
+        statsd._xmit_packet_with_telemetry = blocking_xmit
+        statsd._send_to_server("inflight:1|c")
+        self.assertTrue(entered.wait(5.0), "sender never picked up the payload")
+        statsd._send_to_server("queued:1|c")
+        self.assertEqual(statsd._queue.qsize(), 1, "queue should be full before wait_for_pending flushes")
+        statsd.gauge("buffered", 1)
+        statsd.gauge_with_timestamp("buffered.timestamped", 1, int(time.time()))
+
+        join_calls = []
+        original_join = statsd._queue.join
+
+        def spy_join(timeout=None):
+            join_calls.append(timeout)
+            return original_join(timeout)
+
+        statsd._queue.join = spy_join
+
+        try:
+            self.assertIs(self._call_bounded(statsd.wait_for_pending, (0.1,)), False)
+            self.assertEqual(
+                join_calls,
+                [],
+                "wait_for_pending must not fall through to queue.join() once the "
+                "initial flush already spent the whole timeout",
+            )
+        finally:
+            release.set()
+            self.assertIs(self._call_bounded(statsd.wait_for_pending, (5.0,)), True)
+            statsd.stop()
+
+    def test_wait_for_pending_join_gets_only_remaining_timeout_after_flush(self):
+        def exercise(flush_finished_at, expected_join_timeout):
+            statsd = DogStatsd(disable_background_sender=False, disable_telemetry=True)
+            now = {"value": 100.0}
+            join_timeouts = []
+            original_flush = statsd._flush_buffered_metrics
+
+            def fake_flush(deadline=None):
+                self.assertEqual(deadline, 105.0)
+                now["value"] = flush_finished_at
+                return True, True
+
+            def fake_join(timeout=None):
+                join_timeouts.append(timeout)
+                return True
+
+            statsd._flush_buffered_metrics = fake_flush
+            statsd._queue.join = fake_join
+
+            try:
+                with patch("datadog.dogstatsd.base.monotonic", lambda: now["value"]):
+                    self.assertIs(statsd.wait_for_pending(5.0), True)
+                self.assertEqual(join_timeouts, [expected_join_timeout])
+            finally:
+                statsd._flush_buffered_metrics = original_flush
+                statsd.stop()
+
+        exercise(flush_finished_at=103.25, expected_join_timeout=1.75)
+        exercise(flush_finished_at=106.0, expected_join_timeout=0)
+
     def test_wait_for_pending_returns_true_with_no_queue(self):
         # Nothing queued (background sender disabled) is trivially "drained".
         statsd = DogStatsd(disable_background_sender=True, disable_telemetry=True)
         self.assertIsNone(statsd._queue)
         self.assertIs(statsd.wait_for_pending(), True)
         self.assertIs(statsd.wait_for_pending(0), True)
+
+    def test_wait_for_pending_treats_a_dropped_synchronous_send_as_drained(self):
+        # A synchronous drop is accounted and no longer pending, so it
+        # satisfies the "sent, dropped or expired" drain contract.
+        statsd = DogStatsd(
+            disable_background_sender=True,
+            disable_buffering=False,
+            disable_telemetry=True,
+            flush_interval=0,
+        )
+        statsd.socket = BrokenSocket()
+
+        statsd.gauge("dropped.sync", 1)
+        self.assertTrue(statsd._buffer, "metric should still be buffered")
+
+        self.assertIs(statsd.wait_for_pending(5.0), True)
+        self.assertFalse(statsd._buffer, "the buffer must have been flushed")
+        self.assertIs(statsd.wait_for_pending(), True)
+
+    def test_wait_for_pending_still_drains_after_a_sealed_queue_drop(self):
+        # Regression: after a timed-out stop() sealed the queue, a failed
+        # synchronous fallback made wait_for_pending() skip queue.join().
+        statsd = DogStatsd(
+            disable_background_sender=False,
+            disable_buffering=False,
+            disable_telemetry=True,
+            flush_interval=0,
+        )
+        entered_send = threading.Event()
+        release = threading.Event()
+        wedged = statsd._sender_thread
+
+        def xmit(packet, queue_mode=False):
+            if queue_mode:
+                entered_send.set()
+                release.wait(30.0)
+                return True
+            # Every direct/synchronous send fails.
+            return False
+
+        statsd._xmit_packet_with_telemetry = xmit
+        statsd._send_to_server("inflight:1|c")
+        self.assertTrue(entered_send.wait(5.0), "sender never picked up the payload")
+
+        pending_queue = statsd._queue
+        join_calls = []
+        original_join = pending_queue.join
+
+        def counting_join(timeout=None):
+            join_calls.append(timeout)
+            return original_join(timeout)
+
+        pending_queue.join = counting_join
+
+        try:
+            # Stop seals the queue while the sender is still wedged.
+            self.assertIs(self._call_bounded(statsd.stop, (0.2,)), False)
+            statsd.gauge("buffered.after.seal", 1)
+            self.assertTrue(statsd._buffer, "the metric should be buffered, not queued")
+
+            t0 = time.time()
+            self.assertIs(self._call_bounded(statsd.wait_for_pending, (0.3,), limit=5.0), False)
+            elapsed = time.time() - t0
+
+            self.assertEqual(len(join_calls), 1, "the drain wait was skipped entirely")
+            self.assertGreaterEqual(
+                elapsed, 0.3,
+                "wait_for_pending() returned before its own timeout: it never waited for the drain",
+            )
+        finally:
+            release.set()
+            wedged.join(timeout=5.0)
 
     def test_stop_reports_a_failed_final_flush_of_buffered_metrics(self):
         # The queue drains cleanly (there is no background sender here), but
@@ -3773,22 +3958,22 @@ async def print_foo():
         self.assertEqual(item.payload, "fresh\n")
         self.assertEqual([p.payload for p in dropped_expired], ["stale-1\n", "stale-2\n"])
 
-    def test_sender_queue_replay_safe_payload_never_expires(self):
+    def test_sender_queue_timestamped_payload_never_expires(self):
         pending_queue = SenderQueue(
             maxsize=0,
             expiry_seconds=20.0,
             on_drop_queue_full=lambda item: self.fail("unexpected queue-full drop"),
-            on_drop_expired=lambda item: self.fail("replay-safe payload should not expire"),
+            on_drop_expired=lambda item: self.fail("timestamped payload should not expire"),
         )
 
-        # A replay-safe entry is the bare string, so there is no enqueued_at to
+        # A timestamped entry is the bare string, so there is no enqueued_at to
         # age against at all -- it can never be dropped for staleness however
         # long it sits there.
-        old_but_replay_safe = "timestamped\n"
-        pending_queue.put(old_but_replay_safe)
+        old_but_timestamped = "timestamped\n"
+        pending_queue.put(old_but_timestamped)
 
-        self.assertTrue(is_replay_safe(old_but_replay_safe))
-        self.assertIs(pending_queue.get(), old_but_replay_safe)
+        self.assertTrue(is_timestamped(old_but_timestamped))
+        self.assertIs(pending_queue.get(), old_but_timestamped)
 
     def test_sender_queue_requeue_front_when_room_available(self):
         pending_queue = SenderQueue(
@@ -4028,11 +4213,11 @@ async def print_foo():
             "_unfinished_tasks never drifted under cross-thread get/requeue contention",
         )
 
-    def test_replay_safety_is_carried_by_the_queued_entry_type(self):
-        # Replay-safety is not a stored flag: an entry subject to expiry is a
+    def test_timestamping_is_carried_by_the_queued_entry_type(self):
+        # Timestamping is not a stored flag: an entry subject to expiry is a
         # PendingPayload (carrying the enqueued_at it will be judged against),
-        # and a replay-safe one is the bare packet string. That keeps the
-        # wrapper -- and the GC traversal it implies -- off replay-safe entries
+        # and a timestamped one is the bare packet string. That keeps the
+        # wrapper -- and the GC traversal it implies -- off timestamped entries
         # entirely.
         statsd = DogStatsd(disable_background_sender=False)
         statsd.socket = FakeSocket()
@@ -4053,9 +4238,9 @@ async def print_foo():
 
         self.assertEqual(len(captured), 2)
 
-        expiring, replay_safe = captured
+        expiring, timestamped = captured
         self.assertIsInstance(expiring, PendingPayload)
-        self.assertFalse(is_replay_safe(expiring))
+        self.assertFalse(is_timestamped(expiring))
         self.assertIsInstance(
             expiring.enqueued_at, float,
             "an expiring payload needs a real timestamp to be judged against",
@@ -4064,14 +4249,14 @@ async def print_foo():
         # Deliberately not asserting a concrete string type here: on Python 2
         # the serialized packet is unicode, not str. What matters is that the
         # entry is the bare payload rather than a wrapper, which is exactly
-        # what is_replay_safe()/payload_text() key off.
-        self.assertNotIsInstance(replay_safe, PendingPayload)
-        self.assertTrue(is_replay_safe(replay_safe))
-        self.assertIs(payload_text(replay_safe), replay_safe)
+        # what is_timestamped()/payload_text() key off.
+        self.assertNotIsInstance(timestamped, PendingPayload)
+        self.assertTrue(is_timestamped(timestamped))
+        self.assertIs(payload_text(timestamped), timestamped)
 
         # Either form still yields its packet text the same way.
         self.assertTrue(payload_text(expiring).startswith("no.timestamp"))
-        self.assertTrue(payload_text(replay_safe).startswith("with.timestamp"))
+        self.assertTrue(payload_text(timestamped).startswith("with.timestamp"))
 
         statsd.stop()
 
@@ -4195,15 +4380,15 @@ async def print_foo():
             track_instance=False,
         )
 
-    def test_stop_is_bounded_with_a_stuck_replay_safe_payload(self):
+    def test_stop_is_bounded_with_a_stuck_timestamped_payload(self):
         # requeue_front() puts a failed payload back ahead of the Stop
-        # sentinel, and replay-safe payloads are exempt from the queue's
+        # sentinel, and timestamped payloads are exempt from the queue's
         # expiry, so such a payload never resolves while the Agent is down.
         # Without a bounded grace period the sender never reaches Stop at all
         # and stop() hangs forever. A small patched grace makes the test fast
         # and deterministic instead of depending on the real 60s default.
         statsd = self._unreachable_retrying_client()
-        statsd.gauge_with_timestamp("replay.safe", 1, timestamp=int(time.time()))
+        statsd.gauge_with_timestamp("timestamped.metric", 1, timestamp=int(time.time()))
         time.sleep(0.1)  # let the sender pick it up and start retrying
 
         with patch("datadog.dogstatsd.base.SENDER_UNBOUNDED_STOP_GRACE_SECONDS", 0.3):
@@ -4219,7 +4404,7 @@ async def print_foo():
         # abandoning pending payloads, a second stop() should still report
         # failure (ABORTED), not "success".
         statsd = self._unreachable_retrying_client()
-        statsd.gauge_with_timestamp("replay.safe", 1, timestamp=int(time.time()))
+        statsd.gauge_with_timestamp("timestamped.metric", 1, timestamp=int(time.time()))
         time.sleep(0.1)
 
         with patch("datadog.dogstatsd.base.SENDER_UNBOUNDED_STOP_GRACE_SECONDS", 0.3), \
@@ -4235,12 +4420,12 @@ async def print_foo():
             self.assertIs(statsd.stop(1.0), False)
             self.assertGreaterEqual(statsd.packets_dropped_writer, 1)
 
-    def test_pre_fork_is_bounded_with_a_stuck_replay_safe_payload(self):
+    def test_pre_fork_is_bounded_with_a_stuck_timestamped_payload(self):
         # Same starvation, reached through pre_fork() -- which matters more:
         # it is installed as an os.register_at_fork hook, has no timeout
         # parameter, and would therefore block any fork() in the process.
         statsd = self._unreachable_retrying_client()
-        statsd.gauge_with_timestamp("replay.safe", 1, timestamp=int(time.time()))
+        statsd.gauge_with_timestamp("timestamped.metric", 1, timestamp=int(time.time()))
         time.sleep(0.1)
 
         # Run it on a worker so a regression fails this assertion instead of
