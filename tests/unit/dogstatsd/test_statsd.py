@@ -2909,15 +2909,22 @@ async def print_foo():
         statsd.gauge("buffered", 1)
         statsd.gauge_with_timestamp("buffered.timestamped", 1, int(time.time()))
 
+        join_calls = []
+        original_join = statsd._queue.join
+
+        def spy_join(timeout=None):
+            join_calls.append(timeout)
+            return original_join(timeout)
+
+        statsd._queue.join = spy_join
+
         try:
-            t0 = time.time()
             self.assertIs(self._call_bounded(statsd.wait_for_pending, (0.1,)), False)
-            elapsed = time.time() - t0
-            self.assertGreaterEqual(elapsed, 0.1)
-            self.assertLess(
-                elapsed,
-                0.8,
-                "wait_for_pending should not wait on both buffered payloads after its timeout elapsed",
+            self.assertEqual(
+                join_calls,
+                [],
+                "wait_for_pending must not fall through to queue.join() once the "
+                "initial flush already spent the whole timeout",
             )
         finally:
             release.set()
