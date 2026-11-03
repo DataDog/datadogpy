@@ -1725,18 +1725,8 @@ class DogStatsd(object):
 
         return "".join(parts)
 
-    def _report(
-        self,
-        metric,  # type: Text
-        metric_type,  # type: str
-        value,  # type: Any
-        tags,  # type: Optional[List[str]]
-        sample_rate,  # type: Optional[float]
-        timestamp=0,  # type: int
-        sampling=True,  # type: bool
-        cardinality=None,  # type: Optional[str]
-    ):
-        # type: (...) -> bool
+    def _report(self, metric, metric_type, value, tags, sample_rate, timestamp=0, sampling=True, cardinality=None):
+        # type: (Text, str, Any, Optional[List[str]], Optional[float], int, bool, Optional[str]) -> bool
         """
         Create a metric packet and send it.
 
