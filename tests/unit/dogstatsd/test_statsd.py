@@ -3086,16 +3086,21 @@ async def print_foo():
         self.assertIs(statsd.stop(), True)
         self.assertEqual("stop.buffered:1|g\n", fake_socket.recv(no_wait=True))
 
-    def test_stop_final_flush_bounds_each_send_by_the_remaining_timeout(self):
+    def test_stop_final_flush_skips_a_send_once_the_timeout_is_spent(self):
+        # Resolution is one socket_timeout: a send already underway always
+        # gets to use the full configured socket_timeout -- it is never
+        # shrunk to fit what's left of stop(timeout). Once the deadline is
+        # behind us, a *new* send is skipped outright instead of being
+        # attempted with a smaller timeout.
         class ClockSocket(FakeSocket):
             def __init__(self, clock, cost):
                 super(ClockSocket, self).__init__()
                 self.clock = clock
                 self.cost = cost
-                self.seen = []
+                self.sends = 0
 
             def send(self, payload):
-                self.seen.append(self.timeout)
+                self.sends += 1
                 self.clock["now"] += self.cost
                 return super(ClockSocket, self).send(payload)
 
@@ -3114,29 +3119,31 @@ async def print_foo():
 
             with patch("datadog.dogstatsd.base.monotonic", lambda: clock["now"]):
                 result = statsd.stop(1.0)
-            return result, sock.seen, statsd.socket_timeout
+            return result, sock.sends, statsd.socket_timeout
 
-        # Each packet is bounded by what is actually left of stop(1.0), not by
-        # a fresh socket_timeout, and the configured value is restored after.
-        self.assertEqual(stop_with(0.75), (True, [1.0, 0.25], 10.0))
-        # Budget spent by the first packet: the second is not attempted.
-        self.assertEqual(stop_with(1.25), (False, [1.0], 10.0))
+        # Both packets land inside stop(1.0)'s budget: both attempted.
+        self.assertEqual(stop_with(0.75), (True, 2, 10.0))
+        # The first packet alone spends the whole budget: the second is
+        # skipped outright, never touching the socket at all.
+        self.assertEqual(stop_with(1.25), (False, 1, 10.0))
 
-    def test_stop_final_flush_leaves_other_threads_sends_unclamped(self):
-        # The stop budget belongs to the stopping thread: a send from another
-        # thread between stop's packets keeps the configured socket_timeout,
-        # and is still attempted after stop's own budget is gone.
+    def test_stop_final_flush_leaves_other_threads_sends_unaffected(self):
+        # The stop deadline belongs to the call it was explicitly handed to:
+        # once stop's own budget is spent and its next send is skipped, a
+        # send from another thread that never received that deadline is
+        # still attempted and delivered -- not silently skipped because of
+        # some other thread's exhausted, unrelated budget.
         clock = {"now": 100.0}
         other_result = []
 
         class ClockSocket(FakeSocket):
             def __init__(self):
                 super(ClockSocket, self).__init__()
-                self.seen = []
+                self.sends = 0
 
             def send(self, payload):
-                self.seen.append(self.timeout)
-                if len(self.seen) == 1:
+                self.sends += 1
+                if self.sends == 1:
                     clock["now"] += 1.5  # stop's whole budget, spent
                 return super(ClockSocket, self).send(payload)
 
@@ -3169,9 +3176,10 @@ async def print_foo():
         with patch("datadog.dogstatsd.base.monotonic", lambda: clock["now"]):
             self.assertIs(statsd.stop(1.0), False)
 
-        # stop's packet was clamped to its 1.0 budget; the other thread's send
-        # got the configured 10.0 and was delivered, not dropped.
-        self.assertEqual(sock.seen, [1.0, 10.0])
+        # stop's own second (timestamped) packet was skipped once its budget
+        # was gone -- it never touched the socket, so only the first packet
+        # and the other thread's unrelated send actually reached send().
+        self.assertEqual(sock.sends, 2)
         self.assertEqual(other_result, [True])
         self.assertEqual(statsd.socket_timeout, 10.0)
 

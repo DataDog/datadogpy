@@ -201,9 +201,6 @@ SENDER_UNBOUNDED_STOP_GRACE_SECONDS = SENDER_RETRY_MAX_BACKOFF
 SENDER_STOP_RETRY_INTERVAL = 0.5
 # Default for sender_queue_expiry_seconds; it can be overridden per client.
 PENDING_PAYLOAD_EXPIRY_SECONDS = 10.0
-# Tells _xmit_packet_attempt() that socket_timeout was left alone, so it has
-# nothing to restore. None can't say that: it's a valid timeout (wait forever).
-_NO_CLAMP = object()
 # Errors seen while sending on an already-connected socket that indicate the
 # peer went away (e.g. the agent crashed/restarted). These are worth a single
 # reconnect-and-resend attempt instead of dropping the packet outright.
@@ -1139,34 +1136,25 @@ class DogStatsd(object):
             if self.socket:
                 self.socket.settimeout(timeout)
 
-    def _clamp_send_timeout(self, deadline):
-        # type: (Optional[float]) -> Tuple[bool, Any]
-        """Shrink socket_timeout to the caller's remaining send budget.
+    def _within_send_budget(self, deadline):
+        # type: (Optional[float]) -> bool
+        """Whether there is still budget left to attempt a send.
 
         deadline is an absolute monotonic() timestamp, or None for "no
         budget to enforce": ordinary sends (gauge(), increment(), the
         background sender's own retries, ...) always pass None, so this
-        only ever clamps the specific call chain a caller explicitly handed
+        only ever bounds the specific call chain a caller explicitly handed
         a deadline to -- never a concurrent, unrelated send on another
         thread.
 
-        Returns (within_budget, restore). within_budget is False when the
-        budget is gone, so the caller skips the send instead of blocking for
-        another socket_timeout. restore is the value the caller must hand to
-        set_socket_timeout() before releasing _socket_lock, or _NO_CLAMP when
-        nothing was changed. Caller must hold _socket_lock, so no other
-        sender can observe the clamped value.
+        socket_timeout is never shrunk to fit what is left of the deadline:
+        a send that is already underway always gets its full configured
+        socket_timeout. Only a *new* send attempt is skipped once the
+        deadline is already behind us, so the finest resolution a deadline
+        is enforced at is one socket_timeout, not an arbitrary fraction of
+        one.
         """
-        if deadline is None:
-            return True, _NO_CLAMP
-
-        remaining = deadline - monotonic()
-        if remaining <= 0:
-            return False, _NO_CLAMP
-
-        configured = self.socket_timeout
-        self.set_socket_timeout(remaining if configured is None else min(configured, remaining))
-        return True, configured
+        return deadline is None or monotonic() < deadline
 
     @classmethod
     def _ensure_min_send_buffer_size(cls, sock, min_size=MIN_SEND_BUFFER_SIZE):
@@ -1934,7 +1922,7 @@ class DogStatsd(object):
             accounted for and dropped) so the caller can requeue the payload
             and retry once reconnected, instead of losing it.
         :param deadline: Passed straight through to _xmit_packet_attempt();
-            see _clamp_send_timeout(). None (the default) for every caller
+            see _within_send_budget(). None (the default) for every caller
             outside stop()'s final flush.
         """
         sent = self._xmit_packet(packet, False, queue_mode=queue_mode, deadline=deadline)
@@ -2004,11 +1992,9 @@ class DogStatsd(object):
         and it's worth a reconnect-and-retry by the caller.
         """
         socket_kind = None
-        restore_timeout = _NO_CLAMP  # type: Any
         with self._socket_lock:
             try:
-                within_budget, restore_timeout = self._clamp_send_timeout(deadline)
-                if not within_budget:
+                if not self._within_send_budget(deadline):
                     return False
 
                 if self._uses_dedicated_telemetry(is_telemetry):
@@ -2066,10 +2052,6 @@ class DogStatsd(object):
             except Exception as exc:
                 log.error("Unexpected error: %s", str(exc))
                 return False
-            finally:
-                # Still holding _socket_lock, so the clamp never outlives it.
-                if restore_timeout is not _NO_CLAMP:
-                    self.set_socket_timeout(restore_timeout)
 
             # if in stream mode we need to shut down the socket; we can't recover from a
             # partial send
@@ -2611,8 +2593,10 @@ class DogStatsd(object):
         final buffered and aggregated flush. That final flush is synchronous:
         it does not enqueue buffered payloads on the background sender, so it
         does not use sender queue expiry/backpressure or socket_connect_retry
-        retries, and each of its sends is bounded by socket_timeout or by
-        whatever is left of the timeout below, whichever is smaller. If that
+        retries. Once the timeout below is spent, no further send is
+        attempted -- a send already underway always keeps its full
+        configured socket_timeout, so the timeout below is only bounded to
+        the resolution of one socket_timeout, not to the second. If a
         synchronous send fails, stop() returns False and the payload is
         dropped. Applications that require buffered payloads to
         participate in background-sender retries should call flush() while the
@@ -2682,7 +2666,7 @@ class DogStatsd(object):
         # send to the caller: the payload is dropped, not retried, so a True
         # here would claim a clean stop that didn't happen. deadline is
         # passed explicitly down to each send attempt (see
-        # _clamp_send_timeout()) rather than stashed anywhere shared, so it
+        # _within_send_budget()) rather than stashed anywhere shared, so it
         # can never leak onto a concurrent, unrelated send on another thread.
         flushed_aggregated = self._flush_aggregated_metrics(deadline)
         sent_buffered, completed_buffered = self._flush_buffered_metrics(deadline)
