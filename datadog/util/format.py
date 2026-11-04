@@ -33,7 +33,7 @@ def construct_path(api_version, path):
 def force_to_epoch_seconds(epoch_sec_or_dt):
     # type: (Union[float, int, datetime.datetime]) -> Union[float, int]
     if isinstance(epoch_sec_or_dt, datetime.datetime):
-        return calendar.timegm(epoch_sec_or_dt.timetuple())
+        return calendar.timegm(epoch_sec_or_dt.utctimetuple())
     return epoch_sec_or_dt
 
 
