@@ -1332,11 +1332,13 @@ class DogStatsd(object):
         monotonic() timestamp, which is why it stays off the public method.
         """
         with self._buffer_lock:
+            if deadline is not None and monotonic() >= deadline and (self._buffer or self._buffer_ts):
+                return True, False
+
             # Non-timestamped first: it's the only batch subject to staleness
             # expiry, so give it the earliest queue position.
             sent = self._flush_one_buffer(False)
-            if deadline is not None and monotonic() >= deadline and self._buffer_ts:
-                return sent, False
+
             # Don't short-circuit: the timestamped batch must be flushed even
             # if the first packet failed.
             return self._flush_one_buffer(True) and sent, True
@@ -1357,9 +1359,10 @@ class DogStatsd(object):
         """Flush the aggregated metrics, as flush_aggregated_metrics().
 
         deadline is an absolute monotonic() timestamp checked once per
-        metric, before attempting it -- a send already underway always
-        runs to completion, so the resolution is one socket_timeout, not a
-        fraction of one. None means no bound.
+        metric, before attempting it -- a metric already being sent always
+        runs to completion (including any telemetry flush piggybacked onto
+        it), so the resolution is one flush item, not one socket_timeout.
+        None means no bound.
 
         aggregator.flush_aggregated_metrics() already drained these metrics
         out of the aggregator, so there is no buffer left for an abandoned
@@ -2462,8 +2465,8 @@ class DogStatsd(object):
             metrics, then polls the queue without waiting. It returns False if the
             queue was not empty at that moment. For a positive value, time
             spent flushing is deducted from the time available to wait for the queue.
-            If the timeout expires after flushing the non-timestamped metrics, the
-            timestamped metrics remain buffered.
+            If the timeout has already expired by the time the buffered
+            flush starts, both batches remain buffered.
             This is not a strict time limit. A flush may take up to
             sender_queue_timeout while waiting for space in the queue, or up to
             socket_timeout when sending via the synchronous sender. Configure
@@ -2567,15 +2570,19 @@ class DogStatsd(object):
         final buffered and aggregated flush. That final flush is synchronous:
         it does not enqueue buffered payloads on the background sender, so it
         does not use sender queue expiry/backpressure or socket_connect_retry
-        retries. Once the timeout below is spent, no further send is
-        attempted -- a send already underway always keeps its full
-        configured socket_timeout, so the timeout below is only bounded to
-        the resolution of one socket_timeout, not to the second. If a
-        synchronous send fails, stop() returns False and the payload is
-        dropped. Applications that require buffered payloads to
-        participate in background-sender retries should call flush() while the
-        sender is still enabled, or call wait_for_pending(timeout) before
-        stop().
+        retries. The timeout below is checked once before each aggregated
+        metric, and once before the two buffered-metric batches as a whole,
+        not before each individual socket operation, so it is not a strict
+        upper bound: an item already being sent when the timeout is spent
+        always runs to completion -- up to its full configured
+        socket_timeout, or indefinitely if socket_timeout is None -- and a
+        telemetry flush piggybacked onto that same send is never itself
+        subject to this timeout either. Once the timeout has passed, no
+        further flush item is attempted. If a synchronous send fails, stop()
+        returns False and the payload is dropped. Applications that require
+        buffered payloads to participate in background-sender retries
+        should call flush() while the sender is still enabled, or call
+        wait_for_pending(timeout) before stop().
 
         :param timeout: Maximum number of seconds to wait for the background
             sender to drain its queue and exit. None (the default) waits
