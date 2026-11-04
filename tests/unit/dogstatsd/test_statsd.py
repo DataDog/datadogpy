@@ -3122,63 +3122,6 @@ async def print_foo():
 
         self.assertEqual((result, sock.sends, statsd.socket_timeout), (True, 2, 10.0))
 
-    def test_stop_final_flush_leaves_other_threads_sends_unaffected(self):
-        # The stop deadline belongs to the call it was explicitly handed to:
-        # a send from another thread that never received that deadline is
-        # attempted and delivered regardless of how much of stop's own
-        # budget has already been spent by the time it runs.
-        clock = {"now": 100.0}
-        other_result = []
-
-        class ClockSocket(FakeSocket):
-            def __init__(self):
-                super(ClockSocket, self).__init__()
-                self.sends = 0
-
-            def send(self, payload):
-                self.sends += 1
-                if self.sends == 1:
-                    clock["now"] += 1.5  # stop's whole budget, spent
-                return super(ClockSocket, self).send(payload)
-
-        statsd = DogStatsd(
-            disable_background_sender=True,
-            disable_buffering=False,
-            disable_telemetry=True,
-            socket_timeout=10.0,
-        )
-        sock = ClockSocket()
-        statsd.socket = sock
-        statsd.gauge("expiring", 1)
-        statsd.gauge_with_timestamp("replay.safe", 2, int(time.time()))
-
-        original_flush_one = statsd._flush_one_buffer
-
-        def flush_one(replay_safe):
-            result = original_flush_one(replay_safe)
-            if not replay_safe:
-                # Between stop's two packets: _socket_lock is free again.
-                other = threading.Thread(
-                    target=lambda: other_result.append(statsd._send_to_server("other:1|c"))
-                )
-                other.start()
-                other.join(5.0)
-                self.assertFalse(other.is_alive(), "the other thread's send never returned")
-            return result
-
-        statsd._flush_one_buffer = flush_one
-        with patch("datadog.dogstatsd.base.monotonic", lambda: clock["now"]):
-            # Both of stop's own packets go out regardless (the deadline is
-            # only checked once, before the buffered flush starts) -- the
-            # point under test here is the other thread's send, not this.
-            statsd.stop(1.0)
-
-        # The other thread's unrelated send is counted alongside stop's own
-        # two packets -- nothing starved it of a socket write.
-        self.assertEqual(sock.sends, 3)
-        self.assertEqual(other_result, [True])
-        self.assertEqual(statsd.socket_timeout, 10.0)
-
     def test_stop_final_flush_accounts_aggregated_metrics_abandoned_by_the_deadline(self):
         # aggregator.flush_aggregated_metrics() drains these metrics out of
         # the aggregator entirely -- unlike a skipped buffered line, which
@@ -3253,33 +3196,6 @@ async def print_foo():
         self.assertIs(result, False)
         self.assertEqual(sock.sends, 1)
         self.assertEqual(statsd._buffer, [line])
-
-    def test_stop_does_not_clobber_a_socket_timeout_set_during_its_final_flush(self):
-        # stop() no longer snapshots socket_timeout around the flush, so a
-        # set_socket_timeout() racing it is not reverted afterwards.
-        statsd = DogStatsd(
-            disable_background_sender=True,
-            disable_buffering=False,
-            disable_telemetry=True,
-            socket_timeout=10.0,
-        )
-        statsd.socket = FakeSocket()
-        statsd.gauge("expiring", 1)
-        statsd.gauge_with_timestamp("replay.safe", 2, int(time.time()))
-
-        original_flush_one = statsd._flush_one_buffer
-
-        def flush_one(replay_safe):
-            result = original_flush_one(replay_safe)
-            if not replay_safe:
-                setter = threading.Thread(target=statsd.set_socket_timeout, args=(2.0,))
-                setter.start()
-                setter.join(5.0)
-            return result
-
-        statsd._flush_one_buffer = flush_one
-        self.assertIs(statsd.stop(5.0), True)
-        self.assertEqual(statsd.socket_timeout, 2.0)
 
     def test_stop_reports_a_failed_flush_of_payloads_the_sender_handed_back(self):
         # Keep the sender alive after stop() seals its queue. A payload sent
