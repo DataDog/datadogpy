@@ -2883,8 +2883,10 @@ async def print_foo():
     def test_wait_for_pending_timeout_includes_the_initial_flush(self):
         # wait_for_pending(timeout) owns an end-to-end timeout, but the initial
         # flush may be waiting for room in a full sender queue. That wait is
-        # bounded by sender_queue_timeout, so once the timeout is spent we must
-        # not start flushing the second internal buffer and wait again.
+        # bounded by sender_queue_timeout, not by this timeout -- the deadline
+        # is only checked once, before the buffered flush starts, so a slow
+        # first buffer can run well past it before the final queue.join()
+        # gets its turn, with whatever (zero, here) time is left by then.
         statsd = DogStatsd(
             disable_background_sender=False,
             disable_buffering=False,
@@ -2922,9 +2924,9 @@ async def print_foo():
             self.assertIs(self._call_bounded(statsd.wait_for_pending, (0.1,)), False)
             self.assertEqual(
                 join_calls,
-                [],
-                "wait_for_pending must not fall through to queue.join() once the "
-                "initial flush already spent the whole timeout",
+                [0],
+                "wait_for_pending should still reach queue.join() with whatever time is "
+                "left, even though the buffered flush alone already overran the timeout",
             )
         finally:
             release.set()
@@ -3085,6 +3087,115 @@ async def print_foo():
 
         self.assertIs(statsd.stop(), True)
         self.assertEqual("stop.buffered:1|g\n", fake_socket.recv(no_wait=True))
+
+    def test_stop_final_flush_always_attempts_both_buffers_once_started(self):
+        # The deadline is checked once, before the buffered flush starts --
+        # not between its two packets -- so once started, both are always
+        # attempted, no matter how long the first one's send took.
+        class ClockSocket(FakeSocket):
+            def __init__(self, clock, cost):
+                super(ClockSocket, self).__init__()
+                self.clock = clock
+                self.cost = cost
+                self.sends = 0
+
+            def send(self, payload):
+                self.sends += 1
+                self.clock["now"] += self.cost
+                return super(ClockSocket, self).send(payload)
+
+        clock = {"now": 100.0}
+        statsd = DogStatsd(
+            disable_background_sender=True,
+            disable_buffering=False,
+            disable_telemetry=True,
+            socket_timeout=10.0,
+        )
+        # The first packet alone spends well more than stop(1.0)'s budget.
+        sock = ClockSocket(clock, 1.25)
+        statsd.socket = sock
+        statsd.gauge("expiring", 1)
+        statsd.gauge_with_timestamp("replay.safe", 2, int(time.time()))
+
+        with patch("datadog.dogstatsd.base.monotonic", lambda: clock["now"]):
+            result = statsd.stop(1.0)
+
+        self.assertEqual((result, sock.sends, statsd.socket_timeout), (True, 2, 10.0))
+
+    def test_stop_final_flush_accounts_aggregated_metrics_abandoned_by_the_deadline(self):
+        # aggregator.flush_aggregated_metrics() drains these metrics out of
+        # the aggregator entirely -- unlike a skipped buffered line, which
+        # just stays put in self._buffer_ts -- so a metric abandoned once
+        # the deadline passes has nowhere left to sit. It must be accounted
+        # in packets_dropped_writer instead, or it vanishes untracked.
+        clock = {"now": 100.0}
+
+        class ClockSocket(FakeSocket):
+            def __init__(self):
+                super(ClockSocket, self).__init__()
+                self.sends = 0
+
+            def send(self, payload):
+                self.sends += 1
+                clock["now"] += 1.5  # one send alone spends stop(1.0)'s budget
+                return super(ClockSocket, self).send(payload)
+
+        statsd = DogStatsd(disable_background_sender=True, disable_telemetry=True)
+        statsd.enable_aggregation()
+        sock = ClockSocket()
+        statsd.socket = sock
+
+        statsd.increment("stop.aggregated.one")
+        statsd.increment("stop.aggregated.two")
+        statsd.increment("stop.aggregated.three")
+
+        with patch("datadog.dogstatsd.base.monotonic", lambda: clock["now"]):
+            result = statsd.stop(1.0)
+
+        # The first metric's send alone spends the whole budget: the other
+        # two are never attempted, but neither one vanishes silently.
+        self.assertIs(result, False)
+        self.assertEqual(sock.sends, 1)
+        self.assertEqual(statsd.packets_dropped_writer, 2)
+
+    def test_stop_skips_the_buffered_flush_once_the_aggregated_flush_spent_the_deadline(self):
+        # _flush_buffered_metrics() is entered with whatever the aggregated
+        # flush left of stop()'s deadline -- it must not start the first
+        # (non-timestamped) batch's send either once that deadline is
+        # already gone, not just skip the second the way it already did.
+        clock = {"now": 100.0}
+
+        class ClockSocket(FakeSocket):
+            def __init__(self):
+                super(ClockSocket, self).__init__()
+                self.sends = 0
+
+            def send(self, payload):
+                self.sends += 1
+                clock["now"] += 1.5  # one send alone spends stop(1.0)'s budget
+                return super(ClockSocket, self).send(payload)
+
+        statsd = DogStatsd(disable_background_sender=True, disable_telemetry=True)
+        statsd.enable_aggregation()
+        sock = ClockSocket()
+        statsd.socket = sock
+
+        statsd.increment("stop.aggregated")
+        # A line as if a gauge() call had buffered it before stop() flipped
+        # buffering off.
+        line = "buffered.one:1|g"
+        statsd._buffer = [line]
+        statsd._buffer_size = len(line) + 1
+
+        with patch("datadog.dogstatsd.base.monotonic", lambda: clock["now"]):
+            result = statsd.stop(1.0)
+
+        # The aggregated metric's send alone spent the whole budget: the
+        # buffered batch must never have touched the socket, and the line
+        # must still be sitting there, not lost.
+        self.assertIs(result, False)
+        self.assertEqual(sock.sends, 1)
+        self.assertEqual(statsd._buffer, [line])
 
     def test_stop_reports_a_failed_flush_of_payloads_the_sender_handed_back(self):
         # Keep the sender alive after stop() seals its queue. A payload sent
