@@ -9,7 +9,7 @@
 * [Fixed] Fix DogStatsD `stop()` synchronous fallback failures: `stop()` could return `True` even though a payload flushed synchronously during shutdown failed to send; it now returns `False` in that case. See [#1009](https://github.com/DataDog/datadogpy/pull/1009).
 * [Fixed] Fix DogStatsD `wait_for_pending(timeout)` timeout accounting so the timeout covers both the buffered-metrics flush and the queue drain, not just the drain. See [#1010](https://github.com/DataDog/datadogpy/pull/1010).
 * [Fixed] Fix a DogStatsD background sender deadlock that could occur during buffered flush retries. See [#1011](https://github.com/DataDog/datadogpy/pull/1011).
-* [Fixed] Bound DogStatsD `stop(timeout)`'s final synchronous flush by the remaining timeout budget, instead of letting it add a fresh `socket_timeout` on top. See [#1012](https://github.com/DataDog/datadogpy/pull/1012).
+* [Fixed] Check DogStatsD `stop(timeout)`'s remaining timeout budget before each aggregated metric and before starting the buffered flush. In-progress sends and their telemetry can still exceed that budget because socket timeouts are not clamped. See [#1012](https://github.com/DataDog/datadogpy/pull/1012).
 
 ## v0.55.0 / 2026-09-30
 
