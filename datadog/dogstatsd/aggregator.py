@@ -137,9 +137,9 @@ class Aggregator(object):
         # type: (str, str, Any, Optional[List[str]], Optional[float], Optional[str]) -> None
         if rate is None:
             rate = 1
-        context_key = self.get_context(name, tags)
-        metric_context = self.max_sample_metric_map[metric_type]
         if cardinality is None:
             cardinality = self.cardinality
             validate_cardinality(cardinality)
+        context_key = self.get_context(name, tags, cardinality)
+        metric_context = self.max_sample_metric_map[metric_type]
         return metric_context.sample(name, value, tags, rate, context_key, self.max_samples_per_context, cardinality)
