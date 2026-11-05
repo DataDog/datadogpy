@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type
 
 # datadog
 from datadog.api import _api_version, _max_timeouts, _backoff_period
-from datadog.api.exceptions import ClientError, ApiError, HttpBackoff, HttpTimeout, ApiNotInitialized
+from datadog.api.exceptions import ClientError, ApiError, HttpBackoff, HttpTimeout, ApiNotInitialized, HTTPError
 from datadog.api.http_client import resolve_http_client
 from datadog.util.compat import is_p3k
 from datadog.util.format import construct_url, normalize_tags
@@ -204,6 +204,8 @@ class APIClient(object):
                     else:
                         response_obj = json.loads(content)
                 except ValueError:
+                    if result.status_code >= 400:
+                        raise HTTPError(result.status_code)
                     raise ValueError("Invalid JSON response: {0}".format(content))
 
                 # response_obj can be a bool and not a dict
