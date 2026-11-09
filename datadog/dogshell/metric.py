@@ -37,7 +37,12 @@ class MetricClient(object):
             action="store_true",
         )
         post_parser.add_argument(
-            "--type", help="type of the metric - gauge(32bit float)" " or counter(64bit integer)", default=None
+            "--type",
+            help="type of the metric: gauge, count or rate (`counter` is deprecated and is sent as `count`)",
+            # "" is accepted by the API too, and `counter` is kept for existing scripts
+            choices=["gauge", "count", "rate", "", "counter"],
+            metavar="{gauge,count,rate}",
+            default=None,
         )
         parser.set_defaults(func=cls._post)
 
@@ -57,9 +62,12 @@ class MetricClient(object):
         else:
             tags = None
 
+        # `counter` is a legacy type, send it as the documented `count` type.
+        metric_type = "count" if args.type == "counter" else args.type
+
         # Submit metric
         res = api.Metric.send(
-            metric=args.name, points=args.value, host=host, device=args.device, tags=tags, metric_type=args.type
+            metric=args.name, points=args.value, host=host, device=args.device, tags=tags, metric_type=metric_type
         )
 
         # Report
@@ -70,6 +78,11 @@ class MetricClient(object):
             res["warnings"].append(
                 u"`--localhostname` command line flag is deprecated, made default when no `--host` "
                 u"is specified. See the `--host` option for more information."
+            )
+        if args.type == "counter":
+            # Warn about `--type counter` deprecation
+            res["warnings"].append(
+                u"`--type counter` is deprecated and was sent as `count`. Use `--type count` instead."
             )
         report_warnings(res)
         report_errors(res)
