@@ -52,7 +52,11 @@ jobs:
       run: tox -e flake8
 
   run:
-    name: Python ${{ matrix.python-version }} on ${{ startsWith(matrix.os, 'macos-') && 'macOS' || startsWith(matrix.os, 'windows-') && 'Windows' || 'Linux' }}
+    # matrix.os, not a generic 'Linux' label: with both ubuntu-22.04 and
+    # ubuntu-26.04 now in play (see the include below), collapsing both to
+    # 'Linux' would make two differently-named jobs show up identically in
+    # the checks list.
+    name: Python ${{ matrix.python-version }} on ${{ startsWith(matrix.os, 'macos-') && 'macOS' || startsWith(matrix.os, 'windows-') && 'Windows' || matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -60,6 +64,16 @@ jobs:
         os: [ubuntu-22.04]
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14', 'pypy2.7', 'pypy3.8']
         # Python 2.7 and 3.4 are tested separately in the run-legacy job below.
+        include:
+          # Ubuntu 26.04 is what ubuntu-latest is migrating to (see the lint
+          # job's ubuntu-22.04 pin above for why that migration broke CI
+          # there). Added as a single extra combination via `include`, not
+          # folded into the `os` list: actions/setup-python has no builds
+          # for 26.04 below Python 3.10, so cross-multiplying the full
+          # python-version list above against it would break
+          # 3.7/3.8/3.9/pypy2.7/pypy3.8 the same way 3.8 broke for lint.
+          - os: ubuntu-26.04
+            python-version: '3.14'
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
