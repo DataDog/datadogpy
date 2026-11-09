@@ -1964,6 +1964,12 @@ class DogStatsd(object):
         it is not flush time yet, or another thread already owns the flush
         in progress.
         """
+        if (
+            not self._telemetry or self._telemetry_flush_in_progress
+            or self._last_flush_time + self._telemetry_flush_interval >= time.time()
+        ):
+            return False
+
         with self._telemetry_lock:
             if (
                 self._telemetry
