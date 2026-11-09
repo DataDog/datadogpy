@@ -1811,17 +1811,25 @@ class DogStatsd(object):
         """
         with self._telemetry_lock:
             if snapshot is None:
-                self.metrics_count = 0
-                self.events_count = 0
-                self.service_checks_count = 0
-                self.bytes_sent = 0
-                self.bytes_dropped_queue = 0
-                self.bytes_dropped_writer = 0
-                self.bytes_dropped_expired = 0
-                self.packets_sent = 0
-                self.packets_dropped_queue = 0
-                self.packets_dropped_writer = 0
-                self.packets_dropped_expired = 0
+                # Explicit annotations, not just inferred from these literal
+                # assignments: every one of these attributes is also
+                # mutated via += / -= elsewhere in this class (under this
+                # same lock), and mypy's attribute-type inference cannot
+                # resolve a type from an augmented assignment alone --
+                # without pinning it here, whichever of those usages mypy's
+                # single pass happens to reach first reports "Cannot
+                # determine type of ..." (mypy error code has-type).
+                self.metrics_count = 0  # type: int
+                self.events_count = 0  # type: int
+                self.service_checks_count = 0  # type: int
+                self.bytes_sent = 0  # type: int
+                self.bytes_dropped_queue = 0  # type: int
+                self.bytes_dropped_writer = 0  # type: int
+                self.bytes_dropped_expired = 0  # type: int
+                self.packets_sent = 0  # type: int
+                self.packets_dropped_queue = 0  # type: int
+                self.packets_dropped_writer = 0  # type: int
+                self.packets_dropped_expired = 0  # type: int
             else:
                 self.metrics_count -= snapshot["metrics_count"]
                 self.events_count -= snapshot["events_count"]
