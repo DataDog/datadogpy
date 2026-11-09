@@ -18,7 +18,14 @@ concurrency:
 jobs:
   lint:
     name: Lint datadogpy files on Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    # Pinned (not ubuntu-latest): this job's matrix is fixed at Python 3.8,
+    # and ubuntu-latest floats forward to whatever Ubuntu release GitHub
+    # currently maps it to. When it rolled to 26.04, actions/setup-python
+    # had no Python 3.8 build for it ("The version '3.8' with architecture
+    # 'x64' was not found for Ubuntu 26.04"), breaking this job on every PR
+    # regardless of content. ubuntu-22.04 still ships a 3.8 build and
+    # matches what the `run` job's matrix already pins to below.
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
