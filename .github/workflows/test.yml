@@ -18,13 +18,6 @@ concurrency:
 jobs:
   lint:
     name: Lint datadogpy files on Python ${{ matrix.python-version }}
-    # Pinned (not ubuntu-latest): this job's matrix is fixed at Python 3.8,
-    # and ubuntu-latest floats forward to whatever Ubuntu release GitHub
-    # currently maps it to. When it rolled to 26.04, actions/setup-python
-    # had no Python 3.8 build for it ("The version '3.8' with architecture
-    # 'x64' was not found for Ubuntu 26.04"), breaking this job on every PR
-    # regardless of content. ubuntu-22.04 still ships a 3.8 build and
-    # matches what the `run` job's matrix already pins to below.
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
@@ -52,7 +45,7 @@ jobs:
       run: tox -e flake8
 
   run:
-    name: Python ${{ matrix.python-version }} on ${{ startsWith(matrix.os, 'macos-') && 'macOS' || startsWith(matrix.os, 'windows-') && 'Windows' || 'Linux' }}
+    name: Python ${{ matrix.python-version }} on ${{ startsWith(matrix.os, 'macos-') && 'macOS' || startsWith(matrix.os, 'windows-') && 'Windows' || (matrix.os == 'ubuntu-22.04' && 'Linux' || matrix.os) }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -60,6 +53,9 @@ jobs:
         os: [ubuntu-22.04]
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14', 'pypy2.7', 'pypy3.8']
         # Python 2.7 and 3.4 are tested separately in the run-legacy job below.
+        include:
+          - os: ubuntu-26.04
+            python-version: '3.14'
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
