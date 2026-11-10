@@ -661,15 +661,9 @@ class DogStatsd(object):
             "client:py",
             "client_version:{}".format(__version__),
         ]
-        # Guards every read-modify-write of the telemetry counters below,
-        # so a producer thread's increment (_report/event/service_check) can
-        # never interleave with the sender thread's flush-and-reset of the
-        # same attributes. See _flush_telemetry()/_reset_telemetry().
+        # Guards every read-modify-write of the telemetry counters below.
         self._telemetry_lock = RLock()
-        # True while a telemetry packet is being built/sent, so a second
-        # thread that also decides "it's flush time" (e.g. a producer
-        # falling back to a synchronous send while the sender thread is
-        # mid-flush) doesn't start a concurrent, double-counted flush.
+        # True while a telemetry packet is being built/sent.
         self._telemetry_flush_in_progress = False
         self._reset_telemetry()
         self._telemetry_flush_interval = telemetry_min_flush_interval
@@ -1811,14 +1805,6 @@ class DogStatsd(object):
         """
         with self._telemetry_lock:
             if snapshot is None:
-                # Explicit annotations, not just inferred from these literal
-                # assignments: every one of these attributes is also
-                # mutated via += / -= elsewhere in this class (under this
-                # same lock), and mypy's attribute-type inference cannot
-                # resolve a type from an augmented assignment alone --
-                # without pinning it here, whichever of those usages mypy's
-                # single pass happens to reach first reports "Cannot
-                # determine type of ..." (mypy error code has-type).
                 self.metrics_count = 0  # type: int
                 self.events_count = 0  # type: int
                 self.service_checks_count = 0  # type: int
