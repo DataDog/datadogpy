@@ -2815,6 +2815,85 @@ async def print_foo():
                 stop_listener.set()
                 listener_thread.join(2)
 
+    def test_telemetry_flush_is_claimed_by_only_one_thread(self):
+        """With no background sender, every send reaches
+        _xmit_packet_with_telemetry() directly on whichever thread made it.
+        When the flush is overdue and two threads send concurrently, only one
+        of them must claim and send the telemetry packet -- otherwise both
+        snapshots overlap and both successful resets subtract the same
+        counters.
+
+        Regression test for _try_claim_telemetry_flush(): without it, both
+        threads would observe "it's flush time" via _is_telemetry_flush_time()
+        and both build/send/reset a telemetry packet for the same window.
+        """
+        listener_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        listener_sock.bind(('127.0.0.1', 0))
+        port = listener_sock.getsockname()[1]
+        stop_listener = threading.Event()
+
+        def drain():
+            listener_sock.settimeout(0.2)
+            while not stop_listener.is_set():
+                try:
+                    listener_sock.recvfrom(65535)
+                except socket.timeout:
+                    pass
+
+        listener_thread = threading.Thread(target=drain)
+        listener_thread.daemon = True
+        listener_thread.start()
+
+        with closing(listener_sock):
+            statsd = DogStatsd(host='127.0.0.1', port=port, disable_background_sender=True)
+            statsd._last_flush_time = 0  # force both threads to find the flush overdue
+
+            barrier = threading.Barrier(2)
+            telemetry_packets = []
+            packets_lock = threading.Lock()
+            real_xmit_packet = statsd._xmit_packet
+
+            def paused_xmit_packet(packet, is_telemetry, queue_mode=False):
+                if is_telemetry:
+                    with packets_lock:
+                        telemetry_packets.append(packet)
+                else:
+                    # Line both threads up so they call
+                    # _try_claim_telemetry_flush() as close to simultaneously
+                    # as possible, instead of one finishing well before the
+                    # other starts.
+                    barrier.wait(5)
+                return real_xmit_packet(packet, is_telemetry, queue_mode=queue_mode)
+
+            statsd._xmit_packet = paused_xmit_packet
+
+            errors = []
+
+            def send_one():
+                try:
+                    statsd.increment('foo')
+                except Exception as e:
+                    errors.append(e)
+
+            threads = [threading.Thread(target=send_one) for _ in range(2)]
+            try:
+                for t in threads:
+                    t.start()
+                for t in threads:
+                    t.join(5)
+                    self.assertFalse(t.is_alive(), "sending thread did not finish in time")
+
+                self.assertEqual(errors, [])
+                self.assertEqual(
+                    1,
+                    len(telemetry_packets),
+                    "exactly one telemetry packet must be sent when two threads race an overdue flush",
+                )
+            finally:
+                statsd.stop()
+                stop_listener.set()
+                listener_thread.join(2)
+
     def _call_bounded(self, func, args=(), limit=5.0):
         """Call func in a worker thread, failing if it doesn't return in time.
 
