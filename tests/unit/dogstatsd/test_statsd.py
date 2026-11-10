@@ -2798,7 +2798,7 @@ async def print_foo():
                 statsd.increment('foo')  # sender thread snapshots metrics_count == 101
                 self.assertTrue(in_flush.wait(5), "sender thread never reached the telemetry flush")
 
-                statsd.metrics_count += 1  # concurrent increment from "another thread"
+                statsd.increment("concurrent")
                 released.set()
 
                 deadline = time.time() + 5
