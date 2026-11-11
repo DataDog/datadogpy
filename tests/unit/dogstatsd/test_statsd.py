@@ -2846,9 +2846,10 @@ async def print_foo():
 
         with closing(listener_sock):
             statsd = DogStatsd(host='127.0.0.1', port=port, disable_background_sender=True)
-            statsd._last_flush_time = 0  # force both threads to find the flush overdue
+            statsd._last_flush_time = 0  # force the flush to be overdue
 
-            barrier = threading.Barrier(2)
+            telemetry_started = threading.Event()
+            telemetry_release = threading.Event()
             telemetry_packets = []
             packets_lock = threading.Lock()
             real_xmit_packet = statsd._xmit_packet
@@ -2857,39 +2858,52 @@ async def print_foo():
                 if is_telemetry:
                     with packets_lock:
                         telemetry_packets.append(packet)
-                else:
-                    # Line both threads up so they call
-                    # _try_claim_telemetry_flush() as close to simultaneously
-                    # as possible, instead of one finishing well before the
-                    # other starts.
-                    barrier.wait(5)
+                    # Hold the first sender inside its telemetry send -- i.e.
+                    # with the flush actually claimed and in progress -- so
+                    # the second sender's claim attempt below genuinely
+                    # overlaps it, instead of just racing to get there first
+                    # (threading.Barrier is also unavailable on Python 2.7,
+                    # which this suite still has to run under).
+                    telemetry_started.set()
+                    telemetry_release.wait(5)
                 return real_xmit_packet(packet, is_telemetry, queue_mode=queue_mode)
 
             statsd._xmit_packet = paused_xmit_packet
 
             errors = []
 
-            def send_one():
+            def send_first():
                 try:
                     statsd.increment('foo')
                 except Exception as e:
                     errors.append(e)
 
-            threads = [threading.Thread(target=send_one) for _ in range(2)]
+            first = threading.Thread(target=send_first)
             try:
-                for t in threads:
-                    t.start()
-                for t in threads:
-                    t.join(5)
-                    self.assertFalse(t.is_alive(), "sending thread did not finish in time")
+                first.start()
+                self.assertTrue(
+                    telemetry_started.wait(5), "first sender never reached the telemetry flush"
+                )
+
+                # The first sender now holds the flush claim and is blocked
+                # mid-send. A second sender hitting an overdue flush at this
+                # exact moment must not be able to claim and send its own
+                # telemetry packet.
+                statsd.increment('bar')
+
+                telemetry_release.set()
+                first.join(5)
+                self.assertFalse(first.is_alive(), "first sender did not finish in time")
 
                 self.assertEqual(errors, [])
                 self.assertEqual(
                     1,
                     len(telemetry_packets),
-                    "exactly one telemetry packet must be sent when two threads race an overdue flush",
+                    "exactly one telemetry packet must be sent when a second sender hits an "
+                    "overdue flush while the first sender's flush is still in progress",
                 )
             finally:
+                telemetry_release.set()
                 statsd.stop()
                 stop_listener.set()
                 listener_thread.join(2)
