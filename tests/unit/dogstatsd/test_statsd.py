@@ -14,6 +14,7 @@ import logging
 import struct
 from threading import Thread
 import errno
+import gc
 import os
 import shutil
 import socket
@@ -2907,6 +2908,110 @@ async def print_foo():
                 statsd.stop()
                 stop_listener.set()
                 listener_thread.join(2)
+
+    def test_metrics_count_buckets_sum_correctly_across_many_threads(self):
+        """metrics_count is sharded across a threading.local bucket per
+        producer thread (see _MetricsCountBucket). This proves the sharding
+        itself: many threads incrementing concurrently, with no flush
+        racing them this time, must still add up to exactly the right
+        total once folded -- no bucket's contribution lost or double
+        counted.
+        """
+        statsd = DogStatsd(disable_background_sender=True, disable_telemetry=False)
+        statsd.socket = FakeSocket()
+        statsd._last_flush_time = float("inf")  # no flush triggered mid-test
+
+        n_threads = 12
+        per_thread = 200
+        errors = []
+
+        def worker():
+            try:
+                for _ in range(per_thread):
+                    statsd.increment("bench.metric")
+            except Exception as e:
+                errors.append(e)
+
+        threads = [threading.Thread(target=worker) for _ in range(n_threads)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(10)
+            self.assertFalse(t.is_alive(), "worker thread did not finish in time")
+
+        self.assertEqual(errors, [])
+        self.assertEqual(n_threads * per_thread, statsd.metrics_count)
+        # Reading metrics_count folds every bucket; a second read must see
+        # the same total, not double-count anything still sitting around.
+        self.assertEqual(n_threads * per_thread, statsd.metrics_count)
+
+    def test_metrics_count_survives_thread_exit_before_any_flush(self):
+        """A thread's bucket must not disappear -- taking its increments
+        with it -- just because the thread exits before the next flush.
+
+        Regression test for a real bug found while building this: an
+        earlier version kept DogStatsd._metrics_count_buckets as a
+        weakref.WeakSet so a short-lived thread's bucket would not leak for
+        the life of the client. But a short-lived thread's bucket is the
+        *only* strong reference to its own increments; once the thread
+        exits, nothing else keeps that bucket alive, so a WeakSet silently
+        drops it -- permanently losing those increments, not just
+        delaying them to the next flush. Using a strong-referencing set
+        instead (see _MetricsCountBucket's docstring) fixes this at the
+        cost of the leak it was trying to avoid.
+        """
+        statsd = DogStatsd(disable_background_sender=True, disable_telemetry=False)
+        statsd.socket = FakeSocket()
+        statsd._last_flush_time = float("inf")  # guarantee no flush fires mid-test
+
+        n_threads = 20
+        per_thread = 5
+        errors = []
+
+        def worker():
+            try:
+                for _ in range(per_thread):
+                    statsd.increment("bench.metric")
+            except Exception as e:
+                errors.append(e)
+
+        for _ in range(n_threads):
+            t = threading.Thread(target=worker)
+            t.start()
+            t.join(5)  # each thread fully exits before the next one starts
+            self.assertFalse(t.is_alive(), "worker thread did not finish in time")
+
+        gc.collect()  # force collection of anything only a weak reference would have dropped
+
+        self.assertEqual(errors, [])
+        self.assertEqual(
+            n_threads * per_thread,
+            statsd.metrics_count,
+            "increments from a thread that already exited must not be lost",
+        )
+
+    def test_metrics_count_read_without_flush_sees_unfolded_bucket(self):
+        """Reading statsd.metrics_count must be live -- including whatever
+        is sitting in the calling thread's own not-yet-folded bucket --
+        not just accurate right after a flush. Regression guard for the
+        sharded design: a naive plain-attribute read would see only
+        whatever happened to already be folded in, silently under-
+        reporting metrics_count between flushes.
+        """
+        statsd = DogStatsd(disable_background_sender=True, disable_telemetry=False)
+        statsd.socket = FakeSocket()
+        statsd._last_flush_time = float("inf")  # guarantee no flush fires here
+
+        statsd.metrics_count = 100  # baseline, exercises the property setter too
+        statsd.increment("foo")
+        statsd.increment("bar")
+
+        self.assertEqual(
+            102,
+            statsd.metrics_count,
+            "metrics_count must reflect increments still sitting in a per-thread "
+            "bucket, not just whatever was folded in by the last flush",
+        )
 
     def _call_bounded(self, func, args=(), limit=5.0):
         """Call func in a worker thread, failing if it doesn't return in time.
