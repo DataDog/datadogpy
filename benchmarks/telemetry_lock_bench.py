@@ -35,6 +35,7 @@ Usage
 -----
     python3 benchmarks/telemetry_lock_bench.py [--quick]
     python3 benchmarks/telemetry_lock_bench.py --tls [--quick]
+    python3 benchmarks/telemetry_lock_bench.py --micro
 
 Requires being run inside a git checkout of this repo (it shells out to
 `git show` to fetch the pre-fix source; nothing is written outside a
@@ -49,6 +50,14 @@ estimates: does that design's win survive realistic thread churn, or does
 the one-time per-thread registration cost (WeakSet.add() under a registry
 lock, on every new thread's first increment) eat the saved lock-acquire
 cost when threads are short-lived rather than long-lived producers.
+
+--micro decomposes the --tls end-to-end result (increment() calls, which
+also pay for tag normalization, payload formatting, etc.) into the handful
+of primitive operations that actually differ between the locked and TLS
+counting mechanisms: a bare RLock/Lock acquire, a bare threading.local
+getattr, and the real counting line from each implementation, called
+directly (not through increment()), single-threaded, no sends, no flushes
+-- isolating exactly where the per-call cost difference comes from.
 """
 import argparse
 import gc
@@ -548,6 +557,147 @@ def scenario_thread_churn_locked_vs_tls(LockedDogStatsd, threads_per_wave, incre
     return locked_results, tls_results, surviving_buckets
 
 
+def multi_measure(variants, total_ops, pairs, repeats_per_side=1):
+    """Like ab_measure, generalized to any number of labeled variants.
+
+    `variants` is a dict of label -> zero-arg callable. Each of `pairs`
+    rounds times every variant once, rotating which label goes first so no
+    variant is systematically measured first or last (which would bias it
+    from whatever warmup/cooldown scheduling effect goes with that
+    position, the same concern ab_measure's alternating order addresses
+    for the two-variant case).
+
+    Returns a dict of label -> list of ns-per-op samples, one list per
+    variant, aligned by round (results[label][i] and results[other][i]
+    were measured in the same round i, so paired-diff statistics are
+    valid the same way they are for ab_measure's two-variant case).
+    """
+    labels = list(variants.keys())
+    results = {label: [] for label in labels}
+    for i in range(pairs):
+        order = labels[i % len(labels):] + labels[:i % len(labels)]
+        for label in order:
+            elapsed = best_of(variants[label], repeats_per_side)
+            ns_per_op = elapsed / total_ops * 1e9
+            results[label].append(ns_per_op)
+    return results
+
+
+def report_multi(name, results, baseline_label):
+    """Report every variant in `results` against `baseline_label`'s median,
+    each with its own bootstrap CI on the mean paired difference -- same
+    statistics as report()/report_locked_vs_tls(), generalized to N-1
+    comparisons against one shared baseline instead of a single A/B pair.
+    """
+    baseline = results[baseline_label]
+    baseline_median = statistics.median(baseline)
+    print("%s  [n=%d trials each]" % (name, len(baseline)))
+    print("  %-32s %7.0f ns  (baseline)" % (baseline_label, baseline_median))
+    for label, values in results.items():
+        if label == baseline_label:
+            continue
+        med = statistics.median(values)
+        delta_ns = med - baseline_median
+        delta_pct = delta_ns / baseline_median * 100 if baseline_median else float("nan")
+        diffs = [v - b for v, b in zip(values, baseline)]
+        mean_diff = statistics.mean(diffs)
+        random.seed(0)
+        boot_means = []
+        for _ in range(2000):
+            sample = [random.choice(diffs) for _ in diffs]
+            boot_means.append(statistics.mean(sample))
+        boot_means.sort()
+        ci_lo = boot_means[int(0.025 * len(boot_means))]
+        ci_hi = boot_means[int(0.975 * len(boot_means))]
+        print(
+            "  %-32s %7.0f ns  delta=%+6.0f ns (%+5.1f%%)  mean paired diff=%+6.0f ns  "
+            "95%% CI: [%+.0f, %+.0f] ns" % (label, med, delta_ns, delta_pct, mean_diff, ci_lo, ci_hi)
+        )
+    for label in results:
+        print("  %-32s samples: %s" % (label, [round(x) for x in results[label]]))
+
+
+def scenario_micro(LockedDogStatsd, n, pairs):
+    """Decompose the counting-mechanism cost into its primitive pieces.
+
+    Single-threaded, no sends, no flushes (both statsd instances have
+    _last_flush_time pinned to the far future): this isolates exactly the
+    lines that differ between the two implementations' _report(), called
+    directly rather than through the much larger increment()/_report()
+    (tag normalization, payload formatting, sampling, etc. -- all shared,
+    all unaffected by this change, and would otherwise dilute the
+    difference being measured here).
+
+    locked = LockedDogStatsd(...): the real #1016 implementation, loaded
+    via git by load_locked_dogstatsd() in the caller, so "real_locked_write"
+    below calls that real instance's real self._telemetry_lock -- not a
+    reimplementation of it.
+    """
+    locked = LockedDogStatsd(disable_background_sender=True, disable_telemetry=False)
+    locked.socket = FakeSocket()
+    locked._last_flush_time = float("inf")
+
+    tls = NewDogStatsd(disable_background_sender=True, disable_telemetry=False)
+    tls.socket = FakeSocket()
+    tls._last_flush_time = float("inf")
+
+    bare_rlock = threading.RLock()
+    bare_rlock_counter = [0]
+
+    bare_lock = threading.Lock()
+    bare_lock_counter = [0]
+
+    bare_tls = threading.local()
+    bare_tls.bucket = object()  # already populated: isolates the getattr itself, not first-touch setup
+
+    def bare_rlock_increment():
+        for _ in range(n):
+            with bare_rlock:
+                bare_rlock_counter[0] += 1
+
+    def bare_lock_increment():
+        for _ in range(n):
+            with bare_lock:
+                bare_lock_counter[0] += 1
+
+    def bare_tls_getattr():
+        for _ in range(n):
+            getattr(bare_tls, "bucket", None)
+
+    def real_locked_write():
+        # The exact line from the locked implementation's _report(), via a
+        # real instance -- not a hand-rolled stand-in (see this file's
+        # module docstring on why that distinction matters).
+        for _ in range(n):
+            with locked._telemetry_lock:
+                locked.metrics_count += 1
+
+    def real_tls_bucket_lookup_only():
+        # Isolates DogStatsd._metrics_count_bucket() itself -- the Python
+        # method call plus its internal threading.local getattr -- without
+        # the bucket.lock acquisition that follows it in _report().
+        for _ in range(n):
+            tls._metrics_count_bucket()
+
+    def real_tls_write():
+        # The exact lines from the TLS implementation's _report(), via a
+        # real instance.
+        for _ in range(n):
+            bucket = tls._metrics_count_bucket()
+            with bucket.lock:
+                bucket.value += 1
+
+    variants = {
+        "bare_rlock_increment": bare_rlock_increment,
+        "bare_lock_increment": bare_lock_increment,
+        "bare_tls_getattr": bare_tls_getattr,
+        "real_locked_write": real_locked_write,
+        "real_tls_bucket_lookup_only": real_tls_bucket_lookup_only,
+        "real_tls_write": real_tls_write,
+    }
+    return multi_measure(variants, n, pairs)
+
+
 def report_locked_vs_tls(name, locked_results, tls_results):
     """Like report(), but labeled for the locked-counter-vs-TLS-prototype
     comparison instead of the post-fix-vs-pre-fix one, so the two are never
@@ -618,6 +768,12 @@ def main():
              "real TLS-sharded implementation (this branch's working tree), in both a "
              "long-lived-thread and a thread-churn scenario (see load_locked_dogstatsd() "
              "and _MetricsCountBucket's docstrings)",
+    )
+    parser.add_argument(
+        "--micro", action="store_true",
+        help="decompose the --tls end-to-end result into its primitive sub-costs (bare "
+             "RLock/Lock acquire, bare threading.local getattr, and each implementation's "
+             "real counting line called directly) -- see scenario_micro()",
     )
     args = parser.parse_args()
 
@@ -716,6 +872,30 @@ def main():
                 surviving_buckets, threads_per_wave * waves * churn_pairs,
                 waves, threads_per_wave, churn_pairs,
             )
+        )
+        print()
+
+    if args.micro:
+        LockedDogStatsd, locked_commit, tls_commit = load_locked_dogstatsd()
+        print(
+            "--- micro: decomposing the counting-mechanism cost (%s locked vs %s tls) ---"
+            % (locked_commit[:10], tls_commit[:10])
+        )
+        print()
+
+        micro_n, micro_pairs = (2_000, 8) if args.quick else (50_000, 30)
+        results = scenario_micro(LockedDogStatsd, micro_n, micro_pairs)
+        report_multi("metrics_count counting mechanism, per call", results, "real_locked_write")
+        print()
+        print(
+            "  Read top to bottom: bare_rlock/bare_lock/bare_tls_getattr are generic "
+            "primitives (not tied to either implementation), included so the two "
+            "real_* rows below can be explained in terms of them. real_locked_write is "
+            "the baseline (today's #1016 implementation); real_tls_bucket_lookup_only "
+            "isolates DogStatsd._metrics_count_bucket() alone (the Python method call "
+            "plus its internal threading.local getattr, no lock use yet); "
+            "real_tls_write adds the per-bucket Lock acquire on top, i.e. the full TLS "
+            "write path, directly comparable to real_locked_write."
         )
         print()
 

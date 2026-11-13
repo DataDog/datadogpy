@@ -289,3 +289,51 @@ unchanged and now has two independent reasons behind it instead of one:
 **keep the single-lock implementation from PR #1016.** This PR exists so
 reviewers can see both the diff and these numbers directly, not as a
 merge candidate.
+
+
+## Where the per-call cost actually goes: `--micro`
+
+The end-to-end numbers above show a +2-6% difference, which is small
+relative to `increment()`'s total cost (tag normalization, payload
+formatting, sampling, etc. -- all identical between the two
+implementations, all diluting the one line that differs). `--micro`
+isolates just that one line: both implementations' real counting code,
+called directly, single-threaded, no sends, no flushes -- plus a few bare
+primitives so the real numbers can be explained rather than just quoted.
+
+### Results (full run, not `--quick`; n=30 trials each)
+
+| What | ns/call | vs `real_locked_write` |
+|---|---|---|
+| `real_locked_write` (today's #1016 implementation) | 202 ns | baseline |
+| `bare_rlock_increment` (bare `threading.RLock`, nothing else) | 152 ns | -50 ns |
+| `bare_lock_increment` (bare `threading.Lock`, nothing else) | 147 ns | -55 ns |
+| `bare_tls_getattr` (bare `threading.local` attribute read, bucket already set) | 75 ns | -127 ns |
+| `real_tls_bucket_lookup_only` (`DogStatsd._metrics_count_bucket()` alone, no lock yet) | 129 ns | -73 ns |
+| `real_tls_write` (this branch's full counting path) | 314 ns | **+112 ns (+55.2%), 95% CI [+99, +133] ns** |
+
+### What this shows
+
+**The lock itself is not the problem.** `bare_rlock_increment` (152 ns)
+and `bare_lock_increment` (147 ns) are statistically indistinguishable --
+swapping `RLock` for `Lock` buys nothing, confirming the earlier
+hypothesis that a C-implemented lock acquire is cheap either way.
+
+**The entire +112 ns gap is the bucket lookup, not the locking.**
+`real_tls_bucket_lookup_only` (129 ns) -- `DogStatsd._metrics_count_bucket()`
+called by itself, before any lock is even touched -- already costs almost
+as much as the *locked implementation's entire operation* (202 ns). That
+one method call does a Python-level function call (frame setup/teardown)
+wrapping a `threading.local` attribute read, and a `threading.local` read
+alone (`bare_tls_getattr`, 75 ns) already costs about half of what the
+locked implementation's whole `with self._telemetry_lock: self.metrics_count
++= 1` costs. Everything after the lookup -- `with bucket.lock:
+bucket.value += 1` -- costs about what `bare_lock_increment` costs on its
+own; it is the step *before* the lock, finding which bucket belongs to
+this thread, that the single-lock implementation simply never has to do.
+
+In short: this design doesn't lose to a slow lock. It loses because
+*finding which lock to take* costs almost as much as the single-lock
+implementation's entire counting operation, and that lookup happens on
+every single call, with no way to amortize it away within `_report()`
+itself.
