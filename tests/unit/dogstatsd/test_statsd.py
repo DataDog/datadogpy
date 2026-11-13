@@ -1628,6 +1628,19 @@ async def print_foo():
             fake_socket.recv(2, no_wait=True)
         )
     
+    def test_pre_fork_does_not_wait_for_the_flush_interval(self):
+        dogstatsd = DogStatsd(disable_buffering=False, flush_interval=10, telemetry_min_flush_interval=0)
+        dogstatsd.socket = FakeSocket()
+        self.assertIsNotNone(dogstatsd._flush_thread)
+
+        start = time.time()
+        dogstatsd.pre_fork()
+        elapsed = time.time() - start
+        dogstatsd.post_fork_parent()
+        dogstatsd.stop()
+
+        self.assertLess(elapsed, 5)
+
     def test_aggregation_buffering_simultaneously_dgram(self):
         self._test_aggregation_buffering_simultaneously(socket.SOCK_DGRAM)
 

@@ -953,7 +953,7 @@ class DogStatsd(object):
         def _flush_thread_loop(self, flush_interval):
             # type: (DogStatsd, float) -> None
             while not self._flush_thread_stop.is_set():
-                time.sleep(flush_interval)
+                self._flush_thread_stop.wait(flush_interval)
                 if not self._disable_aggregation:
                     self.flush_aggregated_metrics()
                 if not self._disable_buffering:
