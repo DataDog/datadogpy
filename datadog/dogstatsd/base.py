@@ -27,7 +27,7 @@ if sys.version_info[:2] >= (3, 5):
 # pylint: disable=unused-import
 if sys.version_info[:2] >= (3, 5):
     from typing import (  # noqa: F401
-        Any, Callable, Iterable, List, Optional, Text, Tuple, Type, Union, overload,
+        Any, Callable, Dict, Iterable, List, Optional, Text, Tuple, Type, Union, overload,
     )
 
 try:
@@ -271,6 +271,47 @@ class _ActiveSender(object):
         # type: (SenderQueue, threading.Thread) -> None
         self.queue = queue
         self.thread = thread
+
+
+class _MetricsCountBucket(object):
+    """One producer thread's private share of metrics_count.
+
+    Exists so _report() -- called on every single metric send, the hottest
+    path that reads/writes telemetry state -- never has to take the shared
+    self._telemetry_lock just to bump a counter. Each thread gets exactly
+    one bucket (DogStatsd._metrics_count_bucket(), via threading.local) and
+    only ever touches its own: lock contention on `lock` is therefore
+    limited to this one thread racing a flush that happens to land on this
+    exact bucket, instead of every producer thread racing every other one
+    on a single lock on every call.
+
+    DogStatsd._metrics_count_buckets holds a normal (strong-referencing)
+    set of these, not a weakref.WeakSet, and deliberately so: an earlier
+    version of this used a WeakSet specifically to avoid leaking one entry
+    per thread for the life of the process, and that was a real,
+    reproduced bug -- a thread's bucket is the *only* strong reference to
+    its own increments, so if it is collected the moment the thread exits
+    (which it is: nothing else holds a strong ref once a short-lived
+    thread's threading.local storage is torn down), any increments made by
+    a thread that exits before the next flush are silently lost forever,
+    not just delayed. That is strictly worse than the lock-based
+    implementation this is meant to be an alternative to, which never
+    loses a count regardless of thread lifetime. Keeping a strong
+    reference trades that data-loss bug for unbounded (though typically
+    small) memory growth: one bucket per distinct thread that has ever
+    called this client, for the life of the client, not just for the life
+    of each thread. For a long-running process with a thread-pool-per-
+    request pattern (fresh threads continuously, used once, discarded),
+    this does not shrink back down -- see benchmarks/README.md's TLS
+    section for the thread-churn measurement this gap was found from.
+    """
+
+    __slots__ = ("value", "lock")
+
+    def __init__(self):
+        # type: () -> None
+        self.value = 0  # type: int
+        self.lock = threading.Lock()
 
 
 def pre_fork():
@@ -661,6 +702,23 @@ class DogStatsd(object):
             "client:py",
             "client_version:{}".format(__version__),
         ]
+        # Guards every read-modify-write of the telemetry counters below.
+        self._telemetry_lock = RLock()
+        # True while a telemetry packet is being built/sent.
+        self._telemetry_flush_in_progress = False
+        # metrics_count sharding (see _MetricsCountBucket and
+        # _metrics_count_bucket()): one private bucket per producer thread,
+        # so _report()'s hot-path increment never takes self._telemetry_lock.
+        # Folded into self.metrics_count -- the only counter sharded this
+        # way, since it is the only one touched on every _report() call --
+        # by _fold_metrics_count_buckets(), called from _flush_telemetry()
+        # and from the no-snapshot branch of _reset_telemetry(). A plain
+        # (strong-referencing) set, not a weakref.WeakSet -- see
+        # _MetricsCountBucket's docstring for the data-loss bug that caused.
+        self._metrics_count_buckets = set()  # type: set[_MetricsCountBucket]
+        self._metrics_count_registry_lock = threading.Lock()
+        self._metrics_count_tls = threading.local()
+        self._metrics_count_base = 0  # type: int
         self._reset_telemetry()
         self._telemetry_flush_interval = telemetry_min_flush_interval
         self._telemetry = not disable_telemetry
@@ -1377,7 +1435,8 @@ class DogStatsd(object):
 
         for index, m in enumerate(metrics):
             if deadline is not None and monotonic() >= deadline:
-                self.packets_dropped_writer += len(metrics) - index + len(sampled_metrics)
+                with self._telemetry_lock:
+                    self.packets_dropped_writer += len(metrics) - index + len(sampled_metrics)
                 return False
             sent = self._report(
                 m.name, m.metric_type, m.value, m.tags, m.rate, m.timestamp, cardinality=m.cardinality
@@ -1385,7 +1444,8 @@ class DogStatsd(object):
 
         for index, m in enumerate(sampled_metrics):
             if deadline is not None and monotonic() >= deadline:
-                self.packets_dropped_writer += len(sampled_metrics) - index
+                with self._telemetry_lock:
+                    self.packets_dropped_writer += len(sampled_metrics) - index
                 return False
             sent = self._report(
                 m.name,
@@ -1748,7 +1808,9 @@ class DogStatsd(object):
             return True
 
         if self._telemetry:
-            self.metrics_count += 1
+            bucket = self._metrics_count_bucket()
+            with bucket.lock:
+                bucket.value += 1
 
         if sampling:
             if sample_rate is None:
@@ -1779,20 +1841,174 @@ class DogStatsd(object):
         # Send it
         return self._send(payload, timestamped)
 
-    def _reset_telemetry(self):
+    def _metrics_count_bucket(self):
+        # type: () -> _MetricsCountBucket
+        """This thread's private metrics_count bucket, creating it on first use.
+
+        One bucket per thread, found via threading.local -- every call after
+        a thread's first touches only that thread's own bucket.lock, never
+        self._telemetry_lock. The registration into
+        self._metrics_count_buckets (so a flush can find every live bucket)
+        is the only part that takes a shared lock, and it happens once per
+        thread's lifetime, not once per call.
+        """
+        bucket = getattr(self._metrics_count_tls, "bucket", None)
+        if bucket is None:
+            bucket = _MetricsCountBucket()
+            self._metrics_count_tls.bucket = bucket
+            with self._metrics_count_registry_lock:
+                self._metrics_count_buckets.add(bucket)
+        return bucket
+
+    def _fold_metrics_count_buckets(self):
         # type: () -> None
-        self.metrics_count = 0
-        self.events_count = 0
-        self.service_checks_count = 0
-        self.bytes_sent = 0
-        self.bytes_dropped_queue = 0
-        self.bytes_dropped_writer = 0
-        self.bytes_dropped_expired = 0
-        self.packets_sent = 0
-        self.packets_dropped_queue = 0
-        self.packets_dropped_writer = 0
-        self.packets_dropped_expired = 0
-        self._last_flush_time = time.time()
+        """Merge every live thread's bucket into self._metrics_count_base.
+
+        Must be called before anything reads self._metrics_count_base and
+        needs it to be fully up to date -- _flush_telemetry() (so its
+        snapshot reflects every _report() call made so far, not just
+        whatever self._metrics_count_base already held) and the
+        metrics_count property getter below (so a plain read, not just a
+        flush, sees every increment, including ones still sitting in a
+        bucket that hasn't been folded yet).
+
+        Each bucket is read-then-zeroed under its own bucket.lock, in one
+        uninterrupted critical section: the only other place that ever
+        touches a given bucket is that bucket's owning thread, incrementing
+        it under the same lock in _report(). So, unlike the snapshot/
+        subtract protocol in _reset_telemetry() (needed because
+        _telemetry_lock is released for the slow network send in between),
+        a plain zero-out here cannot lose a concurrent increment -- the
+        writer simply blocks on bucket.lock until this critical section
+        finishes, instead of interleaving with it.
+
+        Writes self._metrics_count_base directly, never through the
+        metrics_count property: going through the property's setter here
+        would discard whatever this same call just folded in (the setter
+        exists for external callers replacing the whole count, e.g. a test
+        setting a baseline, not for internal bookkeeping), and going
+        through the getter anywhere in this method would recurse into this
+        same method.
+        """
+        with self._metrics_count_registry_lock:
+            buckets = list(self._metrics_count_buckets)
+        total = 0
+        for bucket in buckets:
+            with bucket.lock:
+                total += bucket.value
+                bucket.value = 0
+        if total:
+            with self._telemetry_lock:
+                self._metrics_count_base += total
+
+    def _clear_metrics_count_buckets(self):
+        # type: () -> None
+        """Discard every live thread's bucket outright.
+
+        Used by the metrics_count property setter (external callers
+        replacing the whole count should not also keep whatever was
+        pending in a bucket) and by _reset_telemetry()'s no-snapshot ("zero
+        everything") branch -- unlike _fold_metrics_count_buckets(),
+        nothing is added to self._metrics_count_base first, matching that
+        branch's "zeroed outright" semantics for every other counter.
+        """
+        with self._metrics_count_registry_lock:
+            buckets = list(self._metrics_count_buckets)
+        for bucket in buckets:
+            with bucket.lock:
+                bucket.value = 0
+
+    @property
+    def metrics_count(self):
+        # type: () -> int
+        """Count of metrics reported since the last flush/reset.
+
+        Folds every live per-thread bucket in first (see
+        _MetricsCountBucket/_report()), so this is always a live,
+        up-to-the-moment read -- not just accurate right after a flush --
+        exactly like a plain attribute would have been before metrics_count
+        was sharded. The cost of iterating every bucket on each read is
+        acceptable here because reads are rare (tests, debugging,
+        _flush_telemetry()'s own snapshot build): the whole point of the
+        sharding is to keep that cost off of _report()'s write path, which
+        runs on every single metric send.
+        """
+        self._fold_metrics_count_buckets()
+        return self._metrics_count_base
+
+    @metrics_count.setter
+    def metrics_count(self, value):
+        # type: (int) -> None
+        """Replace the count outright (e.g. a test establishing a baseline).
+
+        Discards any pending per-thread bucket contents rather than folding
+        them in first, matching plain-attribute assignment semantics: the
+        new value replaces everything observed so far, not just the part
+        that happened to already be folded.
+        """
+        self._clear_metrics_count_buckets()
+        self._metrics_count_base = value
+
+    def _reset_telemetry(self, snapshot=None):
+        # type: (Optional[Dict[str, int]]) -> None
+        """Clear the telemetry counters.
+
+        Called with no argument (startup, or a test establishing a clean
+        baseline) every counter is zeroed outright, exactly as before.
+
+        Called with a snapshot -- the exact values returned alongside the
+        packet built by _flush_telemetry() -- only those amounts are
+        subtracted instead of zeroing. That distinction matters because the
+        network send for that packet happens with _telemetry_lock released
+        (see _xmit_packet_with_telemetry): another thread can land a
+        concurrent increment after the snapshot was taken but before this
+        call runs. Subtracting exactly what was reported removes only that,
+        leaving the concurrent increment intact for the next flush instead
+        of wiping it out along with everything else.
+
+        metrics_count itself is unaffected by that particular race any
+        more -- _report() no longer writes to it directly, see
+        _MetricsCountBucket -- but self.metrics_count still participates in
+        the same subtract-exact-snapshot protocol as every other counter
+        here, because _flush_telemetry() already folded the buckets into it
+        before building the snapshot this method receives.
+        """
+        with self._telemetry_lock:
+            if snapshot is None:
+                self._clear_metrics_count_buckets()
+                self._metrics_count_base = 0
+                self.events_count = 0  # type: int
+                self.service_checks_count = 0  # type: int
+                self.bytes_sent = 0  # type: int
+                self.bytes_dropped_queue = 0  # type: int
+                self.bytes_dropped_writer = 0  # type: int
+                self.bytes_dropped_expired = 0  # type: int
+                self.packets_sent = 0  # type: int
+                self.packets_dropped_queue = 0  # type: int
+                self.packets_dropped_writer = 0  # type: int
+                self.packets_dropped_expired = 0  # type: int
+            else:
+                # Bypasses the metrics_count property deliberately: by this
+                # point _flush_telemetry() has already folded every bucket
+                # into _metrics_count_base before building the snapshot
+                # being subtracted here, so this is a plain int subtraction
+                # exactly like every other counter below -- going through
+                # the property's getter would trigger a second, redundant
+                # fold, and its setter would discard whatever landed in a
+                # bucket in between (the exact concurrent increment this
+                # subtract-exact-snapshot protocol exists to preserve).
+                self._metrics_count_base -= snapshot["metrics_count"]
+                self.events_count -= snapshot["events_count"]
+                self.service_checks_count -= snapshot["service_checks_count"]
+                self.bytes_sent -= snapshot["bytes_sent"]
+                self.bytes_dropped_queue -= snapshot["bytes_dropped_queue"]
+                self.bytes_dropped_writer -= snapshot["bytes_dropped_writer"]
+                self.bytes_dropped_expired -= snapshot["bytes_dropped_expired"]
+                self.packets_sent -= snapshot["packets_sent"]
+                self.packets_dropped_queue -= snapshot["packets_dropped_queue"]
+                self.packets_dropped_writer -= snapshot["packets_dropped_writer"]
+                self.packets_dropped_expired -= snapshot["packets_dropped_expired"]
+            self._last_flush_time = time.time()
 
     # Aliases for backwards compatibility.
     @property
@@ -1808,60 +2024,152 @@ class DogStatsd(object):
     def _account_dropped_queue_full(self, item):
         # type: (QueuedItem) -> None
         """A payload was evicted from the sender queue to make room for a new one."""
-        self.packets_dropped_queue += 1
-        self.bytes_dropped_queue += len(payload_text(item).encode(self.encoding))
+        size = len(payload_text(item).encode(self.encoding))
+        with self._telemetry_lock:
+            self.packets_dropped_queue += 1
+            self.bytes_dropped_queue += size
 
     def _account_dropped_expired(self, item):
         # type: (QueuedItem) -> None
         """A payload sat in the sender queue longer than the configured expiry (sender_queue_expiry_seconds)."""
-        self.packets_dropped_expired += 1
-        self.bytes_dropped_expired += len(payload_text(item).encode(self.encoding))
+        size = len(payload_text(item).encode(self.encoding))
+        with self._telemetry_lock:
+            self.packets_dropped_expired += 1
+            self.bytes_dropped_expired += size
 
     def _account_dropped_writer(self, item):
         # type: (QueuedItem) -> None
         """A payload could not be written and is not being retried further."""
-        self.packets_dropped_writer += 1
-        self.bytes_dropped_writer += len(payload_text(item).encode(self.encoding))
+        size = len(payload_text(item).encode(self.encoding))
+        with self._telemetry_lock:
+            self.packets_dropped_writer += 1
+            self.bytes_dropped_writer += size
 
     def _flush_telemetry(self):
-        # type: () -> str
+        # type: () -> Tuple[str, Dict[str, int]]
+        """Snapshot the telemetry counters and format them into a packet.
+
+        The snapshot is taken under _telemetry_lock, atomically with every
+        producer thread's counter increments, so it can never observe a
+        half-updated value. It is returned alongside the formatted packet so
+        the caller can later undo exactly these amounts (_reset_telemetry())
+        rather than zeroing whatever the live counters have advanced to
+        while the packet was in flight to the server.
+
+        metrics_count is the one exception to "every producer thread's
+        counter increments": those land in per-thread buckets (see
+        _MetricsCountBucket), not under _telemetry_lock, so they must be
+        folded in first -- _fold_metrics_count_buckets() does that, and must
+        run before self.metrics_count is read into the snapshot below.
+        """
+        self._fold_metrics_count_buckets()
+        with self._telemetry_lock:
+            # Bypasses the metrics_count property deliberately: the fold
+            # above already brought _metrics_count_base fully up to date,
+            # so reading it directly here avoids a second, redundant fold
+            # (the property's getter would otherwise re-run one, uselessly,
+            # right after this method's own explicit call above).
+            snapshot = {
+                "metrics_count": self._metrics_count_base,
+                "events_count": self.events_count,
+                "service_checks_count": self.service_checks_count,
+                "bytes_sent": self.bytes_sent,
+                "bytes_dropped_queue": self.bytes_dropped_queue,
+                "bytes_dropped_writer": self.bytes_dropped_writer,
+                "bytes_dropped_expired": self.bytes_dropped_expired,
+                "packets_sent": self.packets_sent,
+                "packets_dropped_queue": self.packets_dropped_queue,
+                "packets_dropped_writer": self.packets_dropped_writer,
+                "packets_dropped_expired": self.packets_dropped_expired,
+            }  # type: Dict[str, int]
+
         tags = self._client_tags[:]
         tags.append("client_transport:{}".format(self._transport))
         tags.extend(self.constant_tags)
         telemetry_tags = ",".join(tags)
 
-        bytes_dropped_queue = self.bytes_dropped_queue + self.bytes_dropped_expired
-        packets_dropped_queue = self.packets_dropped_queue + self.packets_dropped_expired
+        bytes_dropped_queue = snapshot["bytes_dropped_queue"] + snapshot["bytes_dropped_expired"]
+        packets_dropped_queue = snapshot["packets_dropped_queue"] + snapshot["packets_dropped_expired"]
 
-        return TELEMETRY_FORMATTING_STR % (
-            self.metrics_count,
+        packet = TELEMETRY_FORMATTING_STR % (
+            snapshot["metrics_count"],
             telemetry_tags,
-            self.events_count,
+            snapshot["events_count"],
             telemetry_tags,
-            self.service_checks_count,
+            snapshot["service_checks_count"],
             telemetry_tags,
-            self.bytes_sent,
+            snapshot["bytes_sent"],
             telemetry_tags,
-            bytes_dropped_queue + self.bytes_dropped_writer,
+            bytes_dropped_queue + snapshot["bytes_dropped_writer"],
             telemetry_tags,
             bytes_dropped_queue,
             telemetry_tags,
-            self.bytes_dropped_writer,
+            snapshot["bytes_dropped_writer"],
             telemetry_tags,
-            self.packets_sent,
+            snapshot["packets_sent"],
             telemetry_tags,
-            packets_dropped_queue + self.packets_dropped_writer,
+            packets_dropped_queue + snapshot["packets_dropped_writer"],
             telemetry_tags,
             packets_dropped_queue,
             telemetry_tags,
-            self.packets_dropped_writer,
+            snapshot["packets_dropped_writer"],
             telemetry_tags,
         )
+        return packet, snapshot
 
     def _is_telemetry_flush_time(self):
         # type: () -> bool
-        return self._telemetry and \
-            self._last_flush_time + self._telemetry_flush_interval < time.time()
+        with self._telemetry_lock:
+            return self._telemetry and \
+                self._last_flush_time + self._telemetry_flush_interval < time.time()
+
+    def _try_claim_telemetry_flush(self):
+        # type: () -> bool
+        """Atomically check _is_telemetry_flush_time() and, if true, claim the flush.
+
+        Without this, two threads could both observe "it's flush time" and
+        both build/send/reset a telemetry packet for the same window -- e.g.
+        the background sender thread and a producer thread that fell back to
+        a synchronous send because the sender's queue was already sealed for
+        shutdown. That would double-report some counters and corrupt the
+        subtract-based _reset_telemetry(snapshot) (two threads subtracting
+        overlapping snapshots from the same live counters).
+
+        This is not just a shutdown-window corner case: with
+        disable_background_sender=True (the default -- no sender thread, no
+        queue at all), every call to _send_to_server() reaches
+        _xmit_packet_with_telemetry() directly on whichever thread made it.
+        Any application sharing one DogStatsd instance across multiple
+        threads -- the normal usage pattern -- can therefore have several
+        threads racing _try_claim_telemetry_flush() concurrently in that
+        configuration, not just the one sender thread.
+
+        Returns True if this call claimed the flush; the caller MUST call
+        _release_telemetry_flush() exactly once, from a finally block, once
+        its attempt -- successful or not -- is complete. Returns False if
+        it is not flush time yet, or another thread already owns the flush
+        in progress.
+        """
+        if (
+            not self._telemetry or self._telemetry_flush_in_progress
+            or self._last_flush_time + self._telemetry_flush_interval >= time.time()
+        ):
+            return False
+
+        with self._telemetry_lock:
+            if (
+                self._telemetry
+                and not self._telemetry_flush_in_progress
+                and self._last_flush_time + self._telemetry_flush_interval < time.time()
+            ):
+                self._telemetry_flush_in_progress = True
+                return True
+            return False
+
+    def _release_telemetry_flush(self):
+        # type: () -> None
+        with self._telemetry_lock:
+            self._telemetry_flush_in_progress = False
 
     def _send_to_server(self, packet, timestamped=False):
         # type: (str, bool) -> bool
@@ -1907,17 +2215,22 @@ class DogStatsd(object):
         """
         sent = self._xmit_packet(packet, False, queue_mode=queue_mode)
 
-        if self._is_telemetry_flush_time():
-            telemetry = self._flush_telemetry()
-            if self._xmit_packet(telemetry, True):
-                self._reset_telemetry()
-                self.packets_sent += 1
-                self.bytes_sent += len(telemetry)
-            else:
-                # Telemetry packet has been dropped, keep telemetry data for the next flush
-                self._last_flush_time = time.time()
-                self.bytes_dropped_writer += len(telemetry)
-                self.packets_dropped_writer += 1
+        if self._try_claim_telemetry_flush():
+            try:
+                telemetry, snapshot = self._flush_telemetry()
+                if self._xmit_packet(telemetry, True):
+                    self._reset_telemetry(snapshot)
+                    with self._telemetry_lock:
+                        self.packets_sent += 1
+                        self.bytes_sent += len(telemetry)
+                else:
+                    # Telemetry packet has been dropped, keep telemetry data for the next flush
+                    with self._telemetry_lock:
+                        self._last_flush_time = time.time()
+                        self.bytes_dropped_writer += len(telemetry)
+                        self.packets_dropped_writer += 1
+            finally:
+                self._release_telemetry_flush()
 
         return sent
 
@@ -1957,8 +2270,9 @@ class DogStatsd(object):
             return None
 
         if not is_telemetry and self._telemetry:
-            self.bytes_dropped_writer += len(packet)
-            self.packets_dropped_writer += 1
+            with self._telemetry_lock:
+                self.bytes_dropped_writer += len(packet)
+                self.packets_dropped_writer += 1
         return False
 
     def _xmit_packet_attempt(self, packet, is_telemetry, retry_eligible):
@@ -1989,8 +2303,9 @@ class DogStatsd(object):
                     mysocket.send(encoded_packet)
 
                 if not is_telemetry and self._telemetry:
-                    self.packets_sent += 1
-                    self.bytes_sent += len(packet)
+                    with self._telemetry_lock:
+                        self.packets_sent += 1
+                        self.bytes_sent += len(packet)
 
                 return True
             except socket.timeout:
@@ -2166,7 +2481,8 @@ class DogStatsd(object):
             )
 
         if self._telemetry:
-            self.events_count += 1
+            with self._telemetry_lock:
+                self.events_count += 1
 
         # An event carrying its own explicit date_happened can be sent late
         # without changing what it means.
@@ -2214,7 +2530,8 @@ class DogStatsd(object):
             string = u"{0}|card:{1}".format(string, cardinality)
 
         if self._telemetry:
-            self.service_checks_count += 1
+            with self._telemetry_lock:
+                self.service_checks_count += 1
 
         # A service check carrying its own explicit timestamp can be sent
         # late without changing what it means.
@@ -2542,6 +2859,8 @@ class DogStatsd(object):
         # which we will fix in the next steps.
         self._socket_lock = RLock()
         self._buffer_lock = RLock()
+        self._telemetry_lock = RLock()
+        self._telemetry_flush_in_progress = False
         self._sender_condition = threading.Condition()
 
         # Reset the buffer so we don't send metrics from the parent
