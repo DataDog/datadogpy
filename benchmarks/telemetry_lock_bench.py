@@ -503,6 +503,58 @@ def scenario_multi_thread_locked_vs_tls(LockedDogStatsd, n_threads, per_thread, 
     return locked_results, tls_results
 
 
+def scenario_counting_only_concurrency(LockedDogStatsd, n_threads, per_thread, pairs):
+    """Isolate just the counting mechanism under real concurrency, at any
+    thread count -- no increment()/_report() (tag normalization, payload
+    formatting), no _send()/_xmit_packet (which takes a completely
+    different, unrelated lock -- self._socket_lock, guarding the shared
+    socket object -- that both implementations share unmodified, and that
+    dominates the full end-to-end numbers at higher thread counts enough
+    to swamp the much smaller metrics_count-specific difference being
+    asked about here).
+
+    Exists to answer directly: "at what thread count, if any, does TLS
+    sharding start to win?" scenario_multi_thread_locked_vs_tls() answers
+    a related but different question (real increment() calls, which also
+    pay for _socket_lock contention identically on both sides) -- this one
+    strips that confound out so a comparison at very high thread counts
+    (hundreds to low thousands) is actually measuring the thing in
+    question, not getting lost in socket-lock queueing delay that neither
+    implementation's metrics_count design controls.
+    """
+    locked = LockedDogStatsd(disable_background_sender=True, disable_telemetry=False)
+
+    tls = NewDogStatsd(disable_background_sender=True, disable_telemetry=False)
+
+    def make_run(statsd, is_tls):
+        if is_tls:
+            def worker():
+                for _ in range(per_thread):
+                    bucket = statsd._metrics_count_bucket()
+                    with bucket.lock:
+                        bucket.value += 1
+        else:
+            def worker():
+                for _ in range(per_thread):
+                    with statsd._telemetry_lock:
+                        statsd.metrics_count += 1
+
+        def run():
+            threads = [threading.Thread(target=worker) for _ in range(n_threads)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+
+        return run
+
+    locked_results, tls_results = ab_measure(
+        make_run(locked, False), make_run(tls, True),
+        n_threads * per_thread, pairs,
+    )
+    return locked_results, tls_results
+
+
 def scenario_thread_churn_locked_vs_tls(LockedDogStatsd, threads_per_wave, increments_per_thread, waves, pairs):
     """Short-lived threads: each thread does only `increments_per_thread`
     calls before exiting, repeated over `waves` generations of
@@ -775,6 +827,13 @@ def main():
              "RLock/Lock acquire, bare threading.local getattr, and each implementation's "
              "real counting line called directly) -- see scenario_micro()",
     )
+    parser.add_argument(
+        "--sweep", action="store_true",
+        help="sweep the counting mechanism alone (no increment()/_send() overhead, no "
+             "_socket_lock confound) across thread counts from 1 to 1024, to answer "
+             "directly whether TLS sharding ever overtakes the lock at some concurrency "
+             "level -- see scenario_counting_only_concurrency()",
+    )
     args = parser.parse_args()
 
     OldDogStatsd, before_commit, lock_commit = load_pre_fix_dogstatsd()
@@ -898,6 +957,26 @@ def main():
             "write path, directly comparable to real_locked_write."
         )
         print()
+
+    if args.sweep:
+        LockedDogStatsd, locked_commit, tls_commit = load_locked_dogstatsd()
+        print(
+            "--- sweep: counting mechanism only (no _socket_lock confound), "
+            "%s locked vs %s tls, across thread counts ---" % (locked_commit[:10], tls_commit[:10])
+        )
+        print()
+
+        thread_counts = (1, 4, 16, 64, 256, 1024) if not args.quick else (1, 16, 256)
+        sweep_pairs = 10 if not args.quick else 6
+        sweep_budget = 40_000 if not args.quick else 6_000
+
+        for n_threads in thread_counts:
+            per_thread = max(50, sweep_budget // n_threads)
+            report_locked_vs_tls(
+                "counting_only[t=%d]" % n_threads,
+                *scenario_counting_only_concurrency(LockedDogStatsd, n_threads, per_thread, sweep_pairs)
+            )
+            print()
 
 
 if __name__ == "__main__":

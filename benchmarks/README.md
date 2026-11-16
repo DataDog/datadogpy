@@ -337,3 +337,54 @@ In short: this design doesn't lose to a slow lock. It loses because
 implementation's entire counting operation, and that lookup happens on
 every single call, with no way to amortize it away within `_report()`
 itself.
+
+
+## Does TLS ever win at higher concurrency? `--sweep`
+
+Asked directly: is there some thread count at which TLS sharding finally
+overtakes the lock? `scenario_multi_thread_locked_vs_tls` can't answer
+this cleanly at high thread counts -- real `increment()` calls also go
+through `_xmit_packet_attempt`'s `self._socket_lock` (guarding the shared
+socket object), which both implementations share unmodified. That lock
+*does* show real queueing delay under heavy concurrency (confirmed with
+an ad-hoc check: a bare `RLock`-protected counter stays flat at ~200ns/op
+from 1 to 16 threads, but real `increment()` calls jumped from ~2700ns/op
+at 1 thread to ~9400-10500ns/op at 16 -- a confound unrelated to
+`metrics_count`, big enough to swamp the ~100ns difference this PR is
+actually about). `--sweep` strips that out: no `increment()`, no `_send()`,
+just each implementation's real counting lines, run by real concurrent
+threads, from 1 to 1024 of them.
+
+### Results (full run, not `--quick`; n=10 pairs per thread count)
+
+| threads | locked | tls | delta | 95% CI (tls minus locked) |
+|---|---|---|---|---|
+| 1 | 182 ns | 280 ns | +98 ns (+54.2%) | [+76, +119] ns |
+| 4 | 201 ns | 299 ns | +98 ns (+48.5%) | [+85, +107] ns |
+| 16 | 226 ns | 334 ns | +107 ns (+47.4%) | [+100, +118] ns |
+| 64 | 264 ns | 394 ns | +130 ns (+49.5%) | [+111, +148] ns |
+| 256 | 443 ns | 535 ns | +93 ns (+20.9%) | [+77, +118] ns |
+| 1024 | 975 ns | 1140 ns | +165 ns (+17.0%) | [+101, +215] ns |
+
+### Conclusion: no crossover, at any thread count tested
+
+TLS is slower at every single point from 1 to 1024 threads, and every CI
+excludes zero -- there is no concurrency level in this range where it
+wins, or even draws even. The absolute gap (93-165 ns) does not trend
+toward zero as thread count grows; if anything both sides get noisier and
+more expensive in absolute terms at very high thread counts (likely real
+OS-level scheduling/GIL hand-off overhead from juggling that many live
+threads, affecting both sides), which shrinks the *relative* percentage
+gap somewhat at t=256/1024, but the gap never crosses zero.
+
+This is the expected result given CPython's GIL: only one thread executes
+Python bytecode at a time regardless of how many are runnable, so an
+uncontended, cheap, C-implemented lock essentially never experiences the
+kind of queueing delay that per-thread sharding is designed to relieve.
+Sharding trades that (non-existent, under the GIL) contention cost for a
+real, fixed, per-call cost (the bucket lookup -- see the `--micro` section
+above) that no amount of concurrency makes back. This would need
+re-measuring on a free-threaded CPython build (PEP 703, 3.13+ `t` builds,
+also called out as an open caveat earlier in this file) before assuming
+the same conclusion holds there -- true parallel execution is the one
+regime where this design's premise could actually apply.
