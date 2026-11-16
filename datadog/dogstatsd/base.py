@@ -1808,7 +1808,19 @@ class DogStatsd(object):
             return True
 
         if self._telemetry:
-            bucket = self._metrics_count_bucket()
+            # Inlined rather than calling self._metrics_count_bucket():
+            # that extra Python-level method call/frame was found to be a
+            # measurable fraction of this design's per-call cost (see
+            # benchmarks/README.md's "--micro" section --
+            # real_tls_bucket_lookup_only cost almost as much on its own as
+            # the locked implementation's entire counting operation). This
+            # is the exact same logic, just without the extra call: fast
+            # path first (bucket already exists for this thread), slow
+            # path (first call on this thread) falls back to the shared
+            # helper so the one-time registration logic isn't duplicated.
+            bucket = getattr(self._metrics_count_tls, "bucket", None)
+            if bucket is None:
+                bucket = self._metrics_count_bucket()
             with bucket.lock:
                 bucket.value += 1
 
@@ -1843,14 +1855,16 @@ class DogStatsd(object):
 
     def _metrics_count_bucket(self):
         # type: () -> _MetricsCountBucket
-        """This thread's private metrics_count bucket, creating it on first use.
+        """Create (if needed) and register this thread's metrics_count bucket.
 
-        One bucket per thread, found via threading.local -- every call after
-        a thread's first touches only that thread's own bucket.lock, never
-        self._telemetry_lock. The registration into
-        self._metrics_count_buckets (so a flush can find every live bucket)
-        is the only part that takes a shared lock, and it happens once per
-        thread's lifetime, not once per call.
+        Not on _report()'s hot path any more -- its fast path (bucket
+        already exists for this thread) is inlined directly there instead,
+        to avoid this method's own call/frame overhead on every single
+        metric sent. This is only reached from _report() the first time a
+        given thread calls it (bucket not found by the inlined getattr),
+        and is kept as a normal method for that one-time slow path, and for
+        anything else (tests, other call sites) that wants a thread's
+        bucket without duplicating the registration logic.
         """
         bucket = getattr(self._metrics_count_tls, "bucket", None)
         if bucket is None:
