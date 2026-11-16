@@ -94,6 +94,16 @@ TLS_INTRODUCED_COMMIT_FINDER = [
     "--", "datadog/dogstatsd/base.py",
 ]
 
+# The commit that inlined _report()'s bucket-lookup fast path (removing
+# the self._metrics_count_bucket() method call from the hot path). Its
+# parent is the original TLS implementation (method call still on the hot
+# path), which TLS_INTRODUCED_COMMIT_FINDER's match also identifies --
+# this one exists to tell those two commits apart.
+TLS_INLINED_COMMIT_FINDER = [
+    "git", "-C", REPO_ROOT, "log", "--format=%H", "-S", "Inlined rather than calling",
+    "--", "datadog/dogstatsd/base.py",
+]
+
 
 def _git(*args):
     return subprocess.check_output(["git", "-C", REPO_ROOT] + list(args)).decode().strip()
@@ -169,6 +179,28 @@ def load_locked_dogstatsd():
     locked_commit = _git("rev-parse", "%s^" % tls_commit)
     cls = _load_dogstatsd_at_commit(locked_commit, "dogstatsd_base_locked")
     return cls, locked_commit, tls_commit
+
+
+def load_tls_method_call_dogstatsd():
+    """Load the real, unmodified TLS implementation as it stood before the
+    bucket-lookup fast path was inlined into _report() (i.e. the commit
+    TLS_INTRODUCED_COMMIT_FINDER identifies, not its parent).
+
+    Exists to answer, with real code on all three sides, whether inlining
+    (TLS_INLINED_COMMIT_FINDER's commit, or the current working tree if
+    that is HEAD) actually claws back enough of the method-call overhead
+    found in the original --micro results to change the locked-vs-TLS
+    comparison's conclusion.
+    """
+    commits = subprocess.check_output(TLS_INTRODUCED_COMMIT_FINDER).decode().split()
+    if not commits:
+        raise RuntimeError(
+            "Could not find the commit that introduced _MetricsCountBucket. "
+            "Run this from a git checkout that includes that history."
+        )
+    tls_commit = commits[-1]  # oldest match = the commit that introduced it
+    cls = _load_dogstatsd_at_commit(tls_commit, "dogstatsd_base_tls_method_call")
+    return cls, tls_commit
 
 
 class FakeSocket(object):
@@ -529,8 +561,14 @@ def scenario_counting_only_concurrency(LockedDogStatsd, n_threads, per_thread, p
     def make_run(statsd, is_tls):
         if is_tls:
             def worker():
+                # Matches the current (inlined) _report() exactly, not
+                # the original method-call version -- see
+                # TLS_INLINED_COMMIT_FINDER and real_tls_write_inlined in
+                # scenario_micro().
                 for _ in range(per_thread):
-                    bucket = statsd._metrics_count_bucket()
+                    bucket = getattr(statsd._metrics_count_tls, "bucket", None)
+                    if bucket is None:
+                        bucket = statsd._metrics_count_bucket()
                     with bucket.lock:
                         bucket.value += 1
         else:
@@ -669,29 +707,37 @@ def report_multi(name, results, baseline_label):
         print("  %-32s samples: %s" % (label, [round(x) for x in results[label]]))
 
 
-def scenario_micro(LockedDogStatsd, n, pairs):
+def scenario_micro(LockedDogStatsd, TlsMethodCallDogStatsd, n, pairs):
     """Decompose the counting-mechanism cost into its primitive pieces.
 
-    Single-threaded, no sends, no flushes (both statsd instances have
+    Single-threaded, no sends, no flushes (every statsd instance has
     _last_flush_time pinned to the far future): this isolates exactly the
-    lines that differ between the two implementations' _report(), called
-    directly rather than through the much larger increment()/_report()
-    (tag normalization, payload formatting, sampling, etc. -- all shared,
-    all unaffected by this change, and would otherwise dilute the
-    difference being measured here).
+    lines that differ between the three implementations' _report(),
+    called directly rather than through the much larger increment()/
+    _report() (tag normalization, payload formatting, sampling, etc. --
+    all shared, all unaffected by this change, and would otherwise dilute
+    the difference being measured here).
 
-    locked = LockedDogStatsd(...): the real #1016 implementation, loaded
-    via git by load_locked_dogstatsd() in the caller, so "real_locked_write"
-    below calls that real instance's real self._telemetry_lock -- not a
-    reimplementation of it.
+    Three real implementations, all loaded from actual commits (never a
+    hand-rolled stand-in, per this file's module docstring):
+    - locked = LockedDogStatsd(...): #1016, single self._telemetry_lock.
+    - tls_method_call = TlsMethodCallDogStatsd(...): this branch's
+      original TLS commit, self._metrics_count_bucket() called as a
+      separate method from _report().
+    - tls_inlined = NewDogStatsd(...): the current working tree, with
+      that method call's fast path inlined directly into _report().
     """
     locked = LockedDogStatsd(disable_background_sender=True, disable_telemetry=False)
     locked.socket = FakeSocket()
     locked._last_flush_time = float("inf")
 
-    tls = NewDogStatsd(disable_background_sender=True, disable_telemetry=False)
-    tls.socket = FakeSocket()
-    tls._last_flush_time = float("inf")
+    tls_method_call = TlsMethodCallDogStatsd(disable_background_sender=True, disable_telemetry=False)
+    tls_method_call.socket = FakeSocket()
+    tls_method_call._last_flush_time = float("inf")
+
+    tls_inlined = NewDogStatsd(disable_background_sender=True, disable_telemetry=False)
+    tls_inlined.socket = FakeSocket()
+    tls_inlined._last_flush_time = float("inf")
 
     bare_rlock = threading.RLock()
     bare_rlock_counter = [0]
@@ -725,17 +771,30 @@ def scenario_micro(LockedDogStatsd, n, pairs):
                 locked.metrics_count += 1
 
     def real_tls_bucket_lookup_only():
-        # Isolates DogStatsd._metrics_count_bucket() itself -- the Python
-        # method call plus its internal threading.local getattr -- without
-        # the bucket.lock acquisition that follows it in _report().
+        # Isolates DogStatsd._metrics_count_bucket() itself, called as the
+        # original TLS commit's _report() called it -- the Python method
+        # call plus its internal threading.local getattr -- without the
+        # bucket.lock acquisition that follows it in _report().
         for _ in range(n):
-            tls._metrics_count_bucket()
+            tls_method_call._metrics_count_bucket()
 
-    def real_tls_write():
-        # The exact lines from the TLS implementation's _report(), via a
-        # real instance.
+    def real_tls_write_method_call():
+        # The exact lines from the original TLS commit's _report(), via a
+        # real instance of that commit.
         for _ in range(n):
-            bucket = tls._metrics_count_bucket()
+            bucket = tls_method_call._metrics_count_bucket()
+            with bucket.lock:
+                bucket.value += 1
+
+    def real_tls_write_inlined():
+        # The exact lines from the *current* (inlined) _report(), via a
+        # real instance of the current working tree -- same bucket.lock
+        # use as real_tls_write_method_call, but the lookup itself is the
+        # inlined getattr-with-fallback instead of a bare method call.
+        for _ in range(n):
+            bucket = getattr(tls_inlined._metrics_count_tls, "bucket", None)
+            if bucket is None:
+                bucket = tls_inlined._metrics_count_bucket()
             with bucket.lock:
                 bucket.value += 1
 
@@ -745,7 +804,8 @@ def scenario_micro(LockedDogStatsd, n, pairs):
         "bare_tls_getattr": bare_tls_getattr,
         "real_locked_write": real_locked_write,
         "real_tls_bucket_lookup_only": real_tls_bucket_lookup_only,
-        "real_tls_write": real_tls_write,
+        "real_tls_write_method_call": real_tls_write_method_call,
+        "real_tls_write_inlined": real_tls_write_inlined,
     }
     return multi_measure(variants, n, pairs)
 
@@ -936,25 +996,29 @@ def main():
 
     if args.micro:
         LockedDogStatsd, locked_commit, tls_commit = load_locked_dogstatsd()
+        TlsMethodCallDogStatsd, tls_method_call_commit = load_tls_method_call_dogstatsd()
         print(
-            "--- micro: decomposing the counting-mechanism cost (%s locked vs %s tls) ---"
-            % (locked_commit[:10], tls_commit[:10])
+            "--- micro: decomposing the counting-mechanism cost "
+            "(%s locked / %s tls-method-call / current tree tls-inlined) ---"
+            % (locked_commit[:10], tls_method_call_commit[:10])
         )
         print()
 
         micro_n, micro_pairs = (2_000, 8) if args.quick else (50_000, 30)
-        results = scenario_micro(LockedDogStatsd, micro_n, micro_pairs)
+        results = scenario_micro(LockedDogStatsd, TlsMethodCallDogStatsd, micro_n, micro_pairs)
         report_multi("metrics_count counting mechanism, per call", results, "real_locked_write")
         print()
         print(
             "  Read top to bottom: bare_rlock/bare_lock/bare_tls_getattr are generic "
-            "primitives (not tied to either implementation), included so the two "
-            "real_* rows below can be explained in terms of them. real_locked_write is "
-            "the baseline (today's #1016 implementation); real_tls_bucket_lookup_only "
-            "isolates DogStatsd._metrics_count_bucket() alone (the Python method call "
+            "primitives (not tied to either implementation), included so the real_* rows "
+            "below can be explained in terms of them. real_locked_write is the baseline "
+            "(today's #1016 implementation); real_tls_bucket_lookup_only isolates the "
+            "original TLS commit's _metrics_count_bucket() alone (the Python method call "
             "plus its internal threading.local getattr, no lock use yet); "
-            "real_tls_write adds the per-bucket Lock acquire on top, i.e. the full TLS "
-            "write path, directly comparable to real_locked_write."
+            "real_tls_write_method_call adds the per-bucket Lock acquire on top, i.e. the "
+            "full original TLS write path; real_tls_write_inlined is the *current* "
+            "working tree's inlined fast path instead -- directly comparable to both "
+            "real_locked_write and real_tls_write_method_call."
         )
         print()
 

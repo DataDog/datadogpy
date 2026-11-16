@@ -388,3 +388,85 @@ re-measuring on a free-threaded CPython build (PEP 703, 3.13+ `t` builds,
 also called out as an open caveat earlier in this file) before assuming
 the same conclusion holds there -- true parallel execution is the one
 regime where this design's premise could actually apply.
+
+
+## Iteration 3: inlining the bucket lookup (the speculative fix floated above)
+
+The `--micro` section above floated a specific hypothesis: `_report()`
+calling `self._metrics_count_bucket()` as a separate method was itself a
+real cost (confirmed: `real_tls_bucket_lookup_only` at 129ns, almost as
+much as the locked implementation's entire 202ns operation), and
+"an implementation that inlines the thread-local check directly in
+`_report()` ... might claw back enough to tip positive." Implemented
+exactly that (see `_report()` in `datadog/dogstatsd/base.py`: the fast
+path -- bucket already exists for the calling thread -- is now inlined
+directly, falling back to `_metrics_count_bucket()` only on a thread's
+first call, where the one-time registration cost dominates anyway) and
+re-ran every benchmark in this file against it.
+
+### `--micro`, re-run against the inlined version (n=30)
+
+| What | ns/call | vs `real_locked_write` |
+|---|---|---|
+| `real_locked_write` (#1016) | 171 ns | baseline |
+| `real_tls_write_method_call` (original TLS commit) | 265 ns | +93 ns (+54.6%), CI [+84, +97] ns |
+| `real_tls_write_inlined` (this inlining) | 228 ns | **+57 ns (+33.1%), CI [+50, +59] ns** |
+
+Inlining recovers about 36 ns of the original 93 ns gap -- roughly 39% of
+it, a real and statistically solid improvement (CI tight and clearly
+excludes zero on both the before and after numbers). It does **not**
+close the gap: the inlined version is still measurably slower than the
+single lock, with a CI that excludes zero just as cleanly as before.
+
+### `--tls`, re-run (long-lived threads; now within noise, thread churn unchanged)
+
+| Scenario | locked | tls (inlined) | delta | 95% CI |
+|---|---|---|---|---|
+| `multi_thread_tls[t=2]` | 8270 ns | 8312 ns | +0.5% | crosses zero |
+| `multi_thread_tls[t=4]` | 9310 ns | 9198 ns | -1.2% | crosses zero |
+| `multi_thread_tls[t=8]` | 10346 ns | 10163 ns | -1.8% (median); mean diff +120 ns | crosses zero |
+| `thread_churn_tls[20x15]` | 25257 ns | 29852 ns | +18.2% | [+2097, +4894] ns |
+
+The long-lived-thread scenarios are now a genuine statistical wash --
+none of the three CIs exclude zero any more (iteration 2 had `t=4`
+excluding zero in the lock's favor). That tracks: a 57ns/call difference
+is a small fraction of a full `increment()` call's ~2800-3000ns total
+cost (tag normalization, payload formatting, etc., all unaffected by
+this change), easily inside this sample size's noise floor, even though
+`--micro`'s dedicated, isolated measurement can still detect it cleanly.
+
+**Thread churn is unaffected and still clearly worse** (CI excludes
+zero): inlining only changed the fast path (bucket already exists). The
+slow path -- a thread's first call, still a real call into
+`_metrics_count_bucket()` for the one-time registration under
+`_metrics_count_registry_lock` -- is exactly what dominates this
+scenario (2 increments/thread), and that code didn't change.
+
+### `--sweep`, re-run across thread counts (counting mechanism only, n=10 pairs; updated to match the inlined pattern)
+
+| threads | locked | tls (inlined) | delta | 95% CI |
+|---|---|---|---|---|
+| 1 | 173 ns | 258 ns | +84 ns (+48.5%) | [+31, +111] ns |
+| 4 | 198 ns | 264 ns | +66 ns (+33.2%) | [+47, +78] ns |
+| 16 | 234 ns | 311 ns | +76 ns (+32.6%) | [+60, +87] ns |
+| 64 | 259 ns | 347 ns | +89 ns (+34.3%) | [+74, +94] ns |
+| 256 | 461 ns | 532 ns | +71 ns (+15.5%) | [+48, +98] ns |
+| 1024 | 928 ns | 1044 ns | +116 ns (+12.5%) | [+60, +183] ns |
+
+Smaller gaps across the board than iteration 2's sweep (there: +93 to
++165 ns; here: +66 to +116 ns), consistent with `--micro`'s ~36ns
+recovery -- but still no crossover anywhere from 1 to 1024 threads, and
+every CI still excludes zero.
+
+### Conclusion: real, measured improvement -- still not enough
+
+Inlining is not a wash; it's a genuine, reproducible win over the
+method-call version, visible identically in all three benchmarks. But
+"claw back enough to tip positive" was the actual bar, per the hypothesis
+being tested, and it does not clear that bar anywhere: not in the
+isolated single-threaded micro-benchmark, not across 1-1024 real
+concurrent threads, and not in the thread-churn scenario (which this
+change was never going to help, since it never touches the registration
+cost that dominates there). The conclusion from iterations 1 and 2 stands,
+now tested against the best version of this design actually built:
+**keep the single-lock implementation from PR #1016.**
