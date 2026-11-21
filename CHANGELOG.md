@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## v0.56.0 / 2026-11-04
+
+* [Fixed] Normalize tags passed to `event()` and `service_check()` so `|` and `\n` characters (DogStatsD protocol delimiters) are replaced with `_`, consistent with the existing behavior of all metric methods. See [#953](https://github.com/DataDog/datadogpy/pull/953) (thanks @tomohiro86).
+* [Fixed] Preserve the `cardinality` tag on DogStatsD `set` metrics when client-side aggregation is enabled; it was being silently dropped on the wire. See [#980](https://github.com/DataDog/datadogpy/pull/980) (thanks @jaideeppyne).
+* [Fixed] Fix DogStatsD `stop()` synchronous fallback failures: `stop()` could return `True` even though a payload flushed synchronously during shutdown failed to send; it now returns `False` in that case. See [#1009](https://github.com/DataDog/datadogpy/pull/1009).
+* [Fixed] Fix DogStatsD `wait_for_pending(timeout)` timeout accounting so the timeout covers both the buffered-metrics flush and the queue drain, not just the drain. See [#1010](https://github.com/DataDog/datadogpy/pull/1010).
+* [Fixed] Fix a DogStatsD background sender deadlock that could occur during buffered flush retries. See [#1011](https://github.com/DataDog/datadogpy/pull/1011).
+* [Fixed] Check DogStatsD `stop(timeout)`'s remaining timeout budget before each aggregated metric and before starting the buffered flush. In-progress sends and their telemetry can still exceed that budget because socket timeouts are not clamped. See [#1012](https://github.com/DataDog/datadogpy/pull/1012).
+
 ## v0.55.0 / 2026-09-30
 
 * [Fixed] Suppress unsafe logging from DogStatsD `post_fork_child`/`post_fork_parent` hooks to avoid possible deadlocks after `fork()`. If you subclass `DogStatsd` and override `_start_flush_thread`, `_start_sender_thread`, or `close_socket`, update your overrides to accept the new `quiet=False` keyword argument, or accept `**kwargs`, because the fork hooks now pass `quiet=True` to those methods. See [#989](https://github.com/DataDog/datadogpy/pull/989).
@@ -747,3 +756,5 @@ See [#8][], thanks [@benweatherman][]
 [@timed]: https://github.com/timed
 [@timvisher]: https://github.com/timvisher
 [@tuukkamustonen]: https://github.com/tuukkamustonen
+[@tomohiro86]: https://github.com/tomohiro86
+[@jaideeppyne]: https://github.com/jaideeppyne
