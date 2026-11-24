@@ -1637,9 +1637,14 @@ async def print_foo():
         dogstatsd.pre_fork()
         elapsed = time.time() - start
         dogstatsd.post_fork_parent()
+        flush_thread = dogstatsd._flush_thread
+        self.assertIsNotNone(flush_thread)
+        dogstatsd.disable_buffering = True
         dogstatsd.stop()
 
         self.assertLess(elapsed, 5)
+        self.assertIsNone(dogstatsd._flush_thread)
+        self.assertFalse(flush_thread.is_alive())
 
     def test_aggregation_buffering_simultaneously_dgram(self):
         self._test_aggregation_buffering_simultaneously(socket.SOCK_DGRAM)
