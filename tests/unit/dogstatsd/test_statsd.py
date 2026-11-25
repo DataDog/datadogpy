@@ -1629,20 +1629,31 @@ async def print_foo():
         )
     
     def test_pre_fork_does_not_wait_for_the_flush_interval(self):
-        dogstatsd = DogStatsd(disable_buffering=False, flush_interval=10, telemetry_min_flush_interval=0)
-        dogstatsd.socket = FakeSocket()
-        self.assertIsNotNone(dogstatsd._flush_thread)
+        real_wait = threading.Event.wait
+        waits = []
 
-        start = time.time()
-        dogstatsd.pre_fork()
-        elapsed = time.time() - start
+        def spy_wait(event, timeout=None):
+            result = real_wait(event, timeout)
+            waits.append((event, timeout, result))
+            return result
+
+        with mock.patch.object(threading.Event, "wait", autospec=True, side_effect=spy_wait):
+            dogstatsd = DogStatsd(disable_buffering=False, flush_interval=10, telemetry_min_flush_interval=0)
+            dogstatsd.socket = FakeSocket()
+            stopped_thread = dogstatsd._flush_thread
+            self.assertIsNotNone(stopped_thread)
+            dogstatsd.pre_fork()
+
+        stop_waits = [(timeout, result) for event, timeout, result in waits if event is dogstatsd._flush_thread_stop]
+        self.assertEqual(stop_waits, [(10, True)])
+        self.assertFalse(stopped_thread.is_alive())
+
         dogstatsd.post_fork_parent()
         flush_thread = dogstatsd._flush_thread
         self.assertIsNotNone(flush_thread)
         dogstatsd.disable_buffering = True
         dogstatsd.stop()
 
-        self.assertLess(elapsed, 5)
         self.assertIsNone(dogstatsd._flush_thread)
         self.assertFalse(flush_thread.is_alive())
 
