@@ -64,7 +64,7 @@ class Metric(SearchableAPIResource, SendableAPIResource, ListableAPIResource):
     ):
         # type: (...) -> Any
         """
-        Submit a metric or a list of metrics to the metric API
+        Submit a metric or a list of metrics to the metric API.
         A metric dictionary should consist of 5 keys: metric, points, host, tags, type (some of which optional),
         see below:
 
