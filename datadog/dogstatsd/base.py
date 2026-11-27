@@ -242,6 +242,17 @@ TELEMETRY_FORMATTING_STR = "\n".join(
     ]
 ) + "\n"
 
+# Extra, opt-in (extended_telemetry=True) breakdown of how much of the metrics
+# above is the client's own telemetry traffic, rather than application payloads.
+EXTENDED_TELEMETRY_FORMATTING_STR = "\n".join(
+    [
+        "datadog.dogstatsd.client.telemetry_bytes_sent:%s|c|#%s",
+        "datadog.dogstatsd.client.telemetry_packets_sent:%s|c|#%s",
+        "datadog.dogstatsd.client.telemetry_bytes_dropped:%s|c|#%s",
+        "datadog.dogstatsd.client.telemetry_packets_dropped:%s|c|#%s",
+    ]
+) + "\n"
+
 SUPPORTS_FORKING = hasattr(os, "register_at_fork") and not os.environ.get("DD_DOGSTATSD_DISABLE_FORK_SUPPORT", None)
 TRACK_INSTANCES = not os.environ.get("DD_DOGSTATSD_DISABLE_INSTANCE_TRACKING", None)
 
@@ -350,6 +361,7 @@ class DogStatsd(object):
         sender_queue_expiry_seconds=PENDING_PAYLOAD_EXPIRY_SECONDS,  # type: float
         track_instance=True,                    # type: bool
         socket_connect_retry=False,              # type: bool
+        extended_telemetry=False,                # type: bool
     ):  # type: (...) -> None
         """
         Initialize a DogStatsd object.
@@ -564,6 +576,15 @@ class DogStatsd(object):
         if supported.
         Default: True.
         :type track_instance: boolean
+
+        :param extended_telemetry: If True, also report telemetry_bytes_sent, telemetry_packets_sent,
+        telemetry_bytes_dropped and telemetry_packets_dropped, which break out how much of the client's
+        own telemetry traffic is included in the regular bytes/packets_sent/dropped totals. With a
+        dedicated telemetry destination (telemetry_host or telemetry_socket_path), telemetry traffic is
+        always excluded from those totals regardless of this setting, and these extra metrics describe
+        traffic to that dedicated destination instead.
+        Default: False.
+        :type extended_telemetry: bool
         """
 
         # RLock: _xmit_packet_attempt holds this across get_socket()/close_socket()
@@ -668,6 +689,7 @@ class DogStatsd(object):
         self._reset_telemetry()
         self._telemetry_flush_interval = telemetry_min_flush_interval
         self._telemetry = not disable_telemetry
+        self.extended_telemetry = extended_telemetry
         self._last_flush_time = time.time()
 
         self._buffer_lock = RLock()
@@ -1816,6 +1838,10 @@ class DogStatsd(object):
                 self.packets_dropped_queue = 0  # type: int
                 self.packets_dropped_writer = 0  # type: int
                 self.packets_dropped_expired = 0  # type: int
+                self.telemetry_bytes_sent = 0  # type: int
+                self.telemetry_packets_sent = 0  # type: int
+                self.telemetry_bytes_dropped = 0  # type: int
+                self.telemetry_packets_dropped = 0  # type: int
             else:
                 self.metrics_count -= snapshot["metrics_count"]
                 self.events_count -= snapshot["events_count"]
@@ -1828,6 +1854,10 @@ class DogStatsd(object):
                 self.packets_dropped_queue -= snapshot["packets_dropped_queue"]
                 self.packets_dropped_writer -= snapshot["packets_dropped_writer"]
                 self.packets_dropped_expired -= snapshot["packets_dropped_expired"]
+                self.telemetry_bytes_sent -= snapshot["telemetry_bytes_sent"]
+                self.telemetry_packets_sent -= snapshot["telemetry_packets_sent"]
+                self.telemetry_bytes_dropped -= snapshot["telemetry_bytes_dropped"]
+                self.telemetry_packets_dropped -= snapshot["telemetry_packets_dropped"]
             self._last_flush_time = time.time()
 
     # Aliases for backwards compatibility.
@@ -1889,6 +1919,10 @@ class DogStatsd(object):
                 "packets_dropped_queue": self.packets_dropped_queue,
                 "packets_dropped_writer": self.packets_dropped_writer,
                 "packets_dropped_expired": self.packets_dropped_expired,
+                "telemetry_bytes_sent": self.telemetry_bytes_sent,
+                "telemetry_packets_sent": self.telemetry_packets_sent,
+                "telemetry_bytes_dropped": self.telemetry_bytes_dropped,
+                "telemetry_packets_dropped": self.telemetry_packets_dropped,
             }  # type: Dict[str, int]
 
         tags = self._client_tags[:]
@@ -1923,6 +1957,19 @@ class DogStatsd(object):
             snapshot["packets_dropped_writer"],
             telemetry_tags,
         )
+
+        if self.extended_telemetry:
+            packet += EXTENDED_TELEMETRY_FORMATTING_STR % (
+                snapshot["telemetry_bytes_sent"],
+                telemetry_tags,
+                snapshot["telemetry_packets_sent"],
+                telemetry_tags,
+                snapshot["telemetry_bytes_dropped"],
+                telemetry_tags,
+                snapshot["telemetry_packets_dropped"],
+                telemetry_tags,
+            )
+
         return packet, snapshot
 
     def _is_telemetry_flush_time(self):
@@ -2036,6 +2083,9 @@ class DogStatsd(object):
                         if not dedicated:
                             self.packets_sent += 1
                             self.bytes_sent += len(telemetry)
+                        if self.extended_telemetry:
+                            self.telemetry_packets_sent += 1
+                            self.telemetry_bytes_sent += len(telemetry)
                 else:
                     # Telemetry packet has been dropped, keep telemetry data for the next flush
                     with self._telemetry_lock:
@@ -2043,6 +2093,9 @@ class DogStatsd(object):
                         if not dedicated:
                             self.bytes_dropped_writer += len(telemetry)
                             self.packets_dropped_writer += 1
+                        if self.extended_telemetry:
+                            self.telemetry_bytes_dropped += len(telemetry)
+                            self.telemetry_packets_dropped += 1
             finally:
                 self._release_telemetry_flush()
 
