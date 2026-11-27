@@ -332,9 +332,6 @@ class ServiceLevelObjectiveClient(object):
         report_warnings(res)
         report_errors(res)
 
-        if args.string_ids:
-            res["id"] = str(res["id"])
-
         if format == "pretty":
             print(pretty_json(res))
         else:
