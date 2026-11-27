@@ -126,7 +126,7 @@ class OverflownSocket(BrokenSocket):
         super(OverflownSocket, self).__init__(errno.EAGAIN)
 
 
-def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped_writer=0, packets_sent=1, packets_dropped_writer=0, transport="udp", tags="", bytes_dropped_queue=0, packets_dropped_queue=0, bytes_dropped_expired=0, packets_dropped_expired=0):
+def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes_dropped_writer=0, packets_sent=1, packets_dropped_writer=0, transport="udp", tags="", bytes_dropped_queue=0, packets_dropped_queue=0, bytes_dropped_expired=0, packets_dropped_expired=0, extended=False, telemetry_bytes_sent=0, telemetry_packets_sent=0, telemetry_bytes_dropped=0, telemetry_packets_dropped=0):
     tags = "," + tags if tags else ""
 
     # Expired drops have no dedicated wire metric: they're folded into the
@@ -147,7 +147,12 @@ def telemetry_metrics(metrics=1, events=0, service_checks=0, bytes_sent=0, bytes
         "datadog.dogstatsd.client.packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(reported_packets_dropped_queue + packets_dropped_writer, version, transport, tags),
         "datadog.dogstatsd.client.packets_dropped_queue:{}|c|#client:py,client_version:{},client_transport:{}{}".format(reported_packets_dropped_queue, version, transport, tags),
         "datadog.dogstatsd.client.packets_dropped_writer:{}|c|#client:py,client_version:{},client_transport:{}{}".format(packets_dropped_writer, version, transport, tags),
-    ]) + "\n"
+    ] + ([
+        "datadog.dogstatsd.client.telemetry_bytes_sent:{}|c|#client:py,client_version:{},client_transport:{}{}".format(telemetry_bytes_sent, version, transport, tags),
+        "datadog.dogstatsd.client.telemetry_packets_sent:{}|c|#client:py,client_version:{},client_transport:{}{}".format(telemetry_packets_sent, version, transport, tags),
+        "datadog.dogstatsd.client.telemetry_bytes_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(telemetry_bytes_dropped, version, transport, tags),
+        "datadog.dogstatsd.client.telemetry_packets_dropped:{}|c|#client:py,client_version:{},client_transport:{}{}".format(telemetry_packets_dropped, version, transport, tags),
+    ] if extended else [])) + "\n"
 
 
 class TestDogStatsd(unittest.TestCase):
@@ -2125,6 +2130,86 @@ async def print_foo():
 
         # assert that _last_flush_time has been updated
         self.assertTrue(time1 < dogstatsd._last_flush_time)
+
+    def test_dedicated_telemetry_destination_excludes_telemetry_from_totals(self):
+        """A dedicated telemetry destination's own packets must not be folded into
+        bytes_sent/packets_sent: those stay a pure measure of application traffic."""
+        dogstatsd = DogStatsd(telemetry_host='foo', telemetry_min_flush_interval=0)
+        fake_socket = FakeSocket()
+        dogstatsd.socket = fake_socket
+        fake_telemetry_socket = FakeSocket()
+        dogstatsd.telemetry_socket = fake_telemetry_socket
+
+        dogstatsd.gauge('gauge', 1)
+        self.assertEqual('gauge:1|g\n', fake_socket.recv())
+        self.assert_equal_telemetry(
+            '', fake_telemetry_socket.recv(),
+            telemetry=telemetry_metrics(metrics=1, packets_sent=1, bytes_sent=10),
+        )
+
+        dogstatsd.gauge('gauge', 1)
+        self.assertEqual('gauge:1|g\n', fake_socket.recv(reset_wait=True))
+        # Without the fix, the first telemetry packet's own bytes/count would have
+        # leaked into these totals even though it went out on a different socket.
+        self.assert_equal_telemetry(
+            '', fake_telemetry_socket.recv(reset_wait=True),
+            telemetry=telemetry_metrics(metrics=1, packets_sent=1, bytes_sent=10),
+        )
+
+    def test_extended_telemetry_shared_endpoint(self):
+        dogstatsd = DogStatsd(telemetry_min_flush_interval=0, extended_telemetry=True)
+        fake_socket = FakeSocket()
+        dogstatsd.socket = fake_socket
+
+        dogstatsd.gauge('gauge', 1)
+        first = fake_socket.recv(2)
+        self.assert_equal_telemetry(
+            'gauge:1|g\n', first,
+            telemetry=telemetry_metrics(metrics=1, packets_sent=1, bytes_sent=10, extended=True),
+        )
+        # recv(2) joins the two payloads with an extra '\n' separator, on top of
+        # each payload's own trailing newline -- account for it here.
+        telemetry_size = len(first) - len('gauge:1|g\n') - 1
+
+        dogstatsd.gauge('gauge', 1)
+        second = fake_socket.recv(2, reset_wait=True)
+        # The telemetry-specific counters are a subset of the totals: the one
+        # telemetry packet sent so far shows up in both.
+        self.assert_equal_telemetry(
+            'gauge:1|g\n', second,
+            telemetry=telemetry_metrics(
+                metrics=1, packets_sent=2, bytes_sent=10 + telemetry_size,
+                extended=True, telemetry_bytes_sent=telemetry_size, telemetry_packets_sent=1,
+            ),
+        )
+
+    def test_extended_telemetry_dedicated_destination(self):
+        dogstatsd = DogStatsd(telemetry_host='foo', telemetry_min_flush_interval=0, extended_telemetry=True)
+        fake_socket = FakeSocket()
+        dogstatsd.socket = fake_socket
+        fake_telemetry_socket = FakeSocket()
+        dogstatsd.telemetry_socket = fake_telemetry_socket
+
+        dogstatsd.gauge('gauge', 1)
+        self.assertEqual('gauge:1|g\n', fake_socket.recv())
+        first_telemetry = fake_telemetry_socket.recv()
+        self.assert_equal_telemetry(
+            '', first_telemetry,
+            telemetry=telemetry_metrics(metrics=1, packets_sent=1, bytes_sent=10, extended=True),
+        )
+        telemetry_size = len(first_telemetry)
+
+        dogstatsd.gauge('gauge', 1)
+        self.assertEqual('gauge:1|g\n', fake_socket.recv(reset_wait=True))
+        # bytes_sent/packets_sent remain pure application totals; the
+        # telemetry-specific counters pick up the dedicated-socket traffic instead.
+        self.assert_equal_telemetry(
+            '', fake_telemetry_socket.recv(reset_wait=True),
+            telemetry=telemetry_metrics(
+                metrics=1, packets_sent=1, bytes_sent=10,
+                extended=True, telemetry_bytes_sent=telemetry_size, telemetry_packets_sent=1,
+            ),
+        )
 
     def test_telemetry_flush_interval_batch(self):
         dogstatsd = DogStatsd(disable_buffering=False)
