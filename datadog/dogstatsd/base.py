@@ -2026,17 +2026,23 @@ class DogStatsd(object):
         if self._try_claim_telemetry_flush():
             try:
                 telemetry, snapshot = self._flush_telemetry()
+                # A dedicated telemetry destination carries no application payloads,
+                # so its traffic is kept out of bytes/packets_sent/dropped -- those stay
+                # a pure measure of application traffic, matching the Go and Java clients.
+                dedicated = self._dedicated_telemetry_destination()
                 if self._xmit_packet(telemetry, True):
                     self._reset_telemetry(snapshot)
                     with self._telemetry_lock:
-                        self.packets_sent += 1
-                        self.bytes_sent += len(telemetry)
+                        if not dedicated:
+                            self.packets_sent += 1
+                            self.bytes_sent += len(telemetry)
                 else:
                     # Telemetry packet has been dropped, keep telemetry data for the next flush
                     with self._telemetry_lock:
                         self._last_flush_time = time.time()
-                        self.bytes_dropped_writer += len(telemetry)
-                        self.packets_dropped_writer += 1
+                        if not dedicated:
+                            self.bytes_dropped_writer += len(telemetry)
+                            self.packets_dropped_writer += 1
             finally:
                 self._release_telemetry_flush()
 

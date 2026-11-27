@@ -2126,6 +2126,31 @@ async def print_foo():
         # assert that _last_flush_time has been updated
         self.assertTrue(time1 < dogstatsd._last_flush_time)
 
+    def test_dedicated_telemetry_destination_excludes_telemetry_from_totals(self):
+        """A dedicated telemetry destination's own packets must not be folded into
+        bytes_sent/packets_sent: those stay a pure measure of application traffic."""
+        dogstatsd = DogStatsd(telemetry_host='foo', telemetry_min_flush_interval=0)
+        fake_socket = FakeSocket()
+        dogstatsd.socket = fake_socket
+        fake_telemetry_socket = FakeSocket()
+        dogstatsd.telemetry_socket = fake_telemetry_socket
+
+        dogstatsd.gauge('gauge', 1)
+        self.assertEqual('gauge:1|g\n', fake_socket.recv())
+        self.assert_equal_telemetry(
+            '', fake_telemetry_socket.recv(),
+            telemetry=telemetry_metrics(metrics=1, packets_sent=1, bytes_sent=10),
+        )
+
+        dogstatsd.gauge('gauge', 1)
+        self.assertEqual('gauge:1|g\n', fake_socket.recv(reset_wait=True))
+        # Without the fix, the first telemetry packet's own bytes/count would have
+        # leaked into these totals even though it went out on a different socket.
+        self.assert_equal_telemetry(
+            '', fake_telemetry_socket.recv(reset_wait=True),
+            telemetry=telemetry_metrics(metrics=1, packets_sent=1, bytes_sent=10),
+        )
+
     def test_telemetry_flush_interval_batch(self):
         dogstatsd = DogStatsd(disable_buffering=False)
 
