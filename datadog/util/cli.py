@@ -137,14 +137,11 @@ def parse_date(date_str, to_epoch_ts=False):
 
     def _from_epoch_timestamp(seconds):
         # type: (Union[str, float]) -> datetime
-        print("_from_epoch_timestamp({})".format(seconds))
         return datetime.utcfromtimestamp(float(seconds))
 
     def _from_epoch_ms_timestamp(millis):
         # type: (str) -> datetime
-        print("_from_epoch_ms_timestamp({})".format(millis))
         in_sec = float(millis) / 1000.0
-        print("_from_epoch_ms_timestamp({}) -> {}".format(millis, in_sec))
         return _from_epoch_timestamp(in_sec)
 
     # Or parse date formats (most specific to least specific)

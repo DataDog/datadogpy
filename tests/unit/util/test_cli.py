@@ -6,6 +6,8 @@ from freezegun import freeze_time
 import datetime
 import unittest
 
+from mock import patch
+
 from datadog.util.cli import (
     comma_list,
     comma_set,
@@ -18,7 +20,7 @@ from datadog.util.cli import (
     parse_date_as_epoch_timestamp,
     parse_date,
 )
-from datadog.util.compat import is_pypy
+from datadog.util.compat import is_pypy, StringIO
 from datadog.util.format import force_to_epoch_seconds
 
 
@@ -212,3 +214,17 @@ class TestCLI(unittest.TestCase):
         # test invalid case
         with self.assertRaises(DateParsingError):
             parse_date_as_epoch_timestamp("foo")
+
+    def test_parse_date_does_not_write_to_stdout(self):
+        # parse_date is used as an argparse type by dogshell commands that
+        # print JSON to stdout, so it must not write anything there itself.
+        date_strs = ["1571805872", "foo"]
+        if not is_pypy():
+            date_strs.append("1571805872000")
+        for date_str in date_strs:
+            with patch("sys.stdout", new_callable=StringIO) as stdout:
+                try:
+                    parse_date_as_epoch_timestamp(date_str)
+                except DateParsingError:
+                    pass
+            self.assertEqual(stdout.getvalue(), "", "date_str={}".format(date_str))
