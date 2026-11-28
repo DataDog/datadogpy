@@ -126,7 +126,10 @@ class Histogram(Metric):
         if self.count < self.sample_size:
             self.samples.append(value)
         else:
-            self.samples[random.randrange(0, self.sample_size)] = value
+            # reservoir sampling: the n-th point (n = self.count + 1) is kept with probability sample_size / n
+            index = random.randrange(0, self.count + 1)
+            if index < self.sample_size:
+                self.samples[index] = value
         self.count = iternext(self.iter_counter)
 
     def flush(self, timestamp, interval):
