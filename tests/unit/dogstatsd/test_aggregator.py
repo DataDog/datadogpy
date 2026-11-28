@@ -148,5 +148,28 @@ class TestAggregator(unittest.TestCase):
         )
 
 
+    def test_aggregator_sampled_metrics_preserve_per_call_cardinality(self):
+        # Histogram, distribution and timing values submitted with the same
+        # name and tags but different per-call cardinalities must each be
+        # flushed with their own cardinality.
+        tags = ["tag1", "tag2"]
+        submit = {
+            MetricType.HISTOGRAM: self.aggregator.histogram,
+            MetricType.DISTRIBUTION: self.aggregator.distribution,
+            MetricType.TIMING: self.aggregator.timing,
+        }
+        for metric_type, func in submit.items():
+            func("sampledTest", 1, tags, 1, cardinality="low")
+            func("sampledTest", 2, tags, 1, cardinality="high")
+            self.assertEqual(len(self.aggregator.max_sample_metric_map[metric_type].values), 2)
+
+        metrics = self.aggregator.flush_aggregated_sampled_metrics()
+        emitted = {(m.metric_type, m.value, m.cardinality) for m in metrics}
+        expected = set()
+        for metric_type in submit:
+            expected.add((metric_type, 1, "low"))
+            expected.add((metric_type, 2, "high"))
+        self.assertEqual(emitted, expected)
+
 if __name__ == '__main__':
     unittest.main()
