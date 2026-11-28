@@ -1629,7 +1629,8 @@ async def print_foo():
         )
     
     def test_pre_fork_does_not_wait_for_the_flush_interval(self):
-        real_wait = threading.Event.wait
+        EventClass = type(threading.Event())
+        real_wait = EventClass.wait
         waits = []
 
         def spy_wait(event, timeout=None):
@@ -1637,7 +1638,7 @@ async def print_foo():
             waits.append((event, timeout, result))
             return result
 
-        with mock.patch.object(threading.Event, "wait", autospec=True, side_effect=spy_wait):
+        with mock.patch.object(EventClass, "wait", autospec=True, side_effect=spy_wait):
             dogstatsd = DogStatsd(disable_buffering=False, flush_interval=10, telemetry_min_flush_interval=0)
             dogstatsd.socket = FakeSocket()
             stopped_thread = dogstatsd._flush_thread
