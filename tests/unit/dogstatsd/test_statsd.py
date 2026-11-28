@@ -1633,6 +1633,36 @@ async def print_foo():
             fake_socket.recv(2, no_wait=True)
         )
     
+    def test_pre_fork_does_not_wait_for_the_flush_interval(self):
+        EventClass = type(threading.Event())
+        real_wait = EventClass.wait
+        waits = []
+
+        def spy_wait(event, timeout=None):
+            result = real_wait(event, timeout)
+            waits.append((event, timeout, result))
+            return result
+
+        with mock.patch.object(EventClass, "wait", autospec=True, side_effect=spy_wait):
+            dogstatsd = DogStatsd(disable_buffering=False, flush_interval=10, telemetry_min_flush_interval=0)
+            dogstatsd.socket = FakeSocket()
+            stopped_thread = dogstatsd._flush_thread
+            self.assertIsNotNone(stopped_thread)
+            dogstatsd.pre_fork()
+
+        stop_waits = [(timeout, result) for event, timeout, result in waits if event is dogstatsd._flush_thread_stop]
+        self.assertEqual(stop_waits, [(10, True)])
+        self.assertFalse(stopped_thread.is_alive())
+
+        dogstatsd.post_fork_parent()
+        flush_thread = dogstatsd._flush_thread
+        self.assertIsNotNone(flush_thread)
+        dogstatsd.disable_buffering = True
+        dogstatsd.stop()
+
+        self.assertIsNone(dogstatsd._flush_thread)
+        self.assertFalse(flush_thread.is_alive())
+
     def test_aggregation_buffering_simultaneously_dgram(self):
         self._test_aggregation_buffering_simultaneously(socket.SOCK_DGRAM)
 
